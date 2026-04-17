@@ -1,1 +1,13 @@
 project_id = "rdxaqiacoitzeowehdts"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.agent]
+verify_jwt = false
+
+[functions.create-api-key]
+verify_jwt = true
+
+[functions.v1-messages]
+verify_jwt = false
