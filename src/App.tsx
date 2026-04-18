@@ -12,6 +12,7 @@ import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
+import Redeem from "./pages/Redeem";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
+            <Route path="/redeem" element={<Redeem />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
