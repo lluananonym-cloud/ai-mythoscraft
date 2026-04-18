@@ -14,8 +14,16 @@ import Logo from "./Logo";
 import MinecraftAvatar from "./MinecraftAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  LogOut, MessageSquare, Key, Shield, BookOpen, Menu, User as UserIcon,
+  LogOut, MessageSquare, Key, Shield, BookOpen, Menu, User as UserIcon, Ticket,
 } from "lucide-react";
+
+const DISCORD_URL = "https://discord.gg/MewpPph3aw";
+
+const DiscordIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a14.7 14.7 0 0 0-.665 1.36 18.27 18.27 0 0 0-5.487 0A14.7 14.7 0 0 0 9.74 3a19.74 19.74 0 0 0-3.76 1.37C2.45 9.59 1.49 14.66 1.97 19.66a19.93 19.93 0 0 0 6.04 3.05c.49-.66.92-1.36 1.29-2.1a13 13 0 0 1-2.03-.97c.17-.13.34-.26.5-.39a14.27 14.27 0 0 0 12.46 0c.17.14.34.27.5.4a13 13 0 0 1-2.04.97c.37.74.8 1.44 1.29 2.1a19.92 19.92 0 0 0 6.04-3.05c.57-5.79-.97-10.81-4.04-15.29ZM8.52 16.36c-1.2 0-2.18-1.1-2.18-2.45s.96-2.45 2.18-2.45c1.22 0 2.2 1.11 2.18 2.45 0 1.35-.97 2.45-2.18 2.45Zm6.96 0c-1.2 0-2.18-1.1-2.18-2.45s.96-2.45 2.18-2.45c1.22 0 2.2 1.11 2.18 2.45 0 1.35-.96 2.45-2.18 2.45Z"/>
+  </svg>
+);
 
 const TopNav = () => {
   const { user, isAdmin, profile, signOut } = useAuth();
@@ -31,6 +39,11 @@ const TopNav = () => {
           <BookOpen className="h-4 w-4 mr-1.5" />API Docs
         </Button>
       </Link>
+      <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+        <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
+          <DiscordIcon className="h-4 w-4 mr-1.5" />Discord
+        </Button>
+      </a>
       {user && (
         <>
           <Link to="/app" onClick={() => setOpen(false)}>
@@ -91,6 +104,9 @@ const TopNav = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => nav("/dashboard?tab=profile")}>
                   <UserIcon className="h-4 w-4 mr-2" /> Profil & Skin
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav("/redeem")}>
+                  <Ticket className="h-4 w-4 mr-2" /> Boost Code einlösen
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => nav("/admin")}>

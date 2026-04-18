@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Shield, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, Users, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import BoostCodesAdmin from "@/components/BoostCodesAdmin";
 
 type Article = { id: string; title: string; category: string; body: string; is_published: boolean; created_at: string };
 type UserRow = { user_id: string; email: string; display_name: string | null; role?: string };
@@ -61,9 +62,10 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="kb">
-          <TabsList className="bg-secondary/50">
+          <TabsList className="bg-secondary/50 flex-wrap h-auto">
             <TabsTrigger value="kb">Knowledge Base</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="boosts"><Ticket className="h-3.5 w-3.5 mr-1.5" />Boost Codes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="kb" className="mt-6">
@@ -126,6 +128,10 @@ const Admin = () => {
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="boosts" className="mt-6">
+            <BoostCodesAdmin />
           </TabsContent>
         </Tabs>
       </main>
