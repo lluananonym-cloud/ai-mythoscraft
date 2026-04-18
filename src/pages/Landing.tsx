@@ -23,16 +23,16 @@ const Landing = () => {
 
       <main>
         {/* Hero */}
-        <section className="container pt-20 pb-32 text-center relative">
-          <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8 animate-fade-in">
+        <section className="container pt-12 sm:pt-20 pb-20 sm:pb-32 text-center relative">
+          <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-6 sm:mb-8 animate-fade-in">
             <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
             <span className="text-xs font-medium text-muted-foreground">Powered by Lovable AI · Free Forever</span>
           </div>
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 animate-fade-in">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-5 sm:mb-6 animate-fade-in">
             Die KI für<br />
             <span className="gradient-text">Mythoscraft</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10 animate-fade-in px-2">
             Dein intelligenter Support-Assistent für <span className="text-foreground font-medium">mythoscraft.online</span> — mit Claude-kompatibler API, mächtigem Agent-Modus und Live-Server-Tools.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in">

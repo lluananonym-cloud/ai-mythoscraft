@@ -54,10 +54,10 @@ const Admin = () => {
   return (
     <div className="min-h-screen">
       <TopNav />
-      <main className="container py-8 max-w-6xl">
+      <main className="container py-6 md:py-8 max-w-6xl">
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="h-7 w-7 text-primary" />
-          <h1 className="font-display text-3xl font-bold">Admin Panel</h1>
+          <Shield className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+          <h1 className="font-display text-2xl md:text-3xl font-bold">Admin Panel</h1>
         </div>
 
         <Tabs defaultValue="kb">

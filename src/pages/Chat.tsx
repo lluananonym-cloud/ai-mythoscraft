@@ -2,13 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import TopNav from "@/components/TopNav";
+import MinecraftAvatar from "@/components/MinecraftAvatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Wrench } from "lucide-react";
+import {
+  Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
@@ -21,13 +25,14 @@ const MODES = [
 ];
 
 const Chat = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [convs, setConvs] = useState<Conv[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState("support");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadConvs = async () => {
@@ -39,6 +44,7 @@ const Chat = () => {
 
   const loadMessages = async (id: string) => {
     setActiveId(id);
+    setSidebarOpen(false);
     const { data } = await supabase.from("messages").select("*").eq("conversation_id", id).order("created_at");
     if (data) setMessages(data as any);
     const c = convs.find(c => c.id === id);
@@ -47,9 +53,10 @@ const Chat = () => {
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
 
-  const newChat = async () => {
+  const newChat = () => {
     setActiveId(null);
     setMessages([]);
+    setSidebarOpen(false);
   };
 
   const deleteChat = async (id: string) => {
@@ -116,7 +123,6 @@ const Chat = () => {
           if (json === "[DONE]") break;
           try {
             const p = JSON.parse(json);
-            // Agent tool events
             if (p.tool) {
               setMessages(prev => {
                 const next = [...prev];
@@ -152,97 +158,161 @@ const Chat = () => {
 
   const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
 
+  const Sidebar = (
+    <div className="flex flex-col gap-2 h-full">
+      <Button onClick={newChat} className="bg-gradient-primary text-primary-foreground hover:opacity-90 w-full">
+        <Plus className="h-4 w-4 mr-1.5" /> Neuer Chat
+      </Button>
+      <ScrollArea className="flex-1 -mx-1 px-1">
+        <div className="space-y-1">
+          {convs.map(c => (
+            <div
+              key={c.id}
+              className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm cursor-pointer transition-colors ${
+                activeId === c.id ? "bg-primary/15 text-foreground" : "hover:bg-secondary/50 text-muted-foreground"
+              }`}
+              onClick={() => loadMessages(c.id)}
+            >
+              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate flex-1">{c.title}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1"
+                aria-label="Chat löschen"
+              >
+                <Trash2 className="h-3.5 w-3.5 hover:text-destructive" />
+              </button>
+            </div>
+          ))}
+          {convs.length === 0 && <p className="text-xs text-muted-foreground p-3 text-center">Noch keine Chats</p>}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopNav />
-      <div className="flex-1 container py-4 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="glass rounded-2xl p-3 flex flex-col gap-2 h-[calc(100vh-6rem)]">
-          <Button onClick={newChat} className="bg-gradient-primary text-primary-foreground hover:opacity-90 w-full">
-            <Plus className="h-4 w-4 mr-1.5" /> Neuer Chat
-          </Button>
-          <ScrollArea className="flex-1 -mx-1 px-1">
-            <div className="space-y-1">
-              {convs.map(c => (
-                <div key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm cursor-pointer transition-colors ${activeId === c.id ? "bg-primary/15 text-foreground" : "hover:bg-secondary/50 text-muted-foreground"}`}
-                  onClick={() => loadMessages(c.id)}>
-                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate flex-1">{c.title}</span>
-                  <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 className="h-3.5 w-3.5 hover:text-destructive" />
-                  </button>
-                </div>
-              ))}
-              {convs.length === 0 && <p className="text-xs text-muted-foreground p-3 text-center">Noch keine Chats</p>}
-            </div>
-          </ScrollArea>
+      <div className="flex-1 container py-3 md:py-4 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 md:gap-4 overflow-hidden">
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex glass rounded-2xl p-3 flex-col gap-2 h-[calc(100vh-6rem)]">
+          {Sidebar}
         </aside>
 
         {/* Chat area */}
-        <main className="glass-strong rounded-2xl flex flex-col h-[calc(100vh-6rem)] overflow-hidden">
-          <div className="border-b border-border/50 p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ModeIcon className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Mythos AI</span>
+        <main className="glass-strong rounded-2xl flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] overflow-hidden">
+          <div className="border-b border-border/50 p-2.5 md:p-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Mobile sidebar trigger */}
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 shrink-0">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="glass-strong w-[280px] p-3 flex flex-col">
+                  <div className="mt-6 flex-1 overflow-hidden">{Sidebar}</div>
+                </SheetContent>
+              </Sheet>
+              <ModeIcon className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium text-sm truncate">Mythos AI</span>
             </div>
             <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="w-[180px] bg-secondary/50 h-9 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[120px] sm:w-[180px] bg-secondary/50 h-9 text-xs shrink-0">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {MODES.map(m => (
                   <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2"><m.icon className="h-3.5 w-3.5" /><span>{m.label}</span><span className="text-xs text-muted-foreground">— {m.desc}</span></div>
+                    <div className="flex items-center gap-2">
+                      <m.icon className="h-3.5 w-3.5" />
+                      <span>{m.label}</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
             {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center glow-primary mb-5 animate-pulse-glow">
-                  <Sparkles className="h-8 w-8 text-primary-foreground" />
+              <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto px-2">
+                <div className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-gradient-primary flex items-center justify-center glow-primary mb-5 animate-pulse-glow">
+                  <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-primary-foreground" />
                 </div>
-                <h2 className="font-display text-2xl font-bold mb-2">Willkommen bei Mythos AI</h2>
-                <p className="text-muted-foreground text-sm mb-6">Frag mich alles über mythoscraft.online — Regeln, Commands, Plugins, Server-Status. Im Agent-Modus kann ich auch im Web suchen.</p>
+                <h2 className="font-display text-xl md:text-2xl font-bold mb-2">Willkommen bei Mythos AI</h2>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Frag mich alles über mythoscraft.online — Regeln, Commands, Plugins, Server-Status. Im Agent-Modus kann ich auch im Web suchen.
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                   {["Wie verbinde ich mich mit dem Server?", "Welche Commands gibt es?", "Ist der Server gerade online?", "Was sind die Regeln?"].map(s => (
-                    <button key={s} onClick={() => setInput(s)} className="glass rounded-xl p-3 text-xs text-left hover:border-primary/40 transition-colors">{s}</button>
+                    <button
+                      key={s}
+                      onClick={() => setInput(s)}
+                      className="glass rounded-xl p-3 text-xs text-left hover:border-primary/40 transition-colors"
+                    >
+                      {s}
+                    </button>
                   ))}
                 </div>
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`flex gap-3 animate-fade-in ${m.role === "user" ? "justify-end" : ""}`}>
+              <div key={i} className={`flex gap-2 sm:gap-3 animate-fade-in ${m.role === "user" ? "justify-end" : ""}`}>
                 {m.role !== "user" && (
                   <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shrink-0 mt-0.5">
                     <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${m.role === "user" ? "bg-primary/20 border border-primary/30" : "glass"}`}>
+                <div
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 sm:px-4 sm:py-3 ${
+                    m.role === "user" ? "bg-primary/20 border border-primary/30" : "glass"
+                  }`}
+                >
                   {m.role === "assistant" ? (
-                    <div className="prose-mythos text-sm">
-                      {m.content ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown> : <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                    <div className="prose-mythos text-sm break-words">
+                      {m.content ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                      ) : (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      )}
                     </div>
                   ) : (
-                    <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                    <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
                   )}
                 </div>
+                {m.role === "user" && (
+                  <MinecraftAvatar
+                    username={profile?.mc_username}
+                    fallback={profile?.display_name || user?.email}
+                    size={32}
+                    className="mt-0.5 shrink-0"
+                  />
+                )}
               </div>
             ))}
           </div>
 
-          <div className="border-t border-border/50 p-3">
+          <div className="border-t border-border/50 p-2 sm:p-3">
             <div className="glass rounded-xl flex items-end gap-2 p-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder={mode === "support" ? "Frage zum Mythoscraft-Server..." : mode === "agent" ? "Was soll der Agent tun?" : "Was möchtest du wissen?"}
+                placeholder={
+                  mode === "support" ? "Frage zum Mythoscraft-Server..." :
+                  mode === "agent" ? "Was soll der Agent tun?" : "Was möchtest du wissen?"
+                }
                 className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm"
                 disabled={sending}
               />
-              <Button onClick={send} disabled={!input.trim() || sending} size="icon" className="bg-gradient-primary text-primary-foreground hover:opacity-90 h-10 w-10 shrink-0">
+              <Button
+                onClick={send}
+                disabled={!input.trim() || sending}
+                size="icon"
+                className="bg-gradient-primary text-primary-foreground hover:opacity-90 h-10 w-10 shrink-0"
+              >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
