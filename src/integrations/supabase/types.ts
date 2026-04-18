@@ -94,6 +94,92 @@ export type Database = {
           },
         ]
       }
+      boost_codes: {
+        Row: {
+          bonus_requests: number | null
+          code: string
+          created_at: string
+          created_by: string | null
+          daily_limit: number
+          duration_days: number | null
+          expires_at: string | null
+          id: string
+          max_uses: number
+          mode: Database["public"]["Enums"]["boost_mode"]
+          note: string | null
+          used_count: number
+        }
+        Insert: {
+          bonus_requests?: number | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          duration_days?: number | null
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          mode?: Database["public"]["Enums"]["boost_mode"]
+          note?: string | null
+          used_count?: number
+        }
+        Update: {
+          bonus_requests?: number | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          duration_days?: number | null
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          mode?: Database["public"]["Enums"]["boost_mode"]
+          note?: string | null
+          used_count?: number
+        }
+        Relationships: []
+      }
+      boost_redemptions: {
+        Row: {
+          bonus_remaining: number | null
+          code_id: string
+          daily_limit: number | null
+          expires_at: string | null
+          id: string
+          mode: Database["public"]["Enums"]["boost_mode"]
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_remaining?: number | null
+          code_id: string
+          daily_limit?: number | null
+          expires_at?: string | null
+          id?: string
+          mode: Database["public"]["Enums"]["boost_mode"]
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_remaining?: number | null
+          code_id?: string
+          daily_limit?: number | null
+          expires_at?: string | null
+          id?: string
+          mode?: Database["public"]["Enums"]["boost_mode"]
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "boost_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -255,6 +341,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      boost_mode: "permanent" | "temporary" | "oneshot"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -383,6 +470,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      boost_mode: ["permanent", "temporary", "oneshot"],
     },
   },
 } as const
