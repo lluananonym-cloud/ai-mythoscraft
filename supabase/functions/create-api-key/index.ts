@@ -22,11 +22,15 @@ Deno.serve(async (req) => {
 
   try {
     const auth = req.headers.get("Authorization");
-    if (!auth) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!auth?.startsWith("Bearer ")) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const token = auth.replace("Bearer ", "");
+    const { data: claimsData, error: ce } = await authClient.auth.getClaims(token);
+    if (ce || !claimsData?.claims?.sub) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const userId = claimsData.claims.sub;
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: { user }, error: ue } = await supabase.auth.getUser(auth.replace("Bearer ", ""));
-    if (ue || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const { name } = await req.json();
     if (!name || typeof name !== "string") return new Response(JSON.stringify({ error: "Name required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -37,7 +41,7 @@ Deno.serve(async (req) => {
     const key_prefix = key.slice(0, 22); // sk-ant-mythos-XXXXXXX
 
     const { error } = await supabase.from("api_keys").insert({
-      user_id: user.id,
+      user_id: userId,
       name: name.slice(0, 100),
       key_prefix,
       key_hash,
