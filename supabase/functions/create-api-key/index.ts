@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const key_prefix = key.slice(0, 22); // sk-ant-mythos-XXXXXXX
 
     const { error } = await supabase.from("api_keys").insert({
-      user_id: user.id,
+      user_id: userId,
       name: name.slice(0, 100),
       key_prefix,
       key_hash,
