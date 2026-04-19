@@ -241,25 +241,39 @@ const Chat = () => {
                   <div className="mt-6 flex-1 overflow-hidden">{Sidebar}</div>
                 </SheetContent>
               </Sheet>
-              <ModeIcon className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-medium text-sm truncate">Mythos AI</span>
+              <ModeIcon className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="font-display text-base truncate">Mythos AI</span>
             </div>
-            <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="w-[120px] sm:w-[180px] bg-secondary/50 h-9 text-xs shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MODES.map(m => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2">
-                      <m.icon className="h-3.5 w-3.5" />
-                      <span>{m.label}</span>
-                      <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 shrink-0">
+              {voice.supported && (
+                <Button
+                  variant={voiceMode ? "default" : "ghost"}
+                  size="icon"
+                  className={`h-9 w-9 ${voiceMode ? "bg-foreground text-background hover:bg-foreground/90" : ""}`}
+                  onClick={() => setVoiceMode(v => !v)}
+                  title={voiceMode ? "Voice-Modus aus" : "Voice-Modus an"}
+                  aria-label="Voice-Modus umschalten"
+                >
+                  {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+              )}
+              <Select value={mode} onValueChange={setMode}>
+                <SelectTrigger className="w-[120px] sm:w-[180px] glass h-9 text-xs border-white/10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODES.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <div className="flex items-center gap-2">
+                        <m.icon className="h-3.5 w-3.5" />
+                        <span>{m.label}</span>
+                        <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
