@@ -74,10 +74,10 @@ const Chat = () => {
     loadConvs();
   };
 
-  const send = async () => {
-    if (!input.trim() || sending) return;
-    const text = input.trim();
-    setInput("");
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim();
+    if (!text || sending) return;
+    if (!override) setInput("");
     setSending(true);
 
     let convId = activeId;
