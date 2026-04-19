@@ -1,66 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Mythos AI Design System – Glassmorphism, deep purple/blue with cyan accent. All HSL. */
+/* Mythos AI — Liquid Milky Glass. Monochrome (black/white) with subtle iridescent shimmer. */
 
 @layer base {
   :root {
-    --background: 240 35% 6%;
-    --foreground: 220 30% 96%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
 
-    --card: 240 30% 9%;
-    --card-foreground: 220 30% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 240 35% 8%;
-    --popover-foreground: 220 30% 96%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 265 90% 65%;
-    --primary-foreground: 240 35% 6%;
-    --primary-glow: 280 95% 70%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 4%;
+    --primary-glow: 0 0% 100%;
 
-    --secondary: 240 25% 14%;
-    --secondary-foreground: 220 30% 96%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 20% 14%;
-    --muted-foreground: 220 15% 65%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 190 95% 55%;
-    --accent-foreground: 240 35% 6%;
-    --accent-glow: 175 90% 60%;
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 4%;
+    --accent-glow: 0 0% 100%;
 
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 220 30% 96%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 240 25% 18%;
-    --input: 240 25% 14%;
-    --ring: 265 90% 65%;
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.06;
+    --ring: 0 0% 100%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(265 90% 65%), hsl(190 95% 55%));
-    --gradient-cosmic: linear-gradient(135deg, hsl(265 90% 65% / 0.8), hsl(220 90% 50% / 0.5), hsl(190 95% 55% / 0.6));
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 100%), hsl(0 0% 80%));
+    --gradient-cosmic: linear-gradient(135deg, hsl(0 0% 100% / 0.15), hsl(0 0% 100% / 0.02), hsl(0 0% 100% / 0.08));
+    --gradient-iridescent: conic-gradient(from 180deg at 50% 50%, hsl(0 0% 100% / 0.18), hsl(0 0% 100% / 0.04), hsl(0 0% 100% / 0.14), hsl(0 0% 100% / 0.02), hsl(0 0% 100% / 0.18));
 
-    --shadow-glow: 0 0 60px hsl(265 90% 65% / 0.4);
-    --shadow-glow-cyan: 0 0 50px hsl(190 95% 55% / 0.35);
-    --shadow-elevated: 0 20px 60px -10px hsl(240 60% 4% / 0.7);
-    --shadow-glass: 0 8px 32px hsl(240 60% 2% / 0.5);
+    --shadow-glow: 0 0 80px hsl(0 0% 100% / 0.12);
+    --shadow-glow-cyan: 0 0 60px hsl(0 0% 100% / 0.1);
+    --shadow-elevated: 0 30px 80px -20px hsl(0 0% 0% / 0.8), 0 0 0 1px hsl(0 0% 100% / 0.04);
+    --shadow-glass: 0 8px 32px hsl(0 0% 0% / 0.6), inset 0 1px 0 hsl(0 0% 100% / 0.06);
 
-    --sidebar-background: 240 35% 5%;
-    --sidebar-foreground: 220 25% 80%;
-    --sidebar-primary: 265 90% 65%;
-    --sidebar-primary-foreground: 220 30% 96%;
-    --sidebar-accent: 240 25% 12%;
-    --sidebar-accent-foreground: 220 30% 96%;
-    --sidebar-border: 240 25% 14%;
-    --sidebar-ring: 265 90% 65%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 100% / 0.06;
+    --sidebar-ring: 0 0% 100%;
   }
 
   .dark {
-    --background: 240 35% 6%;
-    --foreground: 220 30% 96%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
   }
 }
 
@@ -70,42 +71,98 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    background-color: hsl(0 0% 3%);
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(265 90% 25% / 0.45), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 20%, hsl(190 95% 25% / 0.25), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 10% 80%, hsl(280 90% 25% / 0.3), transparent 60%);
+      radial-gradient(ellipse 70% 50% at 50% 0%, hsl(0 0% 100% / 0.06), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, hsl(0 0% 100% / 0.04), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 0% 100%, hsl(0 0% 100% / 0.03), transparent 60%);
     background-attachment: fixed;
   }
-  h1, h2, h3, .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.02em; }
+  h1, h2, h3, .font-display {
+    font-family: 'Instrument Serif', 'Inter', serif;
+    letter-spacing: -0.01em;
+    font-weight: 400;
+  }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
 }
 
 @layer components {
+  /* Milky frosted glass with subtle inner light */
   .glass {
-    @apply backdrop-blur-xl border;
-    background: hsl(240 30% 12% / 0.55);
-    border-color: hsl(220 30% 80% / 0.08);
-    box-shadow: var(--shadow-glass), inset 0 1px 0 hsl(220 30% 100% / 0.05);
+    @apply backdrop-blur-2xl border;
+    background:
+      linear-gradient(135deg, hsl(0 0% 100% / 0.06), hsl(0 0% 100% / 0.02)),
+      hsl(0 0% 8% / 0.6);
+    border-color: hsl(0 0% 100% / 0.08);
+    box-shadow:
+      0 8px 32px hsl(0 0% 0% / 0.5),
+      inset 0 1px 0 hsl(0 0% 100% / 0.08),
+      inset 0 -1px 0 hsl(0 0% 100% / 0.02);
   }
   .glass-strong {
-    @apply backdrop-blur-2xl border;
-    background: hsl(240 30% 10% / 0.75);
-    border-color: hsl(220 30% 80% / 0.1);
-    box-shadow: var(--shadow-elevated), inset 0 1px 0 hsl(220 30% 100% / 0.06);
+    @apply backdrop-blur-3xl border;
+    background:
+      linear-gradient(135deg, hsl(0 0% 100% / 0.08), hsl(0 0% 100% / 0.02)),
+      hsl(0 0% 6% / 0.75);
+    border-color: hsl(0 0% 100% / 0.1);
+    box-shadow:
+      0 30px 80px -20px hsl(0 0% 0% / 0.8),
+      inset 0 1px 0 hsl(0 0% 100% / 0.1),
+      inset 0 -1px 0 hsl(0 0% 100% / 0.02);
+  }
+  /* Liquid milky pill — shimmery edge */
+  .glass-liquid {
+    @apply backdrop-blur-3xl border relative overflow-hidden;
+    background:
+      radial-gradient(ellipse at top left, hsl(0 0% 100% / 0.12), transparent 50%),
+      radial-gradient(ellipse at bottom right, hsl(0 0% 100% / 0.06), transparent 50%),
+      hsl(0 0% 8% / 0.5);
+    border-color: hsl(0 0% 100% / 0.12);
+    box-shadow:
+      0 20px 60px -20px hsl(0 0% 0% / 0.7),
+      inset 0 1px 0 hsl(0 0% 100% / 0.15),
+      inset 0 -1px 0 hsl(0 0% 100% / 0.04);
+  }
+  .glass-liquid::before {
+    content: "";
+    @apply absolute inset-0 pointer-events-none opacity-50;
+    background: linear-gradient(120deg, transparent 30%, hsl(0 0% 100% / 0.08) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 8s ease-in-out infinite;
   }
   .gradient-text {
-    background: var(--gradient-primary);
+    background: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 70%));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .glow-primary { box-shadow: var(--shadow-glow); }
-  .glow-cyan { box-shadow: var(--shadow-glow-cyan); }
+  .glow-primary { box-shadow: 0 0 60px hsl(0 0% 100% / 0.15); }
+  .glow-cyan { box-shadow: 0 0 40px hsl(0 0% 100% / 0.1); }
 
   .blob {
     @apply absolute rounded-full pointer-events-none;
-    filter: blur(80px);
-    opacity: 0.5;
-    animation: blob-float 18s ease-in-out infinite;
+    filter: blur(100px);
+    opacity: 0.3;
+    animation: blob-float 20s ease-in-out infinite;
+  }
+
+  /* Iridescent ring border */
+  .iridescent-ring {
+    position: relative;
+  }
+  .iridescent-ring::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-iridescent);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.7;
   }
 
   .prose-mythos { @apply text-foreground/90 leading-relaxed; }
@@ -117,24 +174,24 @@
   .prose-mythos ul { @apply list-disc pl-5 my-2; }
   .prose-mythos ol { @apply list-decimal pl-5 my-2; }
   .prose-mythos li { @apply my-1; }
-  .prose-mythos code { @apply bg-secondary px-1.5 py-0.5 rounded text-accent text-[0.9em]; }
-  .prose-mythos pre { @apply bg-secondary/80 backdrop-blur p-4 rounded-lg overflow-x-auto my-3 border border-border; }
+  .prose-mythos code { @apply font-mono bg-white/5 px-1.5 py-0.5 rounded text-foreground text-[0.85em]; }
+  .prose-mythos pre { @apply font-mono bg-black/40 backdrop-blur p-4 rounded-xl overflow-x-auto my-3 border border-white/10; }
   .prose-mythos pre code { @apply bg-transparent p-0 text-foreground; }
-  .prose-mythos a { @apply text-accent hover:underline; }
-  .prose-mythos blockquote { @apply border-l-2 border-primary pl-4 italic text-muted-foreground my-3; }
+  .prose-mythos a { @apply text-foreground underline underline-offset-2 hover:text-foreground/70; }
+  .prose-mythos blockquote { @apply border-l-2 border-white/30 pl-4 italic text-muted-foreground my-3; }
   .prose-mythos table { @apply w-full border-collapse my-3; }
-  .prose-mythos th, .prose-mythos td { @apply border border-border px-3 py-2 text-sm; }
+  .prose-mythos th, .prose-mythos td { @apply border border-white/10 px-3 py-2 text-sm; }
 }
 
 @keyframes blob-float {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(40px, -50px) scale(1.1); }
-  66% { transform: translate(-30px, 30px) scale(0.95); }
+  33% { transform: translate(60px, -80px) scale(1.15); }
+  66% { transform: translate(-40px, 50px) scale(0.9); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 30px hsl(265 90% 65% / 0.3); }
-  50% { box-shadow: 0 0 60px hsl(265 90% 65% / 0.6); }
+  0%, 100% { box-shadow: 0 0 30px hsl(0 0% 100% / 0.15); }
+  50% { box-shadow: 0 0 70px hsl(0 0% 100% / 0.3); }
 }
 
 @keyframes fade-in {
@@ -142,5 +199,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes shimmer {
+  0%, 100% { background-position: -100% 0; }
+  50% { background-position: 200% 0; }
+}
+
+@keyframes voice-wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
 .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 .animate-fade-in { animation: fade-in 0.5s ease-out; }
+.animate-shimmer { animation: shimmer 6s ease-in-out infinite; }
