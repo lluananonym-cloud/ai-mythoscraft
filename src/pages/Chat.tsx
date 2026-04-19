@@ -12,8 +12,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
+  Mic, MicOff, Volume2, VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useVoiceMode } from "@/hooks/useVoiceMode";
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
 type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any };
