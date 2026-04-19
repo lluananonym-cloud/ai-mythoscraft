@@ -35,7 +35,14 @@ const Chat = () => {
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState("support");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSpokenRef = useRef<string>("");
+  const sendRef = useRef<(text?: string) => void>(() => {});
+  const voice = useVoiceMode({
+    lang: "de-DE",
+    onTranscript: (t) => { sendRef.current?.(t); },
+  });
 
   const loadConvs = async () => {
     const { data } = await supabase.from("conversations").select("*").order("updated_at", { ascending: false });
