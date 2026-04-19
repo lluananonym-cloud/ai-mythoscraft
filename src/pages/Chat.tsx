@@ -165,6 +165,24 @@ const Chat = () => {
     }
   };
 
+  // Wire send to ref so the voice hook can call it
+  useEffect(() => { sendRef.current = send; });
+
+  // Auto-speak last assistant message when voice mode is on and streaming finishes
+  useEffect(() => {
+    if (!voiceMode || sending) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant" || !last.content) return;
+    if (lastSpokenRef.current === last.content) return;
+    lastSpokenRef.current = last.content;
+    voice.speak(last.content);
+  }, [voiceMode, sending, messages, voice]);
+
+  // When toggling off voice, stop any ongoing speech / listening
+  useEffect(() => {
+    if (!voiceMode) { voice.stopSpeaking(); voice.stopListening(); }
+  }, [voiceMode, voice]);
+
   const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
 
   const Sidebar = (
