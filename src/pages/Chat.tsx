@@ -335,24 +335,58 @@ const Chat = () => {
             ))}
           </div>
 
-          <div className="border-t border-border/50 p-2 sm:p-3">
-            <div className="glass rounded-xl flex items-end gap-2 p-2">
+          <div className="border-t border-white/5 p-2 sm:p-3">
+            {voiceMode && voice.status === "listening" && (
+              <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
+                <span className="flex items-end gap-0.5 h-3">
+                  {[0, 1, 2, 3].map(i => (
+                    <span
+                      key={i}
+                      className="w-0.5 bg-foreground/80 rounded-full"
+                      style={{ height: "100%", animation: `voice-wave 0.9s ease-in-out ${i * 0.12}s infinite` }}
+                    />
+                  ))}
+                </span>
+                <span>{voice.interim || "Höre zu..."}</span>
+              </div>
+            )}
+            <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                 placeholder={
+                  voiceMode ? "Tippe oder drücke das Mikro..." :
                   mode === "support" ? "Frage zum Mythoscraft-Server..." :
                   mode === "agent" ? "Was soll der Agent tun?" : "Was möchtest du wissen?"
                 }
-                className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm"
+                className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm relative z-10"
                 disabled={sending}
               />
+              {voice.supported && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (voice.status === "listening") voice.stopListening();
+                    else { setVoiceMode(true); voice.startListening(); }
+                  }}
+                  disabled={sending}
+                  size="icon"
+                  variant="ghost"
+                  className={`h-10 w-10 shrink-0 relative z-10 ${
+                    voice.status === "listening" ? "bg-foreground text-background hover:bg-foreground/90 animate-pulse-glow" : ""
+                  }`}
+                  title={voice.status === "listening" ? "Stopp" : "Sprechen"}
+                  aria-label="Mikrofon"
+                >
+                  {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
               <Button
-                onClick={send}
+                onClick={() => send()}
                 disabled={!input.trim() || sending}
                 size="icon"
-                className="bg-gradient-primary text-primary-foreground hover:opacity-90 h-10 w-10 shrink-0"
+                className="bg-foreground text-background hover:bg-foreground/90 h-10 w-10 shrink-0 relative z-10"
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
