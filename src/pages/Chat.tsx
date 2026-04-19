@@ -12,8 +12,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
+  Mic, MicOff, Volume2, VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useVoiceMode } from "@/hooks/useVoiceMode";
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
 type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any };
@@ -33,7 +35,14 @@ const Chat = () => {
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState("support");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSpokenRef = useRef<string>("");
+  const sendRef = useRef<(text?: string) => void>(() => {});
+  const voice = useVoiceMode({
+    lang: "de-DE",
+    onTranscript: (t) => { sendRef.current?.(t); },
+  });
 
   const loadConvs = async () => {
     const { data } = await supabase.from("conversations").select("*").order("updated_at", { ascending: false });
@@ -65,10 +74,10 @@ const Chat = () => {
     loadConvs();
   };
 
-  const send = async () => {
-    if (!input.trim() || sending) return;
-    const text = input.trim();
-    setInput("");
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim();
+    if (!text || sending) return;
+    if (!override) setInput("");
     setSending(true);
 
     let convId = activeId;
@@ -156,6 +165,24 @@ const Chat = () => {
     }
   };
 
+  // Wire send to ref so the voice hook can call it
+  useEffect(() => { sendRef.current = send; });
+
+  // Auto-speak last assistant message when voice mode is on and streaming finishes
+  useEffect(() => {
+    if (!voiceMode || sending) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant" || !last.content) return;
+    if (lastSpokenRef.current === last.content) return;
+    lastSpokenRef.current = last.content;
+    voice.speak(last.content);
+  }, [voiceMode, sending, messages, voice]);
+
+  // When toggling off voice, stop any ongoing speech / listening
+  useEffect(() => {
+    if (!voiceMode) { voice.stopSpeaking(); voice.stopListening(); }
+  }, [voiceMode, voice]);
+
   const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
 
   const Sidebar = (
@@ -214,25 +241,39 @@ const Chat = () => {
                   <div className="mt-6 flex-1 overflow-hidden">{Sidebar}</div>
                 </SheetContent>
               </Sheet>
-              <ModeIcon className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-medium text-sm truncate">Mythos AI</span>
+              <ModeIcon className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="font-display text-base truncate">Mythos AI</span>
             </div>
-            <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="w-[120px] sm:w-[180px] bg-secondary/50 h-9 text-xs shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MODES.map(m => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2">
-                      <m.icon className="h-3.5 w-3.5" />
-                      <span>{m.label}</span>
-                      <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 shrink-0">
+              {voice.supported && (
+                <Button
+                  variant={voiceMode ? "default" : "ghost"}
+                  size="icon"
+                  className={`h-9 w-9 ${voiceMode ? "bg-foreground text-background hover:bg-foreground/90" : ""}`}
+                  onClick={() => setVoiceMode(v => !v)}
+                  title={voiceMode ? "Voice-Modus aus" : "Voice-Modus an"}
+                  aria-label="Voice-Modus umschalten"
+                >
+                  {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+              )}
+              <Select value={mode} onValueChange={setMode}>
+                <SelectTrigger className="w-[120px] sm:w-[180px] glass h-9 text-xs border-white/10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODES.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <div className="flex items-center gap-2">
+                        <m.icon className="h-3.5 w-3.5" />
+                        <span>{m.label}</span>
+                        <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
@@ -294,24 +335,58 @@ const Chat = () => {
             ))}
           </div>
 
-          <div className="border-t border-border/50 p-2 sm:p-3">
-            <div className="glass rounded-xl flex items-end gap-2 p-2">
+          <div className="border-t border-white/5 p-2 sm:p-3">
+            {voiceMode && voice.status === "listening" && (
+              <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
+                <span className="flex items-end gap-0.5 h-3">
+                  {[0, 1, 2, 3].map(i => (
+                    <span
+                      key={i}
+                      className="w-0.5 bg-foreground/80 rounded-full"
+                      style={{ height: "100%", animation: `voice-wave 0.9s ease-in-out ${i * 0.12}s infinite` }}
+                    />
+                  ))}
+                </span>
+                <span>{voice.interim || "Höre zu..."}</span>
+              </div>
+            )}
+            <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                 placeholder={
+                  voiceMode ? "Tippe oder drücke das Mikro..." :
                   mode === "support" ? "Frage zum Mythoscraft-Server..." :
                   mode === "agent" ? "Was soll der Agent tun?" : "Was möchtest du wissen?"
                 }
-                className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm"
+                className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm relative z-10"
                 disabled={sending}
               />
+              {voice.supported && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (voice.status === "listening") voice.stopListening();
+                    else { setVoiceMode(true); voice.startListening(); }
+                  }}
+                  disabled={sending}
+                  size="icon"
+                  variant="ghost"
+                  className={`h-10 w-10 shrink-0 relative z-10 ${
+                    voice.status === "listening" ? "bg-foreground text-background hover:bg-foreground/90 animate-pulse-glow" : ""
+                  }`}
+                  title={voice.status === "listening" ? "Stopp" : "Sprechen"}
+                  aria-label="Mikrofon"
+                >
+                  {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
               <Button
-                onClick={send}
+                onClick={() => send()}
                 disabled={!input.trim() || sending}
                 size="icon"
-                className="bg-gradient-primary text-primary-foreground hover:opacity-90 h-10 w-10 shrink-0"
+                className="bg-foreground text-background hover:bg-foreground/90 h-10 w-10 shrink-0 relative z-10"
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
