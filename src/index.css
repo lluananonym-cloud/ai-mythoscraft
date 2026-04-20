@@ -181,6 +181,7 @@
   .prose-mythos blockquote { @apply border-l-2 border-white/30 pl-4 italic text-muted-foreground my-3; }
   .prose-mythos table { @apply w-full border-collapse my-3; }
   .prose-mythos th, .prose-mythos td { @apply border border-white/10 px-3 py-2 text-sm; }
+  .prose-mythos img { @apply rounded-xl my-3 max-w-full border border-white/10; }
 }
 
 @keyframes blob-float {

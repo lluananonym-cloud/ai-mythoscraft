@@ -5,41 +5,146 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const enc = new TextEncoder();
+const sse = (obj: unknown) => enc.encode(`data: ${JSON.stringify(obj)}\n\n`);
+const sseDone = () => enc.encode("data: [DONE]\n\n");
+
+async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-image",
+      messages: [{ role: "user", content: prompt }],
+      modalities: ["image", "text"],
+    }),
+  });
+  if (!r.ok) return null;
+  const j = await r.json();
+  return j.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+}
+
+async function webResearch(query: string, apiKey: string): Promise<string> {
+  // Use Lovable AI with google_search tool for grounded research
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: "Du bist ein Recherche-Agent. Suche im Web, vergleiche Quellen, liefere strukturierte Antwort mit Markdown-Überschriften und Bullet-Points. Nenne Quellen als Links am Ende." },
+        { role: "user", content: query },
+      ],
+      tools: [{ type: "function", function: { name: "google_search", description: "Search the web", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } }],
+    }),
+  });
+  if (!r.ok) return `Recherche fehlgeschlagen (${r.status}).`;
+  const j = await r.json();
+  return j.choices?.[0]?.message?.content ?? "Keine Antwort.";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support" } = await req.json();
+    const { messages, mode = "support", conversationId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
-    // Build system prompt
-    let system = `Du bist Mythos AI, ein freundlicher, kompetenter KI-Assistent. Antworte präzise und in der Sprache des Users (default: Deutsch). Nutze Markdown.`;
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
-    if (mode === "support") {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
+    const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
+    const lastText: string = (lastUser?.content || "").trim();
+
+    // ============== SLASH COMMANDS ==============
+    // /identity <name>
+    const idMatch = lastText.match(/^\/identity\s+(.+)$/i);
+    if (idMatch && conversationId) {
+      const newId = idMatch[1].trim().slice(0, 60);
+      await supabase.from("conversations").update({ identity_override: newId }).eq("id", conversationId);
+      const stream = new ReadableStream({
+        start(c) {
+          c.enqueue(sse({ choices: [{ delta: { content: `✨ Identität gewechselt zu **${newId}**. Ab jetzt antworte ich als ${newId} in diesem Chat.` } }] }));
+          c.enqueue(sseDone()); c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    // /image <prompt>
+    const imgMatch = lastText.match(/^\/image\s+(.+)$/i);
+    if (imgMatch) {
+      const prompt = imgMatch[1].trim();
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ tool: `Generiere Bild: ${prompt}` }));
+          const url = await generateImage(prompt, LOVABLE_API_KEY);
+          if (url) {
+            c.enqueue(sse({ choices: [{ delta: { content: `![${prompt}](${url})\n\n*Generiert mit Nano Banana*` } }] }));
+          } else {
+            c.enqueue(sse({ choices: [{ delta: { content: "❌ Bild-Generierung fehlgeschlagen." } }] }));
+          }
+          c.enqueue(sseDone()); c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    // /research <query>
+    const resMatch = lastText.match(/^\/research\s+(.+)$/i);
+    if (resMatch) {
+      const query = resMatch[1].trim();
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ tool: `Deep Research: ${query}` }));
+          const result = await webResearch(query, LOVABLE_API_KEY);
+          // chunk into deltas so frontend renders progressively
+          for (const chunk of result.match(/.{1,40}/gs) || [result]) {
+            c.enqueue(sse({ choices: [{ delta: { content: chunk } }] }));
+            await new Promise(r => setTimeout(r, 15));
+          }
+          c.enqueue(sseDone()); c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    // ============== NORMAL CHAT ==============
+    let identityOverride: string | null = null;
+    if (conversationId) {
+      const { data: conv } = await supabase.from("conversations").select("identity_override").eq("id", conversationId).maybeSingle();
+      identityOverride = conv?.identity_override ?? null;
+    }
+
+    let system = identityOverride
+      ? `Du bist **${identityOverride}**. Du antwortest in dieser Persona, behältst aber alle nützlichen Fähigkeiten. Antworte in der Sprache des Users (default Deutsch). Nutze Markdown.`
+      : `Du bist Mythos AI, ein freundlicher, kompetenter KI-Assistent. Antworte präzise und in der Sprache des Users (default: Deutsch). Nutze Markdown.
+
+Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
+- \`/identity <name>\` — wechselt deine Persona in diesem Chat
+- \`/image <beschreibung>\` — generiert ein Bild
+- \`/research <thema>\` — Deep Research mit Web-Suche`;
+
+    if (mode === "support" && !identityOverride) {
       const { data: kb } = await supabase
-        .from("knowledge_articles")
-        .select("title,category,body")
-        .eq("is_published", true);
-
+        .from("knowledge_articles").select("title,category,body").eq("is_published", true);
       const kbText = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
 
       system = `Du bist **Mythos AI**, der offizielle Support-Assistent für den Minecraft-Server **mythoscraft.online** (SMP).
-Antworte freundlich, präzise und auf Deutsch (außer der User schreibt in einer anderen Sprache). Nutze Markdown.
+Antworte freundlich, präzise und auf Deutsch. Nutze Markdown.
 
-Wenn der User nach Server-Status / Spielerzahl fragt: sag, dass er den Agent-Modus aktivieren soll.
+Slash-Commands die der User nutzen kann: \`/identity <name>\`, \`/image <prompt>\`, \`/research <thema>\`.
 
-Hier ist dein verifiziertes Wissen über den Server:
+Wenn der User nach Server-Status fragt: Agent-Modus aktivieren.
 
-${kbText || "(noch keine Artikel in der Knowledge Base)"}
+Verifiziertes Wissen:
 
-Wenn du etwas nicht weißt, sag es ehrlich und verweise auf den Discord oder /helpop ingame.`;
-    } else if (mode === "general") {
-      system = `Du bist Mythos AI, ein hilfreicher allgemeiner KI-Assistent. Antworte präzise und in der Sprache des Users. Nutze Markdown.`;
+${kbText || "(noch keine Artikel)"}
+
+Wenn unklar: ehrlich sagen + auf Discord oder /helpop verweisen.`;
     }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
