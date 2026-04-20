@@ -145,7 +145,7 @@ const PhoneInbox = () => {
           <div className="flex items-center gap-2 text-sm font-medium"><Phone className="h-4 w-4" /> Inbox</div>
           <div className="flex gap-1">
             {!notif.supported ? null : notif.permission === "granted" ? (
-              <Bell className="h-4 w-4 text-green-500" />
+              <Bell className="h-4 w-4 text-primary" />
             ) : (
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={notif.request} title="Benachrichtigungen aktivieren">
                 <BellOff className="h-4 w-4" />

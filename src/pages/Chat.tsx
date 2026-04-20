@@ -287,7 +287,12 @@ const Chat = () => {
                   Frag mich alles über mythoscraft.online — Regeln, Commands, Plugins, Server-Status. Im Agent-Modus kann ich auch im Web suchen.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                  {["Wie verbinde ich mich mit dem Server?", "Welche Commands gibt es?", "Ist der Server gerade online?", "Was sind die Regeln?"].map(s => (
+                  {[
+                    "Wie verbinde ich mich mit dem Server?",
+                    "/research aktuelle Minecraft 1.21 Updates",
+                    "/image ein epischer Drache über mythoscraft",
+                    "/identity Günther",
+                  ].map(s => (
                     <button
                       key={s}
                       onClick={() => setInput(s)}
