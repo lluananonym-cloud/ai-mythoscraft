@@ -236,7 +236,7 @@ const PhoneInbox = () => {
                   <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                     m.sender === "user" ? "glass" :
                     m.sender === "ai" ? "bg-primary/15 border border-primary/30" :
-                    m.sender === "support" ? "bg-emerald-500/15 border border-emerald-500/30" : "bg-muted"
+                    m.sender === "support" ? "bg-accent/30 border border-accent/50" : "bg-muted"
                   }`}>
                     <div className="text-[10px] uppercase opacity-60 mb-0.5 flex items-center gap-1">
                       {m.sender === "ai" && <Bot className="h-3 w-3" />}
