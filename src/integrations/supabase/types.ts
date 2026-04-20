@@ -184,6 +184,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          identity_override: string | null
           mode: string
           title: string
           updated_at: string
@@ -192,6 +193,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          identity_override?: string | null
           mode?: string
           title?: string
           updated_at?: string
@@ -200,6 +202,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          identity_override?: string | null
           mode?: string
           title?: string
           updated_at?: string
@@ -271,6 +274,86 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_chats: {
+        Row: {
+          ai_identity: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_message_at: string
+          last_support_response_at: string | null
+          mode: string
+          phone_number: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          ai_identity?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_support_response_at?: string | null
+          mode?: string
+          phone_number: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_identity?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_support_response_at?: string | null
+          mode?: string
+          phone_number?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      phone_messages: {
+        Row: {
+          channel: string
+          chat_id: string
+          content: string
+          created_at: string
+          direction: string
+          id: string
+          metadata: Json | null
+          sender: string
+        }
+        Insert: {
+          channel?: string
+          chat_id: string
+          content: string
+          created_at?: string
+          direction: string
+          id?: string
+          metadata?: Json | null
+          sender: string
+        }
+        Update: {
+          channel?: string
+          chat_id?: string
+          content?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          metadata?: Json | null
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "phone_chats"
             referencedColumns: ["id"]
           },
         ]
