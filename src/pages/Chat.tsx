@@ -56,7 +56,14 @@ const Chat = () => {
     setActiveId(id);
     setSidebarOpen(false);
     const { data } = await supabase.from("messages").select("*").eq("conversation_id", id).order("created_at");
-    if (data) setMessages(data as any);
+    if (data) {
+      const enriched = (data as any[]).map(m => ({
+        ...m,
+        image: m.metadata?.image,
+        music: m.metadata?.music,
+      })) as Msg[];
+      setMessages(enriched);
+    }
     const c = convs.find(c => c.id === id);
     if (c) setMode(c.mode);
   };
