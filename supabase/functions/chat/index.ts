@@ -9,19 +9,44 @@ const enc = new TextEncoder();
 const sse = (obj: unknown) => enc.encode(`data: ${JSON.stringify(obj)}\n\n`);
 const sseDone = () => enc.encode("data: [DONE]\n\n");
 
-async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-  if (!r.ok) return null;
-  const j = await r.json();
-  return j.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+async function generateImage(prompt: string, apiKey: string): Promise<{ url: string | null; error?: string }> {
+  // Try a sequence of models; some prompts are refused by one but accepted by another
+  const models = [
+    "google/gemini-2.5-flash-image",
+    "google/gemini-3.1-flash-image-preview",
+  ];
+  let lastErr = "Unknown";
+  for (const model of models) {
+    try {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: "user",
+            content: `Generate a high quality image: ${prompt}`,
+          }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        lastErr = `${model}: HTTP ${r.status} — ${txt.slice(0, 200)}`;
+        console.error("[image] gateway error", lastErr);
+        continue;
+      }
+      const j = await r.json();
+      const url = j.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (url) return { url };
+      lastErr = `${model}: no image in response. raw=${JSON.stringify(j).slice(0, 300)}`;
+      console.error("[image] empty response", lastErr);
+    } catch (e) {
+      lastErr = `${model}: exception ${e instanceof Error ? e.message : String(e)}`;
+      console.error("[image] exception", lastErr);
+    }
+  }
+  return { url: null, error: lastErr };
 }
 
 async function webResearch(query: string, apiKey: string): Promise<string> {
@@ -81,13 +106,16 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(c) {
           c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}` }));
-          const url = await generateImage(prompt, LOVABLE_API_KEY);
+          const { url, error } = await generateImage(prompt, LOVABLE_API_KEY);
           if (url) {
-            // Send image as a dedicated event so the frontend can render a real <img>
             c.enqueue(sse({ image: { url, prompt } }));
             c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit Nano Banana — ${prompt}*` } }] }));
           } else {
-            c.enqueue(sse({ choices: [{ delta: { content: "❌ Bild-Generierung fehlgeschlagen. Versuch es nochmal mit einer anderen Beschreibung." } }] }));
+            const hint = error?.includes("safety") || error?.includes("blocked") || error?.includes("SAFETY")
+              ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch es mit einer detaillierteren, neutraleren Beschreibung."
+              : "Versuch eine längere/detailliertere Beschreibung (z.B. \"ein bärtiger Mann in einer Kneipe, fotorealistisch\" statt nur \"günther\").";
+            c.enqueue(sse({ choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen.\n\n${hint}` } }] }));
+            console.error("[/image] failed:", error);
           }
           c.enqueue(sseDone()); c.close();
         },
