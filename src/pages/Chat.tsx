@@ -43,6 +43,9 @@ const Chat = () => {
   const voice = useVoiceMode({
     lang: "de-DE",
     onTranscript: (t) => { sendRef.current?.(t); },
+    onDictation: (t) => {
+      setInput(prev => (prev ? prev.trimEnd() + " " + t : t));
+    },
   });
 
   const loadConvs = async () => {
