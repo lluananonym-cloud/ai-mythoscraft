@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Browser-native voice mode using Web Speech API.
- * Live-conversation flavour:
- *  - continuous listening with auto-restart
- *  - automatically pauses mic while TTS is speaking (no echo loop)
- *  - resumes listening after TTS ends
- *  - picks the best available voice for the language
+ * Browser-native voice + dictation using the Web Speech API.
+ *
+ * Two independent modes:
+ *  - DICTATION: writes recognised text into a callback (e.g. an input field).
+ *               Does NOT auto-send. Single press = listen until silence/stop.
+ *  - LIVE VOICE MODE: continuous loop, auto-sends final transcripts, speaks
+ *                     the answer back, pauses mic while speaking.
  */
 
 type Status = "idle" | "listening" | "speaking";
@@ -21,7 +22,6 @@ const pickBestVoice = (lang: string): SpeechSynthesisVoice | null => {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
   const short = lang.toLowerCase().slice(0, 2);
-  // Priority: native + premium-sounding names
   const preferredNames = ["google", "microsoft", "natural", "neural", "premium", "anna", "petra", "katharina", "stefan", "markus"];
   const sameLang = voices.filter(v => v.lang?.toLowerCase().startsWith(short));
   for (const name of preferredNames) {
@@ -31,33 +31,45 @@ const pickBestVoice = (lang: string): SpeechSynthesisVoice | null => {
   return sameLang[0] ?? voices[0] ?? null;
 };
 
-export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: string) => void }) {
+export type VoiceMode = "live" | "dictate";
+
+export function useVoiceMode(opts?: {
+  lang?: string;
+  /** called with finalised transcript chunks while in LIVE mode (auto-send) */
+  onTranscript?: (text: string) => void;
+  /** called with finalised transcript chunks while in DICTATE mode (write to input) */
+  onDictation?: (text: string) => void;
+}) {
   const lang = opts?.lang ?? "de-DE";
   const [supported, setSupported] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [interim, setInterim] = useState("");
   const recognitionRef = useRef<any>(null);
   const onTranscriptRef = useRef(opts?.onTranscript);
+  const onDictationRef = useRef(opts?.onDictation);
   onTranscriptRef.current = opts?.onTranscript;
-  const wantListeningRef = useRef(false); // user wants live mode on?
+  onDictationRef.current = opts?.onDictation;
+  const modeRef = useRef<VoiceMode | null>(null); // null = nothing requested
   const isSpeakingRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const startingRef = useRef(false);
 
   useEffect(() => {
     const Ctor = getRecognitionCtor();
     const ttsOk = typeof window !== "undefined" && "speechSynthesis" in window;
-    setSupported(!!Ctor && ttsOk);
+    setSupported(!!Ctor);
     if (!Ctor) return;
 
-    // preload voices (Chrome loads them async)
-    const loadVoices = () => { voiceRef.current = pickBestVoice(lang); };
-    loadVoices();
-    if (ttsOk) window.speechSynthesis.onvoiceschanged = loadVoices;
+    if (ttsOk) {
+      const loadVoices = () => { voiceRef.current = pickBestVoice(lang); };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
 
     const rec = new Ctor();
     rec.lang = lang;
-    rec.continuous = true;       // keep mic open
+    rec.continuous = true;
     rec.interimResults = true;
 
     rec.onresult = (e: any) => {
@@ -69,55 +81,97 @@ export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: strin
         else interimText += t;
       }
       setInterim(interimText);
-      if (finalText.trim() && !isSpeakingRef.current) {
-        setInterim("");
-        onTranscriptRef.current?.(finalText.trim());
+      const trimmed = finalText.trim();
+      if (!trimmed) return;
+      setInterim("");
+      if (modeRef.current === "live" && !isSpeakingRef.current) {
+        onTranscriptRef.current?.(trimmed);
+      } else if (modeRef.current === "dictate") {
+        onDictationRef.current?.(trimmed);
       }
     };
+
+    rec.onstart = () => {
+      startingRef.current = false;
+      setStatus("listening");
+    };
+
     rec.onend = () => {
+      startingRef.current = false;
       setStatus(s => (s === "listening" ? "idle" : s));
-      // Auto-restart if user still wants to listen and we're not speaking
-      if (wantListeningRef.current && !isSpeakingRef.current) {
+      // Auto-restart only in LIVE mode (dictation = single shot)
+      if (modeRef.current === "live" && !isSpeakingRef.current) {
         if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
         restartTimerRef.current = window.setTimeout(() => {
-          try { rec.start(); setStatus("listening"); } catch {}
-        }, 250);
+          if (modeRef.current !== "live") return;
+          try { rec.start(); } catch { /* already running */ }
+        }, 300);
       }
     };
+
     rec.onerror = (e: any) => {
-      // 'no-speech' / 'aborted' are normal -> let onend re-arm if needed
-      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
-        wantListeningRef.current = false;
+      startingRef.current = false;
+      const err = e?.error;
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        modeRef.current = null;
+        setStatus("idle");
+        // bubble up via console — UI handles toast separately
+        console.error("[voice] microphone permission denied");
+        return;
       }
+      // 'no-speech', 'aborted', 'audio-capture' etc. -> let onend re-arm
       setStatus("idle");
     };
 
     recognitionRef.current = rec;
     return () => {
-      wantListeningRef.current = false;
+      modeRef.current = null;
       if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
       try { rec.stop(); } catch {}
       try { window.speechSynthesis?.cancel(); } catch {}
     };
   }, [lang]);
 
-  const startListening = useCallback(() => {
+  const safeStart = useCallback(() => {
     const rec = recognitionRef.current;
-    if (!rec) return;
-    wantListeningRef.current = true;
-    try { window.speechSynthesis?.cancel(); } catch {}
-    isSpeakingRef.current = false;
-    try { rec.start(); setStatus("listening"); } catch {
-      // already started - ignore
+    if (!rec || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      rec.start();
+    } catch (err: any) {
+      // If already started, treat as listening; otherwise reset flag
+      startingRef.current = false;
+      if (err?.name !== "InvalidStateError") {
+        console.error("[voice] start failed", err);
+      }
     }
   }, []);
 
+  const startDictation = useCallback(() => {
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    modeRef.current = "dictate";
+    try { window.speechSynthesis?.cancel(); } catch {}
+    isSpeakingRef.current = false;
+    safeStart();
+  }, [safeStart]);
+
+  const startLive = useCallback(() => {
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    modeRef.current = "live";
+    try { window.speechSynthesis?.cancel(); } catch {}
+    isSpeakingRef.current = false;
+    safeStart();
+  }, [safeStart]);
+
   const stopListening = useCallback(() => {
     const rec = recognitionRef.current;
-    wantListeningRef.current = false;
+    modeRef.current = null;
     if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     try { rec?.stop(); } catch {}
     setStatus("idle");
+    setInterim("");
   }, []);
 
   const speak = useCallback((text: string) => {
@@ -126,9 +180,9 @@ export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: strin
     if (!clean.trim()) return;
     try { window.speechSynthesis.cancel(); } catch {}
 
-    // Pause mic while we speak so the AI doesn't hear itself
     const rec = recognitionRef.current;
     isSpeakingRef.current = true;
+    // pause mic while speaking so it doesn't hear itself
     try { rec?.stop(); } catch {}
 
     const u = new SpeechSynthesisUtterance(clean);
@@ -141,12 +195,9 @@ export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: strin
     u.onend = () => {
       isSpeakingRef.current = false;
       setStatus(s => (s === "speaking" ? "idle" : s));
-      // Resume listening if user is in live mode
-      if (wantListeningRef.current && rec) {
+      if (modeRef.current === "live") {
         if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
-        restartTimerRef.current = window.setTimeout(() => {
-          try { rec.start(); setStatus("listening"); } catch {}
-        }, 200);
+        restartTimerRef.current = window.setTimeout(safeStart, 250);
       }
     };
     u.onerror = () => {
@@ -154,7 +205,7 @@ export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: strin
       setStatus("idle");
     };
     window.speechSynthesis.speak(u);
-  }, [lang]);
+  }, [lang, safeStart]);
 
   const stopSpeaking = useCallback(() => {
     try { window.speechSynthesis?.cancel(); } catch {}
@@ -162,7 +213,18 @@ export function useVoiceMode(opts?: { lang?: string; onTranscript?: (text: strin
     setStatus(s => (s === "speaking" ? "idle" : s));
   }, []);
 
-  const isLiveListening = wantListeningRef.current;
-
-  return { supported, status, interim, startListening, stopListening, speak, stopSpeaking, isLiveListening };
+  return {
+    supported,
+    status,
+    interim,
+    mode: modeRef.current,
+    startDictation,
+    startLive,
+    stopListening,
+    speak,
+    stopSpeaking,
+    /** legacy alias = live mode */
+    startListening: startLive,
+    isLiveListening: modeRef.current === "live",
+  };
 }
