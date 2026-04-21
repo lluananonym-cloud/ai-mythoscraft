@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
+import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
