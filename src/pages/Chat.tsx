@@ -120,6 +120,8 @@ const Chat = () => {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "", full = "";
+      let imageData: { url: string; prompt: string } | undefined;
+      let musicData: FunkPattern | undefined;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -142,12 +144,30 @@ const Chat = () => {
               });
               continue;
             }
+            if (p.image) {
+              imageData = p.image;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], image: p.image };
+                return next;
+              });
+              continue;
+            }
+            if (p.music) {
+              musicData = p.music;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], music: p.music };
+                return next;
+              });
+              continue;
+            }
             const c = p.choices?.[0]?.delta?.content;
             if (c) {
               full += c;
               setMessages(prev => {
                 const next = [...prev];
-                next[next.length - 1] = { role: "assistant", content: full };
+                next[next.length - 1] = { ...next[next.length - 1], role: "assistant", content: full };
                 return next;
               });
             }
@@ -155,7 +175,14 @@ const Chat = () => {
         }
       }
 
-      if (full) await supabase.from("messages").insert({ conversation_id: convId, role: "assistant", content: full });
+      if (full || imageData || musicData) {
+        await supabase.from("messages").insert({
+          conversation_id: convId,
+          role: "assistant",
+          content: full,
+          metadata: { image: imageData, music: musicData },
+        });
+      }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
     } catch (e) {
       console.error(e);
