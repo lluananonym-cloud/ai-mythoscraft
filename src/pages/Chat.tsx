@@ -326,7 +326,7 @@ const Chat = () => {
                     "Wie verbinde ich mich mit dem Server?",
                     "/research aktuelle Minecraft 1.21 Updates",
                     "/image ein epischer Drache über mythoscraft",
-                    "/identity Günther",
+                    "/music funk sereno style banger",
                   ].map(s => (
                     <button
                       key={s}
