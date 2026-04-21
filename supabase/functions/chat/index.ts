@@ -165,6 +165,7 @@ Deno.serve(async (req) => {
 Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
 - \`/identity <name>\` — wechselt deine Persona in diesem Chat
 - \`/image <beschreibung>\` — generiert ein Bild
+- \`/music <stil/vibe>\` — komponiert einen Funk-Groove (z.B. "/music funk sereno style banger")
 - \`/research <thema>\` — Deep Research mit Web-Suche`;
 
     if (mode === "support" && !identityOverride) {
