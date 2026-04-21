@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
+import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -55,7 +56,14 @@ const Chat = () => {
     setActiveId(id);
     setSidebarOpen(false);
     const { data } = await supabase.from("messages").select("*").eq("conversation_id", id).order("created_at");
-    if (data) setMessages(data as any);
+    if (data) {
+      const enriched = (data as any[]).map(m => ({
+        ...m,
+        image: m.metadata?.image,
+        music: m.metadata?.music,
+      })) as Msg[];
+      setMessages(enriched);
+    }
     const c = convs.find(c => c.id === id);
     if (c) setMode(c.mode);
   };
@@ -119,6 +127,8 @@ const Chat = () => {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "", full = "";
+      let imageData: { url: string; prompt: string } | undefined;
+      let musicData: FunkPattern | undefined;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -141,12 +151,30 @@ const Chat = () => {
               });
               continue;
             }
+            if (p.image) {
+              imageData = p.image;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], image: p.image };
+                return next;
+              });
+              continue;
+            }
+            if (p.music) {
+              musicData = p.music;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], music: p.music };
+                return next;
+              });
+              continue;
+            }
             const c = p.choices?.[0]?.delta?.content;
             if (c) {
               full += c;
               setMessages(prev => {
                 const next = [...prev];
-                next[next.length - 1] = { role: "assistant", content: full };
+                next[next.length - 1] = { ...next[next.length - 1], role: "assistant", content: full };
                 return next;
               });
             }
@@ -154,7 +182,14 @@ const Chat = () => {
         }
       }
 
-      if (full) await supabase.from("messages").insert({ conversation_id: convId, role: "assistant", content: full });
+      if (full || imageData || musicData) {
+        await supabase.from("messages").insert({
+          conversation_id: convId,
+          role: "assistant",
+          content: full,
+          metadata: { image: imageData, music: musicData },
+        });
+      }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
     } catch (e) {
       console.error(e);
@@ -178,10 +213,16 @@ const Chat = () => {
     voice.speak(last.content);
   }, [voiceMode, sending, messages, voice]);
 
-  // When toggling off voice, stop any ongoing speech / listening
+  // When toggling voice mode ON, start live listening; OFF -> stop everything.
   useEffect(() => {
-    if (!voiceMode) { voice.stopSpeaking(); voice.stopListening(); }
-  }, [voiceMode, voice]);
+    if (voiceMode) {
+      if (voice.supported) voice.startListening();
+    } else {
+      voice.stopSpeaking();
+      voice.stopListening();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceMode]);
 
   const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
 
@@ -291,7 +332,7 @@ const Chat = () => {
                     "Wie verbinde ich mich mit dem Server?",
                     "/research aktuelle Minecraft 1.21 Updates",
                     "/image ein epischer Drache über mythoscraft",
-                    "/identity Günther",
+                    "/music funk sereno style banger",
                   ].map(s => (
                     <button
                       key={s}
@@ -320,9 +361,18 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : (
+                      ) : !m.image && !m.music ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : null}
+                      {m.image && (
+                        <img
+                          src={m.image.url}
+                          alt={m.image.prompt}
+                          className="mt-2 rounded-xl border border-white/10 max-w-full h-auto"
+                          loading="lazy"
+                        />
                       )}
+                      {m.music && <FunkPlayer pattern={m.music} />}
                     </div>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
@@ -341,7 +391,7 @@ const Chat = () => {
           </div>
 
           <div className="border-t border-white/5 p-2 sm:p-3">
-            {voiceMode && voice.status === "listening" && (
+            {voiceMode && (voice.status === "listening" || voice.status === "speaking") && (
               <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
                 <span className="flex items-end gap-0.5 h-3">
                   {[0, 1, 2, 3].map(i => (
@@ -352,7 +402,11 @@ const Chat = () => {
                     />
                   ))}
                 </span>
-                <span>{voice.interim || "Höre zu..."}</span>
+                <span>
+                  {voice.status === "speaking"
+                    ? "🔊 spricht..."
+                    : voice.interim || "👂 höre zu... (sprich einfach drauf los)"}
+                </span>
               </div>
             )}
             <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
