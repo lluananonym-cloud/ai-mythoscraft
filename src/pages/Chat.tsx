@@ -430,15 +430,15 @@ const Chat = () => {
                   type="button"
                   onClick={() => {
                     if (voice.status === "listening") voice.stopListening();
-                    else { setVoiceMode(true); voice.startListening(); }
+                    else voice.startDictation();
                   }}
                   disabled={sending}
                   size="icon"
                   variant="ghost"
                   className={`h-10 w-10 shrink-0 relative z-10 ${
-                    voice.status === "listening" ? "bg-foreground text-background hover:bg-foreground/90 animate-pulse-glow" : ""
+                    voice.status === "listening" && !voiceMode ? "bg-foreground text-background hover:bg-foreground/90 animate-pulse-glow" : ""
                   }`}
-                  title={voice.status === "listening" ? "Stopp" : "Sprechen"}
+                  title={voice.status === "listening" ? "Diktat stoppen" : "Diktieren (ins Eingabefeld)"}
                   aria-label="Mikrofon"
                 >
                   {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
