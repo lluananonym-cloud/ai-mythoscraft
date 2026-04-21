@@ -355,9 +355,18 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : (
+                      ) : !m.image && !m.music ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : null}
+                      {m.image && (
+                        <img
+                          src={m.image.url}
+                          alt={m.image.prompt}
+                          className="mt-2 rounded-xl border border-white/10 max-w-full h-auto"
+                          loading="lazy"
+                        />
                       )}
+                      {m.music && <FunkPlayer pattern={m.music} />}
                     </div>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
