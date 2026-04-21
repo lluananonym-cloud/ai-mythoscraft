@@ -385,7 +385,7 @@ const Chat = () => {
           </div>
 
           <div className="border-t border-white/5 p-2 sm:p-3">
-            {voiceMode && voice.status === "listening" && (
+            {voiceMode && (voice.status === "listening" || voice.status === "speaking") && (
               <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
                 <span className="flex items-end gap-0.5 h-3">
                   {[0, 1, 2, 3].map(i => (
@@ -396,7 +396,11 @@ const Chat = () => {
                     />
                   ))}
                 </span>
-                <span>{voice.interim || "Höre zu..."}</span>
+                <span>
+                  {voice.status === "speaking"
+                    ? "🔊 spricht..."
+                    : voice.interim || "👂 höre zu... (sprich einfach drauf los)"}
+                </span>
               </div>
             )}
             <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
