@@ -216,10 +216,10 @@ const Chat = () => {
     voice.speak(last.content);
   }, [voiceMode, sending, messages, voice]);
 
-  // When toggling voice mode ON, start live listening; OFF -> stop everything.
+  // When toggling voice mode ON, start LIVE listening; OFF -> stop everything.
   useEffect(() => {
     if (voiceMode) {
-      if (voice.supported) voice.startListening();
+      if (voice.supported) voice.startLive();
     } else {
       voice.stopSpeaking();
       voice.stopListening();
