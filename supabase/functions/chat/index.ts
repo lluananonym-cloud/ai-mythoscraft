@@ -80,12 +80,51 @@ Deno.serve(async (req) => {
       const prompt = imgMatch[1].trim();
       const stream = new ReadableStream({
         async start(c) {
-          c.enqueue(sse({ tool: `Generiere Bild: ${prompt}` }));
+          c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}` }));
           const url = await generateImage(prompt, LOVABLE_API_KEY);
           if (url) {
-            c.enqueue(sse({ choices: [{ delta: { content: `![${prompt}](${url})\n\n*Generiert mit Nano Banana*` } }] }));
+            // Send image as a dedicated event so the frontend can render a real <img>
+            c.enqueue(sse({ image: { url, prompt } }));
+            c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit Nano Banana — ${prompt}*` } }] }));
           } else {
-            c.enqueue(sse({ choices: [{ delta: { content: "❌ Bild-Generierung fehlgeschlagen." } }] }));
+            c.enqueue(sse({ choices: [{ delta: { content: "❌ Bild-Generierung fehlgeschlagen. Versuch es nochmal mit einer anderen Beschreibung." } }] }));
+          }
+          c.enqueue(sseDone()); c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    // /music <style/description>
+    const musicMatch = lastText.match(/^\/music\s+(.+)$/i);
+    if (musicMatch) {
+      const desc = musicMatch[1].trim();
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ tool: `🎵 Komponiere Funk-Track: ${desc}` }));
+          // Ask Gemini to design a funk pattern as JSON
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "You design funk music patterns inspired by artists like FUNK SERENO, Brazilian funk, and 70s funk. Output ONLY valid JSON, no markdown." },
+                { role: "user", content: `Design a funk groove for: "${desc}". Return JSON exactly in this shape:\n{\n  "title": "string",\n  "bpm": 95-130,\n  "key": "C|D|E|F|G|A|B",\n  "bars": 8,\n  "bass": [16 numbers, midi notes 28-50, 0=rest],\n  "kick":  [16 0/1 values],\n  "snare": [16 0/1 values],\n  "hihat": [16 0/1 values],\n  "stab":  [16 numbers, midi notes 60-75, 0=rest],\n  "vibe": "short description"\n}\nMake it groovy and danceable. Syncopated bass. Snares on 5,13. Kicks on 1,7,11. Hats sixteenths.` },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+          let pattern: any = null;
+          if (r.ok) {
+            const j = await r.json();
+            try { pattern = JSON.parse(j.choices?.[0]?.message?.content || "{}"); } catch {}
+          }
+          if (pattern && pattern.bass) {
+            c.enqueue(sse({ music: pattern }));
+            c.enqueue(sse({ choices: [{ delta: { content: `\n🎶 **${pattern.title || "Funk Groove"}** — ${pattern.bpm} BPM in ${pattern.key || "C"}\n\n*${pattern.vibe || desc}*\n\n▶️ Drück Play oben um's zu hören.` } }] }));
+          } else {
+            c.enqueue(sse({ choices: [{ delta: { content: "❌ Konnte den Groove nicht komponieren. Nochmal versuchen?" } }] }));
           }
           c.enqueue(sseDone()); c.close();
         },
