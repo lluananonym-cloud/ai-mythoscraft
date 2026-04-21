@@ -213,10 +213,16 @@ const Chat = () => {
     voice.speak(last.content);
   }, [voiceMode, sending, messages, voice]);
 
-  // When toggling off voice, stop any ongoing speech / listening
+  // When toggling voice mode ON, start live listening; OFF -> stop everything.
   useEffect(() => {
-    if (!voiceMode) { voice.stopSpeaking(); voice.stopListening(); }
-  }, [voiceMode, voice]);
+    if (voiceMode) {
+      if (voice.supported) voice.startListening();
+    } else {
+      voice.stopSpeaking();
+      voice.stopListening();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceMode]);
 
   const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
 
