@@ -13,6 +13,9 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
 import Redeem from "./pages/Redeem";
+import Memories from "./pages/Memories";
+import Personas from "./pages/Personas";
+import McServers from "./pages/McServers";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -33,6 +36,9 @@ const App = () => (
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
             <Route path="/redeem" element={<Redeem />} />
+            <Route path="/memories" element={<RequireAuth><Memories /></RequireAuth>} />
+            <Route path="/personas" element={<RequireAuth><Personas /></RequireAuth>} />
+            <Route path="/mc-servers" element={<RequireAuth><McServers /></RequireAuth>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
