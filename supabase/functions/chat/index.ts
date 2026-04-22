@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
@@ -82,7 +82,13 @@ Deno.serve(async (req) => {
     );
 
     const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
-    const lastText: string = (lastUser?.content || "").trim();
+    const lastTextRaw = lastUser?.content;
+    // content can be either a string or multimodal array (text + images). Extract text part for command parsing.
+    const lastText: string = typeof lastTextRaw === "string"
+      ? lastTextRaw.trim()
+      : Array.isArray(lastTextRaw)
+        ? (lastTextRaw.find((p: any) => p.type === "text")?.text || "").trim()
+        : "";
 
     // ============== SLASH COMMANDS ==============
     // /identity <name>
@@ -130,7 +136,6 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(c) {
           c.enqueue(sse({ tool: `🎵 Komponiere Funk-Track: ${desc}` }));
-          // Ask Gemini to design a funk pattern as JSON
           const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -168,7 +173,6 @@ Deno.serve(async (req) => {
         async start(c) {
           c.enqueue(sse({ tool: `Deep Research: ${query}` }));
           const result = await webResearch(query, LOVABLE_API_KEY);
-          // chunk into deltas so frontend renders progressively
           for (const chunk of result.match(/.{1,40}/gs) || [result]) {
             c.enqueue(sse({ choices: [{ delta: { content: chunk } }] }));
             await new Promise(r => setTimeout(r, 15));
@@ -181,38 +185,65 @@ Deno.serve(async (req) => {
 
     // ============== NORMAL CHAT ==============
     let identityOverride: string | null = null;
+    let convUserId: string | null = clientUserId || null;
     if (conversationId) {
-      const { data: conv } = await supabase.from("conversations").select("identity_override").eq("id", conversationId).maybeSingle();
+      const { data: conv } = await supabase.from("conversations").select("identity_override,user_id").eq("id", conversationId).maybeSingle();
       identityOverride = conv?.identity_override ?? null;
+      if (conv?.user_id) convUserId = conv.user_id;
     }
 
-    let system = identityOverride
-      ? `Du bist **${identityOverride}**. Du antwortest in dieser Persona, behältst aber alle nützlichen Fähigkeiten. Antworte in der Sprache des Users (default Deutsch). Nutze Markdown.`
-      : `Du bist Mythos AI, ein freundlicher, kompetenter KI-Assistent. Antworte präzise und in der Sprache des Users (default: Deutsch). Nutze Markdown.
+    // Load persona if requested
+    let personaPrompt: string | null = null;
+    let personaName: string | null = null;
+    if (personaId) {
+      const { data: p } = await supabase.from("ai_personas").select("name,system_prompt,is_public,user_id").eq("id", personaId).maybeSingle();
+      if (p && (p.is_public || p.user_id === convUserId)) {
+        personaPrompt = p.system_prompt;
+        personaName = p.name;
+        // bump use_count async
+        supabase.rpc("noop").catch(() => {});
+        await supabase.from("ai_personas").update({ use_count: (await supabase.from("ai_personas").select("use_count").eq("id", personaId).single()).data?.use_count + 1 || 1 }).eq("id", personaId);
+      }
+    }
 
-Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
-- \`/identity <name>\` — wechselt deine Persona in diesem Chat
-- \`/image <beschreibung>\` — generiert ein Bild
-- \`/music <stil/vibe>\` — komponiert einen Funk-Groove (z.B. "/music funk sereno style banger")
-- \`/research <thema>\` — Deep Research mit Web-Suche`;
+    // Load user memories
+    let memoryBlock = "";
+    if (convUserId) {
+      const { data: mems } = await supabase.from("user_memories").select("content,category").eq("user_id", convUserId).order("created_at", { ascending: false }).limit(40);
+      if (mems && mems.length > 0) {
+        memoryBlock = `\n\n## Was du über den User weißt (aus früheren Chats)\n${mems.map((m: any) => `- (${m.category}) ${m.content}`).join("\n")}\n\nNutze dieses Wissen natürlich in deinen Antworten — beziehe dich nicht ständig drauf, sondern wirke einfach so als kenntest du den User.`;
+      }
+    }
 
-    if (mode === "support" && !identityOverride) {
+    let system: string;
+    if (personaPrompt) {
+      system = `${personaPrompt}\n\nAntworte in der Sprache des Users (default Deutsch). Nutze Markdown wenn sinnvoll.${memoryBlock}`;
+    } else if (identityOverride) {
+      system = `Du bist **${identityOverride}**. Du antwortest in dieser Persona, behältst aber alle nützlichen Fähigkeiten. Antworte in der Sprache des Users (default Deutsch). Nutze Markdown.${memoryBlock}`;
+    } else if (mode === "support") {
       const { data: kb } = await supabase
         .from("knowledge_articles").select("title,category,body").eq("is_published", true);
       const kbText = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
-
       system = `Du bist **Mythos AI**, der offizielle Support-Assistent für den Minecraft-Server **mythoscraft.online** (SMP).
 Antworte freundlich, präzise und auf Deutsch. Nutze Markdown.
 
-Slash-Commands die der User nutzen kann: \`/identity <name>\`, \`/image <prompt>\`, \`/research <thema>\`.
-
-Wenn der User nach Server-Status fragt: Agent-Modus aktivieren.
+Slash-Commands die der User nutzen kann: \`/identity <name>\`, \`/image <prompt>\`, \`/music <vibe>\`, \`/research <thema>\`.
 
 Verifiziertes Wissen:
 
 ${kbText || "(noch keine Artikel)"}
 
-Wenn unklar: ehrlich sagen + auf Discord oder /helpop verweisen.`;
+Wenn unklar: ehrlich sagen + auf Discord oder /helpop verweisen.${memoryBlock}`;
+    } else {
+      system = `Du bist Mythos AI, ein freundlicher, kompetenter KI-Assistent. Antworte präzise und in der Sprache des Users (default: Deutsch). Nutze Markdown.
+
+Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
+- \`/identity <name>\` — wechselt deine Persona in diesem Chat
+- \`/image <beschreibung>\` — generiert ein Bild
+- \`/music <stil/vibe>\` — komponiert einen Funk-Groove
+- \`/research <thema>\` — Deep Research mit Web-Suche
+
+Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memoryBlock}`;
     }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

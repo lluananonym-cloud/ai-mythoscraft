@@ -113,6 +113,7 @@ const Chat = () => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           conversationId: convId,
+          userId: user?.id,
           messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
           mode,
         }),
@@ -194,6 +195,9 @@ const Chat = () => {
         });
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+
+      // Fire-and-forget: extract durable memories from the user message
+      supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
     } catch (e) {
       console.error(e);
       toast.error("Verbindungsfehler");

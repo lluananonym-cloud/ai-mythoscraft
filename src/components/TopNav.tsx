@@ -15,6 +15,7 @@ import MinecraftAvatar from "./MinecraftAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LogOut, MessageSquare, Key, Shield, BookOpen, Menu, User as UserIcon, Ticket,
+  Brain, Drama, Server,
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
@@ -104,6 +105,15 @@ const TopNav = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => nav("/dashboard?tab=profile")}>
                   <UserIcon className="h-4 w-4 mr-2" /> Profil & Skin
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav("/memories")}>
+                  <Brain className="h-4 w-4 mr-2" /> Memories
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav("/personas")}>
+                  <Drama className="h-4 w-4 mr-2" /> Personas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav("/mc-servers")}>
+                  <Server className="h-4 w-4 mr-2" /> Minecraft-Server
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => nav("/redeem")}>
                   <Ticket className="h-4 w-4 mr-2" /> Boost Code einlösen

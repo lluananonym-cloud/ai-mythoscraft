@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_personas: {
+        Row: {
+          avatar_emoji: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          name: string
+          system_prompt: string
+          updated_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          avatar_emoji?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          system_prompt: string
+          updated_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          avatar_emoji?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          system_prompt?: string
+          updated_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           created_at: string
@@ -243,6 +282,107 @@ export type Database = {
         }
         Relationships: []
       }
+      mc_events: {
+        Row: {
+          ai_response: string | null
+          content: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          player_name: string | null
+          player_uuid: string | null
+          server_id: string
+        }
+        Insert: {
+          ai_response?: string | null
+          content?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          player_name?: string | null
+          player_uuid?: string | null
+          server_id: string
+        }
+        Update: {
+          ai_response?: string | null
+          content?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          player_name?: string | null
+          player_uuid?: string | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mc_events_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "mc_servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mc_servers: {
+        Row: {
+          ai_persona_id: string | null
+          chat_trigger: string
+          comment_on_death: boolean
+          created_at: string
+          events_enabled: boolean
+          greet_on_join: boolean
+          id: string
+          ingame_chat_enabled: boolean
+          key_hash: string
+          key_prefix: string
+          last_seen_at: string | null
+          name: string
+          revoked: boolean
+          total_events: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_persona_id?: string | null
+          chat_trigger?: string
+          comment_on_death?: boolean
+          created_at?: string
+          events_enabled?: boolean
+          greet_on_join?: boolean
+          id?: string
+          ingame_chat_enabled?: boolean
+          key_hash: string
+          key_prefix: string
+          last_seen_at?: string | null
+          name: string
+          revoked?: boolean
+          total_events?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_persona_id?: string | null
+          chat_trigger?: string
+          comment_on_death?: boolean
+          created_at?: string
+          events_enabled?: boolean
+          greet_on_join?: boolean
+          id?: string
+          ingame_chat_enabled?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_seen_at?: string | null
+          name?: string
+          revoked?: boolean
+          total_events?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -383,6 +523,36 @@ export type Database = {
           email?: string | null
           id?: string
           mc_username?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_memories: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          source?: string
           updated_at?: string
           user_id?: string
         }
