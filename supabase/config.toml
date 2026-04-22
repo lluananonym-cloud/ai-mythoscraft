@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.redeem-code]
 verify_jwt = false
+
+[functions.create-mc-key]
+verify_jwt = false
+
+[functions.mc-bridge]
+verify_jwt = false
+
+[functions.extract-memory]
+verify_jwt = false
