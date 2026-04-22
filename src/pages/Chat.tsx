@@ -195,6 +195,9 @@ const Chat = () => {
         });
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+
+      // Fire-and-forget: extract durable memories from the user message
+      supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
     } catch (e) {
       console.error(e);
       toast.error("Verbindungsfehler");
