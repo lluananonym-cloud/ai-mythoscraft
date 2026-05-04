@@ -22,7 +22,7 @@ type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -98,6 +98,7 @@ const Chat = () => {
         ...m,
         image: m.metadata?.image,
         music: m.metadata?.music,
+        attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
     }
