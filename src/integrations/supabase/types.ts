@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          last_result: string | null
+          last_run_at: string | null
+          mode: string
+          prompt: string
+          recurrence: string
+          schedule_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          mode?: string
+          prompt: string
+          recurrence?: string
+          schedule_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          mode?: string
+          prompt?: string
+          recurrence?: string
+          schedule_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_personas: {
         Row: {
           avatar_emoji: string | null
@@ -225,6 +270,7 @@ export type Database = {
           id: string
           identity_override: string | null
           mode: string
+          persona_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -234,6 +280,7 @@ export type Database = {
           id?: string
           identity_override?: string | null
           mode?: string
+          persona_id?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -243,11 +290,121 @@ export type Database = {
           id?: string
           identity_override?: string | null
           mode?: string
+          persona_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      friend_groups: {
+        Row: {
+          ai_enabled: boolean
+          ai_persona_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invite_code: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          ai_persona_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          ai_persona_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "friend_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          content: string
+          created_at: string
+          group_id: string
+          id: string
+          metadata: Json | null
+          role: string
+          sender_id: string | null
+          sender_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          group_id: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          sender_id?: string | null
+          sender_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          sender_id?: string | null
+          sender_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "friend_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_articles: {
         Row: {
@@ -589,6 +746,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
     }
