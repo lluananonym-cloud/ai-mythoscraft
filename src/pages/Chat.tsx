@@ -361,8 +361,24 @@ const Chat = () => {
                   {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
               )}
+              {personas.length > 0 && (
+                <Select value={personaId} onValueChange={setPersonaId}>
+                  <SelectTrigger className="w-[110px] sm:w-[150px] glass h-9 text-xs border-white/10">
+                    <Drama className="h-3.5 w-3.5 mr-1" />
+                    <SelectValue placeholder="Persona" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none"><span className="text-muted-foreground">Standard</span></SelectItem>
+                    {personas.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-1.5">{p.avatar_emoji || "🎭"} {p.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={mode} onValueChange={setMode}>
-                <SelectTrigger className="w-[120px] sm:w-[180px] glass h-9 text-xs border-white/10">
+                <SelectTrigger className="w-[110px] sm:w-[160px] glass h-9 text-xs border-white/10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
