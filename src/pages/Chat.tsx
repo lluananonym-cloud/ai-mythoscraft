@@ -63,6 +63,32 @@ const Chat = () => {
 
   useEffect(() => { if (user) loadConvs(); }, [user]);
 
+  // Load personas (own + public)
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("ai_personas").select("id,name,avatar_emoji").or(`user_id.eq.${user.id},is_public.eq.true`).then(({ data }) => {
+      if (data) setPersonas(data as Persona[]);
+    });
+  }, [user]);
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || !user) return;
+    setUploading(true);
+    const newAtts: Attachment[] = [];
+    for (const file of Array.from(files).slice(0, 5)) {
+      if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: max 20MB`); continue; }
+      const path = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error } = await supabase.storage.from("chat-uploads").upload(path, file);
+      if (error) { toast.error(`Upload fehlgeschlagen: ${file.name}`); continue; }
+      const { data: pub } = supabase.storage.from("chat-uploads").getPublicUrl(path);
+      newAtts.push({ url: pub.publicUrl, name: file.name, mime: file.type });
+    }
+    setAttachments(prev => [...prev, ...newAtts]);
+    setUploading(false);
+    if (newAtts.length) toast.success(`${newAtts.length} Datei(en) angehängt`);
+  };
+
+
   const loadMessages = async (id: string) => {
     setActiveId(id);
     setSidebarOpen(false);
@@ -110,19 +136,41 @@ const Chat = () => {
       loadConvs();
     }
 
-    const userMsg: Msg = { role: "user", content: text };
+    // Build multimodal content if attachments are present
+    const buildContent = (txt: string) => {
+      if (!attachments.length) return txt;
+      const parts: any[] = [{ type: "text", text: txt }];
+      for (const a of attachments) {
+        if (a.mime.startsWith("image/")) parts.push({ type: "image_url", image_url: { url: a.url } });
+        else parts.push({ type: "text", text: `\n[Anhang: ${a.name} (${a.mime}) — ${a.url}]` });
+      }
+      return parts;
+    };
+    const userContentForAI = buildContent(text);
+    const displayContent = attachments.length
+      ? text + "\n" + attachments.map(a => `📎 ${a.name}`).join("\n")
+      : text;
+
+    const userMsg: Msg = { role: "user", content: displayContent };
     setMessages(prev => [...prev, userMsg, { role: "assistant", content: "" }]);
-    await supabase.from("messages").insert({ conversation_id: convId, role: "user", content: text });
+    await supabase.from("messages").insert({
+      conversation_id: convId, role: "user", content: displayContent,
+      metadata: attachments.length ? { attachments } : null,
+    });
+    const sentAttachments = attachments;
+    setAttachments([]);
 
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
     try {
+      const historyForAI = messages.map(m => ({ role: m.role, content: m.content }));
       const resp = await fetch(fnUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           conversationId: convId,
           userId: user?.id,
-          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+          personaId: personaId !== "none" ? personaId : undefined,
+          messages: [...historyForAI, { role: "user", content: userContentForAI }],
           mode,
         }),
       });
