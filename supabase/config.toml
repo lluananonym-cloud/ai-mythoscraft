@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.extract-memory]
 verify_jwt = false
+
+[functions.agent-runner]
+verify_jwt = false
+
+[functions.group-chat]
+verify_jwt = false
+
+[functions.analyze-file]
+verify_jwt = false

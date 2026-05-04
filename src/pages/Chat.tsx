@@ -12,14 +12,17 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
-  Mic, MicOff, Volume2, VolumeX,
+  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 
+type Persona = { id: string; name: string; avatar_emoji: string | null };
+type Attachment = { url: string; name: string; mime: string };
+
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -37,6 +40,11 @@ const Chat = () => {
   const [mode, setMode] = useState("support");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [personaId, setPersonaId] = useState<string>("none");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string>("");
   const sendRef = useRef<(text?: string) => void>(() => {});
@@ -55,6 +63,32 @@ const Chat = () => {
 
   useEffect(() => { if (user) loadConvs(); }, [user]);
 
+  // Load personas (own + public)
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("ai_personas").select("id,name,avatar_emoji").or(`user_id.eq.${user.id},is_public.eq.true`).then(({ data }) => {
+      if (data) setPersonas(data as Persona[]);
+    });
+  }, [user]);
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || !user) return;
+    setUploading(true);
+    const newAtts: Attachment[] = [];
+    for (const file of Array.from(files).slice(0, 5)) {
+      if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: max 20MB`); continue; }
+      const path = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error } = await supabase.storage.from("chat-uploads").upload(path, file);
+      if (error) { toast.error(`Upload fehlgeschlagen: ${file.name}`); continue; }
+      const { data: pub } = supabase.storage.from("chat-uploads").getPublicUrl(path);
+      newAtts.push({ url: pub.publicUrl, name: file.name, mime: file.type });
+    }
+    setAttachments(prev => [...prev, ...newAtts]);
+    setUploading(false);
+    if (newAtts.length) toast.success(`${newAtts.length} Datei(en) angehängt`);
+  };
+
+
   const loadMessages = async (id: string) => {
     setActiveId(id);
     setSidebarOpen(false);
@@ -64,6 +98,7 @@ const Chat = () => {
         ...m,
         image: m.metadata?.image,
         music: m.metadata?.music,
+        attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
     }
@@ -102,19 +137,41 @@ const Chat = () => {
       loadConvs();
     }
 
-    const userMsg: Msg = { role: "user", content: text };
+    // Build multimodal content if attachments are present
+    const buildContent = (txt: string) => {
+      if (!attachments.length) return txt;
+      const parts: any[] = [{ type: "text", text: txt }];
+      for (const a of attachments) {
+        if (a.mime.startsWith("image/")) parts.push({ type: "image_url", image_url: { url: a.url } });
+        else parts.push({ type: "text", text: `\n[Anhang: ${a.name} (${a.mime}) — ${a.url}]` });
+      }
+      return parts;
+    };
+    const userContentForAI = buildContent(text);
+    const displayContent = attachments.length
+      ? text + "\n" + attachments.map(a => `📎 ${a.name}`).join("\n")
+      : text;
+
+    const userMsg: Msg = { role: "user", content: displayContent };
     setMessages(prev => [...prev, userMsg, { role: "assistant", content: "" }]);
-    await supabase.from("messages").insert({ conversation_id: convId, role: "user", content: text });
+    await supabase.from("messages").insert({
+      conversation_id: convId, role: "user", content: displayContent,
+      metadata: attachments.length ? { attachments } : null,
+    });
+    const sentAttachments = attachments;
+    setAttachments([]);
 
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
     try {
+      const historyForAI = messages.map(m => ({ role: m.role, content: m.content }));
       const resp = await fetch(fnUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           conversationId: convId,
           userId: user?.id,
-          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+          personaId: personaId !== "none" ? personaId : undefined,
+          messages: [...historyForAI, { role: "user", content: userContentForAI }],
           mode,
         }),
       });
@@ -305,8 +362,24 @@ const Chat = () => {
                   {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
               )}
+              {personas.length > 0 && (
+                <Select value={personaId} onValueChange={setPersonaId}>
+                  <SelectTrigger className="w-[110px] sm:w-[150px] glass h-9 text-xs border-white/10">
+                    <Drama className="h-3.5 w-3.5 mr-1" />
+                    <SelectValue placeholder="Persona" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none"><span className="text-muted-foreground">Standard</span></SelectItem>
+                    {personas.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-1.5">{p.avatar_emoji || "🎭"} {p.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={mode} onValueChange={setMode}>
-                <SelectTrigger className="w-[120px] sm:w-[180px] glass h-9 text-xs border-white/10">
+                <SelectTrigger className="w-[110px] sm:w-[160px] glass h-9 text-xs border-white/10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -416,7 +489,36 @@ const Chat = () => {
                 </span>
               </div>
             )}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1.5 glass rounded-lg px-2 py-1 text-xs">
+                    {a.mime.startsWith("image/") ? (
+                      <img src={a.url} alt={a.name} className="h-5 w-5 rounded object-cover" />
+                    ) : <Paperclip className="h-3 w-3" />}
+                    <span className="max-w-[120px] truncate">{a.name}</span>
+                    <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} aria-label="Entfernen">
+                      <XIcon className="h-3 w-3 hover:text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input
+              ref={fileInputRef} type="file" multiple hidden
+              accept="image/*,.pdf,.txt,.md,.json,.csv"
+              onChange={(e) => { uploadFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+            />
             <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
+              <Button
+                type="button" size="icon" variant="ghost"
+                className="h-10 w-10 shrink-0 relative z-10"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                title="Datei anhängen (Bild/PDF)"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              </Button>
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
