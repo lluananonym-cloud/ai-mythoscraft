@@ -488,7 +488,36 @@ const Chat = () => {
                 </span>
               </div>
             )}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1.5 glass rounded-lg px-2 py-1 text-xs">
+                    {a.mime.startsWith("image/") ? (
+                      <img src={a.url} alt={a.name} className="h-5 w-5 rounded object-cover" />
+                    ) : <Paperclip className="h-3 w-3" />}
+                    <span className="max-w-[120px] truncate">{a.name}</span>
+                    <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} aria-label="Entfernen">
+                      <XIcon className="h-3 w-3 hover:text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input
+              ref={fileInputRef} type="file" multiple hidden
+              accept="image/*,.pdf,.txt,.md,.json,.csv"
+              onChange={(e) => { uploadFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+            />
             <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
+              <Button
+                type="button" size="icon" variant="ghost"
+                className="h-10 w-10 shrink-0 relative z-10"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                title="Datei anhängen (Bild/PDF)"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              </Button>
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
