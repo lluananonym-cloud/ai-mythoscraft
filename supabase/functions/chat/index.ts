@@ -165,6 +165,76 @@ Deno.serve(async (req) => {
       return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
+    // /translate <lang> <text>  OR  /translate <lang>  (translates last assistant msg)
+    const trMatch = lastText.match(/^\/translate\s+(\S+)(?:\s+([\s\S]+))?$/i);
+    if (trMatch) {
+      const lang = trMatch[1];
+      let toTranslate = trMatch[2]?.trim();
+      if (!toTranslate) {
+        const lastAssist = [...messages].reverse().find((m: any) => m.role === "assistant");
+        toTranslate = typeof lastAssist?.content === "string" ? lastAssist.content : "";
+      }
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ tool: `🌍 Übersetze nach ${lang}` }));
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: `Übersetze den folgenden Text nach ${lang}. Behalte Markdown-Formatierung bei. Antworte NUR mit der Übersetzung.` },
+                { role: "user", content: toTranslate || "(leer)" },
+              ],
+              stream: true,
+            }),
+          });
+          if (!r.ok || !r.body) { c.enqueue(sse({ choices: [{ delta: { content: "❌ Übersetzung fehlgeschlagen." } }] })); c.enqueue(sseDone()); c.close(); return; }
+          const reader = r.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            c.enqueue(value);
+          }
+          c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    // /summarize  (summarizes whole conversation)
+    if (/^\/summarize\b/i.test(lastText)) {
+      const convoText = messages.slice(-30).map((m: any) =>
+        `${m.role.toUpperCase()}: ${typeof m.content === "string" ? m.content : "[multimodal]"}`
+      ).join("\n");
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ tool: "📝 Fasse Konversation zusammen" }));
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "Fasse die Konversation als strukturierte Markdown-Notiz zusammen: **TL;DR**, **Wichtige Punkte** (Bullets), **Offene Fragen / ToDos**." },
+                { role: "user", content: convoText },
+              ],
+              stream: true,
+            }),
+          });
+          if (!r.ok || !r.body) { c.enqueue(sse({ choices: [{ delta: { content: "❌ Zusammenfassung fehlgeschlagen." } }] })); c.enqueue(sseDone()); c.close(); return; }
+          const reader = r.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            c.enqueue(value);
+          }
+          c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
     // /research <query>
     const resMatch = lastText.match(/^\/research\s+(.+)$/i);
     if (resMatch) {
@@ -200,9 +270,9 @@ Deno.serve(async (req) => {
       if (p && (p.is_public || p.user_id === convUserId)) {
         personaPrompt = p.system_prompt;
         personaName = p.name;
-        // bump use_count async
-        supabase.rpc("noop").catch(() => {});
-        await supabase.from("ai_personas").update({ use_count: (await supabase.from("ai_personas").select("use_count").eq("id", personaId).single()).data?.use_count + 1 || 1 }).eq("id", personaId);
+        // bump use_count async (non-blocking, ignore errors)
+        const cur = await supabase.from("ai_personas").select("use_count").eq("id", personaId).maybeSingle();
+        await supabase.from("ai_personas").update({ use_count: (cur.data?.use_count ?? 0) + 1 }).eq("id", personaId);
       }
     }
 

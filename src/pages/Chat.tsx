@@ -12,7 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
-  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama,
+  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
@@ -44,6 +44,7 @@ const Chat = () => {
   const [personaId, setPersonaId] = useState<string>("none");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string>("");
@@ -255,6 +256,13 @@ const Chat = () => {
 
       // Fire-and-forget: extract durable memories from the user message
       supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
+
+      // Fetch smart follow-up suggestions
+      supabase.functions.invoke("suggest", {
+        body: { messages: [...historyForAI, { role: "user", content: text }, { role: "assistant", content: full }] },
+      }).then(({ data }) => {
+        if (data?.items?.length) setSuggestions(data.items);
+      }).catch(() => {});
     } catch (e) {
       console.error(e);
       toast.error("Verbindungsfehler");
@@ -263,6 +271,27 @@ const Chat = () => {
       setSending(false);
     }
   };
+
+  // Clear suggestions when user starts typing or switches chat
+  useEffect(() => { if (input) setSuggestions([]); }, [input]);
+  useEffect(() => { setSuggestions([]); }, [activeId]);
+
+  const copyMessage = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); toast.success("Kopiert"); } catch { toast.error("Kopieren fehlgeschlagen"); }
+  };
+
+  const exportChat = () => {
+    if (!messages.length) { toast.error("Nichts zu exportieren"); return; }
+    const conv = convs.find(c => c.id === activeId);
+    const md = `# ${conv?.title || "Mythos AI Chat"}\n\n_Exportiert: ${new Date().toLocaleString("de-DE")}_\n\n---\n\n` +
+      messages.map(m => `## ${m.role === "user" ? "🧑 Du" : "🤖 Mythos AI"}\n\n${m.content}${m.image ? `\n\n![${m.image.prompt}](${m.image.url})` : ""}`).join("\n\n---\n\n");
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${(conv?.title || "chat").replace(/[^a-z0-9]+/gi, "_")}.md`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
 
   // Wire send to ref so the voice hook can call it
   useEffect(() => { sendRef.current = send; });
@@ -362,6 +391,16 @@ const Chat = () => {
                   {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
               )}
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost" size="icon" className="h-9 w-9"
+                  onClick={exportChat}
+                  title="Chat als Markdown exportieren"
+                  aria-label="Chat exportieren"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
               {personas.length > 0 && (
                 <Select value={personaId} onValueChange={setPersonaId}>
                   <SelectTrigger className="w-[110px] sm:w-[150px] glass h-9 text-xs border-white/10">
@@ -412,7 +451,7 @@ const Chat = () => {
                     "Wie verbinde ich mich mit dem Server?",
                     "/research aktuelle Minecraft 1.21 Updates",
                     "/image ein epischer Drache über mythoscraft",
-                    "/music funk sereno style banger",
+                    "/translate english Hallo wie geht's?",
                   ].map(s => (
                     <button
                       key={s}
@@ -453,6 +492,20 @@ const Chat = () => {
                         />
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
+                      {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
+                        <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
+                          <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
+                          {voice.supported && (
+                            <button
+                              onClick={() => voice.status === "speaking" ? voice.stopSpeaking() : voice.speak(m.content)}
+                              title={voice.status === "speaking" ? "Stop" : "Vorlesen"}
+                              className="p-1 hover:text-primary"
+                            >
+                              {voice.status === "speaking" ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
@@ -468,6 +521,20 @@ const Chat = () => {
                 )}
               </div>
             ))}
+            {suggestions.length > 0 && !sending && (
+              <div className="flex flex-wrap gap-1.5 pt-1 animate-fade-in">
+                <Lightbulb className="h-3.5 w-3.5 text-primary/70 mt-1.5" />
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSuggestions([]); send(s); }}
+                    className="glass rounded-full px-3 py-1 text-xs hover:border-primary/40 hover:bg-primary/10 transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-white/5 p-2 sm:p-3">
