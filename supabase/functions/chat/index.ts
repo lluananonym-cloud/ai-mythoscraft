@@ -270,9 +270,9 @@ Deno.serve(async (req) => {
       if (p && (p.is_public || p.user_id === convUserId)) {
         personaPrompt = p.system_prompt;
         personaName = p.name;
-        // bump use_count async
-        supabase.rpc("noop").catch(() => {});
-        await supabase.from("ai_personas").update({ use_count: (await supabase.from("ai_personas").select("use_count").eq("id", personaId).single()).data?.use_count + 1 || 1 }).eq("id", personaId);
+        // bump use_count async (non-blocking, ignore errors)
+        const cur = await supabase.from("ai_personas").select("use_count").eq("id", personaId).maybeSingle();
+        await supabase.from("ai_personas").update({ use_count: (cur.data?.use_count ?? 0) + 1 }).eq("id", personaId);
       }
     }
 
