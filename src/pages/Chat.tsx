@@ -256,6 +256,13 @@ const Chat = () => {
 
       // Fire-and-forget: extract durable memories from the user message
       supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
+
+      // Fetch smart follow-up suggestions
+      supabase.functions.invoke("suggest", {
+        body: { messages: [...historyForAI, { role: "user", content: text }, { role: "assistant", content: full }] },
+      }).then(({ data }) => {
+        if (data?.items?.length) setSuggestions(data.items);
+      }).catch(() => {});
     } catch (e) {
       console.error(e);
       toast.error("Verbindungsfehler");
@@ -264,6 +271,27 @@ const Chat = () => {
       setSending(false);
     }
   };
+
+  // Clear suggestions when user starts typing or switches chat
+  useEffect(() => { if (input) setSuggestions([]); }, [input]);
+  useEffect(() => { setSuggestions([]); }, [activeId]);
+
+  const copyMessage = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); toast.success("Kopiert"); } catch { toast.error("Kopieren fehlgeschlagen"); }
+  };
+
+  const exportChat = () => {
+    if (!messages.length) { toast.error("Nichts zu exportieren"); return; }
+    const conv = convs.find(c => c.id === activeId);
+    const md = `# ${conv?.title || "Mythos AI Chat"}\n\n_Exportiert: ${new Date().toLocaleString("de-DE")}_\n\n---\n\n` +
+      messages.map(m => `## ${m.role === "user" ? "🧑 Du" : "🤖 Mythos AI"}\n\n${m.content}${m.image ? `\n\n![${m.image.prompt}](${m.image.url})` : ""}`).join("\n\n---\n\n");
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${(conv?.title || "chat").replace(/[^a-z0-9]+/gi, "_")}.md`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
 
   // Wire send to ref so the voice hook can call it
   useEffect(() => { sendRef.current = send; });
