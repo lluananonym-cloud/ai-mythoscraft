@@ -521,6 +521,20 @@ const Chat = () => {
                 )}
               </div>
             ))}
+            {suggestions.length > 0 && !sending && (
+              <div className="flex flex-wrap gap-1.5 pt-1 animate-fade-in">
+                <Lightbulb className="h-3.5 w-3.5 text-primary/70 mt-1.5" />
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSuggestions([]); send(s); }}
+                    className="glass rounded-full px-3 py-1 text-xs hover:border-primary/40 hover:bg-primary/10 transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-white/5 p-2 sm:p-3">
