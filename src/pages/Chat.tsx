@@ -12,7 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
-  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama,
+  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
