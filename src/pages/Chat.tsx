@@ -492,6 +492,20 @@ const Chat = () => {
                         />
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
+                      {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
+                        <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
+                          <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
+                          {voice.supported && (
+                            <button
+                              onClick={() => voice.status === "speaking" ? voice.stopSpeaking() : voice.speak(m.content)}
+                              title={voice.status === "speaking" ? "Stop" : "Vorlesen"}
+                              className="p-1 hover:text-primary"
+                            >
+                              {voice.status === "speaking" ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
