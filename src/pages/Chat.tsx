@@ -18,7 +18,7 @@ import {
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
-  { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten Funk-Groove komponieren (WebAudio, kostenlos)" },
+  { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
@@ -27,12 +27,13 @@ const SLASH_COMMANDS = [
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
+import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -110,6 +111,7 @@ const Chat = () => {
         ...m,
         image: m.metadata?.image,
         music: m.metadata?.music,
+        song: m.metadata?.song,
         attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
@@ -149,7 +151,28 @@ const Chat = () => {
       loadConvs();
     }
 
-    // Build multimodal content if attachments are present
+    // Intercept /music — generate real AI music in the browser (MusicGen, free)
+    const musicMatch = text.match(/^\/music\s+(.+)$/i);
+    if (musicMatch) {
+      const prompt = musicMatch[1].trim();
+      const song: SongRequest = { prompt, title: prompt.slice(0, 60), duration: 10 };
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: `🎵 **AI-Song wird vorbereitet:** _${prompt}_\n\nKlick unten auf "Generieren". Der erste Song lädt das Modell (~300MB einmalig), dann läuft alles offline im Browser — kostenlos.`,
+        song,
+      };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { song } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
+
     const buildContent = (txt: string) => {
       if (!attachments.length) return txt;
       const parts: any[] = [{ type: "text", text: txt }];
@@ -491,7 +514,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music ? (
+                      ) : !m.image && !m.music && !m.song ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
@@ -503,6 +526,7 @@ const Chat = () => {
                         />
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
+                      {m.song && <SongPlayer request={m.song} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
                           <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
