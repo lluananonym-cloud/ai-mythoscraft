@@ -55,6 +55,7 @@ const Chat = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [slashIndex, setSlashIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string>("");
