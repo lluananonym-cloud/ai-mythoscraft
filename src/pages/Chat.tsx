@@ -111,6 +111,7 @@ const Chat = () => {
         ...m,
         image: m.metadata?.image,
         music: m.metadata?.music,
+        song: m.metadata?.song,
         attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
@@ -525,6 +526,7 @@ const Chat = () => {
                         />
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
+                      {m.song && <SongPlayer request={m.song} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
                           <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
