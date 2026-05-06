@@ -633,8 +633,26 @@ const Chat = () => {
               </Button>
               <Textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+                onChange={(e) => { setInput(e.target.value); setSlashIndex(0); }}
+                onKeyDown={(e) => {
+                  // Slash command menu navigation
+                  if (input.startsWith("/")) {
+                    const q = input.slice(1).split(/\s/)[0].toLowerCase();
+                    const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+                    if (filtered.length && !input.includes(" ")) {
+                      if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => (i + 1) % filtered.length); return; }
+                      if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIndex(i => (i - 1 + filtered.length) % filtered.length); return; }
+                      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                        e.preventDefault();
+                        const c = filtered[Math.min(slashIndex, filtered.length - 1)];
+                        setInput(c.args ? `${c.cmd} ` : c.cmd + " ");
+                        setSlashIndex(0);
+                        return;
+                      }
+                    }
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                }}
                 placeholder={
                   voiceMode ? "Tippe oder drücke das Mikro..." :
                   mode === "support" ? "Frage zum Mythoscraft-Server..." :
