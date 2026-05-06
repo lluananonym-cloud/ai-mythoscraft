@@ -514,7 +514,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music ? (
+                      ) : !m.image && !m.music && !m.song ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
