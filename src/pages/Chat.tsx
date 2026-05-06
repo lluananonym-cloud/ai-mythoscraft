@@ -13,7 +13,17 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog,
 } from "lucide-react";
+
+const SLASH_COMMANDS = [
+  { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
+  { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten Funk-Groove komponieren (WebAudio, kostenlos)" },
+  { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
+  { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
+  { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
+  { cmd: "/identity",  args: "<name>",          icon: UserCog,   desc: "AI-Persona im Chat wechseln" },
+];
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
