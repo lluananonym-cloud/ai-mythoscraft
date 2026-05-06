@@ -150,7 +150,28 @@ const Chat = () => {
       loadConvs();
     }
 
-    // Build multimodal content if attachments are present
+    // Intercept /music — generate real AI music in the browser (MusicGen, free)
+    const musicMatch = text.match(/^\/music\s+(.+)$/i);
+    if (musicMatch) {
+      const prompt = musicMatch[1].trim();
+      const song: SongRequest = { prompt, title: prompt.slice(0, 60), duration: 10 };
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: `🎵 **AI-Song wird vorbereitet:** _${prompt}_\n\nKlick unten auf "Generieren". Der erste Song lädt das Modell (~300MB einmalig), dann läuft alles offline im Browser — kostenlos.`,
+        song,
+      };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { song } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
+
     const buildContent = (txt: string) => {
       if (!attachments.length) return txt;
       const parts: any[] = [{ type: "text", text: txt }];
