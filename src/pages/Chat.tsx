@@ -582,6 +582,40 @@ const Chat = () => {
                 ))}
               </div>
             )}
+            {input.startsWith("/") && (() => {
+              const q = input.slice(1).split(/\s/)[0].toLowerCase();
+              const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+              if (!filtered.length) return null;
+              const pick = (cmd: string, args: string) => {
+                setInput(args ? `${cmd} ` : cmd + " ");
+                setSlashIndex(0);
+              };
+              return (
+                <div className="glass-strong rounded-xl p-1.5 mb-2 max-h-64 overflow-y-auto animate-fade-in border border-primary/20">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 flex items-center justify-between">
+                    <span>Commands</span>
+                    <span className="text-[9px]">↑↓ Tab ↵</span>
+                  </div>
+                  {filtered.map((c, i) => {
+                    const Icon = c.icon;
+                    const active = i === Math.min(slashIndex, filtered.length - 1);
+                    return (
+                      <button
+                        key={c.cmd}
+                        onMouseEnter={() => setSlashIndex(i)}
+                        onClick={() => pick(c.cmd, c.args)}
+                        className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${active ? "bg-primary/15" : "hover:bg-secondary/40"}`}
+                      >
+                        <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="font-mono font-semibold">{c.cmd}</span>
+                        {c.args && <span className="text-muted-foreground font-mono">{c.args}</span>}
+                        <span className="text-muted-foreground truncate ml-auto hidden sm:inline">{c.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <input
               ref={fileInputRef} type="file" multiple hidden
               accept="image/*,.pdf,.txt,.md,.json,.csv"
