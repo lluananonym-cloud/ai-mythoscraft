@@ -116,6 +116,7 @@ const Chat = () => {
         image: m.metadata?.image,
         music: m.metadata?.music,
         song: m.metadata?.song,
+        offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
