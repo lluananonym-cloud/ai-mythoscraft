@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile,
 } from "lucide-react";
 
 const SLASH_COMMANDS = [
@@ -23,6 +23,9 @@ const SLASH_COMMANDS = [
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
   { cmd: "/identity",  args: "<name>",          icon: UserCog,   desc: "AI-Persona im Chat wechseln" },
+  { cmd: "/offline",   args: "<frage>",         icon: WifiOff,   desc: "Offline-Chat im Browser (Qwen2.5-0.5B, ~500MB einmalig)" },
+  { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
+  { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
 ];
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
