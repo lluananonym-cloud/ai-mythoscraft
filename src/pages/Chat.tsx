@@ -547,7 +547,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music && !m.song ? (
+                      ) : !m.image && !m.music && !m.song && !m.offline ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
@@ -560,6 +560,7 @@ const Chat = () => {
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
                       {m.song && <SongPlayer request={m.song} />}
+                      {m.offline && <OfflineAI task={m.offline} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
                           <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
