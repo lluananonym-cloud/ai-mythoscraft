@@ -205,6 +205,8 @@ const Chat = () => {
       loadConvs();
       return;
     }
+
+    const buildContent = (txt: string) => {
       if (!attachments.length) return txt;
       const parts: any[] = [{ type: "text", text: txt }];
       for (const a of attachments) {
