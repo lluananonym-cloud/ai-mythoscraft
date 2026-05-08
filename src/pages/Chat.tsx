@@ -178,7 +178,33 @@ const Chat = () => {
       return;
     }
 
-    const buildContent = (txt: string) => {
+    // Intercept offline AI commands — run 100% in browser, no server roundtrip
+    const offlineMatch =
+      text.match(/^\/offline-summary\s+(.+)$/is) ? { kind: "summary" as const, body: text.replace(/^\/offline-summary\s+/i, "") } :
+      text.match(/^\/sentiment\s+(.+)$/is)       ? { kind: "sentiment" as const, body: text.replace(/^\/sentiment\s+/i, "") } :
+      text.match(/^\/offline\s+(.+)$/is)         ? { kind: "chat" as const, body: text.replace(/^\/offline\s+/i, "") } :
+      null;
+    if (offlineMatch) {
+      const offline: OfflineTask =
+        offlineMatch.kind === "chat"      ? { kind: "chat", prompt: offlineMatch.body } :
+        offlineMatch.kind === "summary"   ? { kind: "summary", text: offlineMatch.body } :
+                                            { kind: "sentiment", text: offlineMatch.body };
+      const aiContent =
+        offlineMatch.kind === "chat"      ? `🔌 **Offline-Chat** — läuft komplett lokal im Browser. Klick „Starten" (erster Aufruf lädt das Modell einmalig).` :
+        offlineMatch.kind === "summary"   ? `🔌 **Offline-Zusammenfassung** wird vorbereitet…` :
+                                            `🔌 **Offline-Sentiment** wird analysiert…`;
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = { role: "assistant", content: aiContent, offline };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiContent, metadata: { offline } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
       if (!attachments.length) return txt;
       const parts: any[] = [{ type: "text", text: txt }];
       for (const a of attachments) {
