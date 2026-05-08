@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile,
 } from "lucide-react";
 
 const SLASH_COMMANDS = [
@@ -23,17 +23,21 @@ const SLASH_COMMANDS = [
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
   { cmd: "/identity",  args: "<name>",          icon: UserCog,   desc: "AI-Persona im Chat wechseln" },
+  { cmd: "/offline",   args: "<frage>",         icon: WifiOff,   desc: "Offline-Chat im Browser (Qwen2.5-0.5B, ~500MB einmalig)" },
+  { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
+  { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
 ];
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
+import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; offline?: OfflineTask; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -112,6 +116,7 @@ const Chat = () => {
         image: m.metadata?.image,
         music: m.metadata?.music,
         song: m.metadata?.song,
+        offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
       })) as Msg[];
       setMessages(enriched);
@@ -166,6 +171,34 @@ const Chat = () => {
       await supabase.from("messages").insert([
         { conversation_id: convId, role: "user", content: text },
         { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { song } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
+
+    // Intercept offline AI commands — run 100% in browser, no server roundtrip
+    const offlineMatch =
+      text.match(/^\/offline-summary\s+(.+)$/is) ? { kind: "summary" as const, body: text.replace(/^\/offline-summary\s+/i, "") } :
+      text.match(/^\/sentiment\s+(.+)$/is)       ? { kind: "sentiment" as const, body: text.replace(/^\/sentiment\s+/i, "") } :
+      text.match(/^\/offline\s+(.+)$/is)         ? { kind: "chat" as const, body: text.replace(/^\/offline\s+/i, "") } :
+      null;
+    if (offlineMatch) {
+      const offline: OfflineTask =
+        offlineMatch.kind === "chat"      ? { kind: "chat", prompt: offlineMatch.body } :
+        offlineMatch.kind === "summary"   ? { kind: "summary", text: offlineMatch.body } :
+                                            { kind: "sentiment", text: offlineMatch.body };
+      const aiContent =
+        offlineMatch.kind === "chat"      ? `🔌 **Offline-Chat** — läuft komplett lokal im Browser. Klick „Starten" (erster Aufruf lädt das Modell einmalig).` :
+        offlineMatch.kind === "summary"   ? `🔌 **Offline-Zusammenfassung** wird vorbereitet…` :
+                                            `🔌 **Offline-Sentiment** wird analysiert…`;
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = { role: "assistant", content: aiContent, offline };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiContent, metadata: { offline } },
       ]);
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
       setSending(false);
@@ -514,7 +547,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music && !m.song ? (
+                      ) : !m.image && !m.music && !m.song && !m.offline ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
@@ -527,6 +560,7 @@ const Chat = () => {
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
                       {m.song && <SongPlayer request={m.song} />}
+                      {m.offline && <OfflineAI task={m.offline} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
                           <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
