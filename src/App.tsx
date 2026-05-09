@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import RequireAuth from "@/components/RequireAuth";
 import MythosBackground from "@/components/MythosBackground";
+import SplashScreen from "@/components/SplashScreen";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
@@ -30,6 +31,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <SplashScreen />
           <MythosBackground />
           <Routes>
             <Route path="/" element={<Landing />} />
