@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
+        globIgnores: ["**/ort-wasm*", "**/*.wasm"],
         navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
         runtimeCaching: [
           {
