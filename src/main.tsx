@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initPersistentSession } from "./lib/persistentSession";
+
+void initPersistentSession();
 
 // Guard service worker registration: never register inside Lovable preview iframe.
 const isInIframe = (() => {

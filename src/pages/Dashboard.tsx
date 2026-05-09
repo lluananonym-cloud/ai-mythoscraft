@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon } from "lucide-react";
+import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon, ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { isPersistentSessionEnabled, setPersistentSessionEnabled } from "@/lib/persistentSession";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -37,6 +39,8 @@ const Dashboard = () => {
   const [displayName, setDisplayName] = useState("");
   const [mcUsername, setMcUsername] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
+  useEffect(() => { setStayLoggedIn(isPersistentSessionEnabled()); }, []);
 
   const load = async () => {
     const { data } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
@@ -253,6 +257,30 @@ const Dashboard = () => {
                   <Save className="h-4 w-4 mr-1.5" />
                   {savingProfile ? "Speichern..." : "Speichern"}
                 </Button>
+              </div>
+
+              <div className="glass-strong rounded-2xl p-5 md:p-6 md:col-span-2">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-display font-semibold">Dauerhaft angemeldet bleiben</div>
+                      <Switch
+                        checked={stayLoggedIn}
+                        onCheckedChange={async (v) => {
+                          setStayLoggedIn(v);
+                          await setPersistentSessionEnabled(v);
+                          toast.success(v ? "Du bleibst auf diesem Gerät angemeldet." : "Auto-Anmeldung deaktiviert.");
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      Aktivieren, falls du in der installierten App (PWA) immer wieder ausgeloggt wirst.
+                      Deine Sitzung wird zusätzlich sicher im Gerät gespeichert (IndexedDB) und
+                      übersteht so iOS-/Browser-Cache-Bereinigungen. Gilt nur für dieses Gerät.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* 3D Skin */}
