@@ -37,28 +37,15 @@ function encodeWAV(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([view], { type: "audio/wav" });
 }
 
-// Cached pipeline so the 300MB model only loads once per session
-let pipePromise: Promise<any> | null = null;
+// Globally deduped — see src/lib/transformersLoader.ts
+import { loadPipeline } from "@/lib/transformersLoader";
 async function getMusicGen(onProgress: (p: number, msg: string) => void) {
-  if (!pipePromise) {
-    pipePromise = (async () => {
-      const tf: any = await import("@huggingface/transformers");
-      tf.env.allowLocalModels = false;
-      tf.env.useBrowserCache = true;
-      return await tf.pipeline("text-to-audio", "Xenova/musicgen-small", {
-        dtype: "fp32",
-        progress_callback: (data: any) => {
-          if (data.status === "progress" && data.file?.endsWith(".onnx")) {
-            const pct = Math.round((data.progress ?? 0));
-            onProgress(pct, `Lade Musik-Modell… ${pct}%`);
-          } else if (data.status === "ready") {
-            onProgress(100, "Modell bereit");
-          }
-        },
-      });
-    })().catch((e) => { pipePromise = null; throw e; });
-  }
-  return pipePromise;
+  return loadPipeline({
+    task: "text-to-audio",
+    model: "Xenova/musicgen-small",
+    dtype: "fp32",
+    onProgress: (p) => onProgress(p.pct, p.msg || `Lade Musik-Modell… ${p.pct}%`),
+  });
 }
 
 export default function SongPlayer({ request }: { request: SongRequest }) {

@@ -50,6 +50,27 @@ export default defineConfig(({ mode }) => ({
             handler: "StaleWhileRevalidate",
             options: { cacheName: "assets" },
           },
+          {
+            // Local WASM runtime for Transformers.js — cache forever after first hit.
+            urlPattern: /\.wasm$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "wasm",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Hugging Face model weights — large, immutable, cache forever.
+            urlPattern: ({ url }) => url.hostname === "huggingface.co" || url.hostname.endsWith(".hf.co"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "hf-models",
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+              rangeRequests: true,
+            },
+          },
         ],
       },
     }),

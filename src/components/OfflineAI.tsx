@@ -2,40 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles, WifiOff, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { loadPipeline } from "@/lib/transformersLoader";
 
 export type OfflineTask =
   | { kind: "chat"; prompt: string }
   | { kind: "summary"; text: string }
   | { kind: "sentiment"; text: string };
 
-const MODELS: Record<OfflineTask["kind"], { task: string; id: string; size: string; label: string }> = {
-  chat:      { task: "text-generation",          id: "onnx-community/Qwen2.5-0.5B-Instruct", size: "~500MB", label: "Offline-Chat (Qwen2.5-0.5B)" },
-  summary:   { task: "summarization",            id: "Xenova/distilbart-cnn-6-6",            size: "~250MB", label: "Offline-Zusammenfassung" },
-  sentiment: { task: "sentiment-analysis",       id: "Xenova/distilbert-base-uncased-finetuned-sst-2-english", size: "~65MB", label: "Offline-Sentiment" },
+const MODELS: Record<OfflineTask["kind"], { task: string; id: string; dtype: string; size: string; label: string }> = {
+  chat:      { task: "text-generation",    id: "onnx-community/Qwen2.5-0.5B-Instruct",                  dtype: "q4",   size: "~500MB", label: "Offline-Chat (Qwen2.5-0.5B)" },
+  summary:   { task: "summarization",      id: "Xenova/distilbart-cnn-6-6",                             dtype: "fp32", size: "~250MB", label: "Offline-Zusammenfassung" },
+  sentiment: { task: "sentiment-analysis", id: "Xenova/distilbert-base-uncased-finetuned-sst-2-english", dtype: "fp32", size: "~65MB",  label: "Offline-Sentiment" },
 };
 
-const cache: Record<string, Promise<any>> = {};
 async function getPipe(kind: OfflineTask["kind"], onProgress: (p: number, m: string) => void) {
   const cfg = MODELS[kind];
-  if (!cache[kind]) {
-    cache[kind] = (async () => {
-      const tf: any = await import("@huggingface/transformers");
-      tf.env.allowLocalModels = false;
-      tf.env.useBrowserCache = true;
-      return await tf.pipeline(cfg.task, cfg.id, {
-        dtype: kind === "chat" ? "q4" : "fp32",
-        progress_callback: (data: any) => {
-          if (data.status === "progress" && (data.file?.endsWith(".onnx") || data.file?.endsWith(".bin"))) {
-            const pct = Math.round(data.progress ?? 0);
-            onProgress(pct, `Lade Modell… ${pct}%`);
-          } else if (data.status === "ready") {
-            onProgress(100, "Modell bereit");
-          }
-        },
-      });
-    })().catch((e) => { delete cache[kind]; throw e; });
-  }
-  return cache[kind];
+  return loadPipeline({
+    task: cfg.task,
+    model: cfg.id,
+    dtype: cfg.dtype,
+    onProgress: (p) => onProgress(p.pct, p.msg),
+  });
 }
 
 export default function OfflineAI({ task }: { task: OfflineTask }) {
