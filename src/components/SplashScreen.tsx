@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LogoMark } from "./Logo";
 
 /**
  * Splash + privacy overlay:
@@ -12,7 +13,14 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(false), 1100);
-    const onVis = () => setHidden(document.visibilityState === "hidden");
+    const onVis = () => {
+      const isHidden = document.visibilityState === "hidden";
+      setHidden(isHidden);
+      if (!isHidden) {
+        setVisible(true);
+        window.setTimeout(() => setVisible(false), 360);
+      }
+    };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       clearTimeout(t);
@@ -28,13 +36,7 @@ const SplashScreen = () => {
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black animate-in fade-in"
       style={{ transition: "opacity 400ms" }}
     >
-      <img
-        src="/icon.png"
-        alt=""
-        width={160}
-        height={160}
-        className="w-40 h-40 animate-pulse drop-shadow-[0_0_40px_rgba(139,92,246,0.6)]"
-      />
+      <LogoMark size="lg" className="h-28 w-28 animate-pulse drop-shadow-[0_0_34px_hsl(0_0%_100%_/_0.22)]" />
     </div>
   );
 };
