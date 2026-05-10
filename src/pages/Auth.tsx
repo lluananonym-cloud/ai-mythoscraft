@@ -42,7 +42,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-[max(3rem,calc(env(safe-area-inset-top)+2rem))] pb-[max(3rem,calc(env(safe-area-inset-bottom)+2rem))]">
       <div className="mb-8"><Logo size="lg" /></div>
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md animate-fade-in">
         <Tabs defaultValue="signin" className="w-full">
