@@ -32,6 +32,7 @@ import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
+import { Link } from "react-router-dom";
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
@@ -419,16 +420,16 @@ const Chat = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
       <TopNav />
-      <div className="flex-1 container py-3 md:py-4 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 md:gap-4 overflow-hidden">
+      <div className="flex-1 container py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:py-4 grid min-h-0 grid-cols-1 md:grid-cols-[260px_1fr] gap-3 md:gap-4 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex glass rounded-2xl p-3 flex-col gap-2 h-[calc(100vh-6rem)]">
+        <aside className="hidden md:flex min-h-0 glass rounded-2xl p-3 flex-col gap-2 h-full max-h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]">
           {Sidebar}
         </aside>
 
         {/* Chat area */}
-        <main className="glass-strong rounded-2xl flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] overflow-hidden">
+        <main className="glass-strong rounded-2xl flex min-h-0 flex-col h-full max-h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-hidden">
           <div className="border-b border-border/50 p-2.5 md:p-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               {/* Mobile sidebar trigger */}
@@ -438,12 +439,12 @@ const Chat = () => {
                     <Menu className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="glass-strong w-[280px] p-3 flex flex-col">
+                <SheetContent side="left" className="glass-strong w-[280px] p-3 pt-[max(env(safe-area-inset-top),0.75rem)] pb-[max(env(safe-area-inset-bottom),0.75rem)] flex flex-col">
                   <div className="mt-6 flex-1 overflow-hidden">{Sidebar}</div>
                 </SheetContent>
               </Sheet>
               <ModeIcon className="h-4 w-4 text-foreground/80 shrink-0" />
-              <span className="font-display text-base truncate">Mythos AI</span>
+              <Link to="/" className="font-display text-base truncate hover:text-foreground/80 transition-colors">Mythos AI</Link>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {voice.supported && (
@@ -503,7 +504,7 @@ const Chat = () => {
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 min-h-0">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto px-2">
                 <div className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-gradient-primary flex items-center justify-center glow-primary mb-5 animate-pulse-glow">
@@ -534,8 +535,8 @@ const Chat = () => {
             {messages.map((m, i) => (
               <div key={i} className={`flex gap-2 sm:gap-3 animate-fade-in ${m.role === "user" ? "justify-end" : ""}`}>
                 {m.role !== "user" && (
-                  <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shrink-0 mt-0.5">
-                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  <div className="h-8 w-8 shrink-0 mt-0.5 flex items-center justify-center">
+                    <img src="/icon.png" alt="" aria-hidden="true" className="h-8 w-8 object-contain" loading="lazy" />
                   </div>
                 )}
                 <div
