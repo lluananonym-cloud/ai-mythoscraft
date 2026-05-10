@@ -70,7 +70,7 @@ const TopNav = () => {
   );
 
   return (
-    <header className="sticky top-0 z-40 glass border-b border-glass-border">
+    <header className="sticky top-0 z-40 glass border-b border-glass-border pt-[max(env(safe-area-inset-top),0px)]">
       <div className="container flex h-14 sm:h-16 items-center justify-between gap-2">
         <Link to="/" className="shrink-0"><Logo size="sm" /></Link>
 
@@ -156,7 +156,7 @@ const TopNav = () => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="glass-strong w-[260px] p-4">
+            <SheetContent side="right" className="glass-strong w-[260px] p-4 pt-[max(env(safe-area-inset-top),1rem)] pb-[max(env(safe-area-inset-bottom),1rem)]">
               <div className="mt-8 flex flex-col gap-1">{navLinks}</div>
             </SheetContent>
           </Sheet>
