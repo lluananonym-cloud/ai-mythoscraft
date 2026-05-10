@@ -20,12 +20,15 @@ const MinecraftSkin3D = ({
   useEffect(() => {
     if (!canvasRef.current || !username) return;
 
+    let cancelled = false;
+
     const viewer = new SkinViewer({
       canvas: canvasRef.current,
       width,
       height,
-      skin: `https://mc-heads.net/skin/${encodeURIComponent(username)}`,
+      preserveDrawingBuffer: true,
     });
+    viewer.background = null;
     viewer.animation = new WalkingAnimation();
     viewer.animation.speed = 0.6;
     viewer.controls.enableZoom = false;
@@ -33,7 +36,14 @@ const MinecraftSkin3D = ({
     viewer.zoom = 0.85;
     viewerRef.current = viewer;
 
+    void viewer.loadSkin(`https://mc-heads.net/skin/${encodeURIComponent(username)}`).catch(() => {
+      if (cancelled) return;
+      viewer.dispose();
+      viewerRef.current = null;
+    });
+
     return () => {
+      cancelled = true;
       viewer.dispose();
       viewerRef.current = null;
     };
