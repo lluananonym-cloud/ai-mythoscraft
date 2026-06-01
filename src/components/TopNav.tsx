@@ -72,7 +72,7 @@ const TopNav = () => {
   return (
     <header className="sticky top-0 z-40 glass border-b border-glass-border pt-[max(env(safe-area-inset-top),0px)]">
       <div className="container flex h-14 sm:h-16 items-center justify-between gap-2">
-        <Link to="/" className="shrink-0"><Logo size="sm" /></Link>
+        <Link to={user ? "/app" : "/"} className="shrink-0" aria-label="Mythos AI"><Logo size="sm" /></Link>
 
         <nav className="hidden md:flex items-center gap-1">{navLinks}</nav>
 
