@@ -38,17 +38,29 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
         globIgnores: ["**/ort-wasm*", "**/*.wasm"],
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/, /^\/supabase/],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
+            // Always go to network for HTML so a redeploy never traps users on a stale shell.
             urlPattern: ({ request }) => request.mode === "navigate",
             handler: "NetworkFirst",
-            options: { cacheName: "html", networkTimeoutSeconds: 3 },
+            options: {
+              cacheName: "html",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+            },
           },
           {
-            urlPattern: ({ request }) => ["style", "script", "worker", "image", "font"].includes(request.destination),
+            urlPattern: ({ request }) =>
+              ["style", "script", "worker", "image", "font"].includes(request.destination),
             handler: "StaleWhileRevalidate",
-            options: { cacheName: "assets" },
+            options: {
+              cacheName: "assets",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
           },
           {
             // Local WASM runtime for Transformers.js — cache forever after first hit.
@@ -62,7 +74,8 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Hugging Face model weights — large, immutable, cache forever.
-            urlPattern: ({ url }) => url.hostname === "huggingface.co" || url.hostname.endsWith(".hf.co"),
+            urlPattern: ({ url }) =>
+              url.hostname === "huggingface.co" || url.hostname.endsWith(".hf.co"),
             handler: "CacheFirst",
             options: {
               cacheName: "hf-models",
