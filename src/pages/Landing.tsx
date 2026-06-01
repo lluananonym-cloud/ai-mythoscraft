@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TopNav from "@/components/TopNav";
 import Logo from "@/components/Logo";
@@ -16,10 +17,18 @@ const Feature = ({ icon: Icon, title, desc }: any) => (
 );
 
 const Landing = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const nav = useNavigate();
+
+  // "Start im Chat" preference — auto-redirect logged-in users straight into the chat.
+  useEffect(() => {
+    if (user && profile?.start_in_chat) nav("/app", { replace: true });
+  }, [user, profile?.start_in_chat, nav]);
+
   return (
     <div className="min-h-screen">
       <TopNav />
+
 
       <main>
         {/* Hero */}

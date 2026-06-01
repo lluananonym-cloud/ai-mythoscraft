@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS start_in_chat boolean NOT NULL DEFAULT false;

@@ -1,68 +1,48 @@
 
-## Mythos AI – Plan
+Großes Paket – ich teile in 4 Phasen auf, damit nichts wieder bricht. Phase 1 baue ich **jetzt direkt**, Phase 2–4 starten danach automatisch hintereinander (eine Phase pro Antwort, damit ich zwischendurch testen und reparieren kann).
 
-Eine eigene KI-Plattform mit Fokus auf Support für **mythoscraft.online**, eigenem API-Key-System (Claude-kompatibel für MythosBrowse), Agent-Modus und Glassmorphism-Design.
+## Phase 1 — Stabilität & UX-Basis (jetzt)
 
-### 🎨 Design
-- **Glassmorphism** durchgehend: milchige Cards mit `backdrop-blur`, sanfte Border, Glow-Effekte
-- Dark Theme als Standard, Mythos-Branding (tiefes Blau/Violett mit cyanem Akzent, Minecraft-tauglich)
-- Animierter Hintergrund (Gradient-Blobs / Partikel)
-- Custom Font (z. B. Inter + Space Grotesk für Headlines)
-- Smooth Animations (Framer-Motion-Style via Tailwind)
+**Ziel:** Keine Abstürze mehr, Privacy-Screen funktioniert wirklich, Logo wie ChatGPT überall.
 
-### 🤖 KI-Backend (kostenlos & dauerhaft)
-- **Lovable AI Gateway** mit Standard-Modell `google/gemini-3-flash-preview` (schnell, multimodal, dauerhaft mit free Tier nutzbar)
-- Streaming-Antworten (Token-für-Token) via Edge Function
-- System-Prompt zieht Server-Wissen live aus der DB
+- **PWA-Stabilität:** Service-Worker auf `NetworkFirst` für HTML umstellen (statt CacheFirst, der die Abstürze/Restarts verursacht), Workbox `cleanupOutdatedCaches`, harte Cache-Limits. Update-Prompt statt Auto-Reload.
+- **Privacy-Screen:** Aktuell nutzt `visibilitychange` – iOS feuert das im App-Switcher **nicht zuverlässig**. Ich nutze zusätzlich `pagehide`, `blur`, und vor allem `webkitvisibilitychange` + ein synchroner Overlay-Mount per `useLayoutEffect`. Hintergrund 100% schwarz, Logo zentriert.
+- **Login-Screen Logo:** großes Mythos-Logo (ohne Hintergrund) statt Sparkles.
+- **„Start im Chat"-Einstellung:** Neue Spalte `profiles.start_in_chat boolean`, Toggle in Profileinstellungen, beim App-Open Redirect.
+- **Logo im Chat fixiert** wie ChatGPT (sticky in TopNav, klickbar → /).
+- **Skin-Viewer Crash:** WebGL-Context-Loss-Handler + Fallback auf 2D-Avatar, wenn WebGL fehlschlägt.
 
-### 💬 Chat-Interface
-- ChatGPT-artiger Chat mit Markdown-Rendering, Code-Blöcken, Streaming
-- Conversation-History (gespeichert pro User)
-- Mehrere Chats / Sidebar mit Verlauf, Umbenennen & Löschen
-- Toggle: **Support-Modus** (Mythoscraft-Fokus) ↔ **Agent-Modus** ↔ **General**
+## Phase 2 — Live-Sprachchat (free, ohne Setup)
 
-### 🧠 Agent-Modus (mächtig)
-- **Web-Suche** als Tool (für aktuelle Infos, z. B. Plugin-Docs)
-- **Server-Tools**: Live-Status von mythoscraft.online (Online/Offline, Spielerzahl, MOTD via Minecraft-Server-Status-API)
-- **Wissens-Lookup** in der Mythoscraft-Knowledge-Base
-- Mehrstufiges Reasoning mit sichtbaren Tool-Calls ("🔧 Suche im Wiki…")
+**Free heißt:** Browser Web Speech API (STT) + Browser SpeechSynthesis (TTS) + Lovable AI Gemini Flash für Antworten. Kein API-Key nötig.
+- Neue Route `/voice` mit großem animiertem Mic-Orb (Canvas, reagiert auf `AudioContext.AnalyserNode` Lautstärke)
+- Push-to-talk + Auto-VAD
+- Während AI spricht: Orb pulsiert in anderer Farbe
+- Interrupt: User-Sprechen stoppt TTS
 
-### 🔐 Auth & User-Dashboard
-- Email/Passwort-Login (Lovable Cloud, Auto-Confirm an)
-- Profile-Tabelle + `user_roles` (user / admin) mit RLS
-- Dashboard zeigt: Account, Usage, API-Keys
+## Phase 3 — Anhänge, Musik, Video fixen
 
-### 🔑 API-Keys (Claude-kompatibel)
-- User generiert Keys im Format **`sk-ant-mythos-…`** (gleiche Struktur wie Anthropic)
-- Endpoint **`/v1/messages`** als Edge Function – akzeptiert Claude-API-Payload (`model`, `messages`, `max_tokens`, `system`, Streaming-Support)
-- Übersetzt intern auf Lovable AI Gateway → 1:1 kompatibel mit MythosBrowse
-- Rate-Limit pro Key (z. B. 100 Requests/Tag kostenlos), Usage-Tracking
-- UI: Keys erstellen, benennen, widerrufen, kopieren (mit Doku-Snippet)
+- **Anhänge:** Upload zu `chat-uploads` Bucket prüfen, MIME-Validierung, im Chat-Verlauf anzeigen.
+- **Musik:** Aktuelles Transformers.js-Setup ist instabil im PWA-Modus. Umstellen auf Edge-Function mit Background-Job (`EdgeRuntime.waitUntil`) + Status-Polling. Lovable AI hat keine Musik-Generierung — ich nutze Replicate via API-Key **oder** behalte client-seitig MusicGen mit besserer Fehlerbehandlung. **Frage:** Hast du einen Replicate-Key oder soll ich beim client-seitigen MusicGen bleiben?
+- **Video:** Neue Edge-Function mit `videogen` über Lovable Cloud → ist aktuell **nicht in Lovable AI Gateway** verfügbar. Ich integriere Replicate (z.B. Wan2.5) → braucht `REPLICATE_API_TOKEN`. Background-Job mit Status-Polling, Resultat in `chat-uploads`.
 
-### 🛠️ Admin-Panel (nur für Admin-Rolle)
-- **Knowledge Base CRUD**: Artikel mit Titel, Kategorie (Regeln, Commands, FAQ, Plugins…), Markdown-Body
-- Wissen wird automatisch in den Support-System-Prompt eingebaut
-- User-Verwaltung: Rollen ändern, API-Limits anpassen, Usage einsehen
+## Phase 4 — Pro-Abo & Admin-Geschenke (Paddle)
 
-### 📄 Seiten
-1. **Landing** – Hero, Features, Glass-Cards, CTA "Try Mythos AI"
-2. **Auth** – Login / Signup
-3. **Chat** `/app` – Hauptinterface mit Sidebar
-4. **Dashboard** `/dashboard` – API-Keys, Usage, Doku
-5. **Admin** `/admin` – Knowledge Base & User Management
-6. **API Docs** `/docs` – Wie man Mythos-Keys in MythosBrowse / Code nutzt
+- `recommend_payment_provider` → `enable_paddle_payments`
+- Tabelle `subscriptions` (user_id, tier, source: `paid`/`gift`/`admin`, expires_at)
+- **Free-Limits:** 20 Chats/Tag, kein Voice, kein Bild/Musik/Video
+- **Pro-Features:** Unlimited Chat, Voice, alle Generierungen
+- **Admin-UI:** `/admin` Seite – Nutzer suchen, "Pro für X Tage verschenken" Button
+- Paywall-Modal bei Limit-Überschreitung
+- Webhook für Paddle-Events
 
-### 🗄️ Datenbank (Lovable Cloud)
-- `profiles`, `user_roles`, `conversations`, `messages`
-- `api_keys` (gehashter Key, Prefix sichtbar, Limits, Usage)
-- `api_usage` (Request-Logs für Abrechnung)
-- `knowledge_articles` (Server-Wissen)
-- Alle mit RLS-Policies
+---
 
-### 🚀 Edge Functions
-- `chat` – Streaming Chat für die Web-App
-- `agent` – Agent-Mode mit Tool-Calling (Web-Suche, Server-Status, Wissen)
-- `v1-messages` – Claude-kompatibler öffentlicher API-Endpoint
-- `mc-server-status` – Holt Live-Status von mythoscraft.online
+## Was ich von dir brauche (vor Phase 3):
 
-Nach deiner Freigabe baue ich Phase 1 (Auth + Chat + Design + Knowledge Base + erste API-Keys) und danach den Agent-Mode + Claude-kompatiblen Endpoint.
+1. **Replicate-API-Key** für Video (und optional Musik). Falls du keinen hast: Video fällt weg, Musik bleibt client-seitig.
+2. **Bestätigung Paddle:** Beim Enable musst du im Formular Email/Name eingeben – das geht nicht über mich.
+
+## Reihenfolge im Ausführen
+
+Ich starte **jetzt mit Phase 1** und melde mich danach für Phase 2. Sag Bescheid wenn du eine andere Reihenfolge willst oder Phase 3 (Replicate-Key) jetzt schon klären willst.

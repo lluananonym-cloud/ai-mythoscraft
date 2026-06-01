@@ -662,6 +662,7 @@ export type Database = {
           email: string | null
           id: string
           mc_username: string | null
+          start_in_chat: boolean
           updated_at: string
           user_id: string
         }
@@ -671,6 +672,7 @@ export type Database = {
           email?: string | null
           id?: string
           mc_username?: string | null
+          start_in_chat?: boolean
           updated_at?: string
           user_id: string
         }
@@ -680,6 +682,7 @@ export type Database = {
           email?: string | null
           id?: string
           mc_username?: string | null
+          start_in_chat?: boolean
           updated_at?: string
           user_id?: string
         }

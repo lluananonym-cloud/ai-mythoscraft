@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SkinViewer, WalkingAnimation } from "skinview3d";
+import MinecraftAvatar from "./MinecraftAvatar";
 
 /**
  * 3D rotating Minecraft skin viewer using skinview3d.
- * Loads skin via mc-heads.net (no API key, free).
+ * Falls back to a 2D avatar if WebGL is unavailable or the context is lost
+ * (happens often in PWA standalone mode on iOS after backgrounding).
  */
 const MinecraftSkin3D = ({
   username,
@@ -16,38 +18,55 @@ const MinecraftSkin3D = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || !username) return;
+    if (!canvasRef.current || !username || failed) return;
 
     let cancelled = false;
+    let viewer: SkinViewer | null = null;
 
-    const viewer = new SkinViewer({
-      canvas: canvasRef.current,
-      width,
-      height,
-      preserveDrawingBuffer: true,
-    });
-    viewer.background = null;
-    viewer.animation = new WalkingAnimation();
-    viewer.animation.speed = 0.6;
-    viewer.controls.enableZoom = false;
-    viewer.controls.enablePan = false;
-    viewer.zoom = 0.85;
-    viewerRef.current = viewer;
+    try {
+      viewer = new SkinViewer({
+        canvas: canvasRef.current,
+        width,
+        height,
+        preserveDrawingBuffer: true,
+      });
+      viewer.background = null;
+      viewer.animation = new WalkingAnimation();
+      viewer.animation.speed = 0.6;
+      viewer.controls.enableZoom = false;
+      viewer.controls.enablePan = false;
+      viewer.zoom = 0.85;
+      viewerRef.current = viewer;
 
-    void viewer.loadSkin(`https://mc-heads.net/skin/${encodeURIComponent(username)}`).catch(() => {
-      if (cancelled) return;
-      viewer.dispose();
-      viewerRef.current = null;
-    });
+      const onLost = (e: Event) => {
+        e.preventDefault();
+        setFailed(true);
+      };
+      canvasRef.current.addEventListener("webglcontextlost", onLost, false);
+
+      void viewer
+        .loadSkin(`https://mc-heads.net/skin/${encodeURIComponent(username)}`)
+        .catch(() => {
+          if (cancelled) return;
+          setFailed(true);
+        });
+    } catch {
+      setFailed(true);
+    }
 
     return () => {
       cancelled = true;
-      viewer.dispose();
+      try {
+        viewer?.dispose();
+      } catch {
+        /* ignore */
+      }
       viewerRef.current = null;
     };
-  }, [username, width, height]);
+  }, [username, width, height, failed]);
 
   if (!username) {
     return (
@@ -56,6 +75,18 @@ const MinecraftSkin3D = ({
         style={{ width, height }}
       >
         Kein Minecraft-Name gesetzt
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div
+        className="glass-strong rounded-2xl p-3 flex flex-col items-center justify-center gap-2"
+        style={{ width, height }}
+      >
+        <MinecraftAvatar username={username} fallback={username} size={Math.min(width, height) - 40} />
+        <div className="text-[10px] text-muted-foreground">2D Fallback</div>
       </div>
     );
   }

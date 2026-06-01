@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon, ShieldCheck } from "lucide-react";
+import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon, ShieldCheck, MessageSquare } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPersistentSessionEnabled, setPersistentSessionEnabled } from "@/lib/persistentSession";
 import { toast } from "sonner";
@@ -40,7 +40,10 @@ const Dashboard = () => {
   const [mcUsername, setMcUsername] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
+  const [startInChat, setStartInChat] = useState(false);
+  const [savingStartInChat, setSavingStartInChat] = useState(false);
   useEffect(() => { setStayLoggedIn(isPersistentSessionEnabled()); }, []);
+  useEffect(() => { setStartInChat(!!profile?.start_in_chat); }, [profile?.start_in_chat]);
 
   const load = async () => {
     const { data } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
@@ -259,7 +262,7 @@ const Dashboard = () => {
                 </Button>
               </div>
 
-              <div className="glass-strong rounded-2xl p-5 md:p-6 md:col-span-2">
+              <div className="glass-strong rounded-2xl p-5 md:p-6 md:col-span-2 space-y-5">
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="h-5 w-5 mt-0.5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -278,6 +281,39 @@ const Dashboard = () => {
                       Aktivieren, falls du in der installierten App (PWA) immer wieder ausgeloggt wirst.
                       Deine Sitzung wird zusätzlich sicher im Gerät gespeichert (IndexedDB) und
                       übersteht so iOS-/Browser-Cache-Bereinigungen. Gilt nur für dieses Gerät.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 pt-4 border-t border-border/50">
+                  <MessageSquare className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-display font-semibold">App startet direkt im Chat</div>
+                      <Switch
+                        checked={startInChat}
+                        disabled={savingStartInChat}
+                        onCheckedChange={async (v) => {
+                          if (!user) return;
+                          setStartInChat(v);
+                          setSavingStartInChat(true);
+                          const { error } = await supabase
+                            .from("profiles")
+                            .update({ start_in_chat: v })
+                            .eq("user_id", user.id);
+                          setSavingStartInChat(false);
+                          if (error) {
+                            setStartInChat(!v);
+                            toast.error("Konnte nicht gespeichert werden.");
+                            return;
+                          }
+                          await refreshProfile();
+                          toast.success(v ? "Beim Öffnen geht's direkt in den Chat." : "Du landest beim Öffnen auf der Startseite.");
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      Wenn aktiv, wirst du beim Öffnen der App/PWA automatisch in den Chat geleitet — wie bei ChatGPT.
                     </p>
                   </div>
                 </div>

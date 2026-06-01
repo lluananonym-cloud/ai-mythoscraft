@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Logo from "@/components/Logo";
+import { LogoMark } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -43,7 +43,12 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-[max(3rem,calc(env(safe-area-inset-top)+2rem))] pb-[max(3rem,calc(env(safe-area-inset-bottom)+2rem))]">
-      <div className="mb-8"><Logo size="lg" /></div>
+      <div className="mb-6 flex flex-col items-center gap-3">
+        <LogoMark size="lg" className="h-24 w-24 drop-shadow-[0_0_42px_hsl(var(--primary)/0.35)]" />
+        <div className="font-display text-3xl font-bold tracking-tight">
+          <span className="gradient-text">Mythos</span> AI
+        </div>
+      </div>
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md animate-fade-in">
         <Tabs defaultValue="signin" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary/50">
