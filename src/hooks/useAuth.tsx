@@ -6,6 +6,7 @@ interface Profile {
   display_name: string | null;
   email: string | null;
   mc_username: string | null;
+  start_in_chat: boolean;
 }
 
 interface AuthCtx {
@@ -29,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadExtras = useCallback(async (uid: string) => {
     const [rolesRes, profRes] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.from("profiles").select("display_name,email,mc_username").eq("user_id", uid).maybeSingle(),
+      supabase.from("profiles").select("display_name,email,mc_username,start_in_chat").eq("user_id", uid).maybeSingle(),
     ]);
     setIsAdmin(!!rolesRes.data?.some((r: any) => r.role === "admin"));
     setProfile((profRes.data as any) ?? null);
