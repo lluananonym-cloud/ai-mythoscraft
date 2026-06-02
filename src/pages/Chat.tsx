@@ -147,6 +147,10 @@ const Chat = () => {
   const send = async (override?: string) => {
     const text = (override ?? input).trim();
     if (!text || sending) return;
+    // Pro gating
+    if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
+    if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
+    if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
     if (!override) setInput("");
     setSending(true);
 
@@ -451,6 +455,15 @@ const Chat = () => {
               <Link to="/" className="font-display text-base truncate hover:text-foreground/80 transition-colors">Mythos AI</Link>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost" size="icon"
+                className="h-9 w-9"
+                onClick={() => { if (sub.canUseVoice) window.location.assign("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
+                title="Live-Sprachchat"
+                aria-label="Live-Sprachchat öffnen"
+              >
+                <AudioLines className="h-4 w-4" />
+              </Button>
               {voice.supported && (
                 <Button
                   variant={voiceMode ? "default" : "ghost"}
@@ -755,6 +768,7 @@ const Chat = () => {
           </div>
         </main>
       </div>
+      <Paywall open={paywall.open} onOpenChange={(o) => setPaywall({ open: o })} reason={paywall.reason} />
     </div>
   );
 };
