@@ -10,6 +10,7 @@ import SplashScreen from "@/components/SplashScreen";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
+import Voice from "./pages/Voice";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
+            <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
             <Route path="/redeem" element={<Redeem />} />

@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Shield, Users, Ticket, Phone } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, Users, Ticket, Phone, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import BoostCodesAdmin from "@/components/BoostCodesAdmin";
 import PhoneInbox from "@/components/PhoneInbox";
+import SubscriptionsAdmin from "@/components/SubscriptionsAdmin";
 
 type Article = { id: string; title: string; category: string; body: string; is_published: boolean; created_at: string };
 type UserRow = { user_id: string; email: string; display_name: string | null; role?: string };
@@ -67,6 +68,7 @@ const Admin = () => {
             <TabsTrigger value="inbox"><Phone className="h-3.5 w-3.5 mr-1.5" />Phone Inbox</TabsTrigger>
             <TabsTrigger value="kb">Knowledge Base</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="subs"><Sparkles className="h-3.5 w-3.5 mr-1.5" />Pro / Geschenke</TabsTrigger>
             <TabsTrigger value="boosts"><Ticket className="h-3.5 w-3.5 mr-1.5" />Boost Codes</TabsTrigger>
           </TabsList>
 
@@ -134,6 +136,10 @@ const Admin = () => {
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="subs" className="mt-6">
+            <SubscriptionsAdmin />
           </TabsContent>
 
           <TabsContent value="boosts" className="mt-6">
