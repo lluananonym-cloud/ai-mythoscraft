@@ -13,8 +13,10 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines,
 } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import Paywall from "@/components/Paywall";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
@@ -48,6 +50,8 @@ const MODES = [
 
 const Chat = () => {
   const { user, profile } = useAuth();
+  const sub = useSubscription();
+  const [paywall, setPaywall] = useState<{ open: boolean; reason?: string }>({ open: false });
   const [convs, setConvs] = useState<Conv[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -143,6 +147,10 @@ const Chat = () => {
   const send = async (override?: string) => {
     const text = (override ?? input).trim();
     if (!text || sending) return;
+    // Pro gating
+    if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
+    if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
+    if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
     if (!override) setInput("");
     setSending(true);
 
@@ -447,6 +455,15 @@ const Chat = () => {
               <Link to="/" className="font-display text-base truncate hover:text-foreground/80 transition-colors">Mythos AI</Link>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost" size="icon"
+                className="h-9 w-9"
+                onClick={() => { if (sub.canUseVoice) window.location.assign("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
+                title="Live-Sprachchat"
+                aria-label="Live-Sprachchat öffnen"
+              >
+                <AudioLines className="h-4 w-4" />
+              </Button>
               {voice.supported && (
                 <Button
                   variant={voiceMode ? "default" : "ghost"}
@@ -751,6 +768,7 @@ const Chat = () => {
           </div>
         </main>
       </div>
+      <Paywall open={paywall.open} onOpenChange={(o) => setPaywall({ open: o })} reason={paywall.reason} />
     </div>
   );
 };
