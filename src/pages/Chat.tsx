@@ -13,8 +13,10 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines,
 } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import Paywall from "@/components/Paywall";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
@@ -48,6 +50,8 @@ const MODES = [
 
 const Chat = () => {
   const { user, profile } = useAuth();
+  const sub = useSubscription();
+  const [paywall, setPaywall] = useState<{ open: boolean; reason?: string }>({ open: false });
   const [convs, setConvs] = useState<Conv[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
