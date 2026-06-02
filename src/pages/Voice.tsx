@@ -149,7 +149,7 @@ export default function Voice() {
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
-      <div className="flex items-center justify-between p-4 safe-top">
+      <div className="flex items-center justify-between p-4" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
         <Link to="/app" onClick={() => { voice.stopListening(); voice.stopSpeaking(); }}>
           <ArrowLeft className="h-6 w-6 text-white/80" />
         </Link>
@@ -168,7 +168,7 @@ export default function Voice() {
         </div>
       </div>
 
-      <div className="p-8 flex justify-center safe-bottom">
+      <div className="p-8 flex justify-center" style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
         {voice.status === "listening" ? (
           <Button size="lg" variant="destructive" className="h-16 w-16 rounded-full" onClick={() => voice.stopListening()}>
             <MicOff className="h-7 w-7" />
