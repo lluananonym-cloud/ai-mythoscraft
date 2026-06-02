@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
-import Logo from "@/components/Logo";
+import { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mic, MicOff, X } from "lucide-react";
 import { toast } from "sonner";
@@ -153,7 +153,7 @@ export default function Voice() {
         <Link to="/app" onClick={() => { voice.stopListening(); voice.stopSpeaking(); }}>
           <ArrowLeft className="h-6 w-6 text-white/80" />
         </Link>
-        <Logo className="h-7 w-auto opacity-80" />
+        <LogoMark size="sm" className="opacity-90" />
         <button onClick={exit}><X className="h-6 w-6 text-white/80" /></button>
       </div>
 
