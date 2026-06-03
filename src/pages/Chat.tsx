@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
@@ -21,6 +21,7 @@ import Paywall from "@/components/Paywall";
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
+  { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
@@ -33,6 +34,7 @@ import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
+import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
 import { Link } from "react-router-dom";
 
@@ -40,7 +42,7 @@ type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; offline?: OfflineTask; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; offline?: OfflineTask; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -121,6 +123,7 @@ const Chat = () => {
         image: m.metadata?.image,
         music: m.metadata?.music,
         song: m.metadata?.song,
+        video: m.metadata?.video,
         offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
       })) as Msg[];
@@ -180,6 +183,28 @@ const Chat = () => {
       await supabase.from("messages").insert([
         { conversation_id: convId, role: "user", content: text },
         { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { song } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
+
+    // Intercept /video — generate cinematic clip 100% client-side (image gen + Ken Burns)
+    const videoMatch = text.match(/^\/video\s+(.+)$/i);
+    if (videoMatch) {
+      const prompt = videoMatch[1].trim();
+      const video: VideoRequest = { prompt, title: prompt.slice(0, 60), duration: 5, motion: "kenburns" };
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: `🎬 **AI-Video wird vorbereitet:** _${prompt}_\n\nKlick „Generieren" — die KI erstellt ein Schlüsselbild und animiert es zu einem kurzen Clip. Komplett im Browser, kostenlos.`,
+        video,
+      };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { video } },
       ]);
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
       setSending(false);
@@ -534,9 +559,9 @@ const Chat = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                   {[
                     "Wie verbinde ich mich mit dem Server?",
-                    "/research aktuelle Minecraft 1.21 Updates",
+                    "/video epische Drohnenaufnahme über einer Mythoscraft-Burg",
                     "/image ein epischer Drache über mythoscraft",
-                    "/translate english Hallo wie geht's?",
+                    "/music chill lofi hip hop beat",
                   ].map(s => (
                     <button
                       key={s}
@@ -565,7 +590,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music && !m.song && !m.offline ? (
+                      ) : !m.image && !m.music && !m.song && !m.video && !m.offline ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
@@ -578,6 +603,7 @@ const Chat = () => {
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
                       {m.song && <SongPlayer request={m.song} />}
+                      {m.video && <VideoPlayer request={m.video} />}
                       {m.offline && <OfflineAI task={m.offline} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">

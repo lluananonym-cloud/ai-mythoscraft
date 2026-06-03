@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Download, Loader2, Sparkles } from "lucide-react";
+import { Play, Pause, Download, Loader2, Sparkles, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 export type SongRequest = {
@@ -52,6 +52,7 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
   const [status, setStatus] = useState<"idle" | "loading" | "generating" | "ready" | "error">("idle");
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -59,6 +60,7 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
 
   const generate = async () => {
+    setErrorMsg(null);
     try {
       setStatus("loading");
       setProgress(0);
@@ -66,26 +68,37 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
       const pipe = await getMusicGen((p, m) => { setProgress(p); setProgressMsg(m); });
 
       setStatus("generating");
-      setProgressMsg("Komponiere Song… (10–30s)");
+      setProgressMsg("Komponiere Song… (15–45s)");
       const seconds = Math.min(15, Math.max(5, request.duration ?? 10));
-      // ~50 tokens/sec audio
       const max_new_tokens = Math.round(seconds * 50);
-      const out: any = await pipe(request.prompt, {
-        do_sample: true,
-        guidance_scale: 3,
-        max_new_tokens,
-      });
+
+      // Hard timeout so a stuck inference doesn't lock the UI forever
+      const out: any = await Promise.race([
+        pipe(request.prompt, { do_sample: true, guidance_scale: 3, max_new_tokens }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — versuch's mit kürzerer Beschreibung")), 90_000)),
+      ]);
+
       const sampleRate = out.sampling_rate ?? 32000;
       const samples = out.audio as Float32Array;
+      if (!samples || !samples.length) throw new Error("Leere Audio-Antwort vom Modell");
       const wav = encodeWAV(samples, sampleRate);
       setAudioUrl(URL.createObjectURL(wav));
       setStatus("ready");
     } catch (e: any) {
       console.error("MusicGen error:", e);
-      toast.error("Musik-Generierung fehlgeschlagen: " + (e?.message ?? "unknown"));
+      const raw = e?.message ?? "unbekannter Fehler";
+      let friendly = raw;
+      if (/out of memory|allocation|wasm/i.test(raw)) {
+        friendly = "Zu wenig Arbeitsspeicher — schließe andere Tabs und versuch's nochmal.";
+      } else if (/network|fetch|load/i.test(raw)) {
+        friendly = "Modell konnte nicht geladen werden — Internet kurz prüfen und erneut versuchen.";
+      }
+      setErrorMsg(friendly);
+      toast.error("Musik fehlgeschlagen: " + friendly);
       setStatus("error");
     }
   };
+
 
   const toggle = () => {
     const a = audioRef.current; if (!a) return;
@@ -121,6 +134,10 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
             <Button size="icon" disabled className="h-10 w-10">
               <Loader2 className="h-5 w-5 animate-spin" />
             </Button>
+          ) : status === "error" ? (
+            <Button size="sm" variant="outline" onClick={generate} className="gap-1.5">
+              <RefreshCcw className="h-4 w-4" /> Erneut
+            </Button>
           ) : (
             <Button size="sm" onClick={generate} className="gap-1.5">
               <Sparkles className="h-4 w-4" /> Generieren
@@ -145,6 +162,11 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
           Klick „Generieren" — der erste Song lädt das KI-Modell (~300MB, einmalig). Folgende Songs sind schnell.
         </p>
       )}
+
+      {status === "error" && errorMsg && (
+        <p className="text-xs text-destructive">{errorMsg}</p>
+      )}
+
 
       {audioUrl && (
         <audio
