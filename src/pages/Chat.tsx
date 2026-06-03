@@ -189,6 +189,28 @@ const Chat = () => {
       return;
     }
 
+    // Intercept /video — generate cinematic clip 100% client-side (image gen + Ken Burns)
+    const videoMatch = text.match(/^\/video\s+(.+)$/i);
+    if (videoMatch) {
+      const prompt = videoMatch[1].trim();
+      const video: VideoRequest = { prompt, title: prompt.slice(0, 60), duration: 5, motion: "kenburns" };
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: `🎬 **AI-Video wird vorbereitet:** _${prompt}_\n\nKlick „Generieren" — die KI erstellt ein Schlüsselbild und animiert es zu einem kurzen Clip. Komplett im Browser, kostenlos.`,
+        video,
+      };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { video } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false);
+      loadConvs();
+      return;
+    }
+
     // Intercept offline AI commands — run 100% in browser, no server roundtrip
     const offlineMatch =
       text.match(/^\/offline-summary\s+(.+)$/is) ? { kind: "summary" as const, body: text.replace(/^\/offline-summary\s+/i, "") } :
