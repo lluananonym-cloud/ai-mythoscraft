@@ -603,6 +603,7 @@ const Chat = () => {
                       )}
                       {m.music && <FunkPlayer pattern={m.music} />}
                       {m.song && <SongPlayer request={m.song} />}
+                      {m.video && <VideoPlayer request={m.video} />}
                       {m.offline && <OfflineAI task={m.offline} />}
                       {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
                         <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
