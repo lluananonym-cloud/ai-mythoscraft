@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Download, Loader2, Sparkles } from "lucide-react";
+import { Play, Pause, Download, Loader2, Sparkles, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 export type SongRequest = {
