@@ -559,9 +559,9 @@ const Chat = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                   {[
                     "Wie verbinde ich mich mit dem Server?",
-                    "/research aktuelle Minecraft 1.21 Updates",
+                    "/video epische Drohnenaufnahme über einer Mythoscraft-Burg",
                     "/image ein epischer Drache über mythoscraft",
-                    "/translate english Hallo wie geht's?",
+                    "/music chill lofi hip hop beat",
                   ].map(s => (
                     <button
                       key={s}
