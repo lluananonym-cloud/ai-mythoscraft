@@ -121,6 +121,10 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
             <Button size="icon" disabled className="h-10 w-10">
               <Loader2 className="h-5 w-5 animate-spin" />
             </Button>
+          ) : status === "error" ? (
+            <Button size="sm" variant="outline" onClick={generate} className="gap-1.5">
+              <RefreshCcw className="h-4 w-4" /> Erneut
+            </Button>
           ) : (
             <Button size="sm" onClick={generate} className="gap-1.5">
               <Sparkles className="h-4 w-4" /> Generieren
@@ -145,6 +149,11 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
           Klick „Generieren" — der erste Song lädt das KI-Modell (~300MB, einmalig). Folgende Songs sind schnell.
         </p>
       )}
+
+      {status === "error" && errorMsg && (
+        <p className="text-xs text-destructive">{errorMsg}</p>
+      )}
+
 
       {audioUrl && (
         <audio
