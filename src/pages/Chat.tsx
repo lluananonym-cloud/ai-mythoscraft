@@ -123,6 +123,7 @@ const Chat = () => {
         image: m.metadata?.image,
         music: m.metadata?.music,
         song: m.metadata?.song,
+        video: m.metadata?.video,
         offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
       })) as Msg[];
