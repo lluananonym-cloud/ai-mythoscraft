@@ -590,7 +590,7 @@ const Chat = () => {
                     <div className="prose-mythos text-sm break-words">
                       {m.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music && !m.song && !m.offline ? (
+                      ) : !m.image && !m.music && !m.song && !m.video && !m.offline ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : null}
                       {m.image && (
