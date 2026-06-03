@@ -32,3 +32,7 @@ verify_jwt = false
 
 [functions.analyze-file]
 verify_jwt = false
+
+[functions.image-gen]
+verify_jwt = false
+
