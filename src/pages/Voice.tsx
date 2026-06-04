@@ -32,17 +32,25 @@ export default function Voice() {
 
   const askAI = async (text: string) => {
     setHistory(h => [...h, { role: "user", content: text }]);
+    setAiText("");
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const resp = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, apikey: key },
         body: JSON.stringify({
           userId: user?.id,
-          mode: "general",
+          mode: "support",
           messages: [...historyRef.current, { role: "user", content: text }],
         }),
       });
-      if (!resp.ok || !resp.body) { toast.error("AI nicht erreichbar"); return; }
+      if (!resp.ok || !resp.body) {
+        const t = await resp.text().catch(()=> "");
+        console.error("[voice] chat error", resp.status, t);
+        toast.error("AI nicht erreichbar");
+        return;
+      }
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
       let buf = "", full = "";
@@ -58,7 +66,11 @@ export default function Voice() {
         }
       }
       if (full) { setHistory(h => [...h, { role: "assistant", content: full }]); voice.speak(full); }
-    } catch (e) { toast.error("Verbindungsfehler"); }
+      else toast.error("Keine Antwort erhalten");
+    } catch (e) {
+      console.error("[voice] connection error", e);
+      toast.error("Verbindungsfehler");
+    }
   };
 
   const voice = useVoiceMode({ lang: "de-DE", onTranscript: askAI });

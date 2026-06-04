@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import TopNav from "@/components/TopNav";
 import Logo from "@/components/Logo";
 import {
-  Sparkles, Zap, Shield, Code2, Brain, MessageSquare, Server, Key, ArrowRight,
+  Sparkles, Zap, Shield, Code2, Brain, MessageSquare, Server, Key, ArrowRight, Check, Crown,
   Film, Music, AudioLines, Image as ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { TIER_LIMITS } from "@/hooks/useSubscription";
 
 const Feature = ({ icon: Icon, title, desc }: any) => (
   <div className="glass rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:-translate-y-1 group">
