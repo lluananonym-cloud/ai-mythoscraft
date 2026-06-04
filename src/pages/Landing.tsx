@@ -117,6 +117,43 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section className="container pb-24" id="pricing">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">Einfach. Fair. Drei Pläne.</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Starte kostenlos. Upgrade nur wenn du mehr willst.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {[
+              { key:"free",  name:"Free",  icon: Sparkles, accent:"from-zinc-400 to-zinc-600",
+                features:["20 Chats / Tag","Alle Standard-Personas","Server-Knowledge","Community-Support"] },
+              { key:"light", name:"Light", icon: Zap, accent:"from-sky-400 to-indigo-500", tag:"Mitte",
+                features:[`${TIER_LIMITS.light.chatsPerDay} Chats / Tag`,"Bilder generieren","Alle Personas","Keine Werbung"] },
+              { key:"pro",   name:"Pro",   icon: Crown, accent:"from-fuchsia-500 to-rose-500", tag:"Beliebt", highlight:true,
+                features:["Unbegrenzte Chats","Live-Sprachchat","Bilder · Musik · Video","Priorität bei Updates"] },
+            ].map((p:any) => (
+              <div key={p.key} className={`relative glass-strong rounded-3xl p-7 transition-all hover:-translate-y-1 ${p.highlight ? "border-primary/60 ring-1 ring-primary/30 glow-primary" : ""}`}>
+                {p.tag && (
+                  <span className={`absolute -top-3 right-5 text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full text-white bg-gradient-to-r ${p.accent}`}>{p.tag}</span>
+                )}
+                <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${p.accent} flex items-center justify-center mb-4`}>
+                  <p.icon className="h-5 w-5 text-white" />
+                </div>
+                <div className="font-display text-2xl font-bold">{p.name}</div>
+                <div className="text-sm text-muted-foreground mb-5">{TIER_LIMITS[p.key as keyof typeof TIER_LIMITS].priceLabel}</div>
+                <ul className="space-y-2 text-sm mb-6">
+                  {p.features.map((f:string) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary shrink-0" />{f}</li>)}
+                </ul>
+                <Link to={user ? "/app" : "/auth"} className="block">
+                  <Button variant={p.highlight ? "default" : "outline"} className={`w-full ${p.highlight ? "bg-gradient-primary text-primary-foreground" : ""}`}>
+                    {p.key === "free" ? "Loslegen" : "Upgrade"}
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="container pb-24">
           <div className="glass-strong rounded-3xl p-10 md:p-16 text-center relative overflow-hidden">
