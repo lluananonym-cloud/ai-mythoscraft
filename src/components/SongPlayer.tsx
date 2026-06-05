@@ -43,9 +43,17 @@ async function getMusicGen(onProgress: (p: number, msg: string) => void) {
   return loadPipeline({
     task: "text-to-audio",
     model: "Xenova/musicgen-small",
-    dtype: "fp32",
+    // q8 quant = ~150MB instead of 300MB, runs on mobile too
+    dtype: "q8",
     onProgress: (p) => onProgress(p.pct, p.msg || `Lade Musik-Modell… ${p.pct}%`),
   });
+}
+
+// Detect low-memory devices (mobile, old browsers)
+function isLowMemory() {
+  const mem = (navigator as any).deviceMemory;
+  if (typeof mem === "number" && mem < 4) return true;
+  return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) && !(navigator as any).deviceMemory;
 }
 
 export default function SongPlayer({ request }: { request: SongRequest }) {
@@ -64,18 +72,18 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
     try {
       setStatus("loading");
       setProgress(0);
-      setProgressMsg("Lade KI-Modell (einmalig ~300MB)…");
+      setProgressMsg("Lade KI-Modell (einmalig ~150MB, danach offline)…");
       const pipe = await getMusicGen((p, m) => { setProgress(p); setProgressMsg(m); });
 
       setStatus("generating");
-      setProgressMsg("Komponiere Song… (15–45s)");
-      const seconds = Math.min(15, Math.max(5, request.duration ?? 10));
+      setProgressMsg("Komponiere Song… (15-60s)");
+      // Shorter default + lower guidance = much more stable
+      const seconds = Math.min(10, Math.max(4, request.duration ?? 7));
       const max_new_tokens = Math.round(seconds * 50);
 
-      // Hard timeout so a stuck inference doesn't lock the UI forever
       const out: any = await Promise.race([
-        pipe(request.prompt, { do_sample: true, guidance_scale: 3, max_new_tokens }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — versuch's mit kürzerer Beschreibung")), 90_000)),
+        pipe(request.prompt, { do_sample: true, guidance_scale: 2.5, max_new_tokens }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — versuch's mit kürzerer Beschreibung")), 120_000)),
       ]);
 
       const sampleRate = out.sampling_rate ?? 32000;
@@ -88,10 +96,12 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
       console.error("MusicGen error:", e);
       const raw = e?.message ?? "unbekannter Fehler";
       let friendly = raw;
-      if (/out of memory|allocation|wasm/i.test(raw)) {
-        friendly = "Zu wenig Arbeitsspeicher — schließe andere Tabs und versuch's nochmal.";
-      } else if (/network|fetch|load/i.test(raw)) {
-        friendly = "Modell konnte nicht geladen werden — Internet kurz prüfen und erneut versuchen.";
+      if (/out of memory|allocation|wasm|RangeError/i.test(raw)) {
+        friendly = "Zu wenig Arbeitsspeicher — schließe andere Tabs & lade die Seite neu.";
+      } else if (/network|fetch|load|404|403/i.test(raw)) {
+        friendly = "Modell konnte nicht geladen werden — Internet prüfen.";
+      } else if (/timeout/i.test(raw)) {
+        friendly = "Zu langsam — kürzere Beschreibung versuchen.";
       }
       setErrorMsg(friendly);
       toast.error("Musik fehlgeschlagen: " + friendly);
@@ -159,7 +169,8 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
 
       {status === "idle" && (
         <p className="text-xs text-muted-foreground">
-          Klick „Generieren" — der erste Song lädt das KI-Modell (~300MB, einmalig). Folgende Songs sind schnell.
+          Klick „Generieren" — der erste Song lädt das KI-Modell (~150MB, einmalig & offline-fähig). Folgende Songs sind schnell.
+          {isLowMemory() && <span className="block mt-1 text-amber-400">⚠ Auf deinem Gerät kann's eng werden — schließe andere Tabs.</span>}
         </p>
       )}
 
