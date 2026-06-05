@@ -36,3 +36,8 @@ verify_jwt = false
 [functions.image-gen]
 verify_jwt = false
 
+[functions.twin-train]
+verify_jwt = false
+
+
+

@@ -15,7 +15,7 @@ import MinecraftAvatar from "./MinecraftAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LogOut, MessageSquare, Key, Shield, BookOpen, Menu, User as UserIcon, Ticket,
-  Brain, Drama, Server, Bot, Users, BarChart3,
+  Brain, Drama, Server, Bot, Users, BarChart3, Crown,
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
@@ -111,6 +111,9 @@ const TopNav = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => nav("/personas")}>
                   <Drama className="h-4 w-4 mr-2" /> Personas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav("/twin")}>
+                  <Crown className="h-4 w-4 mr-2 text-fuchsia-400" /> AI Twin <span className="ml-auto text-[9px] uppercase tracking-wider text-fuchsia-400">Pro</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => nav("/agents")}>
                   <Bot className="h-4 w-4 mr-2" /> Auto-Agents
