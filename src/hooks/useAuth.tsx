@@ -7,6 +7,12 @@ interface Profile {
   email: string | null;
   mc_username: string | null;
   start_in_chat: boolean;
+  onboarded: boolean;
+  age?: number | null;
+  about?: string | null;
+  interests?: string[] | null;
+  favorite_block?: string | null;
+  playstyle?: string | null;
 }
 
 interface AuthCtx {
@@ -30,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadExtras = useCallback(async (uid: string) => {
     const [rolesRes, profRes] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.from("profiles").select("display_name,email,mc_username,start_in_chat").eq("user_id", uid).maybeSingle(),
+      supabase.from("profiles").select("display_name,email,mc_username,start_in_chat,onboarded,age,about,interests,favorite_block,playstyle").eq("user_id", uid).maybeSingle(),
     ]);
     setIsAdmin(!!rolesRes.data?.some((r: any) => r.role === "admin"));
     setProfile((profRes.data as any) ?? null);

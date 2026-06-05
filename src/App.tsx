@@ -21,6 +21,7 @@ import McServers from "./pages/McServers";
 import Agents from "./pages/Agents";
 import Analytics from "./pages/Analytics";
 import Groups from "./pages/Groups";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
