@@ -21,6 +21,7 @@ import McServers from "./pages/McServers";
 import Agents from "./pages/Agents";
 import Analytics from "./pages/Analytics";
 import Groups from "./pages/Groups";
+import Twin from "./pages/Twin";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/mc-servers" element={<RequireAuth><McServers /></RequireAuth>} />
             <Route path="/agents" element={<RequireAuth><Agents /></RequireAuth>} />
             <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
+            <Route path="/twin" element={<RequireAuth><Twin /></RequireAuth>} />
             <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

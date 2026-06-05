@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Crown, Sparkles, Loader2, Brain, Trash2, Plus, RefreshCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import Paywall from "@/components/Paywall";
 import { Link } from "react-router-dom";
 
 type Twin = {
@@ -117,8 +116,12 @@ export default function Twin() {
             </div>
             <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">AI Twin</h1>
             <p className="text-muted-foreground mb-1">Dein digitaler Klon — trainiert auf <em>deinem</em> Schreibstil.</p>
-            <p className="text-sm text-muted-foreground mb-6">Antwortet in deinem Namen, in deiner Tonalität, mit deinem Slang. Nur für Pro.</p>
-            <Paywall open trigger="twin" onClose={() => {}} inline />
+            <p className="text-sm text-muted-foreground mb-6">Antwortet in deinem Namen, in deiner Tonalität, mit deinem Slang. <strong>Pro-Only.</strong></p>
+            <Link to="/dashboard">
+              <Button size="lg" className="bg-gradient-primary text-primary-foreground hover:opacity-90">
+                <Crown className="h-4 w-4 mr-2" /> Auf Pro upgraden
+              </Button>
+            </Link>
             <Link to="/app" className="block mt-6 text-xs text-muted-foreground hover:text-foreground">← Zurück zum Chat</Link>
           </div>
         </main>
