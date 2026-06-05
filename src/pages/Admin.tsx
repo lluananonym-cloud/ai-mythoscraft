@@ -7,11 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Shield, Users, Ticket, Phone, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, Users, Phone, Gift } from "lucide-react";
 import { toast } from "sonner";
-import BoostCodesAdmin from "@/components/BoostCodesAdmin";
 import PhoneInbox from "@/components/PhoneInbox";
-import SubscriptionsAdmin from "@/components/SubscriptionsAdmin";
+import RewardsAdmin from "@/components/RewardsAdmin";
 
 type Article = { id: string; title: string; category: string; body: string; is_published: boolean; created_at: string };
 type UserRow = { user_id: string; email: string; display_name: string | null; role?: string };
@@ -67,9 +66,8 @@ const Admin = () => {
           <TabsList className="bg-secondary/50 flex-wrap h-auto">
             <TabsTrigger value="inbox"><Phone className="h-3.5 w-3.5 mr-1.5" />Phone Inbox</TabsTrigger>
             <TabsTrigger value="kb">Knowledge Base</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="subs"><Sparkles className="h-3.5 w-3.5 mr-1.5" />Pro / Geschenke</TabsTrigger>
-            <TabsTrigger value="boosts"><Ticket className="h-3.5 w-3.5 mr-1.5" />Boost Codes</TabsTrigger>
+            <TabsTrigger value="users">Users / Roles</TabsTrigger>
+            <TabsTrigger value="rewards"><Gift className="h-3.5 w-3.5 mr-1.5" />Abos & Boost-Codes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="inbox" className="mt-6">
@@ -138,12 +136,8 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="subs" className="mt-6">
-            <SubscriptionsAdmin />
-          </TabsContent>
-
-          <TabsContent value="boosts" className="mt-6">
-            <BoostCodesAdmin />
+          <TabsContent value="rewards" className="mt-6">
+            <RewardsAdmin />
           </TabsContent>
         </Tabs>
       </main>
