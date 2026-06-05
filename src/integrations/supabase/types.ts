@@ -98,6 +98,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_twins: {
+        Row: {
+          auto_reply_in_groups: boolean
+          avatar_emoji: string | null
+          created_at: string
+          id: string
+          is_trained: boolean
+          last_trained_at: string | null
+          style_summary: string | null
+          tone: string | null
+          training_samples: string[]
+          twin_name: string
+          updated_at: string
+          user_id: string
+          vocabulary: string[]
+        }
+        Insert: {
+          auto_reply_in_groups?: boolean
+          avatar_emoji?: string | null
+          created_at?: string
+          id?: string
+          is_trained?: boolean
+          last_trained_at?: string | null
+          style_summary?: string | null
+          tone?: string | null
+          training_samples?: string[]
+          twin_name?: string
+          updated_at?: string
+          user_id: string
+          vocabulary?: string[]
+        }
+        Update: {
+          auto_reply_in_groups?: boolean
+          avatar_emoji?: string | null
+          created_at?: string
+          id?: string
+          is_trained?: boolean
+          last_trained_at?: string | null
+          style_summary?: string | null
+          tone?: string | null
+          training_samples?: string[]
+          twin_name?: string
+          updated_at?: string
+          user_id?: string
+          vocabulary?: string[]
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           created_at: string
@@ -657,31 +705,52 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about: string | null
+          age: number | null
           created_at: string
           display_name: string | null
           email: string | null
+          favorite_block: string | null
           id: string
+          interests: string[] | null
           mc_username: string | null
+          onboarded: boolean
+          playstyle: string | null
+          referral: string | null
           start_in_chat: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          about?: string | null
+          age?: number | null
           created_at?: string
           display_name?: string | null
           email?: string | null
+          favorite_block?: string | null
           id?: string
+          interests?: string[] | null
           mc_username?: string | null
+          onboarded?: boolean
+          playstyle?: string | null
+          referral?: string | null
           start_in_chat?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          about?: string | null
+          age?: number | null
           created_at?: string
           display_name?: string | null
           email?: string | null
+          favorite_block?: string | null
           id?: string
+          interests?: string[] | null
           mc_username?: string | null
+          onboarded?: boolean
+          playstyle?: string | null
+          referral?: string | null
           start_in_chat?: boolean
           updated_at?: string
           user_id?: string
