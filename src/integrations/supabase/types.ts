@@ -703,6 +703,42 @@ export type Database = {
           },
         ]
       }
+      pro_games: {
+        Row: {
+          created_at: string
+          genre: string | null
+          html: string
+          id: string
+          play_count: number
+          prompt: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          genre?: string | null
+          html: string
+          id?: string
+          play_count?: number
+          prompt: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          genre?: string | null
+          html?: string
+          id?: string
+          play_count?: number
+          prompt?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           about: string | null
