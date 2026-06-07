@@ -39,12 +39,11 @@ function encodeWAV(samples: Float32Array, sampleRate: number): Blob {
 
 // Globally deduped — see src/lib/transformersLoader.ts
 import { loadPipeline } from "@/lib/transformersLoader";
-async function getMusicGen(onProgress: (p: number, msg: string) => void) {
+async function getMusicGen(onProgress: (p: number, msg: string) => void, dtype: "fp32" | "q8" = "fp32") {
   return loadPipeline({
     task: "text-to-audio",
     model: "Xenova/musicgen-small",
-    // q8 quant = ~150MB instead of 300MB, runs on mobile too
-    dtype: "q8",
+    dtype,
     onProgress: (p) => onProgress(p.pct, p.msg || `Lade Musik-Modell… ${p.pct}%`),
   });
 }
@@ -67,46 +66,54 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
 
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
 
+  const runGenerate = async (dtype: "fp32" | "q8") => {
+    setStatus("loading");
+    setProgress(0);
+    setProgressMsg(`Lade KI-Modell (${dtype === "q8" ? "~150MB quantisiert" : "~300MB"}, einmalig & offline-fähig)…`);
+    const pipe = await getMusicGen((p, m) => { setProgress(p); setProgressMsg(m); }, dtype);
+    setStatus("generating");
+    setProgressMsg("Komponiere Song… (15-60s)");
+    const seconds = Math.min(10, Math.max(4, request.duration ?? 7));
+    const max_new_tokens = Math.round(seconds * 50);
+    const out: any = await Promise.race([
+      pipe(request.prompt, { do_sample: true, guidance_scale: 3, max_new_tokens }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout")), 180_000)),
+    ]);
+    const sampleRate = out.sampling_rate ?? 32000;
+    const samples = out.audio as Float32Array;
+    if (!samples || !samples.length) throw new Error("Leere Audio-Antwort vom Modell");
+    return encodeWAV(samples, sampleRate);
+  };
+
   const generate = async () => {
     setErrorMsg(null);
-    try {
-      setStatus("loading");
-      setProgress(0);
-      setProgressMsg("Lade KI-Modell (einmalig ~150MB, danach offline)…");
-      const pipe = await getMusicGen((p, m) => { setProgress(p); setProgressMsg(m); });
-
-      setStatus("generating");
-      setProgressMsg("Komponiere Song… (15-60s)");
-      // Shorter default + lower guidance = much more stable
-      const seconds = Math.min(10, Math.max(4, request.duration ?? 7));
-      const max_new_tokens = Math.round(seconds * 50);
-
-      const out: any = await Promise.race([
-        pipe(request.prompt, { do_sample: true, guidance_scale: 2.5, max_new_tokens }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — versuch's mit kürzerer Beschreibung")), 120_000)),
-      ]);
-
-      const sampleRate = out.sampling_rate ?? 32000;
-      const samples = out.audio as Float32Array;
-      if (!samples || !samples.length) throw new Error("Leere Audio-Antwort vom Modell");
-      const wav = encodeWAV(samples, sampleRate);
-      setAudioUrl(URL.createObjectURL(wav));
-      setStatus("ready");
-    } catch (e: any) {
-      console.error("MusicGen error:", e);
-      const raw = e?.message ?? "unbekannter Fehler";
-      let friendly = raw;
-      if (/out of memory|allocation|wasm|RangeError/i.test(raw)) {
-        friendly = "Zu wenig Arbeitsspeicher — schließe andere Tabs & lade die Seite neu.";
-      } else if (/network|fetch|load|404|403/i.test(raw)) {
-        friendly = "Modell konnte nicht geladen werden — Internet prüfen.";
-      } else if (/timeout/i.test(raw)) {
-        friendly = "Zu langsam — kürzere Beschreibung versuchen.";
+    // fp32 ist deutlich stabiler; auf Low-Mem direkt q8
+    const order: ("fp32" | "q8")[] = isLowMemory() ? ["q8", "fp32"] : ["fp32", "q8"];
+    let lastErr: any = null;
+    for (const dtype of order) {
+      try {
+        const wav = await runGenerate(dtype);
+        setAudioUrl(URL.createObjectURL(wav));
+        setStatus("ready");
+        return;
+      } catch (e: any) {
+        console.error(`MusicGen (${dtype}) error:`, e);
+        lastErr = e;
+        if (dtype === "fp32" && /memory|allocation|wasm|RangeError/i.test(e?.message ?? "")) {
+          setProgressMsg("Zu wenig RAM für fp32 — wechsle auf quantisiertes Modell…");
+          continue;
+        }
+        break;
       }
-      setErrorMsg(friendly);
-      toast.error("Musik fehlgeschlagen: " + friendly);
-      setStatus("error");
     }
+    const raw = lastErr?.message ?? "unbekannter Fehler";
+    let friendly = raw;
+    if (/out of memory|allocation|wasm|RangeError/i.test(raw)) friendly = "Zu wenig Arbeitsspeicher — schließe andere Tabs & lade die Seite neu.";
+    else if (/network|fetch|load|404|403/i.test(raw)) friendly = "Modell konnte nicht geladen werden — Internet prüfen.";
+    else if (/timeout/i.test(raw)) friendly = "Zu langsam — kürzere Beschreibung versuchen.";
+    setErrorMsg(friendly);
+    toast.error("Musik fehlgeschlagen: " + friendly);
+    setStatus("error");
   };
 
 

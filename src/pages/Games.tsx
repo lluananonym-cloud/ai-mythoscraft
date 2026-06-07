@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import TopNav from "@/components/TopNav";
-import Paywall from "@/components/Paywall";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,13 +79,16 @@ export default function Games() {
   if (!isPro) {
     return (
       <div className="min-h-screen"><TopNav />
-        <main className="container max-w-3xl py-10">
-          <div className="text-center mb-6">
-            <Gamepad2 className="h-14 w-14 mx-auto text-fuchsia-400 mb-3" />
-            <h1 className="font-display text-3xl font-bold mb-2">Game Coder <span className="text-fuchsia-400">Pro</span></h1>
-            <p className="text-muted-foreground">Beschreibe ein Spiel, die KI baut ein komplettes 3D-Casual-Game (wie auf Poki) — sofort spielbar im Browser.</p>
+        <main className="container max-w-2xl py-12 text-center">
+          <Gamepad2 className="h-16 w-16 mx-auto text-fuchsia-400 mb-4" />
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-3">Game Coder <span className="text-fuchsia-400">Pro</span></h1>
+          <p className="text-muted-foreground mb-6">Beschreibe ein Spiel — die KI baut dir ein komplettes 3D-Casual-Game (Poki-Style), sofort spielbar im Browser, mit Tastatur & Touch.</p>
+          <div className="glass-strong rounded-2xl p-6 space-y-3 text-left text-sm">
+            <div className="flex items-start gap-2"><Sparkles className="h-4 w-4 text-fuchsia-400 mt-0.5 shrink-0" /><span>Endless Runner, Puzzle, Racing, Shooter, Tower-Defense — alles möglich</span></div>
+            <div className="flex items-start gap-2"><Sparkles className="h-4 w-4 text-fuchsia-400 mt-0.5 shrink-0" /><span>Three.js-basiert, Vollbild, mobile-ready, Score/Restart/HUD inklusive</span></div>
+            <div className="flex items-start gap-2"><Sparkles className="h-4 w-4 text-fuchsia-400 mt-0.5 shrink-0" /><span>Direkt im Browser spielen oder in eigenem Tab öffnen & teilen</span></div>
           </div>
-          <Paywall feature="Game Coder" />
+          <Button asChild className="mt-6 bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white"><a href="/dashboard">Auf Pro upgraden</a></Button>
         </main>
       </div>
     );
