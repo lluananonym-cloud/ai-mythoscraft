@@ -1,22 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import TopNav from "@/components/TopNav";
 import MinecraftAvatar from "@/components/MinecraftAvatar";
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
   Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
+  PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
+  Crown, Gamepad2, Server, Ticket, User as UserIcon, Search,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
+import { toast } from "sonner";
+import { useVoiceMode } from "@/hooks/useVoiceMode";
+import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
+import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
+import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
+import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
+import { Link, useNavigate } from "react-router-dom";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
@@ -30,17 +44,9 @@ const SLASH_COMMANDS = [
   { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
   { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
 ];
-import { toast } from "sonner";
-import { useVoiceMode } from "@/hooks/useVoiceMode";
-import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
-import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
-import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
-import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
-import { Link } from "react-router-dom";
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
-
 type Conv = { id: string; title: string; mode: string; updated_at: string };
 type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; offline?: OfflineTask; attachments?: Attachment[] };
 
@@ -50,8 +56,11 @@ const MODES = [
   { value: "general", label: "General", icon: Sparkles, desc: "Allgemeiner KI-Chat" },
 ];
 
+const SIDEBAR_KEY = "mythos.sidebar.collapsed";
+
 const Chat = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
+  const nav = useNavigate();
   const sub = useSubscription();
   const [paywall, setPaywall] = useState<{ open: boolean; reason?: string }>({ open: false });
   const [convs, setConvs] = useState<Conv[]>([]);
@@ -60,7 +69,11 @@ const Chat = () => {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState("support");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_KEY) === "1";
+  });
   const [voiceMode, setVoiceMode] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaId, setPersonaId] = useState<string>("none");
@@ -68,6 +81,7 @@ const Chat = () => {
   const [uploading, setUploading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
+  const [convSearch, setConvSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string>("");
@@ -75,10 +89,10 @@ const Chat = () => {
   const voice = useVoiceMode({
     lang: "de-DE",
     onTranscript: (t) => { sendRef.current?.(t); },
-    onDictation: (t) => {
-      setInput(prev => (prev ? prev.trimEnd() + " " + t : t));
-    },
+    onDictation: (t) => { setInput(prev => (prev ? prev.trimEnd() + " " + t : t)); },
   });
+
+  useEffect(() => { localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? "1" : "0"); }, [sidebarCollapsed]);
 
   const loadConvs = async () => {
     const { data } = await supabase.from("conversations").select("*").order("updated_at", { ascending: false });
@@ -87,7 +101,6 @@ const Chat = () => {
 
   useEffect(() => { if (user) loadConvs(); }, [user]);
 
-  // Load personas (own + public)
   useEffect(() => {
     if (!user) return;
     supabase.from("ai_personas").select("id,name,avatar_emoji").or(`user_id.eq.${user.id},is_public.eq.true`).then(({ data }) => {
@@ -112,10 +125,9 @@ const Chat = () => {
     if (newAtts.length) toast.success(`${newAtts.length} Datei(en) angehängt`);
   };
 
-
   const loadMessages = async (id: string) => {
     setActiveId(id);
-    setSidebarOpen(false);
+    setMobileSidebar(false);
     const { data } = await supabase.from("messages").select("*").eq("conversation_id", id).order("created_at");
     if (data) {
       const enriched = (data as any[]).map(m => ({
@@ -138,7 +150,7 @@ const Chat = () => {
   const newChat = () => {
     setActiveId(null);
     setMessages([]);
-    setSidebarOpen(false);
+    setMobileSidebar(false);
   };
 
   const deleteChat = async (id: string) => {
@@ -150,7 +162,6 @@ const Chat = () => {
   const send = async (override?: string) => {
     const text = (override ?? input).trim();
     if (!text || sending) return;
-    // Pro gating
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
@@ -168,7 +179,6 @@ const Chat = () => {
       loadConvs();
     }
 
-    // Intercept /music — generate real AI music in the browser (MusicGen, free)
     const musicMatch = text.match(/^\/music\s+(.+)$/i);
     if (musicMatch) {
       const prompt = musicMatch[1].trim();
@@ -176,7 +186,7 @@ const Chat = () => {
       const userMsg: Msg = { role: "user", content: text };
       const aiMsg: Msg = {
         role: "assistant",
-        content: `🎵 **AI-Song wird vorbereitet:** _${prompt}_\n\nKlick unten auf "Generieren". Der erste Song lädt das Modell (~300MB einmalig), dann läuft alles offline im Browser — kostenlos.`,
+        content: `🎵 **AI-Song wird vorbereitet:** _${prompt}_\n\nKlick unten auf „Generieren". Der erste Song lädt das Modell (~300MB einmalig), dann läuft alles offline im Browser — kostenlos.`,
         song,
       };
       setMessages(prev => [...prev, userMsg, aiMsg]);
@@ -185,12 +195,9 @@ const Chat = () => {
         { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { song } },
       ]);
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-      setSending(false);
-      loadConvs();
-      return;
+      setSending(false); loadConvs(); return;
     }
 
-    // Intercept /video — generate cinematic clip 100% client-side (image gen + Ken Burns)
     const videoMatch = text.match(/^\/video\s+(.+)$/i);
     if (videoMatch) {
       const prompt = videoMatch[1].trim();
@@ -207,12 +214,9 @@ const Chat = () => {
         { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { video } },
       ]);
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-      setSending(false);
-      loadConvs();
-      return;
+      setSending(false); loadConvs(); return;
     }
 
-    // Intercept offline AI commands — run 100% in browser, no server roundtrip
     const offlineMatch =
       text.match(/^\/offline-summary\s+(.+)$/is) ? { kind: "summary" as const, body: text.replace(/^\/offline-summary\s+/i, "") } :
       text.match(/^\/sentiment\s+(.+)$/is)       ? { kind: "sentiment" as const, body: text.replace(/^\/sentiment\s+/i, "") } :
@@ -235,9 +239,7 @@ const Chat = () => {
         { conversation_id: convId, role: "assistant", content: aiContent, metadata: { offline } },
       ]);
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-      setSending(false);
-      loadConvs();
-      return;
+      setSending(false); loadConvs(); return;
     }
 
     const buildContent = (txt: string) => {
@@ -260,7 +262,6 @@ const Chat = () => {
       conversation_id: convId, role: "user", content: displayContent,
       metadata: attachments.length ? { attachments } : null,
     });
-    const sentAttachments = attachments;
     setAttachments([]);
 
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
@@ -355,10 +356,7 @@ const Chat = () => {
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
 
-      // Fire-and-forget: extract durable memories from the user message
       supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
-
-      // Fetch smart follow-up suggestions
       supabase.functions.invoke("suggest", {
         body: { messages: [...historyForAI, { role: "user", content: text }, { role: "assistant", content: full }] },
       }).then(({ data }) => {
@@ -373,7 +371,6 @@ const Chat = () => {
     }
   };
 
-  // Clear suggestions when user starts typing or switches chat
   useEffect(() => { if (input) setSuggestions([]); }, [input]);
   useEffect(() => { setSuggestions([]); }, [activeId]);
 
@@ -393,11 +390,8 @@ const Chat = () => {
     a.click(); URL.revokeObjectURL(url);
   };
 
-
-  // Wire send to ref so the voice hook can call it
   useEffect(() => { sendRef.current = send; });
 
-  // Auto-speak last assistant message when voice mode is on and streaming finishes
   useEffect(() => {
     if (!voiceMode || sending) return;
     const last = messages[messages.length - 1];
@@ -407,395 +401,545 @@ const Chat = () => {
     voice.speak(last.content);
   }, [voiceMode, sending, messages, voice]);
 
-  // When toggling voice mode ON, start LIVE listening; OFF -> stop everything.
   useEffect(() => {
-    if (voiceMode) {
-      if (voice.supported) voice.startLive();
-    } else {
-      voice.stopSpeaking();
-      voice.stopListening();
-    }
+    if (voiceMode) { if (voice.supported) voice.startLive(); }
+    else { voice.stopSpeaking(); voice.stopListening(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceMode]);
 
-  const ModeIcon = MODES.find(m => m.value === mode)?.icon || HelpCircle;
+  const filteredConvs = convSearch
+    ? convs.filter(c => c.title.toLowerCase().includes(convSearch.toLowerCase()))
+    : convs;
 
-  const Sidebar = (
-    <div className="flex flex-col gap-2 h-full">
-      <Button onClick={newChat} className="bg-gradient-primary text-primary-foreground hover:opacity-90 w-full">
-        <Plus className="h-4 w-4 mr-1.5" /> Neuer Chat
-      </Button>
-      <ScrollArea className="flex-1 -mx-1 px-1">
-        <div className="space-y-1">
-          {convs.map(c => (
+  const displayName = profile?.display_name || user?.email?.split("@")[0] || "Account";
+
+  const SidebarContentBlock = (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-1 px-2 pt-2 pb-3">
+        <Link to="/" className="flex items-center gap-2 px-1 rounded-lg hover:bg-white/5 py-1" aria-label="Startseite">
+          <Logo size="sm" />
+        </Link>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setSidebarCollapsed(true)}>
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sidebar einklappen</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={newChat} aria-label="Neuer Chat">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Neuer Chat</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* New chat CTA */}
+      <div className="px-2">
+        <button
+          onClick={newChat}
+          className="w-full flex items-center gap-2 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2.5 text-sm text-left transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Neuer Chat</span>
+        </button>
+      </div>
+
+      {/* Search */}
+      {convs.length > 4 && (
+        <div className="px-2 pt-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              value={convSearch}
+              onChange={(e) => setConvSearch(e.target.value)}
+              placeholder="Chats suchen…"
+              className="w-full bg-white/5 border border-white/5 rounded-lg pl-8 pr-2 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:border-white/20"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Conversation list */}
+      <ScrollArea className="flex-1 mt-2 px-2">
+        <div className="space-y-0.5 pb-2">
+          {filteredConvs.length === 0 && (
+            <p className="text-xs text-muted-foreground p-3 text-center">
+              {convSearch ? "Keine Treffer" : "Noch keine Chats"}
+            </p>
+          )}
+          {filteredConvs.map(c => (
             <div
               key={c.id}
-              className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm cursor-pointer transition-colors ${
-                activeId === c.id ? "bg-primary/15 text-foreground" : "hover:bg-secondary/50 text-muted-foreground"
+              className={`group flex items-center gap-2 rounded-lg pl-3 pr-1 py-2 text-sm cursor-pointer transition-colors ${
+                activeId === c.id ? "bg-white/10 text-foreground" : "hover:bg-white/5 text-foreground/80"
               }`}
               onClick={() => loadMessages(c.id)}
             >
-              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate flex-1">{c.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
-                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1"
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1"
                 aria-label="Chat löschen"
               >
                 <Trash2 className="h-3.5 w-3.5 hover:text-destructive" />
               </button>
             </div>
           ))}
-          {convs.length === 0 && <p className="text-xs text-muted-foreground p-3 text-center">Noch keine Chats</p>}
         </div>
       </ScrollArea>
+
+      {/* User footer */}
+      <div className="border-t border-white/5 p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-2 rounded-lg hover:bg-white/5 p-2 transition-colors">
+              <MinecraftAvatar username={profile?.mc_username} fallback={displayName} size={32} />
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-sm font-medium truncate">{profile?.mc_username || displayName}</div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {sub.tier === "pro" ? "✨ Pro" : sub.tier === "light" ? "· Light" : "Free"}
+                </div>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top" className="glass-strong w-64">
+            <DropdownMenuLabel className="text-xs text-muted-foreground truncate">{user?.email}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => nav("/dashboard")}><Key className="h-4 w-4 mr-2" /> Dashboard</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/dashboard?tab=profile")}><UserIcon className="h-4 w-4 mr-2" /> Profil & Skin</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/memories")}><Brain className="h-4 w-4 mr-2" /> Memories</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/personas")}><Drama className="h-4 w-4 mr-2" /> Personas</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/twin")}><Crown className="h-4 w-4 mr-2 text-fuchsia-400" /> AI Twin <span className="ml-auto text-[9px] uppercase text-fuchsia-400">Pro</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/games")}><Gamepad2 className="h-4 w-4 mr-2 text-fuchsia-400" /> Game Coder <span className="ml-auto text-[9px] uppercase text-fuchsia-400">Pro</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/agents")}><Bot className="h-4 w-4 mr-2" /> Auto-Agents</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/groups")}><Users className="h-4 w-4 mr-2" /> Freunde-Chats</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/analytics")}><BarChart3 className="h-4 w-4 mr-2" /> Analytics</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/mc-servers")}><Server className="h-4 w-4 mr-2" /> Minecraft-Server</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/redeem")}><Ticket className="h-4 w-4 mr-2" /> Boost Code einlösen</DropdownMenuItem>
+            {isAdmin && <DropdownMenuItem onClick={() => nav("/admin")}><Shield className="h-4 w-4 mr-2" /> Admin</DropdownMenuItem>}
+            <DropdownMenuSeparator />
+            {sub.tier === "free" && (
+              <DropdownMenuItem onClick={() => setPaywall({ open: true, reason: "Upgrade auf Pro für alle Features." })}>
+                <Crown className="h-4 w-4 mr-2 text-fuchsia-400" /> Auf Pro upgraden
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={async () => { await signOut(); nav("/"); }}>
+              <LogOut className="h-4 w-4 mr-2" /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden">
-      <TopNav />
-      <div className="flex-1 container py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:py-4 grid min-h-0 grid-cols-1 md:grid-cols-[260px_1fr] gap-3 md:gap-4 overflow-hidden">
+    <TooltipProvider delayDuration={200}>
+      <div className="h-[100dvh] flex overflow-hidden bg-background">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex min-h-0 glass rounded-2xl p-3 flex-col gap-2 h-full max-h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]">
-          {Sidebar}
+        <aside
+          className={`hidden md:flex shrink-0 flex-col h-full transition-[width] duration-200 ease-out border-r border-white/5 bg-[hsl(0_0%_5%)] ${
+            sidebarCollapsed ? "w-0" : "w-[260px]"
+          } overflow-hidden`}
+        >
+          <div className="w-[260px] h-full">{SidebarContentBlock}</div>
         </aside>
 
-        {/* Chat area */}
-        <main className="glass-strong rounded-2xl flex min-h-0 flex-col h-full max-h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-hidden">
-          <div className="border-b border-border/50 p-2.5 md:p-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {/* Mobile sidebar trigger */}
-              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 shrink-0">
-                    <Menu className="h-4 w-4" />
+        {/* Mobile sidebar */}
+        <Sheet open={mobileSidebar} onOpenChange={setMobileSidebar}>
+          <SheetContent
+            side="left"
+            className="w-[280px] p-0 bg-[hsl(0_0%_5%)] border-r border-white/5 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          >
+            {SidebarContentBlock}
+          </SheetContent>
+        </Sheet>
+
+        {/* Main column */}
+        <main className="flex-1 min-w-0 flex flex-col h-full">
+          {/* Top bar */}
+          <header className="shrink-0 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 h-14 border-b border-white/5 pt-[env(safe-area-inset-top)]">
+            {/* Sidebar toggle */}
+            <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setMobileSidebar(true)} aria-label="Sidebar öffnen">
+              <Menu className="h-5 w-5" />
+            </Button>
+            {sidebarCollapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hidden md:inline-flex h-9 w-9" onClick={() => setSidebarCollapsed(false)} aria-label="Sidebar öffnen">
+                    <PanelLeft className="h-4 w-4" />
                   </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="glass-strong w-[280px] p-3 pt-[max(env(safe-area-inset-top),0.75rem)] pb-[max(env(safe-area-inset-bottom),0.75rem)] flex flex-col">
-                  <div className="mt-6 flex-1 overflow-hidden">{Sidebar}</div>
-                </SheetContent>
-              </Sheet>
-              <ModeIcon className="h-4 w-4 text-foreground/80 shrink-0" />
-              <Link to="/" className="font-display text-base truncate hover:text-foreground/80 transition-colors">Mythos AI</Link>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="ghost" size="icon"
-                className="h-9 w-9"
-                onClick={() => { if (sub.canUseVoice) window.location.assign("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
-                title="Live-Sprachchat"
-                aria-label="Live-Sprachchat öffnen"
-              >
-                <AudioLines className="h-4 w-4" />
-              </Button>
-              {voice.supported && (
-                <Button
-                  variant={voiceMode ? "default" : "ghost"}
-                  size="icon"
-                  className={`h-9 w-9 ${voiceMode ? "bg-foreground text-background hover:bg-foreground/90" : ""}`}
-                  onClick={() => setVoiceMode(v => !v)}
-                  title={voiceMode ? "Voice-Modus aus" : "Voice-Modus an"}
-                  aria-label="Voice-Modus umschalten"
-                >
-                  {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
-              )}
-              {messages.length > 0 && (
-                <Button
-                  variant="ghost" size="icon" className="h-9 w-9"
-                  onClick={exportChat}
-                  title="Chat als Markdown exportieren"
-                  aria-label="Chat exportieren"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
-              {personas.length > 0 && (
-                <Select value={personaId} onValueChange={setPersonaId}>
-                  <SelectTrigger className="w-[110px] sm:w-[150px] glass h-9 text-xs border-white/10">
-                    <Drama className="h-3.5 w-3.5 mr-1" />
-                    <SelectValue placeholder="Persona" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">Standard</span></SelectItem>
-                    {personas.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <span className="flex items-center gap-1.5">{p.avatar_emoji || "🎭"} {p.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={mode} onValueChange={setMode}>
-                <SelectTrigger className="w-[110px] sm:w-[160px] glass h-9 text-xs border-white/10">
-                  <SelectValue />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Sidebar öffnen</TooltipContent>
+              </Tooltip>
+            )}
+            {sidebarCollapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hidden md:inline-flex h-9 w-9" onClick={newChat} aria-label="Neuer Chat">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Neuer Chat</TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Mode selector as title */}
+            <Select value={mode} onValueChange={setMode}>
+              <SelectTrigger className="h-9 w-auto min-w-0 border-0 bg-transparent hover:bg-white/5 px-2 gap-1.5 text-sm font-medium focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {MODES.map(m => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <div className="flex items-center gap-2">
+                      <m.icon className="h-3.5 w-3.5" />
+                      <span>Mythos AI · {m.label}</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex-1" />
+
+            {personas.length > 0 && (
+              <Select value={personaId} onValueChange={setPersonaId}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-xs border-white/10 bg-white/5">
+                  <Drama className="h-3.5 w-3.5 mr-1" />
+                  <SelectValue placeholder="Persona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MODES.map(m => (
-                    <SelectItem key={m.value} value={m.value}>
-                      <div className="flex items-center gap-2">
-                        <m.icon className="h-3.5 w-3.5" />
-                        <span>{m.label}</span>
-                        <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
-                      </div>
+                  <SelectItem value="none"><span className="text-muted-foreground">Standard</span></SelectItem>
+                  {personas.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="flex items-center gap-1.5">{p.avatar_emoji || "🎭"} {p.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            )}
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 min-h-0">
-            {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto px-2">
-                <div className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-gradient-primary flex items-center justify-center glow-primary mb-5 animate-pulse-glow">
-                  <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-primary-foreground" />
-                </div>
-                <h2 className="font-display text-xl md:text-2xl font-bold mb-2">Willkommen bei Mythos AI</h2>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Frag mich alles über mythoscraft.online — Regeln, Commands, Plugins, Server-Status. Im Agent-Modus kann ich auch im Web suchen.
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost" size="icon" className="h-9 w-9"
+                  onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
+                  aria-label="Live-Sprachchat"
+                >
+                  <AudioLines className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Live-Sprachchat</TooltipContent>
+            </Tooltip>
+
+            {voice.supported && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost" size="icon"
+                    className={`h-9 w-9 ${voiceMode ? "text-foreground bg-white/10" : ""}`}
+                    onClick={() => setVoiceMode(v => !v)}
+                    aria-label="Voice-Modus umschalten"
+                  >
+                    {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{voiceMode ? "Voice-Modus aus" : "Voice-Modus an"}</TooltipContent>
+              </Tooltip>
+            )}
+
+            {messages.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={exportChat} aria-label="Chat exportieren">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Als Markdown exportieren</TooltipContent>
+              </Tooltip>
+            )}
+          </header>
+
+          {/* Messages */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center px-4">
+                <div className="mb-6"><Logo size="lg" /></div>
+                <h1 className="font-display text-3xl md:text-4xl text-center mb-2 gradient-text">Womit kann ich helfen?</h1>
+                <p className="text-muted-foreground text-sm text-center max-w-md mb-8">
+                  Frag mich alles. Tippe <code className="font-mono bg-white/5 px-1.5 py-0.5 rounded text-[11px]">/</code> für alle Commands.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
                   {[
-                    "Wie verbinde ich mich mit dem Server?",
-                    "/video epische Drohnenaufnahme über einer Mythoscraft-Burg",
-                    "/image ein epischer Drache über mythoscraft",
-                    "/music chill lofi hip hop beat",
-                  ].map(s => (
+                    { icon: HelpCircle, label: "Wie verbinde ich mich mit dem Server?" },
+                    { icon: Film,       label: "/video epische Drohnenaufnahme über einer Burg" },
+                    { icon: ImageIcon,  label: "/image ein epischer Drache über mythoscraft" },
+                    { icon: Music,      label: "/music chill lofi hip hop beat" },
+                  ].map(({ icon: Icon, label }) => (
                     <button
-                      key={s}
-                      onClick={() => setInput(s)}
-                      className="glass rounded-xl p-3 text-xs text-left hover:border-primary/40 transition-colors"
+                      key={label}
+                      onClick={() => setInput(label)}
+                      className="border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-2xl p-4 text-sm text-left transition-colors flex items-start gap-3"
                     >
-                      {s}
+                      <Icon className="h-4 w-4 text-foreground/60 mt-0.5 shrink-0" />
+                      <span className="text-foreground/90">{label}</span>
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-            {messages.map((m, i) => (
-              <div key={i} className={`flex gap-2 sm:gap-3 animate-fade-in ${m.role === "user" ? "justify-end" : ""}`}>
-                {m.role !== "user" && (
-                  <div className="h-8 w-8 shrink-0 mt-0.5 flex items-center justify-center">
-                    <img src="/icon.png" alt="" aria-hidden="true" className="h-8 w-8 object-contain" loading="lazy" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 sm:px-4 sm:py-3 ${
-                    m.role === "user" ? "bg-primary/20 border border-primary/30" : "glass"
-                  }`}
-                >
-                  {m.role === "assistant" ? (
-                    <div className="prose-mythos text-sm break-words">
-                      {m.content ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      ) : !m.image && !m.music && !m.song && !m.video && !m.offline ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      ) : null}
-                      {m.image && (
-                        <img
-                          src={m.image.url}
-                          alt={m.image.prompt}
-                          className="mt-2 rounded-xl border border-white/10 max-w-full h-auto"
-                          loading="lazy"
-                        />
-                      )}
-                      {m.music && <FunkPlayer pattern={m.music} />}
-                      {m.song && <SongPlayer request={m.song} />}
-                      {m.video && <VideoPlayer request={m.video} />}
-                      {m.offline && <OfflineAI task={m.offline} />}
-                      {m.role === "assistant" && m.content && !sending && i === messages.length - 1 && (
-                        <div className="flex items-center gap-1 mt-2 -mb-1 opacity-60 hover:opacity-100 transition-opacity">
-                          <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1 hover:text-primary"><Copy className="h-3 w-3" /></button>
-                          {voice.supported && (
-                            <button
-                              onClick={() => voice.status === "speaking" ? voice.stopSpeaking() : voice.speak(m.content)}
-                              title={voice.status === "speaking" ? "Stop" : "Vorlesen"}
-                              className="p-1 hover:text-primary"
-                            >
-                              {voice.status === "speaking" ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                            </button>
+            ) : (
+              <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 space-y-6">
+                {messages.map((m, i) => (
+                  <div key={i} className="animate-fade-in">
+                    {m.role === "user" ? (
+                      <div className="flex justify-end">
+                        <div className="max-w-[85%] rounded-3xl px-4 py-2.5 bg-white/10 text-foreground">
+                          <p className="text-[15px] whitespace-pre-wrap break-words leading-relaxed">{m.content}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3">
+                        <div className="h-7 w-7 shrink-0 mt-1 flex items-center justify-center">
+                          <img src="/icon.png" alt="" aria-hidden="true" className="h-7 w-7 object-contain" loading="lazy" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="prose-mythos text-[15px] break-words">
+                            {m.content ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                            ) : !m.image && !m.music && !m.song && !m.video && !m.offline ? (
+                              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Denke nach…</span>
+                              </div>
+                            ) : null}
+                            {m.image && (
+                              <img
+                                src={m.image.url}
+                                alt={m.image.prompt}
+                                className="mt-2 rounded-2xl border border-white/10 max-w-full h-auto"
+                                loading="lazy"
+                              />
+                            )}
+                            {m.music && <FunkPlayer pattern={m.music} />}
+                            {m.song && <SongPlayer request={m.song} />}
+                            {m.video && <VideoPlayer request={m.video} />}
+                            {m.offline && <OfflineAI task={m.offline} />}
+                          </div>
+                          {m.content && !sending && (
+                            <div className="flex items-center gap-0.5 mt-2 -ml-1.5 opacity-40 hover:opacity-100 transition-opacity">
+                              <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1.5 rounded-md hover:bg-white/5">
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              {voice.supported && (
+                                <button
+                                  onClick={() => voice.status === "speaking" ? voice.stopSpeaking() : voice.speak(m.content)}
+                                  title={voice.status === "speaking" ? "Stop" : "Vorlesen"}
+                                  className="p-1.5 rounded-md hover:bg-white/5"
+                                >
+                                  {voice.status === "speaking" ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
-                  )}
-                </div>
-                {m.role === "user" && (
-                  <MinecraftAvatar
-                    username={profile?.mc_username}
-                    fallback={profile?.display_name || user?.email}
-                    size={32}
-                    className="mt-0.5 shrink-0"
-                  />
-                )}
-              </div>
-            ))}
-            {suggestions.length > 0 && !sending && (
-              <div className="flex flex-wrap gap-1.5 pt-1 animate-fade-in">
-                <Lightbulb className="h-3.5 w-3.5 text-primary/70 mt-1.5" />
-                {suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setSuggestions([]); send(s); }}
-                    className="glass rounded-full px-3 py-1 text-xs hover:border-primary/40 hover:bg-primary/10 transition-all"
-                  >
-                    {s}
-                  </button>
+                      </div>
+                    )}
+                  </div>
                 ))}
+                {suggestions.length > 0 && !sending && (
+                  <div className="flex flex-wrap gap-1.5 pt-1 pl-10 animate-fade-in">
+                    <Lightbulb className="h-3.5 w-3.5 text-foreground/50 mt-1.5" />
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setSuggestions([]); send(s); }}
+                        className="border border-white/10 rounded-full px-3 py-1 text-xs hover:border-white/30 hover:bg-white/5 transition-all"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="border-t border-white/5 p-2 sm:p-3">
-            {voiceMode && (voice.status === "listening" || voice.status === "speaking") && (
-              <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
-                <span className="flex items-end gap-0.5 h-3">
-                  {[0, 1, 2, 3].map(i => (
-                    <span
-                      key={i}
-                      className="w-0.5 bg-foreground/80 rounded-full"
-                      style={{ height: "100%", animation: `voice-wave 0.9s ease-in-out ${i * 0.12}s infinite` }}
-                    />
-                  ))}
-                </span>
-                <span>
-                  {voice.status === "speaking"
-                    ? "🔊 spricht..."
-                    : voice.interim || "👂 höre zu... (sprich einfach drauf los)"}
-                </span>
-              </div>
-            )}
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {attachments.map((a, i) => (
-                  <div key={i} className="flex items-center gap-1.5 glass rounded-lg px-2 py-1 text-xs">
-                    {a.mime.startsWith("image/") ? (
-                      <img src={a.url} alt={a.name} className="h-5 w-5 rounded object-cover" />
-                    ) : <Paperclip className="h-3 w-3" />}
-                    <span className="max-w-[120px] truncate">{a.name}</span>
-                    <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} aria-label="Entfernen">
-                      <XIcon className="h-3 w-3 hover:text-destructive" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {input.startsWith("/") && (() => {
-              const q = input.slice(1).split(/\s/)[0].toLowerCase();
-              const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
-              if (!filtered.length) return null;
-              const pick = (cmd: string, args: string) => {
-                setInput(args ? `${cmd} ` : cmd + " ");
-                setSlashIndex(0);
-              };
-              return (
-                <div className="glass-strong rounded-xl p-1.5 mb-2 max-h-64 overflow-y-auto animate-fade-in border border-primary/20">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 flex items-center justify-between">
-                    <span>Commands</span>
-                    <span className="text-[9px]">↑↓ Tab ↵</span>
-                  </div>
-                  {filtered.map((c, i) => {
-                    const Icon = c.icon;
-                    const active = i === Math.min(slashIndex, filtered.length - 1);
-                    return (
-                      <button
-                        key={c.cmd}
-                        onMouseEnter={() => setSlashIndex(i)}
-                        onClick={() => pick(c.cmd, c.args)}
-                        className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${active ? "bg-primary/15" : "hover:bg-secondary/40"}`}
-                      >
-                        <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-mono font-semibold">{c.cmd}</span>
-                        {c.args && <span className="text-muted-foreground font-mono">{c.args}</span>}
-                        <span className="text-muted-foreground truncate ml-auto hidden sm:inline">{c.desc}</span>
-                      </button>
-                    );
-                  })}
+          {/* Composer */}
+          <div className="shrink-0 px-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+            <div className="max-w-3xl mx-auto">
+              {voiceMode && (voice.status === "listening" || voice.status === "speaking") && (
+                <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
+                  <span className="flex items-end gap-0.5 h-3">
+                    {[0, 1, 2, 3].map(i => (
+                      <span
+                        key={i}
+                        className="w-0.5 bg-foreground/80 rounded-full"
+                        style={{ height: "100%", animation: `voice-wave 0.9s ease-in-out ${i * 0.12}s infinite` }}
+                      />
+                    ))}
+                  </span>
+                  <span>
+                    {voice.status === "speaking" ? "🔊 spricht..." : voice.interim || "👂 höre zu... (sprich einfach drauf los)"}
+                  </span>
                 </div>
-              );
-            })()}
-            <input
-              ref={fileInputRef} type="file" multiple hidden
-              accept="image/*,.pdf,.txt,.md,.json,.csv"
-              onChange={(e) => { uploadFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-            />
-            <div className="glass-liquid rounded-2xl flex items-end gap-2 p-2">
-              <Button
-                type="button" size="icon" variant="ghost"
-                className="h-10 w-10 shrink-0 relative z-10"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || sending}
-                title="Datei anhängen (Bild/PDF)"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-              </Button>
-              <Textarea
-                value={input}
-                onChange={(e) => { setInput(e.target.value); setSlashIndex(0); }}
-                onKeyDown={(e) => {
-                  // Slash command menu navigation
-                  if (input.startsWith("/")) {
-                    const q = input.slice(1).split(/\s/)[0].toLowerCase();
-                    const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
-                    if (filtered.length && !input.includes(" ")) {
-                      if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => (i + 1) % filtered.length); return; }
-                      if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIndex(i => (i - 1 + filtered.length) % filtered.length); return; }
-                      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
-                        e.preventDefault();
-                        const c = filtered[Math.min(slashIndex, filtered.length - 1)];
-                        setInput(c.args ? `${c.cmd} ` : c.cmd + " ");
-                        setSlashIndex(0);
-                        return;
+              )}
+
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {attachments.map((a, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs">
+                      {a.mime.startsWith("image/") ? (
+                        <img src={a.url} alt={a.name} className="h-5 w-5 rounded object-cover" />
+                      ) : <Paperclip className="h-3 w-3" />}
+                      <span className="max-w-[120px] truncate">{a.name}</span>
+                      <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} aria-label="Entfernen">
+                        <XIcon className="h-3 w-3 hover:text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {input.startsWith("/") && (() => {
+                const q = input.slice(1).split(/\s/)[0].toLowerCase();
+                const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+                if (!filtered.length) return null;
+                const pick = (cmd: string, args: string) => {
+                  setInput(args ? `${cmd} ` : cmd + " ");
+                  setSlashIndex(0);
+                };
+                return (
+                  <div className="glass-strong rounded-2xl p-1.5 mb-2 max-h-64 overflow-y-auto animate-fade-in">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 flex items-center justify-between">
+                      <span>Commands</span>
+                      <span className="text-[9px]">↑↓ Tab ↵</span>
+                    </div>
+                    {filtered.map((c, i) => {
+                      const Icon = c.icon;
+                      const active = i === Math.min(slashIndex, filtered.length - 1);
+                      return (
+                        <button
+                          key={c.cmd}
+                          onMouseEnter={() => setSlashIndex(i)}
+                          onClick={() => pick(c.cmd, c.args)}
+                          className={`w-full flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs transition-colors ${active ? "bg-white/10" : "hover:bg-white/5"}`}
+                        >
+                          <Icon className="h-3.5 w-3.5 text-foreground/80 shrink-0" />
+                          <span className="font-mono font-semibold">{c.cmd}</span>
+                          {c.args && <span className="text-muted-foreground font-mono">{c.args}</span>}
+                          <span className="text-muted-foreground truncate ml-auto hidden sm:inline">{c.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <input
+                ref={fileInputRef} type="file" multiple hidden
+                accept="image/*,.pdf,.txt,.md,.json,.csv"
+                onChange={(e) => { uploadFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+              />
+
+              <div className="relative rounded-3xl border border-white/10 bg-[hsl(0_0%_10%)] focus-within:border-white/25 transition-colors shadow-[0_8px_32px_hsl(0_0%_0%/0.4)]">
+                <Textarea
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); setSlashIndex(0); }}
+                  onKeyDown={(e) => {
+                    if (input.startsWith("/")) {
+                      const q = input.slice(1).split(/\s/)[0].toLowerCase();
+                      const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+                      if (filtered.length && !input.includes(" ")) {
+                        if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => (i + 1) % filtered.length); return; }
+                        if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIndex(i => (i - 1 + filtered.length) % filtered.length); return; }
+                        if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                          e.preventDefault();
+                          const c = filtered[Math.min(slashIndex, filtered.length - 1)];
+                          setInput(c.args ? `${c.cmd} ` : c.cmd + " ");
+                          setSlashIndex(0);
+                          return;
+                        }
                       }
                     }
-                  }
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-                }}
-                placeholder={
-                  voiceMode ? "Tippe oder drücke das Mikro..." :
-                  mode === "support" ? "Frage zum Mythoscraft-Server..." :
-                  mode === "agent" ? "Was soll der Agent tun?" : "Was möchtest du wissen?"
-                }
-                className="flex-1 min-h-[44px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 text-sm relative z-10"
-                disabled={sending}
-              />
-              {voice.supported && (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (voice.status === "listening") voice.stopListening();
-                    else voice.startDictation();
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
                   }}
+                  placeholder={
+                    voiceMode ? "Tippe oder drücke das Mikro..." :
+                    mode === "support" ? "Frage Mythos AI…" :
+                    mode === "agent" ? "Was soll der Agent tun?" : "Frag mich alles…"
+                  }
+                  className="min-h-[56px] max-h-52 resize-none border-0 bg-transparent focus-visible:ring-0 text-[15px] px-4 pt-4 pb-14 shadow-none"
                   disabled={sending}
-                  size="icon"
-                  variant="ghost"
-                  className={`h-10 w-10 shrink-0 relative z-10 ${
-                    voice.status === "listening" && !voiceMode ? "bg-foreground text-background hover:bg-foreground/90 animate-pulse-glow" : ""
-                  }`}
-                  title={voice.status === "listening" ? "Diktat stoppen" : "Diktieren (ins Eingabefeld)"}
-                  aria-label="Mikrofon"
-                >
-                  {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
-              )}
-              <Button
-                onClick={() => send()}
-                disabled={!input.trim() || sending}
-                size="icon"
-                className="bg-foreground text-background hover:bg-foreground/90 h-10 w-10 shrink-0 relative z-10"
-              >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+                />
+                {/* Action row inside composer */}
+                <div className="absolute left-2 bottom-2 flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button" size="icon" variant="ghost"
+                        className="h-9 w-9 rounded-full"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading || sending}
+                        aria-label="Anhang"
+                      >
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Datei anhängen</TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  {voice.supported && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          onClick={() => { if (voice.status === "listening") voice.stopListening(); else voice.startDictation(); }}
+                          disabled={sending}
+                          size="icon"
+                          variant="ghost"
+                          className={`h-9 w-9 rounded-full ${
+                            voice.status === "listening" && !voiceMode ? "bg-foreground text-background hover:bg-foreground/90" : ""
+                          }`}
+                          aria-label="Diktieren"
+                        >
+                          {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{voice.status === "listening" ? "Diktat stoppen" : "Diktieren"}</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Button
+                    onClick={() => send()}
+                    disabled={!input.trim() || sending}
+                    size="icon"
+                    className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30"
+                    aria-label="Senden"
+                  >
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center mt-2 hidden sm:block">
+                Mythos AI kann Fehler machen. Wichtige Infos prüfen. <code className="font-mono">/</code> für Commands.
+              </p>
             </div>
           </div>
         </main>
+
+        <Paywall open={paywall.open} onOpenChange={(o) => setPaywall({ open: o })} reason={paywall.reason} />
       </div>
-      <Paywall open={paywall.open} onOpenChange={(o) => setPaywall({ open: o })} reason={paywall.reason} />
-    </div>
+    </TooltipProvider>
   );
 };
+
 export default Chat;
