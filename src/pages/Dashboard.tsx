@@ -252,6 +252,9 @@ const Dashboard = () => {
                   </p>
                 </div>
 
+                <McLinkPanel />
+
+
                 <Button
                   onClick={saveProfile}
                   disabled={savingProfile}
