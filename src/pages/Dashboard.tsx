@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import TopNav from "@/components/TopNav";
 import MinecraftSkin3D from "@/components/MinecraftSkin3D";
 import MinecraftAvatar from "@/components/MinecraftAvatar";
+import McLinkPanel from "@/components/McLinkPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
