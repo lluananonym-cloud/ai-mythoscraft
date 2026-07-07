@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
           });
         }
         return new Response(JSON.stringify({
-          reply: `Hi ${player}! Dein Verifizierungs-Code: ${code}\nGib ihn ein auf: ${server.website_url || "der Mythos AI Website"} -> Profil -> Minecraft verknuepfen. Danach kannst du hier per /ai chatten.`,
+          reply: `Hi ${player}! Dein Verifizierungs-Code: ${code}\nGib ihn auf der Mythos AI Website ein: Profil -> Minecraft verknuepfen. Dann kannst du hier per /ai chatten.`,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
