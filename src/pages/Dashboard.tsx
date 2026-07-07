@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import TopNav from "@/components/TopNav";
 import MinecraftSkin3D from "@/components/MinecraftSkin3D";
 import MinecraftAvatar from "@/components/MinecraftAvatar";
+import McLinkPanel from "@/components/McLinkPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -251,6 +252,9 @@ const Dashboard = () => {
                     Dein Minecraft-Skin wird als Profilbild + 3D-Modell verwendet (Java-Account oder mit Cape per mc-heads.net).
                   </p>
                 </div>
+
+                <McLinkPanel />
+
 
                 <Button
                   onClick={saveProfile}

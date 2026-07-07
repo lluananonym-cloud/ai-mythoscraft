@@ -267,7 +267,7 @@ const Chat = () => {
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
     try {
       const historyForAI = messages.map(m => ({ role: m.role, content: m.content }));
-      const resp = await fetch(fnUrl, {
+      const doFetch = () => fetch(fnUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
@@ -278,15 +278,24 @@ const Chat = () => {
           mode,
         }),
       });
+      // Auto-retry on 429 with backoff (1s, 3s) — fixes "zu viele Anfragen"
+      let resp = await doFetch();
+      for (let attempt = 0; resp.status === 429 && attempt < 2; attempt++) {
+        const wait = attempt === 0 ? 1000 : 3000;
+        toast.info(`Kurz Pause… (${wait / 1000}s)`);
+        await new Promise(r => setTimeout(r, wait));
+        resp = await doFetch();
+      }
 
       if (!resp.ok || !resp.body) {
-        if (resp.status === 429) toast.error("Zu viele Anfragen. Bitte warte einen Moment.");
+        if (resp.status === 429) toast.error("Zu viele Anfragen. Warte kurz und probier's nochmal.");
         else if (resp.status === 402) toast.error("AI-Credits aufgebraucht. Bitte später erneut versuchen.");
         else toast.error("Fehler beim Senden");
         setMessages(prev => prev.slice(0, -1));
         setSending(false);
         return;
       }
+
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();

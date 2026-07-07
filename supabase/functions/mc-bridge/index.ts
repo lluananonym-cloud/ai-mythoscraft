@@ -131,6 +131,55 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ reply: trimmed || null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ============== /ai IN-GAME COMMAND (with account linking) ==============
+    // Body: { action: "ai", player, uuid, message }
+    // Flow: if player not linked -> mint 6-digit code, tell them to enter it on the website profile.
+    //       if linked -> chat as that user (their memories + persona) and reply.
+    if (action === "ai") {
+      const player = String(body.player || "Player").slice(0, 32);
+      const mcUuid = String(body.uuid || "").slice(0, 64);
+      const userText = String(body.message || "").trim();
+      if (!mcUuid) {
+        return new Response(JSON.stringify({ reply: "Fehler: kein UUID vom Plugin übergeben." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Already linked?
+      const { data: linked } = await supabase.from("mc_players").select("user_id").eq("mc_uuid", mcUuid).maybeSingle();
+      if (!linked) {
+        // Reuse an unexpired unclaimed code if we have one, else mint a new 6-digit one.
+        const { data: existing } = await supabase.from("mc_link_codes")
+          .select("code,expires_at").eq("mc_uuid", mcUuid).is("claimed_by", null)
+          .gt("expires_at", new Date().toISOString()).maybeSingle();
+        let code = existing?.code;
+        if (!code) {
+          code = String(Math.floor(100000 + Math.random() * 900000));
+          await supabase.from("mc_link_codes").insert({
+            code, mc_uuid: mcUuid, mc_name: player, server_id: server.id,
+          });
+        }
+        return new Response(JSON.stringify({
+          reply: `Hi ${player}! Dein Verifizierungs-Code: ${code}\nGib ihn auf der Mythos AI Website ein: Profil -> Minecraft verknuepfen. Dann kannst du hier per /ai chatten.`,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (!userText) {
+        return new Response(JSON.stringify({ reply: `Hi ${player}, sag mir was mit /ai <deine Frage>` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Load memories for this user for personalization
+      const { data: mems } = await supabase.from("user_memories").select("content,category").eq("user_id", linked.user_id).limit(20);
+      const memBlock = mems?.length ? `\n\nWas du ueber den Spieler weisst:\n${mems.map((m: any) => `- ${m.content}`).join("\n")}` : "";
+      const sys = `${personaPrompt}${memBlock}\n\nWICHTIG: Antwort im Minecraft-Chat. Plain text, keine Markdown-Symbole, max 2 Saetze.`;
+      const reply = await callAI(sys, `Spieler ${player} fragt: ${userText}`, LOVABLE_API_KEY);
+      const trimmed = reply.replace(/[*_`#>]/g, "").slice(0, 220);
+      await supabase.from("mc_events").insert({
+        server_id: server.id, event_type: "ai_command", player_name: player, content: userText, ai_response: trimmed,
+      });
+      return new Response(JSON.stringify({ reply: trimmed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
+
     return new Response(JSON.stringify({ error: "Unknown action. Use: ping, chat, event" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

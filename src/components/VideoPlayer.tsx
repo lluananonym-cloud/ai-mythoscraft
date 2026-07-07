@@ -29,38 +29,51 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
   }, [videoUrl]);
 
-  const fetchImage = async (): Promise<string> => {
-    setStatus("fetching-image");
-    setProgress(10);
-    const { data, error } = await supabase.functions.invoke("image-gen", {
-      body: { prompt: request.prompt },
-    });
+  const fetchImage = async (prompt: string): Promise<string> => {
+    const { data, error } = await supabase.functions.invoke("image-gen", { body: { prompt } });
     if (error || !data?.url) throw new Error(error?.message || data?.error || "Bild fehlgeschlagen");
-    setImgUrl(data.url);
-    setProgress(40);
     return data.url as string;
   };
 
-  const renderVideo = async (url: string): Promise<Blob> => {
-    setStatus("rendering");
-    const duration = Math.min(10, Math.max(3, request.duration ?? 5));
-    const motion = request.motion ?? "kenburns";
-    const W = 1280, H = 720, FPS = 30;
+  const fetchKeyframes = async (): Promise<string[]> => {
+    setStatus("fetching-image");
+    setProgress(5);
+    // Generate 3 keyframes with progressive prompts for real "video" feel (cinematic beats)
+    const base = request.prompt;
+    const prompts = [
+      `${base}, wide establishing shot, cinematic, golden hour, film grain`,
+      `${base}, medium shot, dynamic action moment, dramatic lighting`,
+      `${base}, close-up detail, epic mood, shallow depth of field`,
+    ];
+    const urls: string[] = [];
+    for (let i = 0; i < prompts.length; i++) {
+      const url = await fetchImage(prompts[i]);
+      urls.push(url);
+      setImgUrl(url);
+      setProgress(5 + Math.round(((i + 1) / prompts.length) * 35));
+    }
+    return urls;
+  };
 
-    // Load image
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.crossOrigin = "anonymous";
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error("Bild laden fehlgeschlagen"));
-      i.src = url;
-    });
+
+  const loadImg = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Bild laden fehlgeschlagen"));
+    i.src = url;
+  });
+
+  const renderVideo = async (urls: string[]): Promise<Blob> => {
+    setStatus("rendering");
+    const duration = Math.min(15, Math.max(4, request.duration ?? 8));
+    const W = 1280, H = 720, FPS = 30;
+    const imgs = await Promise.all(urls.map(loadImg));
 
     const canvas = canvasRef.current ?? document.createElement("canvas");
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext("2d", { alpha: false })!;
 
-    // Pick the best supported mime
     const candidates = [
       "video/mp4;codecs=avc1.42E01E",
       "video/webm;codecs=vp9",
@@ -70,53 +83,60 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     const mime = candidates.find(m => (window as any).MediaRecorder?.isTypeSupported?.(m)) || "video/webm";
 
     const stream = (canvas as any).captureStream(FPS) as MediaStream;
-    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-
     const done = new Promise<Blob>((resolve) => {
       recorder.onstop = () => resolve(new Blob(chunks, { type: mime }));
     });
     recorder.start();
 
-    // Cover-fit base box
-    const scale = Math.max(W / img.width, H / img.height);
-    const baseW = img.width * scale;
-    const baseH = img.height * scale;
-
     const totalFrames = duration * FPS;
+    const perScene = totalFrames / imgs.length;
     const ease = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    const drawImg = (img: HTMLImageElement, sceneIdx: number, localT: number) => {
+      const scale = Math.max(W / img.width, H / img.height);
+      const baseW = img.width * scale, baseH = img.height * scale;
+      // Alternate ken-burns direction per scene for variety
+      const dir = sceneIdx % 2 === 0 ? 1 : -1;
+      const e = ease(localT);
+      const zoom = 1 + 0.15 * e;
+      const dx = dir * -40 * e;
+      const dy = -18 * e;
+      const w = baseW * zoom, h = baseH * zoom;
+      const x = (W - w) / 2 + dx, y = (H - h) / 2 + dy;
+      ctx.drawImage(img, x, y, w, h);
+    };
 
     return await new Promise<Blob>((resolve, reject) => {
       let frame = 0;
       const drawFrame = () => {
-        const t = frame / (totalFrames - 1);
-        const e = ease(t);
-        // Motion presets
-        let zoom = 1, dx = 0, dy = 0;
-        if (motion === "kenburns") { zoom = 1 + 0.18 * e; dx = -30 * e; dy = -20 * e; }
-        else if (motion === "zoom-out") { zoom = 1.25 - 0.25 * e; }
-        else if (motion === "pan-right") { zoom = 1.1; dx = -80 * e; }
-        else { zoom = 1.08 + 0.06 * Math.sin(t * Math.PI); dx = 40 * Math.sin(t * Math.PI * 2); }
+        const global = frame / (totalFrames - 1);
+        const sceneF = frame / perScene;
+        const sceneIdx = Math.min(imgs.length - 1, Math.floor(sceneF));
+        const localT = sceneF - sceneIdx;
 
-        const w = baseW * zoom;
-        const h = baseH * zoom;
-        const x = (W - w) / 2 + dx;
-        const y = (H - h) / 2 + dy;
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+        drawImg(imgs[sceneIdx], sceneIdx, localT);
 
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, W, H);
-        ctx.drawImage(img, x, y, w, h);
+        // Crossfade into next scene during last 25% of the current scene
+        const fadeInto = 0.75;
+        if (localT > fadeInto && sceneIdx < imgs.length - 1) {
+          const blend = (localT - fadeInto) / (1 - fadeInto);
+          ctx.globalAlpha = blend;
+          drawImg(imgs[sceneIdx + 1], sceneIdx + 1, 0);
+          ctx.globalAlpha = 1;
+        }
 
-        // Subtle vignette
+        // Vignette
         const grd = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
         grd.addColorStop(0, "rgba(0,0,0,0)");
         grd.addColorStop(1, "rgba(0,0,0,0.55)");
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
 
-        // Fade-in / fade-out
-        const fade = Math.min(1, t / 0.08) * Math.min(1, (1 - t) / 0.08);
+        // Global fade in/out
+        const fade = Math.min(1, global / 0.06) * Math.min(1, (1 - global) / 0.06);
         if (fade < 1) {
           ctx.fillStyle = `rgba(0,0,0,${1 - fade})`;
           ctx.fillRect(0, 0, W, H);
@@ -129,7 +149,6 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
           done.then(resolve).catch(reject);
           return;
         }
-        // 1000/FPS ms between frames
         setTimeout(() => requestAnimationFrame(drawFrame), 1000 / FPS);
       };
       requestAnimationFrame(drawFrame);
@@ -139,8 +158,8 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
   const generate = async () => {
     setErrorMsg(null);
     try {
-      const url = await fetchImage();
-      const blob = await renderVideo(url);
+      const urls = await fetchKeyframes();
+      const blob = await renderVideo(urls);
       setVideoUrl(URL.createObjectURL(blob));
       setProgress(100);
       setStatus("ready");
@@ -152,6 +171,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
       toast.error("Video fehlgeschlagen: " + msg);
     }
   };
+
 
   const toggle = () => {
     const v = videoRef.current; if (!v) return;

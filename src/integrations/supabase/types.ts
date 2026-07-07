@@ -531,6 +531,85 @@ export type Database = {
           },
         ]
       }
+      mc_link_codes: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          mc_name: string
+          mc_uuid: string
+          server_id: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          mc_name: string
+          mc_uuid: string
+          server_id?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          mc_name?: string
+          mc_uuid?: string
+          server_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mc_link_codes_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "mc_servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mc_players: {
+        Row: {
+          id: string
+          linked_at: string
+          mc_name: string
+          mc_uuid: string
+          server_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          linked_at?: string
+          mc_name: string
+          mc_uuid: string
+          server_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          linked_at?: string
+          mc_name?: string
+          mc_uuid?: string
+          server_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mc_players_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "mc_servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mc_servers: {
         Row: {
           ai_persona_id: string | null
