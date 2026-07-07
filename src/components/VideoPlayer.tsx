@@ -29,17 +29,32 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
   }, [videoUrl]);
 
-  const fetchImage = async (): Promise<string> => {
-    setStatus("fetching-image");
-    setProgress(10);
-    const { data, error } = await supabase.functions.invoke("image-gen", {
-      body: { prompt: request.prompt },
-    });
+  const fetchImage = async (prompt: string): Promise<string> => {
+    const { data, error } = await supabase.functions.invoke("image-gen", { body: { prompt } });
     if (error || !data?.url) throw new Error(error?.message || data?.error || "Bild fehlgeschlagen");
-    setImgUrl(data.url);
-    setProgress(40);
     return data.url as string;
   };
+
+  const fetchKeyframes = async (): Promise<string[]> => {
+    setStatus("fetching-image");
+    setProgress(5);
+    // Generate 3 keyframes with progressive prompts for real "video" feel (cinematic beats)
+    const base = request.prompt;
+    const prompts = [
+      `${base}, wide establishing shot, cinematic, golden hour, film grain`,
+      `${base}, medium shot, dynamic action moment, dramatic lighting`,
+      `${base}, close-up detail, epic mood, shallow depth of field`,
+    ];
+    const urls: string[] = [];
+    for (let i = 0; i < prompts.length; i++) {
+      const url = await fetchImage(prompts[i]);
+      urls.push(url);
+      setImgUrl(url);
+      setProgress(5 + Math.round(((i + 1) / prompts.length) * 35));
+    }
+    return urls;
+  };
+
 
   const renderVideo = async (url: string): Promise<Blob> => {
     setStatus("rendering");
