@@ -37,23 +37,27 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
 
   const fetchKeyframes = async (): Promise<string[]> => {
     setStatus("fetching-image");
-    setProgress(5);
-    // Generate 3 keyframes with progressive prompts for real "video" feel (cinematic beats)
+    setProgress(3);
     const base = request.prompt;
+    // 6 cinematic beats — each a distinct camera / composition so the "video" reads as real footage
     const prompts = [
-      `${base}, wide establishing shot, cinematic, golden hour, film grain`,
-      `${base}, medium shot, dynamic action moment, dramatic lighting`,
-      `${base}, close-up detail, epic mood, shallow depth of field`,
+      `${base}, ultra wide establishing shot, cinematic anamorphic, dawn light, atmospheric haze, film grain, 35mm`,
+      `${base}, tracking shot mid-distance, dynamic motion, shallow depth of field, volumetric light`,
+      `${base}, low angle hero shot, dramatic rim lighting, epic scale, cinematic color grade`,
+      `${base}, over-the-shoulder perspective, tension, motion blur background, teal-orange grade`,
+      `${base}, close-up detail, macro focus, expressive mood, bokeh, sharp texture`,
+      `${base}, final wide reveal, golden hour, sweeping vista, cinematic finale`,
     ];
     const urls: string[] = [];
     for (let i = 0; i < prompts.length; i++) {
       const url = await fetchImage(prompts[i]);
       urls.push(url);
       setImgUrl(url);
-      setProgress(5 + Math.round(((i + 1) / prompts.length) * 35));
+      setProgress(3 + Math.round(((i + 1) / prompts.length) * 45));
     }
     return urls;
   };
+
 
 
   const loadImg = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
