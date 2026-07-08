@@ -160,11 +160,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
         ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
 
 
-        // Vignette
-        const grd = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
-        grd.addColorStop(0, "rgba(0,0,0,0)");
-        grd.addColorStop(1, "rgba(0,0,0,0.55)");
-        ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+
 
         // Global fade in/out
         const fade = Math.min(1, global / 0.06) * Math.min(1, (1 - global) / 0.06);
