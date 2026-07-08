@@ -70,7 +70,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
 
   const renderVideo = async (urls: string[]): Promise<Blob> => {
     setStatus("rendering");
-    const duration = Math.min(15, Math.max(4, request.duration ?? 8));
+    const duration = Math.min(15, Math.max(6, request.duration ?? 10));
     const W = 1280, H = 720, FPS = 30;
     const imgs = await Promise.all(urls.map(loadImg));
 
@@ -87,7 +87,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     const mime = candidates.find(m => (window as any).MediaRecorder?.isTypeSupported?.(m)) || "video/webm";
 
     const stream = (canvas as any).captureStream(FPS) as MediaStream;
-    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     const done = new Promise<Blob>((resolve) => {
@@ -98,19 +98,31 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     const totalFrames = duration * FPS;
     const perScene = totalFrames / imgs.length;
     const ease = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    // 6 distinct camera moves — each scene gets a different real "camera motion"
+    const moves = [
+      { zoomFrom: 1.0, zoomTo: 1.18, dx: -60, dy: 0, rot: 0 },      // slow push-in wide
+      { zoomFrom: 1.15, zoomTo: 1.0, dx: 80, dy: -20, rot: 0.5 },   // pull-back track right
+      { zoomFrom: 1.25, zoomTo: 1.05, dx: 0, dy: 40, rot: -0.3 },   // crane-down hero
+      { zoomFrom: 1.0, zoomTo: 1.3, dx: -50, dy: 30, rot: 0 },      // push-in OTS
+      { zoomFrom: 1.4, zoomTo: 1.1, dx: 30, dy: -30, rot: 0 },      // macro reveal
+      { zoomFrom: 1.0, zoomTo: 1.2, dx: 60, dy: 0, rot: 0 },        // final sweep
+    ];
 
-    const drawImg = (img: HTMLImageElement, sceneIdx: number, localT: number) => {
-      const scale = Math.max(W / img.width, H / img.height);
-      const baseW = img.width * scale, baseH = img.height * scale;
-      // Alternate ken-burns direction per scene for variety
-      const dir = sceneIdx % 2 === 0 ? 1 : -1;
+    const drawImg = (img: HTMLImageElement, sceneIdx: number, localT: number, alpha = 1) => {
+      const m = moves[sceneIdx % moves.length];
       const e = ease(localT);
-      const zoom = 1 + 0.15 * e;
-      const dx = dir * -40 * e;
-      const dy = -18 * e;
-      const w = baseW * zoom, h = baseH * zoom;
-      const x = (W - w) / 2 + dx, y = (H - h) / 2 + dy;
-      ctx.drawImage(img, x, y, w, h);
+      const zoom = m.zoomFrom + (m.zoomTo - m.zoomFrom) * e;
+      const dx = m.dx * e;
+      const dy = m.dy * e;
+      const rot = (m.rot * Math.PI / 180) * e;
+      const baseScale = Math.max(W / img.width, H / img.height);
+      const w = img.width * baseScale * zoom, h = img.height * baseScale * zoom;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(W / 2 + dx, H / 2 + dy);
+      ctx.rotate(rot);
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      ctx.restore();
     };
 
     return await new Promise<Blob>((resolve, reject) => {
@@ -122,16 +134,31 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
         const localT = sceneF - sceneIdx;
 
         ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
-        drawImg(imgs[sceneIdx], sceneIdx, localT);
+        drawImg(imgs[sceneIdx], sceneIdx, localT, 1);
 
-        // Crossfade into next scene during last 25% of the current scene
-        const fadeInto = 0.75;
+        // Long crossfade (last 35%) into next scene for smoother morph
+        const fadeInto = 0.65;
         if (localT > fadeInto && sceneIdx < imgs.length - 1) {
-          const blend = (localT - fadeInto) / (1 - fadeInto);
-          ctx.globalAlpha = blend;
-          drawImg(imgs[sceneIdx + 1], sceneIdx + 1, 0);
+          const blend = ease((localT - fadeInto) / (1 - fadeInto));
+          drawImg(imgs[sceneIdx + 1], sceneIdx + 1, 0, blend);
+        }
+
+        // Film grain
+        if (frame % 2 === 0) {
+          ctx.globalAlpha = 0.04;
+          ctx.fillStyle = Math.random() > 0.5 ? "#fff" : "#000";
+          for (let g = 0; g < 40; g++) {
+            ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+          }
           ctx.globalAlpha = 1;
         }
+
+        // Vignette
+        const grd = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
+        grd.addColorStop(0, "rgba(0,0,0,0)");
+        grd.addColorStop(1, "rgba(0,0,0,0.55)");
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+
 
         // Vignette
         const grd = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
