@@ -37,7 +37,16 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
       const s: MusicSpec = { ...data.spec, title: data.spec.title || request.title };
       setSpec(s);
       setStatus("generating");
-      const wav = await renderSong(s, (p, m) => { setProgress(p); setProgressMsg(m); });
+      let vocalBuf: ArrayBuffer | null = null;
+      if (data.vocal) {
+        try {
+          const bin = atob(data.vocal);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          vocalBuf = bytes.buffer;
+        } catch {}
+      }
+      const wav = await renderSong(s, (p, m) => { setProgress(p); setProgressMsg(m); }, vocalBuf);
       setAudioUrl(URL.createObjectURL(wav));
       setStatus("ready");
     } catch (e: any) {

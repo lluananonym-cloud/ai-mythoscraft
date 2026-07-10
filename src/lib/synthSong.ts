@@ -58,7 +58,7 @@ function encodeWAV(left: Float32Array, sampleRate: number): Blob {
   return new Blob([view], { type: "audio/wav" });
 }
 
-export async function renderSong(spec: MusicSpec, onProgress?: (p: number, m: string) => void): Promise<Blob> {
+export async function renderSong(spec: MusicSpec, onProgress?: (p: number, m: string) => void, vocalBytes?: ArrayBuffer | null): Promise<Blob> {
   const bpm = Math.max(60, Math.min(180, spec.bpm ?? 100));
   const bars = Math.max(4, Math.min(16, spec.bars ?? 8));
   const key = spec.key ?? "C";
@@ -190,7 +190,35 @@ export async function renderSong(spec: MusicSpec, onProgress?: (p: number, m: st
     }
   }
 
-  onProgress?.(85, "Rendere Audio…");
+  // --- Mix in AI-generated vocals ---
+  if (vocalBytes && vocalBytes.byteLength > 0) {
+    onProgress?.(80, "Mixe Gesang…");
+    try {
+      // Decode using a temporary online context (OfflineAudioContext can't decodeAudioData cross-sr reliably in all browsers, but ctx.decodeAudioData works fine)
+      const decoded: AudioBuffer = await new Promise((resolve, reject) => {
+        // decodeAudioData accepts callback or Promise form; use callback for wider compat
+        (ctx as any).decodeAudioData(vocalBytes.slice(0), resolve, reject);
+      });
+      const vSrc = ctx.createBufferSource();
+      vSrc.buffer = decoded;
+      // Slight playback rate tweak to fit song length if vocals are longer
+      const targetDur = Math.min(decoded.duration, totalSec - 0.1);
+      if (decoded.duration > totalSec) vSrc.playbackRate.value = decoded.duration / totalSec;
+      const vGain = ctx.createGain(); vGain.gain.value = 1.4;
+      // Fade in/out
+      vGain.gain.setValueAtTime(0, 0);
+      vGain.gain.linearRampToValueAtTime(1.4, 0.3);
+      vGain.gain.setValueAtTime(1.4, Math.max(0.3, targetDur - 0.4));
+      vGain.gain.linearRampToValueAtTime(0, targetDur);
+      vSrc.connect(vGain); vGain.connect(master);
+      // Duck instrumental a touch by lowering master while vocal plays — simple: leave as-is, vocal gain > 1
+      vSrc.start(0.2);
+    } catch (e) {
+      console.warn("vocal decode failed", e);
+    }
+  }
+
+  onProgress?.(88, "Rendere Audio…");
   const rendered = await ctx.startRendering();
   const ch = rendered.getChannelData(0);
   onProgress?.(98, "Verpacke WAV…");
