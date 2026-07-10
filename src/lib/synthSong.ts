@@ -58,7 +58,7 @@ function encodeWAV(left: Float32Array, sampleRate: number): Blob {
   return new Blob([view], { type: "audio/wav" });
 }
 
-export async function renderSong(spec: MusicSpec, onProgress?: (p: number, m: string) => void): Promise<Blob> {
+export async function renderSong(spec: MusicSpec, onProgress?: (p: number, m: string) => void, vocalBytes?: ArrayBuffer | null): Promise<Blob> {
   const bpm = Math.max(60, Math.min(180, spec.bpm ?? 100));
   const bars = Math.max(4, Math.min(16, spec.bars ?? 8));
   const key = spec.key ?? "C";
