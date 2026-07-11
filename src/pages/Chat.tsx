@@ -269,7 +269,9 @@ const Chat = () => {
     const chosenModel = (profile as any)?.ai_model as string | undefined;
     if (isPuterModel(chosenModel) && mode !== "agent") {
       try {
-        const history = messages.map(m => ({ role: m.role, content: m.content }));
+        const history = messages
+          .filter(m => m.role !== "tool")
+          .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
         const puterMsgs = [
           ...history,
           { role: "user" as const, content: typeof userContentForAI === "string" ? userContentForAI : text },
