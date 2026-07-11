@@ -45,6 +45,8 @@ const Dashboard = () => {
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [startInChat, setStartInChat] = useState(false);
   const [savingStartInChat, setSavingStartInChat] = useState(false);
+  const [aiModel, setAiModel] = useState<string>(DEFAULT_MODEL_ID);
+  const [savingModel, setSavingModel] = useState(false);
   useEffect(() => { setStayLoggedIn(isPersistentSessionEnabled()); }, []);
   useEffect(() => { setStartInChat(!!profile?.start_in_chat); }, [profile?.start_in_chat]);
 
