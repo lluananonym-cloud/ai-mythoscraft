@@ -31,6 +31,7 @@ import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
 import { Link, useNavigate } from "react-router-dom";
+import { isPuterModel, puterChatStream, getPuterLabel } from "@/lib/puterAi";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
