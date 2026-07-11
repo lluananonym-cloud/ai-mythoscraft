@@ -822,6 +822,7 @@ export type Database = {
         Row: {
           about: string | null
           age: number | null
+          ai_model: string | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -839,6 +840,7 @@ export type Database = {
         Insert: {
           about?: string | null
           age?: number | null
+          ai_model?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -856,6 +858,7 @@ export type Database = {
         Update: {
           about?: string | null
           age?: number | null
+          ai_model?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
