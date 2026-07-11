@@ -49,6 +49,7 @@ const Dashboard = () => {
   const [savingModel, setSavingModel] = useState(false);
   useEffect(() => { setStayLoggedIn(isPersistentSessionEnabled()); }, []);
   useEffect(() => { setStartInChat(!!profile?.start_in_chat); }, [profile?.start_in_chat]);
+  useEffect(() => { setAiModel(((profile as any)?.ai_model as string) || DEFAULT_MODEL_ID); }, [profile]);
 
   const load = async () => {
     const { data } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
