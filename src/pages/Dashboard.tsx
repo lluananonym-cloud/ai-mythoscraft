@@ -326,7 +326,51 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
+
+                <div className="flex items-start gap-3 pt-4 border-t border-border/50">
+                  <Key className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="font-display font-semibold">AI-Modell</div>
+                    <p className="text-xs text-muted-foreground">
+                      Standard nutzt Mythos AI (kostenlos & schnell). Alle anderen Modelle laufen über <b>Puter.js</b> — beim ersten Chat wirst du einmalig aufgefordert dich bei Puter anzumelden (free tier verfügbar, du zahlst nichts über uns).
+                    </p>
+                    <Select
+                      value={aiModel}
+                      disabled={savingModel}
+                      onValueChange={async (v) => {
+                        if (!user) return;
+                        setAiModel(v);
+                        setSavingModel(true);
+                        const val = v === DEFAULT_MODEL_ID ? null : v;
+                        const { error } = await supabase
+                          .from("profiles")
+                          .update({ ai_model: val } as any)
+                          .eq("user_id", user.id);
+                        setSavingModel(false);
+                        if (error) { toast.error("Konnte Modell nicht speichern."); return; }
+                        await refreshProfile();
+                        toast.success("Modell gespeichert.");
+                      }}
+                    >
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="max-h-80">
+                        <SelectItem value={DEFAULT_MODEL_ID}>Mythos AI (Standard, empfohlen)</SelectItem>
+                        {Object.entries(
+                          PUTER_MODELS.reduce<Record<string, typeof PUTER_MODELS>>((acc, m) => {
+                            (acc[m.vendor] ||= []).push(m); return acc;
+                          }, {})
+                        ).map(([vendor, models]) => (
+                          <SelectGroup key={vendor}>
+                            <SelectLabel>{vendor} (via Puter)</SelectLabel>
+                            {models.map(m => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
+
 
               {/* 3D Skin */}
               <div className="flex flex-col items-center gap-3">
