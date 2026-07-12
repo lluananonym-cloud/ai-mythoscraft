@@ -332,7 +332,7 @@ const Dashboard = () => {
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="font-display font-semibold">AI-Modell</div>
                     <p className="text-xs text-muted-foreground">
-                      Standard nutzt Mythos AI (kostenlos & schnell). Alle anderen Modelle laufen über <b>Puter.js</b> — beim ersten Chat wirst du einmalig aufgefordert dich bei Puter anzumelden (free tier verfügbar, du zahlst nichts über uns).
+                      Standard nutzt Gemini 3 Flash (schnell & kostenlos). Wähle eines der Premium-Modelle für stärkeres Reasoning oder Code — läuft ohne extra Login direkt über Mythos AI.
                     </p>
                     <Select
                       value={aiModel}
@@ -361,7 +361,7 @@ const Dashboard = () => {
                           }, {})
                         ).map(([vendor, models]) => (
                           <SelectGroup key={vendor}>
-                            <SelectLabel>{vendor} (via Puter)</SelectLabel>
+                            <SelectLabel>{vendor}</SelectLabel>
                             {models.map(m => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
                           </SelectGroup>
                         ))}
