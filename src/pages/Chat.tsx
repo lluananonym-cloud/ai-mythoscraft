@@ -31,7 +31,7 @@ import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
 import { Link, useNavigate } from "react-router-dom";
-import { isPuterModel, puterChatStream, getPuterLabel } from "@/lib/puterAi";
+import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
@@ -265,44 +265,8 @@ const Chat = () => {
     });
     setAttachments([]);
 
-    // ── Puter.js route (user-selected non-default model) ───────────────
     const chosenModel = (profile as any)?.ai_model as string | undefined;
-    if (isPuterModel(chosenModel) && mode !== "agent") {
-      try {
-        const history = messages
-          .filter(m => m.role !== "tool")
-          .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
-        const puterMsgs = [
-          ...history,
-          { role: "user" as const, content: typeof userContentForAI === "string" ? userContentForAI : text },
-        ];
-        let full = "";
-        for await (const delta of puterChatStream(puterMsgs, chosenModel!)) {
-          full += delta;
-          setMessages(prev => {
-            const next = [...prev];
-            next[next.length - 1] = { role: "assistant", content: full };
-            return next;
-          });
-        }
-        await supabase.from("messages").insert({
-          conversation_id: convId, role: "assistant", content: full,
-          metadata: { model: chosenModel, via: "puter" },
-        });
-        await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-        setSending(false);
-        loadConvs();
-        return;
-      } catch (e: any) {
-        const msg = e?.message || String(e);
-        toast.error(`${getPuterLabel(chosenModel)}: ${msg}`);
-        setMessages(prev => prev.slice(0, -1));
-        setSending(false);
-        return;
-      }
-    }
-
-
+    const modelForCall = isPuterModel(chosenModel) ? chosenModel : undefined;
 
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
     try {
@@ -314,6 +278,7 @@ const Chat = () => {
           conversationId: convId,
           userId: user?.id,
           personaId: personaId !== "none" ? personaId : undefined,
+          model: modelForCall,
           messages: [...historyForAI, { role: "user", content: userContentForAI }],
           mode,
         }),
