@@ -1,0 +1,14 @@
+# Mythos AI website endpoint (do NOT include trailing slash)
+website: "https://ai-mythoscraft.lovable.app"
+
+# API key from Web-Dashboard -> Minecraft, OR leave "191306" for the shared master key
+api_key: "191306"
+
+# Optional in-game chat trigger (prefix). Users can then say: !ai wer bist du
+chat_trigger: "!ai"
+
+# Fire join/leave/death events to the website
+enable_events: true
+
+# Allow !ai in public chat
+enable_ingame_chat: true

@@ -1,0 +1,21 @@
+name: MythosAI
+version: '1.0.0'
+main: online.mythoscraft.ai.MythosAIPlugin
+api-version: '1.20'
+author: MythosCraft
+description: Verbindet Server mit ai-mythoscraft.lovable.app (Chat, Events, Link-Codes).
+commands:
+  ai:
+    description: Chatte mit Mythos AI. /ai <text>, /ai link, /ai unlink, /ai stats
+    usage: /ai <text|link|unlink|stats>
+  mythos:
+    description: Admin/root command. /mythos reload|status|help
+    usage: /mythos <reload|status|help>
+    permission: mythosai.admin
+permissions:
+  mythosai.use:
+    description: Darf /ai benutzen
+    default: true
+  mythosai.admin:
+    description: Admin-Rechte für /mythos reload
+    default: op
