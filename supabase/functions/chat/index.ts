@@ -72,7 +72,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel } = await req.json();
+    const ALLOWED_MODELS = new Set([
+      "openai/gpt-5.5-pro",
+      "openai/gpt-5.5",
+      "openai/gpt-5.4",
+      "google/gemini-3.1-pro-preview",
+    ]);
+    const chatModel = (typeof requestedModel === "string" && ALLOWED_MODELS.has(requestedModel))
+      ? requestedModel
+      : "google/gemini-3-flash-preview";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
@@ -320,7 +329,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: chatModel,
         messages: [{ role: "system", content: system }, ...messages],
         stream: true,
       }),
