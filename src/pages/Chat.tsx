@@ -84,9 +84,10 @@ const Chat = () => {
   const [slashIndex, setSlashIndex] = useState(0);
   const [convSearch, setConvSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const lastSpokenRef = useRef<string>("");
-  const sendRef = useRef<(text?: string) => void>(() => {});
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const lastSpokenRef = useRef<string>("");
+    const sendRef = useRef<(text?: string) => void>(() => {});
   const voice = useVoiceMode({
     lang: "de-DE",
     onTranscript: (t) => { sendRef.current?.(t); },
@@ -416,10 +417,17 @@ const Chat = () => {
   }, [voiceMode, sending, messages, voice]);
 
   useEffect(() => {
-    if (voiceMode) { if (voice.supported) voice.startLive(); }
-    else { voice.stopSpeaking(); voice.stopListening(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voiceMode]);
+      if (voiceMode) { if (voice.supported) voice.startLive(); }
+      else { voice.stopSpeaking(); voice.stopListening(); }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [voiceMode]);
+  
+    useEffect(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+      }
+    }, [input]);
 
   const filteredConvs = convSearch
     ? convs.filter(c => c.title.toLowerCase().includes(convSearch.toLowerCase()))
@@ -864,7 +872,7 @@ const Chat = () => {
               />
 
               <div className="relative rounded-3xl border border-white/10 bg-[hsl(0_0%_10%)] focus-within:border-white/25 transition-colors shadow-[0_8px_32px_hsl(0_0%_0%/0.4)]">
-                <Textarea
+                <Textarea ref={textareaRef}
                   value={input}
                   onChange={(e) => { setInput(e.target.value); setSlashIndex(0); }}
                   onKeyDown={(e) => {
@@ -890,8 +898,9 @@ const Chat = () => {
                     mode === "support" ? "Frage Mythos AI…" :
                     mode === "agent" ? "Was soll der Agent tun?" : "Frag mich alles…"
                   }
-                  className="min-h-[56px] max-h-52 resize-none border-0 bg-transparent focus-visible:ring-0 text-[15px] px-4 pt-4 pb-14 shadow-none"
-                  disabled={sending}
+                  className="min-h-[56px] max-h-[200px] overflow-hidden resize-none border-0 bg-transparent focus-visible:ring-0 text-[15px] px-4 pt-4 pb-14 shadow-none"
+                                    style={{ height: 'auto' }}
+                                    disabled={sending}
                 />
                 {/* Action row inside composer */}
                 <div className="absolute left-2 bottom-2 flex items-center gap-1">
