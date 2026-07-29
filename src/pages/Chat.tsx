@@ -162,8 +162,40 @@ const Chat = () => {
   };
 
   const send = async (override?: string) => {
-    const text = (override ?? input).trim();
+    let text = (override ?? input).trim();
     if (!text || sending) return;
+    // Auto-detect generation commands
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes("generiere mir ein bild von")) {
+      const match = lowerText.match(/generiere mir ein bild von (.+)/i);
+      if (match && match[1]) {
+        text = `/image ${match[1].trim()}`;
+      }
+    } else if (lowerText.includes("generiere mir ein video von")) {
+      const match = lowerText.match(/generiere mir ein video von (.+)/i);
+      if (match && match[1]) {
+        text = `/video ${match[1].trim()}`;
+      }
+    } else if (lowerText.includes("generiere mir musik von")) {
+      const match = lowerText.match(/generiere mir musik von (.+)/i);
+      if (match && match[1]) {
+        text = `/music ${match[1].trim()}`;
+      }
+    } else if (/generiere (mir )?(das|dies) als bild/i.test(lowerText) || /mach (das|dies) als bild/i.test(lowerText) || /erstelle (das|dies) als bild/i.test(lowerText)) {
+      // Find context from previous messages
+      let prompt = "";
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.content && !msg.content.startsWith("/")) {
+          prompt = msg.content.replace(/^([🤖👤]|AI-Song|AI-Video|🎬|🎵).*/g, "").trim().slice(0, 250);
+          if (prompt) break;
+        }
+      }
+      if (!prompt) {
+        prompt = text.replace(/generiere|mir|das|dies|als|bild|mach|erstelle/gi, "").trim() || "Ein schönes Bild";
+      }
+      text = `/image ${prompt}`;
+    }
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
@@ -203,7 +235,7 @@ const Chat = () => {
     const videoMatch = text.match(/^\/video\s+(.+)$/i);
     if (videoMatch) {
       const prompt = videoMatch[1].trim();
-      const video: VideoRequest = { prompt, title: prompt.slice(0, 60), duration: 5, motion: "kenburns" };
+      const video: VideoRequest = { prompt, title: prompt.slice(0, 60), duration: 8, motion: "kenburns" };
       const userMsg: Msg = { role: "user", content: text };
       const aiMsg: Msg = {
         role: "assistant",

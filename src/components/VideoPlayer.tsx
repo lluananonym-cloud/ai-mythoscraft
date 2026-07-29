@@ -39,8 +39,8 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     setStatus("fetching-image");
     setProgress(3);
     const base = request.prompt;
-    // 6 cinematic beats — each a distinct camera / composition so the "video" reads as real footage
-    const prompts = [
+    // Base cinematic prompts – we will repeat/cycle them as needed
+    const basePrompts = [
       `${base}, ultra wide establishing shot, cinematic anamorphic, dawn light, atmospheric haze, film grain, 35mm`,
       `${base}, tracking shot mid-distance, dynamic motion, shallow depth of field, volumetric light`,
       `${base}, low angle hero shot, dramatic rim lighting, epic scale, cinematic color grade`,
@@ -48,17 +48,26 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
       `${base}, close-up detail, macro focus, expressive mood, bokeh, sharp texture`,
       `${base}, final wide reveal, golden hour, sweeping vista, cinematic finale`,
     ];
+
+    // Determine number of keyframes: at least 4, roughly one per 3 seconds of video
+    const defaultDuration = request.duration ?? 10;
+    const duration = Math.min(30, Math.max(6, defaultDuration)); // clamp 6-30 seconds
+    const keyframeCount = Math.max(4, Math.floor(duration / 3));
+
+    const prompts: string[] = [];
+    for (let i = 0; i < keyframeCount; i++) {
+      prompts.push(basePrompts[i % basePrompts.length]);
+    }
+
     const urls: string[] = [];
     for (let i = 0; i < prompts.length; i++) {
       const url = await fetchImage(prompts[i]);
       urls.push(url);
       setImgUrl(url);
-      setProgress(3 + Math.round(((i + 1) / prompts.length) * 45));
+      setProgress(3 + Math.round(((i + 1) / prompts.length) * 45)); // progress 3-48% for image fetching
     }
     return urls;
   };
-
-
 
   const loadImg = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
@@ -70,7 +79,8 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
 
   const renderVideo = async (urls: string[]): Promise<Blob> => {
     setStatus("rendering");
-    const duration = Math.min(15, Math.max(6, request.duration ?? 10));
+    const defaultDuration = request.duration ?? 10;
+    const duration = Math.min(30, Math.max(6, defaultDuration)); // clamp 6-30 seconds
     const W = 1280, H = 720, FPS = 30;
     const imgs = await Promise.all(urls.map(loadImg));
 
@@ -87,7 +97,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     const mime = candidates.find(m => (window as any).MediaRecorder?.isTypeSupported?.(m)) || "video/webm";
 
     const stream = (canvas as any).captureStream(FPS) as MediaStream;
-    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000 }); // increased bitrate
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     const done = new Promise<Blob>((resolve) => {
@@ -98,15 +108,19 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
     const totalFrames = duration * FPS;
     const perScene = totalFrames / imgs.length;
     const ease = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    // 6 distinct camera moves — each scene gets a different real "camera motion"
-    const moves = [
-      { zoomFrom: 1.0, zoomTo: 1.18, dx: -60, dy: 0, rot: 0 },      // slow push-in wide
-      { zoomFrom: 1.15, zoomTo: 1.0, dx: 80, dy: -20, rot: 0.5 },   // pull-back track right
-      { zoomFrom: 1.25, zoomTo: 1.05, dx: 0, dy: 40, rot: -0.3 },   // crane-down hero
-      { zoomFrom: 1.0, zoomTo: 1.3, dx: -50, dy: 30, rot: 0 },      // push-in OTS
-      { zoomFrom: 1.4, zoomTo: 1.1, dx: 30, dy: -30, rot: 0 },      // macro reveal
-      { zoomFrom: 1.0, zoomTo: 1.2, dx: 60, dy: 0, rot: 0 },        // final sweep
-    ];
+
+    // Generate a random motion for each keyframe
+    const moves = imgs.map(() => {
+      // Random zoom between 1.0 and 1.3
+      const zoomFrom = 1.0 + Math.random() * 0.2;
+      const zoomTo = 1.0 + Math.random() * 0.2;
+      // Pan between -80 and 80 pixels
+      const dx = (Math.random() - 0.5) * 160;
+      const dy = (Math.random() - 0.5) * 160;
+      // Rotation between -5 and 5 degrees
+      const rot = (Math.random() - 0.5) * 10;
+      return { zoomFrom, zoomTo, dx, dy, rot };
+    });
 
     const drawImg = (img: HTMLImageElement, sceneIdx: number, localT: number, alpha = 1) => {
       const m = moves[sceneIdx % moves.length];
@@ -116,7 +130,8 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
       const dy = m.dy * e;
       const rot = (m.rot * Math.PI / 180) * e;
       const baseScale = Math.max(W / img.width, H / img.height);
-      const w = img.width * baseScale * zoom, h = img.height * baseScale * zoom;
+      const w = img.width * baseScale * zoom;
+      const h = img.height * baseScale * zoom;
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate(W / 2 + dx, H / 2 + dy);
@@ -159,9 +174,6 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
         grd.addColorStop(1, "rgba(0,0,0,0.55)");
         ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
 
-
-
-
         // Global fade in/out
         const fade = Math.min(1, global / 0.06) * Math.min(1, (1 - global) / 0.06);
         if (fade < 1) {
@@ -176,6 +188,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
           done.then(resolve).catch(reject);
           return;
         }
+        // Use requestAnimationFrame for smooth timing, but fallback to setTimeout for exact FPS
         setTimeout(() => requestAnimationFrame(drawFrame), 1000 / FPS);
       };
       requestAnimationFrame(drawFrame);
@@ -198,7 +211,6 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
       toast.error("Video fehlgeschlagen: " + msg);
     }
   };
-
 
   const toggle = () => {
     const v = videoRef.current; if (!v) return;
@@ -259,7 +271,7 @@ export default function VideoPlayer({ request }: { request: VideoRequest }) {
 
       {status === "idle" && (
         <p className="text-xs text-muted-foreground">
-          Klick „Generieren" — die KI erstellt ein Schlüsselbild und animiert es zu einem 5-Sek-Clip. 100% kostenlos, läuft im Browser.
+          Klick „Generieren“ — die KI erstellt ein Schlüsselbild und animiert es zu einem Clip. 100% kostenlos, läuft im Browser.
         </p>
       )}
 
