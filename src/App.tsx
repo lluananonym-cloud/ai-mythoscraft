@@ -25,6 +25,11 @@ import Twin from "./pages/Twin";
 import Games from "./pages/Games";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound.tsx";
+import Impressum from "./pages/Impressum";
+import Datenschutz from "./pages/Datenschutz";
+import Nutzungsbedingungen from "./pages/Nutzungsbedingungen";
+import Cookie from "./pages/Cookie";
+import KIRegeln from "./pages/KIRegeln";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +60,11 @@ const App = () => (
             <Route path="/twin" element={<RequireAuth><Twin /></RequireAuth>} />
             <Route path="/games" element={<RequireAuth><Games /></RequireAuth>} />
             <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
+            <Route path="/impressum" element={<Impressum />} />
+            <Route path="/datenschutz" element={<Datenschutz />} />
+            <Route path="/nutzungsbedingungen" element={<Nutzungsbedingungen />} />
+            <Route path="/cookie" element={<Cookie />} />
+            <Route path="/ki-regeln" element={<KIRegeln />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
