@@ -33,6 +33,8 @@ import OfflineAI, { type OfflineTask } from "@/components/OfflineAI";
 import { Link, useNavigate } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 
+const NV_API_KEY = "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";
+
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
@@ -326,9 +328,49 @@ const Chat = () => {
       }
 
       if (!resp.ok || !resp.body) {
-        if (resp.status === 429) toast.error("Zu viele Anfragen. Warte kurz und probier's nochmal.");
-        else if (resp.status === 402) toast.error("AI-Credits aufgebraucht. Bitte später erneut versuchen.");
-        else toast.error("Fehler beim Senden");
+        if (resp.status === 429) {
+          toast.error("Zu viele Anfragen. Warte kurz und probier's nochmal.");
+        } else if (resp.status === 402) {
+          // Fallback to NVIDIA OSS model when credits are exhausted
+          try {
+            const nvidiaResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${NV_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-oss-120gb",
+                messages: [...historyForAI, { role: "user", content: userContentForAI }],
+                temperature: 0.7,
+              }),
+            });
+            if (!nvidiaResp.ok) throw new Error(`NVIDIA API error ${nvidiaResp.status}`);
+            const nvidiaData = await nvidiaResp.json();
+            const content = nvidiaData.choices?.[0]?.message?.content ?? "";
+            // replace the placeholder assistant message with the actual content
+            setMessages(prev => {
+              const updated = [...prev];
+              const lastIdx = updated.length - 1;
+              updated[lastIdx] = { role: "assistant", content } as any;
+              return updated;
+            });
+            await supabase.from("messages").insert({
+              conversation_id: convId,
+              role: "assistant",
+              content,
+            });
+            await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+            setSending(false);
+            loadConvs();
+            return;
+          } catch (e) {
+            console.error("Fallback error:", e);
+            toast.error("Fallback über NVIDIA fehlgeschlagen.");
+          }
+        } else {
+          toast.error("Fehler beim Senden");
+        }
         setMessages(prev => prev.slice(0, -1));
         setSending(false);
         return;

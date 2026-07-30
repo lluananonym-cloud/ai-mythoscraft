@@ -101,9 +101,14 @@ export default function OfflineAI({ task }: { task: OfflineTask }) {
             </Button>
           )}
           {status === "idle" && (
-            <Button size="sm" onClick={run} className="gap-1.5">
-              <Sparkles className="h-4 w-4" /> Starten
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={run} className="gap-1.5" aria-label="Offline‑Task starten">
+                <Sparkles className="h-4 w-4" /> Starten
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setStatus("idle")} className="gap-1.5" aria-label="Später">
+                Später
+              </Button>
+            </div>
           )}
           {(status === "loading" || status === "running") && (
             <Button size="icon" disabled className="h-9 w-9">

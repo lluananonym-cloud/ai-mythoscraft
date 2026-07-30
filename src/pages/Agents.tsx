@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Plus, Trash2, Clock, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Bot, Plus, Trash2, Clock, RefreshCw, CheckCircle2, XCircle, Pause } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 type Task = {
@@ -25,6 +26,7 @@ const Agents = () => {
   const [when, setWhen] = useState("");
   const [recurrence, setRecurrence] = useState("once");
   const [creating, setCreating] = useState(false);
+  const [pausedTasks, setPausedTasks] = useState<Set<string>>(new Set());
 
   const load = async () => {
     const { data } = await supabase.from("agent_tasks").select("*").order("schedule_at", { ascending: true });

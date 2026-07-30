@@ -29,6 +29,9 @@ const Stat = ({ value, label }: { value: string; label: string }) => (
 );
 
 const Landing = () => {
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<string>("");
+  const [upgradeReason, setUpgradeReason] = useState<string>("");
   const { user, profile } = useAuth();
   const nav = useNavigate();
 
@@ -144,11 +147,17 @@ const Landing = () => {
                 <ul className="space-y-2 text-sm mb-6">
                   {p.features.map((f:string) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary shrink-0" />{f}</li>)}
                 </ul>
-                <Link to={user ? "/app" : "/auth"} className="block">
-                  <Button variant={p.highlight ? "default" : "outline"} className={`w-full ${p.highlight ? "bg-gradient-primary text-primary-foreground" : ""}`}>
-                    {p.key === "free" ? "Loslegen" : "Upgrade"}
+                {p.key === "free" ? (
+                  <Link to={user ? "/app" : "/auth"} className="block">
+                    <Button variant={p.highlight ? "default" : "outline"} className={`w-full ${p.highlight ? "bg-gradient-primary text-primary-foreground" : ""}`}>
+                      Loslegen
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant={p.highlight ? "default" : "outline"} className={`w-full ${p.highlight ? "bg-gradient-primary text-primary-foreground" : ""}`} onClick={() => { setUpgradeFeature(p.name); setUpgradeReason(`Upgrade zu ${p.name} gibt dir Zugriff auf: ${p.features.join(", ")}`); setUpgradeOpen(true); }}>
+                    Upgrade
                   </Button>
-                </Link>
+                )}
               </div>
             ))}
           </div>
@@ -221,6 +230,7 @@ const Landing = () => {
             </nav>
           </div>
         </footer>
+      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} feature={upgradeFeature} reason={upgradeReason} />
       </main>
     </div>
   );
