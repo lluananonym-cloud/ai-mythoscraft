@@ -15,7 +15,7 @@ const Feature = ({ icon: Icon, title, desc }: any) => (
     <div className="h-12 w-12 rounded-xl bg-gradient-primary/20 border border-primary/20 flex items-center justify-center mb-4 group-hover:glow-primary transition-shadow">
       <Icon className="h-6 w-6 text-primary" />
     </div>
-    <h3 className="font-display text-lg font-semibold mb-2">{title}</h3>
+    <h3 className="font-display text-lg font-bold mb-2">{title}</h3>
     <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
   </div>
 );
@@ -124,8 +124,7 @@ const Landing = () => {
             <p className="text-muted-foreground max-w-2xl mx-auto">Starte kostenlos. Upgrade nur wenn du mehr willst.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-            {[
-              { key:"free",  name:"Free",  icon: Sparkles, accent:"from-zinc-400 to-zinc-600",
+            {[{ key:"free",  name:"Free",  icon: Sparkles, accent:"from-zinc-400 to-zinc-600",
                 features:["20 Chats / Tag","Alle Standard-Personas","Server-Knowledge","Community-Support"] },
               { key:"light", name:"Light", icon: Zap, accent:"from-sky-400 to-indigo-500", tag:"Mitte",
                 features:[`${TIER_LIMITS.light.chatsPerDay} Chats / Tag`,"Bilder generieren","Alle Personas","Keine Werbung"] },
@@ -154,6 +153,44 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* Feature Comparison Table */}
+        <section className="container pb-24" id="comparison">
+          <div className="text-center mb-8">
+            <h2 className="font-display text-3xl md:text-4xl font-bold">Feature‑Vergleich</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Welche Funktionen in welchem Tarif enthalten sind.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto border border-white/10 rounded-xl bg-background/50 backdrop-blur">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funktion</th>
+                  <th className="px-4 py-2 text-center font-medium text-muted-foreground">Free</th>
+                  <th className="px-4 py-2 text-center font-medium text-muted-foreground">Light</th>
+                  <th className="px-4 py-2 text-center font-medium text-muted-foreground">Pro</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {[
+                  { name: "Bild‑Generierung", free: false, light: true, pro: true },
+                  { name: "Musik‑Generierung", free: false, light: false, pro: true },
+                  { name: "Video‑Generierung", free: false, light: false, pro: true },
+                  { name: "Downloads/Modelle", free: false, light: true, pro: true },
+                  { name: "Browser‑Rendering", free: true, light: true, pro: true },
+                ].map((row, i) => (
+                  <tr key={i} className="bg-transparent hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-2 font-medium text-foreground/80">{row.name}</td>
+                    {[row.free, row.light, row.pro].map((has, idx) => (
+                      <td key={idx} className="px-4 py-2 text-center">
+                        {has ? <Check className="inline-block h-4 w-4 text-primary" /> : "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="container pb-24">
           <div className="glass-strong rounded-3xl p-10 md:p-16 text-center relative overflow-hidden">
@@ -174,6 +211,13 @@ const Landing = () => {
           <div className="container flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <Logo size="sm" />
             <p>© 2026 Mythos AI · Built for <a href="https://mythoscraft.online" className="text-accent hover:underline">mythoscraft.online</a></p>
+            <nav className="flex flex-wrap gap-2">
+              <a href="/impressum" className="hover:underline">Impressum</a>
+              <a href="/datenschutz" className="hover:underline">Datenschutz</a>
+              <a href="/nutzungsbedingungen" className="hover:underline">Nutzungsbedingungen</a>
+              <a href="/cookie" className="hover:underline">Cookie‑Hinweis</a>
+              <a href="/ki-regeln" className="hover:underline">KI‑Inhalts‑Regeln</a>
+            </nav>
           </div>
         </footer>
       </main>
