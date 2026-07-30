@@ -27,7 +27,7 @@ import {
   Crown,
   Server,
   Ticket,
-  Discord as DiscordIcon,
+  // Discord icon not available in current lucide-react version
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
@@ -85,7 +85,7 @@ const TopNav = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="flex items-center">
-            <DiscordIcon className="h-4 w-4 mr-2" />Discord
+            <MessageSquare className="h-4 w-4 mr-2" />Discord
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

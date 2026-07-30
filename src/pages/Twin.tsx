@@ -140,6 +140,16 @@ export default function Twin() {
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-bold">AI Twin</h1>
             <p className="text-sm text-muted-foreground">Dein digitaler Klon — trainiert auf deinem Stil.</p>
+            {/* Privacy & consent info */}
+            <details className="mt-2 border-t border-white/10 pt-2">
+              <summary className="text-sm font-medium text-primary underline cursor-pointer">Wie werden meine Daten verarbeitet?</summary>
+              <div className="mt-2 text-xs text-muted-foreground space-y-2">
+                <p>Der AI‑Twin analysiert bis zu <strong>200 deiner Chat‑Nachrichten</strong> und optional hinzugefügte Beispiele, um einen Stil‑ und Ton‑Profil zu erstellen.</p>
+                <p>Du gibst ausdrücklich deine Einwilligung, indem du die "Twin trainieren"‑Schaltfläche betätigst. Vor dem Training siehst du eine Vorschau der zu nutzenden Nachrichten und kannst einzelne Nachrichten entfernen.</p>
+                <p>Du kannst jederzeit das komplette Training zurücksetzen oder einzelne Beispiele löschen. Der Twin kann über das <strong>Auto‑Antwort‑Toggle</strong> deaktiviert werden.</p>
+                <p>Alle Daten werden ausschließlich in deinem Supabase‑Projekt gespeichert und sind nur für dich einsehbar. Es werden keine Daten an Dritte weitergegeben.</p>
+              </div>
+            </details>
           </div>
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-gradient-primary text-primary-foreground font-bold">
             <Crown className="h-3 w-3" /> Pro
