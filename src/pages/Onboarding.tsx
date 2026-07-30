@@ -167,7 +167,7 @@ export default function Onboarding() {
         <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground font-medium">
           <Sparkles className="h-3.5 w-3.5 text-primary" /> Schritt {step + 1} von {steps.length}
         </div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold mb-1">{s.title}</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-bold mb-1"><Sparkles className=\"h-5 w-5 mr-2 text-primary\" />{s.title}</h1>
         <p className="text-sm text-muted-foreground mb-6">{s.sub}</p>
 
         <div className="mb-8">{s.body}</div>

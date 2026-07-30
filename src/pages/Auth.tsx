@@ -102,9 +102,6 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input/50 mt-1.5"
                 />
-                {pwdStrength.label && (
-                  <p className={`mt-1 text-sm ${pwdStrength.color}`}>Stärke: {pwdStrength.label}</p>
-                )}
                 <div className="mt-2 text-sm">
                   <Link to="/reset-password" className="hover:underline text-primary" aria-label="Passwort vergessen?">Passwort vergessen?</Link>
                 </div>

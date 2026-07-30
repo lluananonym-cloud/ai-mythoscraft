@@ -8,6 +8,7 @@ import {
   Film, Music, AudioLines, Image as ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import UpgradeDialog from "@/components/UpgradeDialog";
 import { TIER_LIMITS } from "@/hooks/useSubscription";
 
 const Feature = ({ icon: Icon, title, desc }: any) => (
