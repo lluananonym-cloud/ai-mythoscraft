@@ -4,7 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
-import nitro from 'nitropack';
+// nitro import removed – using custom middleware instead
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -15,8 +15,104 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [dyadComponentTagger(), nitro(),
-    react(),
+  configureServer(server) {
+    const jsonParser = (req, res, next) => {
+      let data = "";
+      req.on("data", chunk => (data += chunk));
+      req.on("end", () => {
+        if (data) {
+          try {
+            req.body = JSON.parse(data);
+          } catch (e) {
+            req.body = {};
+          }
+        }
+        next();
+      });
+    };
+    const handleProxy = (path, handler) => {
+      server.middlewares.use(path, jsonParser, async (req, res, next) => {
+        try {
+          const result = await handler(req.body);
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(result));
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+    };
+    // /api/nvidia/chat
+    handleProxy("/api/nvidia/chat", async (body) => {
+      const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NV_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-oss-120gb",
+          messages: body.messages,
+          temperature: 0.7,
+        }),
+      });
+      const data = await resp.json();
+      return { content: data.choices?.[0]?.message?.content ?? "" };
+    });
+    // /api/nvidia/llm
+    handleProxy("/api/nvidia/llm", async (body) => {
+      const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NV_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          model: body.model,
+          messages: body.messages,
+          temperature: 0.7,
+        }),
+      });
+      const data = await resp.json();
+      return { content: data.choices?.[0]?.message?.content ?? "" };
+    });
+    // /api/nvidia/image
+    handleProxy("/api/nvidia/image", async (body) => {
+      const resp = await fetch("https://integrate.api.nvidia.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NV_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          model: "qwen-image-edit-nvpcb-ovsl2sl",
+          prompt: body.prompt,
+          n: 1,
+        }),
+      });
+      const data = await resp.json();
+      const img = data.data?.[0];
+      return { url: img?.url ?? `data:image/png;base64,${img?.b64_json}` };
+    });
+    // /api/nvidia/tts
+    handleProxy("/api/nvidia/tts", async (body) => {
+      const resp = await fetch("https://integrate.api.nvidia.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NV_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          model: body.model || "magpie-tts-multilingual",
+          input: body.text,
+        }),
+      });
+      const data = await resp.json();
+      return { audioBase64: data.audioBase64 };
+    });
+  },
+  plugins: [dyadComponentTagger(),
+      react(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
