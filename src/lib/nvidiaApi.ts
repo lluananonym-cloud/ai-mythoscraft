@@ -10,7 +10,7 @@ export const NV_API_KEY = "nvapi-WiKpiRzsxmBF-2KVvtDRqJlVa3IWTDgQeB7dPRaEufgKE9w
  * @param messages Array of {role, content} objects.
  */
 export async function nvidiaChat(messages: { role: string; content: string }[]): Promise<string> {
-  const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const resp = await fetch("/api/nvidia/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -31,7 +31,7 @@ export async function nvidiaChat(messages: { role: string; content: string }[]):
  * Generic LLM chat using a specified NVIDIA model (e.g., meta/llama-3.3-70b-instruct).
  */
 export async function nvidiaLLM(model: string, messages: { role: string; content: string }[]): Promise<string> {
-  const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const resp = await fetch("/api/nvidia/llm", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +53,7 @@ export async function nvidiaLLM(model: string, messages: { role: string; content
  * Returns a URL to the generated image (base64 data URL or hosted URL).
  */
 export async function nvidiaGenerateImage(prompt: string): Promise<string> {
-  const resp = await fetch("https://integrate.api.nvidia.com/v1/images/generations", {
+  const resp = await fetch("/api/nvidia/image", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -67,8 +67,7 @@ export async function nvidiaGenerateImage(prompt: string): Promise<string> {
   });
   if (!resp.ok) throw new Error(`NVIDIA image error ${resp.status}`);
   const data = await resp.json();
-  const img = data.data?.[0];
-  return img?.url ?? `data:image/png;base64,${img?.b64_json}`;
+    return data.url;
 }
 
 /**
@@ -76,7 +75,7 @@ export async function nvidiaGenerateImage(prompt: string): Promise<string> {
  * Returns an audio Blob.
  */
 export async function nvidiaTTS(text: string, model: string = "magpie-tts-multilingual"): Promise<Blob> {
-  const resp = await fetch("https://integrate.api.nvidia.com/v1/audio/speech", {
+  const resp = await fetch("/api/nvidia/tts", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,5 +87,8 @@ export async function nvidiaTTS(text: string, model: string = "magpie-tts-multil
     }),
   });
   if (!resp.ok) throw new Error(`NVIDIA TTS error ${resp.status}`);
-  return await resp.blob();
+    const data = await resp.json();
+    const base64 = data.audioBase64;
+    const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    return new Blob([binary.buffer], { type: "audio/mpeg" });
 }

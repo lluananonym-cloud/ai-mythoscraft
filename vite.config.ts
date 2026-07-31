@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
+import nitro from 'nitropack';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [dyadComponentTagger(), 
+  plugins: [dyadComponentTagger(), nitro(),
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
