@@ -27,7 +27,7 @@ import {
   Crown,
   Server,
   Ticket,
-  // Discord icon not available in current lucide-react version
+  Image as ImageIcon,
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
