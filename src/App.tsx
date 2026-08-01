@@ -23,6 +23,8 @@ import Analytics from "./pages/Analytics";
 import Groups from "./pages/Groups";
 import Twin from "./pages/Twin";
 import Games from "./pages/Games";
+import Try from "./pages/Try";
+import BrowserAgent from "./pages/BrowserAgent";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound.tsx";
 import Impressum from "./pages/Impressum";
@@ -46,6 +48,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
+            <Route path="/try" element={<Try />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
@@ -56,6 +59,7 @@ const App = () => (
             <Route path="/personas" element={<RequireAuth><Personas /></RequireAuth>} />
             <Route path="/mc-servers" element={<RequireAuth><McServers /></RequireAuth>} />
             <Route path="/agents" element={<RequireAuth><Agents /></RequireAuth>} />
+            <Route path="/browser" element={<RequireAuth><BrowserAgent /></RequireAuth>} />
             <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
             <Route path="/twin" element={<RequireAuth><Twin /></RequireAuth>} />
             <Route path="/games" element={<RequireAuth><Games /></RequireAuth>} />
