@@ -28,7 +28,8 @@ import {
   Server,
   Ticket,
   Image as ImageIcon,
-}, Globe from "lucide-react";
+  Globe,
+} from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
 
