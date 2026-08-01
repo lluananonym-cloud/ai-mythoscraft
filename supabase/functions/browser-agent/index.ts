@@ -37,7 +37,10 @@ const TOOLS = [
 
 async function searchWeb(query: string) {
   const results: { url: string; title: string; snippet: string }[] = [];
-  const push = (url: string, title: string, snippet: string) => {
+  const push = (raw: string, title: string, snippet: string) => {
+    let url = raw;
+    const m = url.match(/[?&]uddg=([^&]+)/);
+    if (m) url = decodeURIComponent(m[1]);
     if (!url.startsWith("http")) return;
     if (/duckduckgo\.com|r\.jina\.ai|google\.com\/search/.test(url)) return;
     if (results.some((r) => r.url === url)) return;
@@ -51,7 +54,7 @@ async function searchWeb(query: string) {
   ]) {
     if (results.length >= 5) break;
     try {
-      const r = await fetch(`https://r.jina.ai/${target}`, { headers: { Accept: "text/plain" } });
+      const r = await fetch(`https://r.jina.ai/${encodeURIComponent(target)}`, { headers: { Accept: "text/plain" } });
       if (!r.ok) continue;
       const txt = await r.text();
       const re = /\[([^\]]{8,160})\]\((https?:\/\/[^\s)]+)\)/g;
@@ -88,7 +91,7 @@ async function openUrl(url: string) {
   const clean = url.startsWith("http") ? url : `https://${url}`;
   // r.jina.ai rendert die Seite und liefert lesbaren Text (kein Key nötig)
   try {
-    const r = await fetch(`https://r.jina.ai/${clean}`, {
+    const r = await fetch(`https://r.jina.ai/${encodeURIComponent(clean)}`, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; MythosAI/1.0)", Accept: "text/plain" },
     });
     if (r.ok) {
