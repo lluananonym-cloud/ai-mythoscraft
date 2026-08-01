@@ -37,50 +37,49 @@ const TOOLS = [
 
 async function searchWeb(query: string) {
   const results: { url: string; title: string; snippet: string }[] = [];
-  const unwrap = (u: string) => {
-    const m = u.match(/uddg=([^&]+)/);
-    let out = m ? decodeURIComponent(m[1]) : u;
-    if (out.startsWith("//")) out = `https:${out}`;
-    return out;
+  const push = (url: string, title: string, snippet: string) => {
+    if (!url.startsWith("http")) return;
+    if (/duckduckgo\.com|r\.jina\.ai|google\.com\/search/.test(url)) return;
+    if (results.some((r) => r.url === url)) return;
+    results.push({ url, title: title.trim().slice(0, 160), snippet: snippet.trim().slice(0, 240) });
   };
 
-  // 1) DuckDuckGo Lite (stabiles, schlankes HTML)
-  try {
-    const r = await fetch(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept-Language": "de,en;q=0.8" },
-    });
-    const html = await r.text();
-    const linkRe = /<a[^>]+href="([^"]+)"[^>]*class=['"]result-link['"][^>]*>([\s\S]*?)<\/a>/g;
-    const snipRe = /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/g;
-    const snippets: string[] = [];
-    let sm: RegExpExecArray | null;
-    while ((sm = snipRe.exec(html)) !== null) snippets.push(sm[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
-    let m: RegExpExecArray | null;
-    let i = 0;
-    while ((m = linkRe.exec(html)) !== null && results.length < 6) {
-      results.push({
-        url: unwrap(m[1]),
-        title: m[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim(),
-        snippet: (snippets[i] || "").slice(0, 240),
-      });
-      i++;
-    }
-  } catch { /* next */ }
+  // 1) Suche über r.jina.ai (eigene IP, wird nicht geblockt)
+  for (const target of [
+    `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+    `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`,
+  ]) {
+    if (results.length >= 5) break;
+    try {
+      const r = await fetch(`https://r.jina.ai/${target}`, { headers: { Accept: "text/plain" } });
+      if (!r.ok) continue;
+      const txt = await r.text();
+      const re = /\[([^\]]{8,160})\]\((https?:\/\/[^\s)]+)\)/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(txt)) !== null && results.length < 6) push(m[2], m[1], "");
+    } catch { /* next */ }
+  }
   if (results.length) return results;
 
-  // 2) Fallback: Seite über r.jina.ai rendern und Links aus dem Markdown ziehen
+  // 2) Fallback: grounded Google-Suche über das Lovable AI Gateway
   try {
-    const r = await fetch(`https://r.jina.ai/https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
-      headers: { Accept: "text/plain" },
+    const key = Deno.env.get("LOVABLE_API_KEY")!;
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{
+          role: "user",
+          content: `Suche im Web nach: ${query}\nAntworte NUR mit JSON: {"results":[{"url":"...","title":"...","snippet":"..."}]} (max 5, echte URLs).`,
+        }],
+        tools: [{ type: "function", function: { name: "google_search", description: "Search the web", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } }],
+      }),
     });
-    const txt = await r.text();
-    const re = /\[([^\]]{8,140})\]\((https?:\/\/[^\s)]+)\)/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(txt)) !== null && results.length < 6) {
-      const url = m[2];
-      if (url.includes("duckduckgo.com")) continue;
-      results.push({ url, title: m[1].trim(), snippet: "" });
-    }
+    const j = await r.json();
+    const raw = j.choices?.[0]?.message?.content || "";
+    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    for (const it of parsed.results || []) push(it.url, it.title || it.url, it.snippet || "");
   } catch { /* ignore */ }
   return results;
 }
