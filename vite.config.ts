@@ -16,10 +16,10 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  configureServer(server) {
-    const jsonParser = (req, res, next) => {
+  configureServer(server: any) {
+    const jsonParser = (req: any, res: any, next: any) => {
       let data = "";
-      req.on("data", chunk => (data += chunk));
+      req.on("data", (chunk: any) => (data += chunk));
       req.on("end", () => {
         if (data) {
           try {
@@ -31,20 +31,20 @@ export default defineConfig(({ mode }) => ({
         next();
       });
     };
-    const handleProxy = (path, handler) => {
-      server.middlewares.use(path, jsonParser, async (req, res, next) => {
+    const handleProxy = (path: string, handler: (body: any) => Promise<any>) => {
+      server.middlewares.use(path, jsonParser, async (req: any, res: any, next: any) => {
         try {
           const result = await handler(req.body);
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify(result));
         } catch (e) {
           res.statusCode = 500;
-          res.end(JSON.stringify({ error: e.message }));
+          res.end(JSON.stringify({ error: (e as Error).message }));
         }
       });
     };
     // /api/nvidia/chat
-    handleProxy("/api/nvidia/chat", async (body) => {
+    handleProxy("/api/nvidia/chat", async (body: any) => {
       const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -57,11 +57,11 @@ export default defineConfig(({ mode }) => ({
           temperature: 0.7,
         }),
       });
-      const data = await resp.json();
+      const data: any = await resp.json();
       return { content: data.choices?.[0]?.message?.content ?? "" };
     });
     // /api/nvidia/llm
-    handleProxy("/api/nvidia/llm", async (body) => {
+    handleProxy("/api/nvidia/llm", async (body: any) => {
       const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -74,11 +74,11 @@ export default defineConfig(({ mode }) => ({
           temperature: 0.7,
         }),
       });
-      const data = await resp.json();
+      const data: any = await resp.json();
       return { content: data.choices?.[0]?.message?.content ?? "" };
     });
     // /api/nvidia/image
-    handleProxy("/api/nvidia/image", async (body) => {
+    handleProxy("/api/nvidia/image", async (body: any) => {
       const resp = await fetch("https://integrate.api.nvidia.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -91,12 +91,12 @@ export default defineConfig(({ mode }) => ({
           n: 1,
         }),
       });
-      const data = await resp.json();
+      const data: any = await resp.json();
       const img = data.data?.[0];
       return { url: img?.url ?? `data:image/png;base64,${img?.b64_json}` };
     });
     // /api/nvidia/tts
-    handleProxy("/api/nvidia/tts", async (body) => {
+    handleProxy("/api/nvidia/tts", async (body: any) => {
       const resp = await fetch("https://integrate.api.nvidia.com/v1/audio/speech", {
         method: "POST",
         headers: {
@@ -108,7 +108,7 @@ export default defineConfig(({ mode }) => ({
           input: body.text,
         }),
       });
-      const data = await resp.json();
+      const data: any = await resp.json();
       return { audioBase64: data.audioBase64 };
     });
   },

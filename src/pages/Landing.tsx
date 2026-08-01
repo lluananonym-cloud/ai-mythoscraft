@@ -71,9 +71,14 @@ const Landing = () => {
                 <Sparkles className="h-5 w-5 mr-2" /> Mythos AI starten <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>
-            <Link to="/docs">
+            <Link to="/try">
               <Button size="lg" variant="outline" className="glass border-glass-border text-base px-8 h-12">
-                <Code2 className="h-5 w-5 mr-2" /> API-Dokumentation
+                <Zap className="h-5 w-5 mr-2" /> Try Mythos AI — ohne Anmeldung
+              </Button>
+            </Link>
+            <Link to="/docs">
+              <Button size="lg" variant="ghost" className="text-base px-6 h-12">
+                <Code2 className="h-5 w-5 mr-2" /> API-Docs
               </Button>
             </Link>
           </div>
