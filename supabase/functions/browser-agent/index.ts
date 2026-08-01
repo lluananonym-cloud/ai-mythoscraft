@@ -118,6 +118,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   if (req.method === "GET") {
+    const probe = new URL(req.url).searchParams.get("probe");
+    if (probe) {
+      try { const r = await fetch(probe, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", Accept: "text/plain,text/html" } }); const t = await r.text(); return new Response(JSON.stringify({ status: r.status, len: t.length, head: t.slice(0, 600) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); } catch (e) { return new Response(JSON.stringify({ err: String(e) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
+    }
     const q = new URL(req.url).searchParams.get("q");
     if (q) return new Response(JSON.stringify(await searchWeb(q)), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const diag: any = {};
