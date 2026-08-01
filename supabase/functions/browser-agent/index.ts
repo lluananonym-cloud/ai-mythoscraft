@@ -118,6 +118,23 @@ async function openUrl(url: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  if (req.method === "GET") {
+    const diag: any = {};
+    try {
+      const r = await fetch("https://lite.duckduckgo.com/lite/?q=test", { headers: { "User-Agent": "Mozilla/5.0" } });
+      diag.ddg = { status: r.status, len: (await r.text()).length };
+    } catch (e) { diag.ddg = String(e); }
+    try {
+      const r = await fetch("https://r.jina.ai/https://example.com", { headers: { Accept: "text/plain" } });
+      diag.jina = { status: r.status, len: (await r.text()).length };
+    } catch (e) { diag.jina = String(e); }
+    try {
+      const r = await fetch("https://example.com");
+      diag.direct = { status: r.status, len: (await r.text()).length };
+    } catch (e) { diag.direct = String(e); }
+    return new Response(JSON.stringify(diag), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(sse(o));
