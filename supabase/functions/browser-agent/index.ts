@@ -120,29 +120,6 @@ async function openUrl(url: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  if (req.method === "GET") {
-    const probe = new URL(req.url).searchParams.get("probe");
-    if (probe) {
-      try { const r = await fetch(probe, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", Accept: "text/plain,text/html" } }); const t = await r.text(); return new Response(JSON.stringify({ status: r.status, len: t.length, head: t.slice(0, 600) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); } catch (e) { return new Response(JSON.stringify({ err: String(e) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
-    }
-    const q = new URL(req.url).searchParams.get("q");
-    if (q) return new Response(JSON.stringify(await searchWeb(q)), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const diag: any = {};
-    try {
-      const r = await fetch("https://lite.duckduckgo.com/lite/?q=test", { headers: { "User-Agent": "Mozilla/5.0" } });
-      diag.ddg = { status: r.status, len: (await r.text()).length };
-    } catch (e) { diag.ddg = String(e); }
-    try {
-      const r = await fetch("https://r.jina.ai/https://example.com", { headers: { Accept: "text/plain" } });
-      diag.jina = { status: r.status, len: (await r.text()).length };
-    } catch (e) { diag.jina = String(e); }
-    try {
-      const r = await fetch("https://example.com");
-      diag.direct = { status: r.status, len: (await r.text()).length };
-    } catch (e) { diag.direct = String(e); }
-    return new Response(JSON.stringify(diag), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(sse(o));
