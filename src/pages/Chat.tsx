@@ -360,7 +360,7 @@ const Chat = () => {
             return;
           } catch (e) {
             console.error("Fallback error:", e);
-            toast.error("Fallback über NVIDIA fehlgeschlagen.");
+            toast.error(`NVIDIA fallback failed: ${e?.message || "unknown"}`);
           }
         } else {
           toast.error("Fehler beim Senden");

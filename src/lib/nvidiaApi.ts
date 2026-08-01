@@ -14,7 +14,6 @@ export async function nvidiaChat(messages: { role: string; content: string }[]):
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${NV_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-oss-120gb",
@@ -35,7 +34,6 @@ export async function nvidiaLLM(model: string, messages: { role: string; content
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${NV_API_KEY}`,
     },
     body: JSON.stringify({
       model,
@@ -57,7 +55,6 @@ export async function nvidiaGenerateImage(prompt: string): Promise<string> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${NV_API_KEY}`,
     },
     body: JSON.stringify({
       model: "qwen-image-edit-nvpcb-ovsl2sl",
@@ -79,7 +76,6 @@ export async function nvidiaTTS(text: string, model: string = "magpie-tts-multil
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${NV_API_KEY}`,
     },
     body: JSON.stringify({
       model,
