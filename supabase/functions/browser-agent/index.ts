@@ -36,28 +36,53 @@ const TOOLS = [
 ];
 
 async function searchWeb(query: string) {
+  const results: { url: string; title: string; snippet: string }[] = [];
+  const unwrap = (u: string) => {
+    const m = u.match(/uddg=([^&]+)/);
+    let out = m ? decodeURIComponent(m[1]) : u;
+    if (out.startsWith("//")) out = `https:${out}`;
+    return out;
+  };
+
+  // 1) DuckDuckGo Lite (stabiles, schlankes HTML)
   try {
-    const r = await fetch(`https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MythosAI/1.0)" },
+    const r = await fetch(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept-Language": "de,en;q=0.8" },
     });
     const html = await r.text();
-    const results: { url: string; title: string; snippet: string }[] = [];
-    const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    const linkRe = /<a[^>]+href="([^"]+)"[^>]*class=['"]result-link['"][^>]*>([\s\S]*?)<\/a>/g;
+    const snipRe = /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/g;
+    const snippets: string[] = [];
+    let sm: RegExpExecArray | null;
+    while ((sm = snipRe.exec(html)) !== null) snippets.push(sm[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
     let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) !== null && results.length < 6) {
-      let url = m[1];
-      const uddg = url.match(/uddg=([^&]+)/);
-      if (uddg) url = decodeURIComponent(uddg[1]);
+    let i = 0;
+    while ((m = linkRe.exec(html)) !== null && results.length < 6) {
       results.push({
-        url,
-        title: m[2].replace(/<[^>]+>/g, "").trim(),
-        snippet: m[3].replace(/<[^>]+>/g, "").trim().slice(0, 240),
+        url: unwrap(m[1]),
+        title: m[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim(),
+        snippet: (snippets[i] || "").slice(0, 240),
       });
+      i++;
     }
-    return results;
-  } catch {
-    return [];
-  }
+  } catch { /* next */ }
+  if (results.length) return results;
+
+  // 2) Fallback: Seite über r.jina.ai rendern und Links aus dem Markdown ziehen
+  try {
+    const r = await fetch(`https://r.jina.ai/https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      headers: { Accept: "text/plain" },
+    });
+    const txt = await r.text();
+    const re = /\[([^\]]{8,140})\]\((https?:\/\/[^\s)]+)\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(txt)) !== null && results.length < 6) {
+      const url = m[2];
+      if (url.includes("duckduckgo.com")) continue;
+      results.push({ url, title: m[1].trim(), snippet: "" });
+    }
+  } catch { /* ignore */ }
+  return results;
 }
 
 async function openUrl(url: string) {
