@@ -28,7 +28,7 @@ import {
   Server,
   Ticket,
   Image as ImageIcon,
-} from "lucide-react";
+}, Globe from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
 
@@ -53,6 +53,11 @@ const TopNav = () => {
           <Link to="/create" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
               <Code2 className="h-4 w-4 mr-1.5" />Erstellen
+            </Button>
+          </Link>
+          <Link to="/browser" onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
+              <Globe className="h-4 w-4 mr-1.5" />Browser-Agent
             </Button>
           </Link>
           {/* Community – groups */}
