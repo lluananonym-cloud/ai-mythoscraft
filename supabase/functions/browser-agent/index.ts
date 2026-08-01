@@ -118,6 +118,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   if (req.method === "GET") {
+    const q = new URL(req.url).searchParams.get("q");
+    if (q) return new Response(JSON.stringify(await searchWeb(q)), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const diag: any = {};
     try {
       const r = await fetch("https://lite.duckduckgo.com/lite/?q=test", { headers: { "User-Agent": "Mozilla/5.0" } });
