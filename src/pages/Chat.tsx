@@ -51,7 +51,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
