@@ -29,6 +29,7 @@ import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
+import AgentBrowser from "@/components/AgentBrowser";
 import { Link, useNavigate } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 
@@ -38,6 +39,7 @@ const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
+  { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
@@ -51,7 +53,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -201,6 +203,7 @@ const Chat = () => {
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
+    if (/^\/agent\b/i.test(text) && !sub.isPro) { setPaywall({ open: true, reason: "Der Browser-Agent ist eine Pro-Funktion." }); return; }
     if (!override) setInput("");
     setSending(true);
 
@@ -214,6 +217,21 @@ const Chat = () => {
       setActiveId(convId);
       loadConvs();
     }
+
+    // /agent — Browser-Agent live im Chat
+    const agentMatch = text.match(/^\/agent\s+(.+)$/i);
+    if (agentMatch) {
+      const task = agentMatch[1].trim();
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = { role: "assistant", content: "", agent: { task } };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false); loadConvs(); return;
+    }
+
 
     const musicMatch = text.match(/^\/music\s+(.+)$/i);
     if (musicMatch) {
@@ -804,7 +822,7 @@ const Chat = () => {
                           <div className="prose-mythos text-[15px] break-words">
                             {m.content ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                            ) : !m.image && !m.music && !m.song && !m.video ? (
+                            ) : !m.image && !m.music && !m.song && !m.video && !m.agent ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Denke nach…</span>
@@ -821,6 +839,20 @@ const Chat = () => {
                             {m.music && <FunkPlayer pattern={m.music} />}
                             {m.song && <SongPlayer request={m.song} />}
                             {m.video && <VideoPlayer request={m.video} />}
+                            {m.agent && (
+                              <AgentBrowser
+                                task={m.agent.task}
+                                onDone={(ans) => {
+                                  if (!ans) return;
+                                  supabase.from("messages").insert({
+                                    conversation_id: activeId,
+                                    role: "assistant",
+                                    content: ans,
+                                    metadata: { agentAnswer: true },
+                                  });
+                                }}
+                              />
+                            )}
                           </div>
                           {m.content && !sending && (
                             <div className="flex items-center gap-0.5 mt-2 -ml-1.5 opacity-40 hover:opacity-100 transition-opacity">

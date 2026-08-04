@@ -174,13 +174,17 @@ Antworte am Ende auf Deutsch in Markdown mit Quellen-Links am Ende.`,
                 send({ browser: { type: "search", query: args.query, status: "done", results: res } });
                 convo.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(res.length ? res : { message: "keine Ergebnisse" }) });
               } else if (tc.function.name === "open_url") {
-                send({ browser: { type: "page", url: args.url, reason: args.reason || "", status: "running" } });
-                const page = await openUrl(args.url || "");
+                const rawUrl = String(args.url || "");
+                const cleanUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
+                const shot = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(cleanUrl)}?w=1280`;
+                // Screenshot sofort mitschicken -> Live-Preview erscheint, bevor die Seite gelesen ist
+                send({ browser: { type: "page", url: cleanUrl, reason: args.reason || "", status: "running", screenshot: shot } });
+                const page = await openUrl(rawUrl);
                 send({
                   browser: {
                     type: "page", url: page.url, title: page.title, reason: args.reason || "",
                     status: "done", excerpt: page.text.slice(0, 600),
-                    screenshot: `https://s.wordpress.com/mshots/v1/${encodeURIComponent(page.url)}?w=1280`,
+                    screenshot: shot,
                   },
                 });
                 convo.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ url: page.url, title: page.title, text: page.text }) });
