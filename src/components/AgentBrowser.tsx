@@ -94,7 +94,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Fehler");
       } finally {
-        if (!cancelled) setBusy(false);
+        if (!cancelled) { setBusy(false); setThinking(false); }
       }
     })();
 
