@@ -141,6 +141,9 @@ Antworte am Ende auf Deutsch in Markdown mit Quellen-Links am Ende.`,
         ];
 
         for (let step = 0; step < 8; step++) {
+          // Live-Signal: der Agent denkt/plant gerade
+          send({ browser: { type: "think", status: "running", step } });
+
           const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -149,31 +152,71 @@ Antworte am Ende auf Deutsch in Markdown mit Quellen-Links am Ende.`,
               messages: convo,
               tools: TOOLS,
               tool_choice: "auto",
+              stream: true,
             }),
           });
 
-          if (!r.ok) {
+          if (!r.ok || !r.body) {
             if (r.status === 429) { delta("\n\n⚠️ Rate limit erreicht — bitte kurz warten."); break; }
             if (r.status === 402) { delta("\n\n⚠️ AI-Credits aufgebraucht."); break; }
             delta(`\n\n⚠️ Gateway-Fehler (${r.status}).`); break;
           }
 
-          const data = await r.json();
-          const msg = data.choices?.[0]?.message;
-          if (!msg) break;
+          // Upstream-SSE lesen: Text sofort weiterstreamen, Tool-Calls sammeln
+          const reader = r.body.getReader();
+          const dec = new TextDecoder();
+          let buf = "";
+          let content = "";
+          const toolAcc: Record<number, { id: string; name: string; args: string }> = {};
 
-          if (msg.tool_calls?.length) {
-            convo.push(msg);
-            for (const tc of msg.tool_calls) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop() || "";
+            for (const line of lines) {
+              const t = line.trim();
+              if (!t.startsWith("data:")) continue;
+              const p = t.slice(5).trim();
+              if (!p || p === "[DONE]") continue;
+              let j: any;
+              try { j = JSON.parse(p); } catch { continue; }
+              const d = j.choices?.[0]?.delta;
+              if (!d) continue;
+              if (d.content) { content += d.content; delta(d.content); }
+              for (const tc of d.tool_calls || []) {
+                const i = tc.index ?? 0;
+                const cur = toolAcc[i] || (toolAcc[i] = { id: "", name: "", args: "" });
+                if (tc.id) cur.id = tc.id;
+                if (tc.function?.name) cur.name = tc.function.name;
+                if (tc.function?.arguments) cur.args += tc.function.arguments;
+              }
+            }
+          }
+          send({ browser: { type: "think", status: "done", step } });
+
+          const toolCalls = Object.values(toolAcc).filter((t) => t.name);
+
+          if (toolCalls.length) {
+            convo.push({
+              role: "assistant",
+              content: content || null,
+              tool_calls: toolCalls.map((t) => ({
+                id: t.id, type: "function", function: { name: t.name, arguments: t.args || "{}" },
+              })),
+            });
+
+            for (const tc of toolCalls) {
               let args: any = {};
-              try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* ignore */ }
+              try { args = JSON.parse(tc.args || "{}"); } catch { /* ignore */ }
 
-              if (tc.function.name === "search_web") {
+              if (tc.name === "search_web") {
                 send({ browser: { type: "search", query: args.query, status: "running" } });
                 const res = await searchWeb(args.query || "");
                 send({ browser: { type: "search", query: args.query, status: "done", results: res } });
                 convo.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(res.length ? res : { message: "keine Ergebnisse" }) });
-              } else if (tc.function.name === "open_url") {
+              } else if (tc.name === "open_url") {
                 const rawUrl = String(args.url || "");
                 const cleanUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
                 const shot = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(cleanUrl)}?w=1280`;
@@ -195,13 +238,10 @@ Antworte am Ende auf Deutsch in Markdown mit Quellen-Links am Ende.`,
             continue;
           }
 
-          const final = msg.content || "(keine Antwort)";
-          for (let i = 0; i < final.length; i += 16) {
-            delta(final.slice(i, i + 16));
-            await new Promise((res) => setTimeout(res, 6));
-          }
+          if (!content) delta("(keine Antwort)");
           break;
         }
+
 
         controller.enqueue(enc.encode("data: [DONE]\n\n"));
         controller.close();

@@ -16,6 +16,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [thinking, setThinking] = useState(true);
   const [active, setActive] = useState<number | null>(null);
   const started = useRef(false);
   const doneRef = useRef(onDone);
@@ -66,6 +67,8 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
 
             if (j.browser) {
               const b = j.browser;
+              if (b.type === "think") { setThinking(b.status === "running"); continue; }
+              if (b.type !== "search" && b.type !== "page") continue;
               setSteps((prev) => {
                 const copy = [...prev];
                 const i = copy.findIndex(
@@ -91,7 +94,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Fehler");
       } finally {
-        if (!cancelled) setBusy(false);
+        if (!cancelled) { setBusy(false); setThinking(false); }
       }
     })();
 
@@ -164,6 +167,11 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
               )}
             </button>
           ))}
+          {thinking && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-2 py-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" /> Agent überlegt den nächsten Schritt…
+            </div>
+          )}
         </div>
       </div>
 
