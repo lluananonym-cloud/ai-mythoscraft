@@ -29,6 +29,7 @@ import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
+import AgentBrowser from "@/components/AgentBrowser";
 import { Link, useNavigate } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 
