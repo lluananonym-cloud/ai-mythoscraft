@@ -821,6 +821,20 @@ const Chat = () => {
                             {m.music && <FunkPlayer pattern={m.music} />}
                             {m.song && <SongPlayer request={m.song} />}
                             {m.video && <VideoPlayer request={m.video} />}
+                            {m.agent && (
+                              <AgentBrowser
+                                task={m.agent.task}
+                                onDone={(ans) => {
+                                  if (!ans) return;
+                                  supabase.from("messages").insert({
+                                    conversation_id: activeId,
+                                    role: "assistant",
+                                    content: ans,
+                                    metadata: { agentAnswer: true },
+                                  });
+                                }}
+                              />
+                            )}
                           </div>
                           {m.content && !sending && (
                             <div className="flex items-center gap-0.5 mt-2 -ml-1.5 opacity-40 hover:opacity-100 transition-opacity">
