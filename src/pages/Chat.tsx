@@ -217,6 +217,21 @@ const Chat = () => {
       loadConvs();
     }
 
+    // /agent — Browser-Agent live im Chat
+    const agentMatch = text.match(/^\/agent\s+(.+)$/i);
+    if (agentMatch) {
+      const task = agentMatch[1].trim();
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = { role: "assistant", content: "", agent: { task } };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false); loadConvs(); return;
+    }
+
+
     const musicMatch = text.match(/^\/music\s+(.+)$/i);
     if (musicMatch) {
       const prompt = musicMatch[1].trim();
