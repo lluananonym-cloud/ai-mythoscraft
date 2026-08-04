@@ -68,6 +68,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
               const b = j.browser;
               if (b.type === "think") { setThinking(b.status === "running"); continue; }
               if (b.type !== "search" && b.type !== "page") continue;
+              setSteps((prev) => {
                 const copy = [...prev];
                 const i = copy.findIndex(
                   (s) =>
