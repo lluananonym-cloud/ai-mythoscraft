@@ -68,6 +68,7 @@ const BrowserAgent = () => {
 
           if (j.browser) {
             const b = j.browser;
+            if (b.type !== "search" && b.type !== "page") continue;
             setSteps((prev) => {
               const copy = [...prev];
               const i = copy.findIndex(
