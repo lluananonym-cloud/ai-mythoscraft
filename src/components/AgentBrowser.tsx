@@ -16,6 +16,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [thinking, setThinking] = useState(true);
   const [active, setActive] = useState<number | null>(null);
   const started = useRef(false);
   const doneRef = useRef(onDone);
