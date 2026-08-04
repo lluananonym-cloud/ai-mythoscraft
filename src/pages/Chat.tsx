@@ -39,6 +39,7 @@ const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
+  { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
