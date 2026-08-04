@@ -804,7 +804,7 @@ const Chat = () => {
                           <div className="prose-mythos text-[15px] break-words">
                             {m.content ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                            ) : !m.image && !m.music && !m.song && !m.video ? (
+                            ) : !m.image && !m.music && !m.song && !m.video && !m.agent ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Denke nach…</span>
