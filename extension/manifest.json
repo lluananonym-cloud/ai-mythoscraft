@@ -16,6 +16,17 @@
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": false
+    },
+    {
+      "matches": [
+        "https://ai-mythos.lovable.app/*",
+        "https://*.lovable.app/*",
+        "http://localhost/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "icons": { "48": "icon.png", "128": "icon.png" }
