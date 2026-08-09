@@ -34,6 +34,8 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
   const [clicking, setClicking] = useState(false);
   const [takeover, setTakeover] = useState(false);
   const [shotKey, setShotKey] = useState(0);
+  const [frameBlocked, setFrameBlocked] = useState(false);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const started = useRef(false);
   const popup = useRef<Window | null>(null);
   const doneRef = useRef(onDone);
@@ -61,6 +63,19 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
     }, 260);
     return () => clearInterval(t);
   }, []);
+
+  /* Erkennen, ob die Seite das Einbetten blockiert (X-Frame-Options/CSP) */
+  useEffect(() => {
+    if (!takeover) return;
+    const t = setTimeout(() => {
+      const f = frameRef.current;
+      let blocked = false;
+      try { blocked = !f?.contentWindow || f.contentWindow.length === 0 && !f.contentDocument?.body?.childElementCount; }
+      catch { blocked = false; /* cross-origin = geladen */ }
+      setFrameBlocked(blocked);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [takeover, activePage?.url]);
 
   /* Maus-Cursor bewegt sich, solange die KI arbeitet */
   useEffect(() => {
@@ -149,14 +164,10 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
     return () => { cancelled = true; };
   }, [task]);
 
-  const startTakeover = () => {
-    setTakeover(true);
-    if (activePage?.url) {
-      popup.current = window.open(activePage.url, "mythos-takeover", "width=1100,height=800");
-    }
-  };
+  const startTakeover = () => setTakeover(true);
   const endTakeover = () => {
     setTakeover(false);
+    setFrameBlocked(false);
     try { popup.current?.close(); } catch { /* ignore */ }
     popup.current = null;
     setShotKey((k) => k + 1); // Screenshot neu laden -> Änderungen sichtbar
@@ -222,29 +233,40 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
             </div>
           )}
 
-          {/* Eingreifen-Overlay */}
-          {takeover && (
-            <div className="absolute inset-0 z-30 bg-background/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-5 text-center">
-              <Hand className="h-6 w-6 text-primary" />
-              <div className="text-xs text-muted-foreground max-w-xs">
-                Du steuerst jetzt selbst. Erledige im geöffneten Fenster z.&nbsp;B. den Login und gib die Steuerung dann zurück.
-              </div>
-              <div className="flex gap-2">
-                {activePage?.url && (
-                  <a
-                    href={activePage.url} target="_blank" rel="noreferrer"
-                    className="text-[11px] rounded-full px-3 py-1.5 bg-muted/60 hover:bg-muted"
-                  >
-                    Fenster erneut öffnen
-                  </a>
-                )}
+          {/* Eingreifen: direkt hier im Fenster, kein neuer Tab */}
+          {takeover && activePage?.url && (
+            <div className="absolute inset-0 z-30 bg-background">
+              <iframe
+                ref={frameRef}
+                src={activePage.url}
+                title="Manuelle Steuerung"
+                className="w-full h-full min-h-[320px] border-0 bg-white"
+                sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur">
+                <Hand className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-[11px] text-muted-foreground truncate">
+                  Du steuerst jetzt selbst — direkt hier im Fenster.
+                </span>
                 <button
                   onClick={endTakeover}
-                  className="text-[11px] rounded-full px-3 py-1.5 bg-primary text-primary-foreground flex items-center gap-1.5"
+                  className="ml-auto text-[11px] rounded-full px-3 py-1.5 bg-primary text-primary-foreground flex items-center gap-1.5 shrink-0"
                 >
                   <Play className="h-3 w-3" /> KI übernimmt wieder
                 </button>
               </div>
+              {frameBlocked && (
+                <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2 bg-background/90 text-[11px]">
+                  <span className="text-muted-foreground truncate">Diese Seite verbietet das Einbetten.</span>
+                  <button
+                    onClick={() => { popup.current = window.open(activePage.url, "mythos-takeover", "width=1100,height=850"); }}
+                    className="ml-auto rounded-full px-2.5 py-1 bg-muted/60 hover:bg-muted shrink-0"
+                  >
+                    In eigenem Fenster öffnen
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
