@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Mythos AI — Browser Control",
+  "version": "1.0.0",
+  "description": "Lass Mythos AI deinen Browser steuern: Seiten öffnen, klicken, tippen, lesen — per Chat.",
+  "permissions": ["activeTab", "tabs", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": { "48": "icon.png", "128": "icon.png" }
+  },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://ai-mythos.lovable.app/*",
+        "https://*.lovable.app/*",
+        "http://localhost/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "icons": { "48": "icon.png", "128": "icon.png" }
+}

@@ -20,7 +20,7 @@ import {
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
   Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
-  Crown, Gamepad2, Server, Ticket, User as UserIcon, Search,
+  Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
@@ -30,6 +30,7 @@ import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
 import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import AgentBrowser from "@/components/AgentBrowser";
+import BrowserExtensionPanel from "@/components/BrowserExtensionPanel";
 import { Link, useNavigate } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 
@@ -40,6 +41,7 @@ const SLASH_COMMANDS = [
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
   { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
+  { cmd: "/browser",   args: "[anweisung]",     icon: Puzzle,    desc: "Deinen echten Browser steuern per Mythos-Erweiterung (Pro)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
   { cmd: "/translate", args: "<sprache> [text]",icon: Languages, desc: "Übersetzen (letzte AI-Antwort wenn ohne Text)" },
   { cmd: "/summarize", args: "",                icon: FileText,  desc: "Konversation zusammenfassen" },
@@ -53,7 +55,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; ext?: { task: string }; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -144,6 +146,7 @@ const Chat = () => {
         video: m.metadata?.video,
         offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
+        ext: m.metadata?.ext,
       })) as Msg[];
       setMessages(enriched);
     }
@@ -204,6 +207,7 @@ const Chat = () => {
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
     if (/^\/agent\b/i.test(text) && !sub.isPro) { setPaywall({ open: true, reason: "Der Browser-Agent ist eine Pro-Funktion." }); return; }
+    if (/^\/browser\b/i.test(text) && !sub.isPro) { setPaywall({ open: true, reason: "Browser-Steuerung ist eine Pro-Funktion." }); return; }
     if (!override) setInput("");
     setSending(true);
 
@@ -216,6 +220,25 @@ const Chat = () => {
       convId = data.id;
       setActiveId(convId);
       loadConvs();
+    }
+
+    // /browser — echte Browser-Steuerung über die Mythos-Erweiterung
+    const extMatch = text.match(/^\/browser\b\s*(.*)$/i);
+    if (extMatch) {
+      const t = extMatch[1].trim();
+      const userMsg: Msg = { role: "user", content: text };
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: "🧩 **Browser Control** — ich steuere deinen echten Browser: klicken, tippen, Seiten öffnen. Beim ersten Mal einmalig die Erweiterung installieren, danach reicht `/browser <anweisung>`.",
+        ext: { task: t },
+      };
+      setMessages(prev => [...prev, userMsg, aiMsg]);
+      await supabase.from("messages").insert([
+        { conversation_id: convId, role: "user", content: text },
+        { conversation_id: convId, role: "assistant", content: aiMsg.content, metadata: { ext: { task: t } } },
+      ]);
+      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      setSending(false); loadConvs(); return;
     }
 
     // /agent — Browser-Agent live im Chat
@@ -822,7 +845,7 @@ const Chat = () => {
                           <div className="prose-mythos text-[15px] break-words">
                             {m.content ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                            ) : !m.image && !m.music && !m.song && !m.video && !m.agent ? (
+                            ) : !m.image && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Denke nach…</span>
@@ -839,6 +862,7 @@ const Chat = () => {
                             {m.music && <FunkPlayer pattern={m.music} />}
                             {m.song && <SongPlayer request={m.song} />}
                             {m.video && <VideoPlayer request={m.video} />}
+                            {m.ext && <BrowserExtensionPanel initialTask={m.ext.task || undefined} />}
                             {m.agent && (
                               <AgentBrowser
                                 task={m.agent.task}
