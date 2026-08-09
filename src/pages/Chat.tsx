@@ -146,6 +146,7 @@ const Chat = () => {
         video: m.metadata?.video,
         offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
+        ext: m.metadata?.ext,
       })) as Msg[];
       setMessages(enriched);
     }
