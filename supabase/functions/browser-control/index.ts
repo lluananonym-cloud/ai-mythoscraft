@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { task, history, page } = await req.json();
+    const { task, history, page, memory } = await req.json();
     const key = Deno.env.get("LOVABLE_API_KEY")!;
 
     const ctx = page
@@ -45,12 +45,21 @@ Deno.serve(async (req) => {
           .join("\n")}\n\nSeitentext:\n${String(page.text || "").slice(0, 6000)}`
       : "Es ist noch keine Seite geladen.";
 
+    const mem = Array.isArray(memory) && memory.length
+      ? `Erinnerung an frühere Aufgaben des Nutzers:\n${memory
+          .slice(-10)
+          .map((m: any) => `- ${String(m.task || "").slice(0, 120)} → ${String(m.result || "").slice(0, 160)}`)
+          .join("\n")}`
+      : "";
+
     const messages = [
       { role: "system", content: SYSTEM },
+      ...(mem ? [{ role: "system", content: mem }] : []),
       { role: "user", content: `Aufgabe: ${String(task ?? "").slice(0, 1500)}` },
       ...(Array.isArray(history) ? history.slice(-8) : []),
       { role: "user", content: ctx },
     ];
+
 
     let r: Response | null = null;
     for (let i = 0; i < 3; i++) {

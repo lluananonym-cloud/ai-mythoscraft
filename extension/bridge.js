@@ -4,44 +4,48 @@
   if (window.__mythosBridge) return;
   window.__mythosBridge = true;
 
-  const post = (payload) => window.postMessage({ source: "mythos-ext", ...payload }, "*");
-  const ask = (msg) => new Promise((r) => chrome.runtime.sendMessage(msg, r));
+  const version = chrome.runtime.getManifest().version;
+  const post = (payload) => window.postMessage({ source: "mythos-ext", version, ...payload }, "*");
+  const ask = (msg) => new Promise((r) => { try { chrome.runtime.sendMessage(msg, r); } catch { r(null); } });
 
-  // Website erkennt: Erweiterung ist installiert
+  let busy = false;
+
+  // Heartbeat: Website weiß dadurch verlässlich, dass die Erweiterung aktiv ist
   post({ type: "ready" });
+  const beat = setInterval(() => post({ type: "ready", busy }), 1500);
+  window.addEventListener("pagehide", () => clearInterval(beat));
+
+  // Live-Events aus dem Hintergrund an die Website weitergeben
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.mythos !== "event") return;
+    if (msg.line) {
+      const l = msg.line;
+      if (l.kind === "ai") post({ type: "say", text: l.text });
+      else if (l.kind === "act") post({ type: "action", action: "", info: l.text });
+      else if (l.kind === "err") post({ type: "error", message: l.text });
+    }
+    if (typeof msg.busy === "boolean") { busy = msg.busy; post({ type: msg.busy ? "start" : "done" }); }
+  });
+
   window.addEventListener("message", async (e) => {
     if (e.source !== window) return;
     const d = e.data;
     if (!d || d.source !== "mythos-web") return;
 
-    if (d.type === "ping") { post({ type: "ready" }); return; }
+    if (d.type === "ping") { post({ type: "ready", busy }); return; }
+    if (d.type === "history") {
+      const st = await ask({ mythos: "state" });
+      post({ type: "history", lines: st?.lines || [], busy: !!st?.busy });
+      return;
+    }
+    if (d.type === "stop") { await ask({ mythos: "stop" }); return; }
+    if (d.type === "clear") { await ask({ mythos: "clear" }); return; }
+    if (d.type === "forget") { await ask({ mythos: "forget" }); return; }
     if (d.type !== "task" || !d.task) return;
 
-    const task = String(d.task).slice(0, 1500);
-    let history = [];
-    post({ type: "start", task });
-
-    try {
-      let page = await ask({ mythos: "page" });
-      for (let step = 0; step < 12; step++) {
-        const out = await ask({ mythos: "brain", task, history, page });
-        if (!out) { post({ type: "error", message: "Keine Antwort vom Server." }); break; }
-        if (out.say) post({ type: "say", text: out.say });
-        history.push({ role: "assistant", content: JSON.stringify({ say: out.say, actions: out.actions }) });
-        if (out.done || !out.actions?.length) break;
-
-        for (const action of out.actions) {
-          const res = await ask({ mythos: "run", action });
-          post({ type: "action", action: action.type, info: res?.info || "" });
-          if (res?.page) page = res.page;
-        }
-        if (!page) page = await ask({ mythos: "page" });
-        history.push({ role: "user", content: "Aktionen ausgeführt, neuer Seiten-Kontext folgt." });
-        history = history.slice(-10);
-      }
-    } catch (err) {
-      post({ type: "error", message: String(err?.message || err) });
-    }
-    post({ type: "done" });
+    busy = true;
+    post({ type: "start", task: String(d.task).slice(0, 1500) });
+    const res = await ask({ mythos: "task", task: String(d.task).slice(0, 1500) });
+    if (!res?.ok) { post({ type: "error", message: res?.error || "Aufgabe konnte nicht gestartet werden." }); post({ type: "done" }); busy = false; }
   });
 })();
