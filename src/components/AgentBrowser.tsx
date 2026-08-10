@@ -165,7 +165,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
         }
       }
       if (!flag.cancelled) {
-        historyRef.current = [...historyRef.current, { role: "user", content: job }, { role: "assistant", content: acc }].slice(-10);
+        historyRef.current = ([...historyRef.current, { role: "user", content: job }, { role: "assistant", content: acc }] as Turn[]).slice(-10);
         setTurns((p) => [...p, { role: "assistant", content: acc }]);
         doneRef.current?.(acc);
       }
