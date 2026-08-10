@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       const delta = (t: string) => send({ choices: [{ delta: { content: t } }] });
 
       try {
-        const { task, model } = await req.json();
+        const { task, model, history } = await req.json();
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
         const convo: any[] = [
