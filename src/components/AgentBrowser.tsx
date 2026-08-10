@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Globe, Loader2, Search, ExternalLink, Monitor, CheckCircle2,
-  Hand, MousePointer2, Play, RotateCcw,
+  Hand, MousePointer2, Play, RotateCcw, Send, Square, Brain,
 } from "lucide-react";
 
 type Step =
   | { kind: "search"; query: string; status: "running" | "done"; results?: { url: string; title: string; snippet: string }[] }
   | { kind: "page"; url: string; title?: string; reason?: string; status: "running" | "done"; excerpt?: string; screenshot?: string; screenshotFallback?: string };
+
+type Turn = { role: "user" | "assistant"; content: string };
 
 const BOOT_LINES = [
   "MythosOS 1.0 — Agent Desktop",
@@ -19,7 +21,8 @@ const BOOT_LINES = [
 
 /**
  * Live-Desktop der KI, direkt im Chat: Boot-Sequenz, sichtbarer Maus-Cursor,
- * Live-Screenshots und ein Eingreifen-Modus zum manuellen Weitersteuern.
+ * Live-Screenshots, Eingreifen-Modus und eine eigene Chat-Zeile für weitere
+ * Anweisungen an den Browser (mit Erinnerung an vorherige Aufträge).
  */
 const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string) => void }) => {
   const [steps, setSteps] = useState<Step[]>([]);
@@ -35,11 +38,15 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
   const [takeover, setTakeover] = useState(false);
   const [shotKey, setShotKey] = useState(0);
   const [frameBlocked, setFrameBlocked] = useState(false);
+  const [followUp, setFollowUp] = useState("");
+  const [turns, setTurns] = useState<Turn[]>([{ role: "user", content: task }]);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const started = useRef(false);
+  const abortRef = useRef<{ cancelled: boolean } | null>(null);
   const popup = useRef<Window | null>(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
+  const historyRef = useRef<Turn[]>([]);
 
   const pages = steps.filter((s) => s.kind === "page") as Extract<Step, { kind: "page" }>[];
   const activePage = (() => {
@@ -70,7 +77,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
     const t = setTimeout(() => {
       const f = frameRef.current;
       let blocked = false;
-      try { blocked = !f?.contentWindow || f.contentWindow.length === 0 && !f.contentDocument?.body?.childElementCount; }
+      try { blocked = !f?.contentWindow || (f.contentWindow.length === 0 && !f.contentDocument?.body?.childElementCount); }
       catch { blocked = false; /* cross-origin = geladen */ }
       setFrameBlocked(blocked);
     }, 2500);
@@ -94,75 +101,101 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
     return () => clearTimeout(t);
   }, [pages.length]);
 
+  /** Führt eine Aufgabe aus und streamt Schritte + Antwort live. */
+  const run = useCallback(async (job: string, isFollowUp: boolean) => {
+    const flag = { cancelled: false };
+    abortRef.current = flag;
+    setError(null);
+    setBusy(true);
+    setThinking(true);
+    setAnswer("");
+    if (isFollowUp) setSteps([]);
+
+    try {
+      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/browser-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ task: job, history: historyRef.current.slice(-8) }),
+      });
+      if (!r.ok || !r.body) throw new Error(`Agent nicht erreichbar (${r.status})`);
+
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let acc = "";
+      while (!flag.cancelled) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const p = line.slice(6).trim();
+          if (!p || p === "[DONE]") continue;
+          let j: any;
+          try { j = JSON.parse(p); } catch { continue; }
+
+          if (j.browser) {
+            const b = j.browser;
+            if (b.type === "think") { setThinking(b.status === "running"); continue; }
+            if (b.type !== "search" && b.type !== "page") continue;
+            setSteps((prev) => {
+              const copy = [...prev];
+              const i = copy.findIndex(
+                (s) =>
+                  (b.type === "search" && s.kind === "search" && s.query === b.query) ||
+                  (b.type === "page" && s.kind === "page" && s.url === b.url),
+              );
+              const next: Step =
+                b.type === "search"
+                  ? { kind: "search", query: b.query, status: b.status, results: b.results }
+                  : { kind: "page", url: b.url, title: b.title, reason: b.reason, status: b.status, excerpt: b.excerpt, screenshot: b.screenshot, screenshotFallback: b.screenshotFallback };
+              if (i >= 0) copy[i] = { ...(copy[i] as any), ...(next as any) };
+              else copy.push(next);
+              return copy;
+            });
+            continue;
+          }
+          const d = j.choices?.[0]?.delta?.content;
+          if (d) { acc += d; setAnswer(acc); }
+        }
+      }
+      if (!flag.cancelled) {
+        historyRef.current = ([...historyRef.current, { role: "user", content: job }, { role: "assistant", content: acc }] as Turn[]).slice(-10);
+        setTurns((p) => [...p, { role: "assistant", content: acc }]);
+        doneRef.current?.(acc);
+      }
+    } catch (e) {
+      if (!flag.cancelled) setError(e instanceof Error ? e.message : "Fehler");
+    } finally {
+      if (!flag.cancelled) { setBusy(false); setThinking(false); }
+    }
+  }, []);
+
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    let cancelled = false;
+    run(task, false);
+    return () => { if (abortRef.current) abortRef.current.cancelled = true; };
+  }, [task, run]);
 
-    (async () => {
-      try {
-        const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/browser-agent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ task }),
-        });
-        if (!r.ok || !r.body) throw new Error(`Agent nicht erreichbar (${r.status})`);
+  const sendFollowUp = () => {
+    const t = followUp.trim();
+    if (!t || busy) return;
+    setFollowUp("");
+    setTurns((p) => [...p, { role: "user", content: t }]);
+    run(t, true);
+  };
 
-        const reader = r.body.getReader();
-        const dec = new TextDecoder();
-        let buf = "";
-        let acc = "";
-        while (!cancelled) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop() || "";
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const p = line.slice(6).trim();
-            if (!p || p === "[DONE]") continue;
-            let j: any;
-            try { j = JSON.parse(p); } catch { continue; }
-
-            if (j.browser) {
-              const b = j.browser;
-              if (b.type === "think") { setThinking(b.status === "running"); continue; }
-              if (b.type !== "search" && b.type !== "page") continue;
-              setSteps((prev) => {
-                const copy = [...prev];
-                const i = copy.findIndex(
-                  (s) =>
-                    (b.type === "search" && s.kind === "search" && s.query === b.query) ||
-                    (b.type === "page" && s.kind === "page" && s.url === b.url),
-                );
-                const next: Step =
-                  b.type === "search"
-                    ? { kind: "search", query: b.query, status: b.status, results: b.results }
-                    : { kind: "page", url: b.url, title: b.title, reason: b.reason, status: b.status, excerpt: b.excerpt, screenshot: b.screenshot, screenshotFallback: b.screenshotFallback };
-                if (i >= 0) copy[i] = { ...(copy[i] as any), ...(next as any) };
-                else copy.push(next);
-                return copy;
-              });
-              continue;
-            }
-            const d = j.choices?.[0]?.delta?.content;
-            if (d) { acc += d; setAnswer(acc); }
-          }
-        }
-        if (!cancelled) doneRef.current?.(acc);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Fehler");
-      } finally {
-        if (!cancelled) { setBusy(false); setThinking(false); }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [task]);
+  const stop = () => {
+    if (abortRef.current) abortRef.current.cancelled = true;
+    setBusy(false);
+    setThinking(false);
+  };
 
   const startTakeover = () => setTakeover(true);
   const endTakeover = () => {
@@ -222,7 +255,7 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
             </div>
           )}
 
-          {/* Sichtbarer Maus-Cursor */}
+          {/* Sichtbarer Maus-Cursor (genau einer) */}
           {!booting && !takeover && (
             <div
               className="pointer-events-none absolute transition-all duration-700 ease-out z-20"
@@ -291,10 +324,49 @@ const AgentBrowser = ({ task, onDone }: { task: string; onDone?: (answer: string
           >
             <RotateCcw className="h-3 w-3" /> Neu laden
           </button>
+          {busy && (
+            <button
+              onClick={stop}
+              className="text-[11px] rounded-full px-3 py-1.5 bg-destructive/15 text-destructive flex items-center gap-1.5"
+            >
+              <Square className="h-3 w-3" /> Stop
+            </button>
+          )}
           <span className="ml-auto text-[10px] text-muted-foreground">
             {takeover ? "Manuelle Steuerung" : thinking ? "KI plant…" : busy ? "KI arbeitet…" : "Fertig"}
           </span>
         </div>
+
+        {/* Chat-Zeile: weitere Anweisungen direkt an den Browser */}
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-glass-border/60">
+          <input
+            value={followUp}
+            onChange={(e) => setFollowUp(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendFollowUp(); } }}
+            placeholder={busy ? "Agent arbeitet…" : "Neue Anweisung an den Browser, z.B. öffne die Preise-Seite"}
+            disabled={busy}
+            className="flex-1 bg-transparent text-xs outline-none px-1 disabled:opacity-50"
+          />
+          <button
+            onClick={sendFollowUp}
+            disabled={busy || !followUp.trim()}
+            className="text-[11px] rounded-full px-3 py-1.5 bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Send className="h-3 w-3" /> Senden
+          </button>
+        </div>
+
+        {/* Verlauf der Aufträge (Erinnerung) */}
+        {turns.length > 1 && (
+          <div className="px-3 py-2 border-t border-glass-border/60 space-y-1 max-h-28 overflow-y-auto">
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+              <Brain className="h-3 w-3" /> Sitzungs-Erinnerung
+            </div>
+            {turns.filter((t) => t.role === "user").map((t, i) => (
+              <div key={i} className="text-[11px] text-muted-foreground truncate">• {t.content}</div>
+            ))}
+          </div>
+        )}
 
         {/* Live-Schritte */}
         <div className="p-2 border-t border-glass-border/60 space-y-1 max-h-44 overflow-y-auto">

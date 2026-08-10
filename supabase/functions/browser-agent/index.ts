@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       const delta = (t: string) => send({ choices: [{ delta: { content: t } }] });
 
       try {
-        const { task, model } = await req.json();
+        const { task, model, history } = await req.json();
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
         const convo: any[] = [
@@ -135,10 +135,18 @@ Deno.serve(async (req) => {
             content: `Du bist **Mythos Browser-Agent**. Du hast einen echten Browser: \`search_web\` und \`open_url\`.
 Vorgehen: erst suchen, dann 2–4 relevante Seiten wirklich öffnen und lesen, dann antworten.
 Öffne immer mindestens eine Seite, bevor du antwortest. Nutze pro Schritt maximal 2 Tool-Calls.
+Du kannst Folgefragen beantworten und dich an frühere Schritte dieser Sitzung erinnern.
 Antworte am Ende auf Deutsch in Markdown mit Quellen-Links am Ende.`,
           },
+          ...(Array.isArray(history)
+            ? history
+                .slice(-8)
+                .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+                .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }))
+            : []),
           { role: "user", content: String(task ?? "").slice(0, 2000) },
         ];
+
 
         for (let step = 0; step < 8; step++) {
           // Live-Signal: der Agent denkt/plant gerade

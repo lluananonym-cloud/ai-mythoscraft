@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Chrome, Download, Loader2, MousePointerClick, Send, CheckCircle2, Puzzle } from "lucide-react";
+import { Chrome, Download, Loader2, MousePointerClick, Send, CheckCircle2, Puzzle, Square, Brain } from "lucide-react";
 
 type Line = { kind: "you" | "ai" | "act" | "err"; text: string };
 
@@ -9,29 +9,47 @@ type Line = { kind: "you" | "ai" | "act" | "err"; text: string };
  */
 const BrowserExtensionPanel = ({ initialTask }: { initialTask?: string }) => {
   const [installed, setInstalled] = useState(false);
+  const [version, setVersion] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [task, setTask] = useState(initialTask ?? "");
   const [lines, setLines] = useState<Line[]>([]);
   const end = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
+  const lastSeen = useRef(0);
 
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [lines.length]);
 
-  /* Erweiterung erkennen + Events der Bridge empfangen */
+  /* Erweiterung wirklich tracken: Heartbeat der Bridge + Timeout */
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       const d = e.data;
       if (!d || d.source !== "mythos-ext") return;
-      if (d.type === "ready") { setInstalled(true); return; }
+      if (d.type === "ready") {
+        lastSeen.current = Date.now();
+        setInstalled(true);
+        if (d.version) setVersion(d.version);
+        if (typeof d.busy === "boolean") setBusy(d.busy);
+        return;
+      }
+      if (d.type === "history") {
+        setLines((d.lines || []).map((l: Line) => ({ kind: l.kind, text: l.text })));
+        setBusy(!!d.busy);
+        return;
+      }
       if (d.type === "start") { setBusy(true); return; }
       if (d.type === "say") setLines((p) => [...p, { kind: "ai", text: d.text }]);
-      if (d.type === "action") setLines((p) => [...p, { kind: "act", text: `${d.action}: ${d.info}` }]);
+      if (d.type === "action") setLines((p) => [...p, { kind: "act", text: d.info || d.action }]);
       if (d.type === "error") setLines((p) => [...p, { kind: "err", text: d.message }]);
       if (d.type === "done") setBusy(false);
     };
     window.addEventListener("message", onMsg);
-    window.postMessage({ source: "mythos-web", type: "ping" }, "*");
-    const t = setInterval(() => window.postMessage({ source: "mythos-web", type: "ping" }, "*"), 2000);
+    const ping = () => window.postMessage({ source: "mythos-web", type: "ping" }, "*");
+    ping();
+    window.postMessage({ source: "mythos-web", type: "history" }, "*");
+    const t = setInterval(() => {
+      ping();
+      if (lastSeen.current && Date.now() - lastSeen.current > 5000) setInstalled(false);
+    }, 1500);
     return () => { window.removeEventListener("message", onMsg); clearInterval(t); };
   }, []);
 
@@ -58,6 +76,13 @@ const BrowserExtensionPanel = ({ initialTask }: { initialTask?: string }) => {
     window.postMessage({ source: "mythos-web", type: "task", task: text }, "*");
   };
 
+  const stop = () => { window.postMessage({ source: "mythos-web", type: "stop" }, "*"); setBusy(false); };
+  const forget = () => {
+    window.postMessage({ source: "mythos-web", type: "forget" }, "*");
+    window.postMessage({ source: "mythos-web", type: "clear" }, "*");
+    setLines([]);
+  };
+
   useEffect(() => {
     if (installed && initialTask && !autoSent.current) { autoSent.current = true; send(initialTask); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,7 +94,7 @@ const BrowserExtensionPanel = ({ initialTask }: { initialTask?: string }) => {
         <Puzzle className="h-4 w-4 text-primary" />
         <span className="text-xs font-medium">Mythos Browser Control</span>
         <span className={`ml-auto text-[10px] flex items-center gap-1 ${installed ? "text-emerald-400" : "text-muted-foreground"}`}>
-          {installed ? <><CheckCircle2 className="h-3 w-3" /> verbunden</> : "nicht installiert"}
+          {installed ? <><CheckCircle2 className="h-3 w-3" /> verbunden{version ? ` · v${version}` : ""}</> : "nicht installiert"}
         </span>
       </div>
 
@@ -134,12 +159,25 @@ const BrowserExtensionPanel = ({ initialTask }: { initialTask?: string }) => {
           placeholder={installed ? "z.B. öffne YouTube und suche Lofi Beats" : "Erst Erweiterung installieren"}
           className="flex-1 bg-transparent text-xs outline-none px-1 disabled:opacity-50"
         />
+        {busy ? (
+          <button onClick={stop} className="text-[11px] rounded-full px-3 py-1.5 bg-destructive/15 text-destructive flex items-center gap-1.5">
+            <Square className="h-3 w-3" /> Stop
+          </button>
+        ) : (
+          <button
+            onClick={() => send()}
+            disabled={!installed || !task.trim()}
+            className="text-[11px] rounded-full px-3 py-1.5 bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Send className="h-3 w-3" /> Ausführen
+          </button>
+        )}
         <button
-          onClick={() => send()}
-          disabled={!installed || busy || !task.trim()}
-          className="text-[11px] rounded-full px-3 py-1.5 bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-40 flex items-center gap-1.5"
+          onClick={forget}
+          title="Verlauf & Erinnerung löschen"
+          className="text-[11px] rounded-full px-2.5 py-1.5 bg-muted/50 hover:bg-muted text-muted-foreground flex items-center gap-1.5"
         >
-          <Send className="h-3 w-3" /> Ausführen
+          <Brain className="h-3 w-3" />
         </button>
       </div>
     </div>

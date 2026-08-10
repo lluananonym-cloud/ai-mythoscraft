@@ -5,64 +5,56 @@ const status = document.getElementById("status");
 
 const ask = (msg) => new Promise((r) => chrome.runtime.sendMessage(msg, r));
 
-function add(text, cls) {
+let tabId = null;
+let busy = false;
+
+function render(line) {
   const el = document.createElement("div");
-  el.className = cls === "act" ? "act" : `m ${cls}`;
-  el.textContent = text;
+  el.className =
+    line.kind === "act" ? "act" :
+    line.kind === "err" ? "m ai err" :
+    line.kind === "you" ? "m user" : "m ai";
+  el.textContent = line.kind === "act" ? `› ${line.text}` : line.text;
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
-  return el;
 }
 
-let history = [];
-let running = false;
-
-async function run(task) {
-  running = true;
-  go.disabled = true;
-  status.textContent = "arbeitet…";
-  add(task, "user");
-  history.push({ role: "user", content: task });
-
-  try {
-    let page = await ask({ mythos: "page" });
-
-    for (let step = 0; step < 12; step++) {
-      const out = await ask({ mythos: "brain", task, history, page });
-      if (!out) { add("Keine Antwort vom Server.", "m ai err"); break; }
-      if (out.say) add(out.say, "ai");
-      history.push({ role: "assistant", content: JSON.stringify({ say: out.say, actions: out.actions }) });
-
-      if (out.done || !out.actions?.length) break;
-
-      for (const action of out.actions) {
-        status.textContent = action.type;
-        const res = await ask({ mythos: "run", action });
-        add(`› ${action.type}: ${res?.info || "keine Rückmeldung"}`, "act");
-        if (res?.page) page = res.page;
-      }
-      if (!page) page = await ask({ mythos: "page" });
-      history.push({ role: "user", content: "Aktionen ausgeführt. Hier ist der neue Seiten-Kontext." });
-      history = history.slice(-10);
-    }
-  } catch (e) {
-    add(`Fehler: ${e.message || e}`, "m ai err");
-  } finally {
-    running = false;
-    go.disabled = false;
-    status.textContent = "bereit";
-  }
+function setBusy(v) {
+  busy = v;
+  go.textContent = v ? "Stop" : "Los";
+  status.textContent = v ? "arbeitet…" : "bereit";
 }
 
-function submit() {
+async function boot() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  tabId = tab?.id ?? null;
+  const st = await ask({ mythos: "state", tabId });
+  if (st?.lines?.length) { log.innerHTML = ""; st.lines.forEach(render); }
+  setBusy(!!st?.busy);
+  input.focus();
+}
+
+async function submit() {
+  if (busy) { await ask({ mythos: "stop", tabId }); setBusy(false); return; }
   const t = input.value.trim();
-  if (!t || running) return;
+  if (!t) return;
   input.value = "";
-  run(t);
+  setBusy(true);
+  await ask({ mythos: "task", task: t, tabId });
+  input.focus();
 }
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.mythos !== "event") return;
+  if (msg.tabId != null && tabId != null && msg.tabId !== tabId) return;
+  if (msg.line) render(msg.line);
+  if (typeof msg.busy === "boolean") setBusy(msg.busy);
+});
 
 go.addEventListener("click", submit);
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
 });
-input.focus();
+window.addEventListener("unload", () => { chrome.runtime.sendMessage({ mythos: "closed", tabId }); });
+
+boot();

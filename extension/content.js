@@ -7,7 +7,14 @@
   let cursorEl = null;
 
   function ensureCursor() {
-    if (cursorEl && document.body.contains(cursorEl)) return cursorEl;
+    // Doppelte Cursor (z.B. nach erneuter Injektion) konsequent entfernen
+    const all = Array.from(document.querySelectorAll("[data-mythos-cursor]"));
+    if (all.length) {
+      cursorEl = all[0];
+      all.slice(1).forEach((el) => el.remove());
+      return cursorEl;
+    }
+
     cursorEl = document.createElement("div");
     cursorEl.setAttribute("data-mythos-cursor", "");
     cursorEl.style.cssText = [
