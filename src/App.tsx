@@ -37,7 +37,6 @@ import KIRegeln from "./pages/KIRegeln";
 const queryClient = new QueryClient();
 
 function OrbTest() {
-  const [lvl, setLvl] = (globalThis as any).React ? [0, () => {}] as any : [0.5, () => {}] as any;
   return <VoiceOrb level={0.6} status="listening" />;
 }
 
