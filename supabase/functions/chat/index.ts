@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode } = await req.json();
     const resolved = resolveMythos(mythos);
     const ALLOWED_MODELS = new Set([
       "openai/gpt-5.5-pro",
@@ -403,6 +403,7 @@ Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend)
 Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memoryBlock}`;
     }
 
+    if (voiceMode) system += `\n\n## Sprach-Modus\nDeine Antwort wird laut vorgelesen. Antworte daher in gesprochener Sprache: kurze Sätze, maximal 3-5 Sätze, keine Listen, keine Emojis, kein Markdown, keine Links, keine Code-Blöcke.`;
     system += `\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}` + IDENTITY_RULE;
 
     // ---- optional live web search (streamed status first) ----
