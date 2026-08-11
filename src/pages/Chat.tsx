@@ -33,6 +33,8 @@ import AgentBrowser from "@/components/AgentBrowser";
 import BrowserExtensionPanel from "@/components/BrowserExtensionPanel";
 import { Link, useNavigate } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
+import ModelPicker from "@/components/ModelPicker";
+import { DEFAULT_MYTHOS_ID, isAllowed, mythosLabel } from "@/lib/mythosModels";
 
 import { NV_API_KEY, nvidiaLLM } from "@/lib/nvidiaApi";
 
@@ -55,7 +57,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; ext?: { task: string }; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[] };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -76,6 +78,10 @@ const Chat = () => {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState("support");
+  const [mythosId, setMythosId] = useState<string>(() => {
+    if (typeof window === "undefined") return DEFAULT_MYTHOS_ID;
+    return localStorage.getItem("mythos.model") || DEFAULT_MYTHOS_ID;
+  });
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -101,6 +107,12 @@ const Chat = () => {
   });
 
   useEffect(() => { localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? "1" : "0"); }, [sidebarCollapsed]);
+  useEffect(() => { localStorage.setItem("mythos.model", mythosId); }, [mythosId]);
+  // downgrade silently if the stored choice is not covered by the current plan
+  useEffect(() => {
+    if (!sub.loading && !isAllowed(mythosId, sub.tier)) setMythosId(DEFAULT_MYTHOS_ID);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sub.loading, sub.tier]);
 
   const loadConvs = async () => {
     const { data } = await supabase.from("conversations").select("*").order("updated_at", { ascending: false });
@@ -349,6 +361,7 @@ const Chat = () => {
           userId: user?.id,
           personaId: personaId !== "none" ? personaId : undefined,
           model: modelForCall,
+          mythos: mythosId,
           messages: [...historyForAI, { role: "user", content: userContentForAI }],
           mode,
         }),
@@ -435,6 +448,14 @@ const Chat = () => {
                 const next = [...prev];
                 const last = next[next.length - 1];
                 last.content = (last.content || "") + `\n\n> 🔧 *${p.tool}*\n\n`;
+                return next;
+              });
+              continue;
+            }
+            if (p.search) {
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], search: p.search };
                 return next;
               });
               continue;
@@ -721,9 +742,16 @@ const Chat = () => {
               </Tooltip>
             )}
 
-            {/* Mode selector as title */}
+            {/* Model + effort in one */}
+            <ModelPicker
+              value={mythosId}
+              tier={sub.tier}
+              onChange={setMythosId}
+              onLocked={(reason) => setPaywall({ open: true, reason })}
+            />
+
             <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="h-9 w-auto min-w-0 border-0 bg-transparent hover:bg-white/5 px-2 gap-1.5 text-sm font-medium focus:ring-0">
+              <SelectTrigger className="h-9 w-auto min-w-0 border-0 bg-transparent hover:bg-white/5 px-2 gap-1.5 text-xs text-muted-foreground focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="start">
@@ -731,7 +759,7 @@ const Chat = () => {
                   <SelectItem key={m.value} value={m.value}>
                     <div className="flex items-center gap-2">
                       <m.icon className="h-3.5 w-3.5" />
-                      <span>Mythos AI · {m.label}</span>
+                      <span>{m.label}</span>
                       <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
                     </div>
                   </SelectItem>
@@ -843,12 +871,24 @@ const Chat = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="prose-mythos text-[15px] break-words">
+                            {m.search && m.content && (
+                              <div className="not-prose mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
+                                <Globe className="h-3 w-3" /> Im Internet gesucht: <span className="text-foreground/80">{m.search}</span>
+                              </div>
+                            )}
                             {m.content ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                             ) : !m.image && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                <span>Denke nach…</span>
+                                {m.search ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <Globe className="h-3.5 w-3.5 animate-pulse" />
+                                    Suche im Internet nach <span className="text-foreground/80">„{m.search}"</span>…
+                                  </span>
+                                ) : (
+                                  <span>Denke nach…</span>
+                                )}
                               </div>
                             ) : null}
                             {m.image && (
@@ -1062,6 +1102,23 @@ const Chat = () => {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top">{voice.status === "listening" ? "Diktat stoppen" : "Diktieren"}</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {!input.trim() && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-9 w-9 rounded-full"
+                          onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
+                          aria-label="Live-Sprachchat"
+                        >
+                          <AudioLines className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Live-Sprachchat</TooltipContent>
                     </Tooltip>
                   )}
                   <Button

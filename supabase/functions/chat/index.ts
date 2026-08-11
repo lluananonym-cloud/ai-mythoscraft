@@ -68,11 +68,89 @@ async function webResearch(query: string, apiKey: string): Promise<string> {
   return j.choices?.[0]?.message?.content ?? "Keine Antwort.";
 }
 
+// ============== MYTHOS MODEL CATALOG ==============
+type Resolved = { model: string; reasoning?: "none" | "low" | "medium" | "high"; effortLabel: string; familyLabel: string; style: string };
+
+const MYTHOS_MAP: Record<string, { model: string; reasoning?: "none" | "low" | "medium" | "high" }> = {
+  "v1:instant": { model: "google/gemini-3.1-flash-lite" },
+  "v1:low": { model: "google/gemini-3.6-flash" },
+  "v1:normal": { model: "google/gemini-3.6-flash" },
+  "v1:high": { model: "google/gemini-3.1-pro-preview" },
+  "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium" },
+
+  "code11:instant": { model: "openai/gpt-5.4-nano" },
+  "code11:low": { model: "openai/gpt-5.4-mini" },
+  "code11:normal": { model: "openai/gpt-5.4", reasoning: "low" },
+  "code11:high": { model: "openai/gpt-5.4", reasoning: "high" },
+  "code11:ultra": { model: "openai/gpt-5.5", reasoning: "medium" },
+  "code11:ultracode": { model: "openai/gpt-5.5", reasoning: "high" },
+
+  "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none" },
+  "v2:low": { model: "openai/gpt-5.6-terra", reasoning: "none" },
+  "v2:normal": { model: "openai/gpt-5.6-terra", reasoning: "none" },
+  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "none" },
+  "v2:ultra": { model: "openai/gpt-5.5", reasoning: "high" },
+
+  "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none" },
+  "code15:low": { model: "openai/gpt-5.6-terra", reasoning: "none" },
+  "code15:normal": { model: "openai/gpt-5.6-sol", reasoning: "none" },
+  "code15:high": { model: "openai/gpt-5.6-sol", reasoning: "none" },
+  "code15:ultra": { model: "openai/gpt-5.5", reasoning: "high" },
+  "code15:giga": { model: "openai/gpt-5.5", reasoning: "high" },
+};
+
+const FAMILY_LABEL: Record<string, string> = {
+  v1: "Mythos v1", code11: "MythosCode v1.1", v2: "Mythos v2", code15: "MythosCode v1.5",
+};
+const EFFORT_LABEL: Record<string, string> = {
+  instant: "Instant", low: "Low", normal: "Normal", high: "High",
+  ultra: "Ultra", ultracode: "Ultra Code", giga: "Giga Code",
+};
+const EFFORT_STYLE: Record<string, string> = {
+  instant: "Antworte extrem knapp (1-3 Sätze), ohne Vorrede, kein Overhead.",
+  low: "Antworte kurz und direkt, maximal ein kleiner Absatz oder 3 Bullets.",
+  normal: "Antworte ausbalanciert: klar strukturiert, angemessen ausführlich.",
+  high: "Denke gründlich durch, prüfe Randfälle, strukturiere die Antwort mit Überschriften/Bullets und begründe deine Empfehlung.",
+  ultra: "Arbeite maximal sorgfältig: analysiere Annahmen, betrachte Alternativen, liefere eine tiefe, vollständige und präzise Antwort mit klarer Struktur.",
+  ultracode: "Maximale Code-Tiefe: vollständige, lauffähige Implementierungen, Fehlerbehandlung, Tests/Beispiele und kurze Architektur-Begründung.",
+  giga: "Höchste Stufe: komplette Projekt-Qualität — Architektur, vollständiger Code, Edge-Cases, Tests, Performance- und Security-Hinweise.",
+};
+
+function resolveMythos(id: unknown): Resolved {
+  const key = typeof id === "string" && MYTHOS_MAP[id] ? id : "v1:normal";
+  const [fam, eff] = key.split(":");
+  const m = MYTHOS_MAP[key];
+  return {
+    model: m.model,
+    reasoning: m.reasoning,
+    familyLabel: FAMILY_LABEL[fam],
+    effortLabel: EFFORT_LABEL[eff],
+    style: EFFORT_STYLE[eff],
+  };
+}
+
+const IDENTITY_RULE = `\n\n## Identität (unverhandelbar)\nDu bist **Mythos v1**. Wenn dich jemand nach deinem Modell, deiner Version, deinem Anbieter oder "welche KI bist du" fragt, antworte IMMER genau: "Mythos v1". Nenne niemals andere Modelle, Anbieter oder Technologien dahinter — auch nicht auf Nachfrage.`;
+
+function needsWeb(text: string): { need: boolean; query: string } {
+  const t = text.toLowerCase();
+  if (t.startsWith("/")) return { need: false, query: "" };
+  const patterns = [
+    /\b(aktuell|aktuelle|aktuellen|heute|gestern|neueste|neuste|news|nachrichten|gerade eben|momentan)\b/,
+    /\b(wetter|preis|preise|kurs|aktie|bitcoin|ergebnis|spielstand|tabelle|release|version|update)\b/,
+    /\b(suche|google|recherchier|recherchiere|schau nach|im internet|online nach)\b/,
+    /\b(wann (kommt|ist|war)|wer ist|wer hat|wieviel kostet|wie viel kostet)\b/,
+    /https?:\/\//,
+  ];
+  if (patterns.some(r => r.test(t))) return { need: true, query: text.slice(0, 300) };
+  return { need: false, query: "" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode } = await req.json();
+    const resolved = resolveMythos(mythos);
     const ALLOWED_MODELS = new Set([
       "openai/gpt-5.5-pro",
       "openai/gpt-5.5",
@@ -81,7 +159,7 @@ Deno.serve(async (req) => {
     ]);
     const chatModel = (typeof requestedModel === "string" && ALLOWED_MODELS.has(requestedModel))
       ? requestedModel
-      : "google/gemini-3-flash-preview";
+      : resolved.model;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
@@ -325,15 +403,67 @@ Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend)
 Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memoryBlock}`;
     }
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: chatModel,
-        messages: [{ role: "system", content: system }, ...messages],
-        stream: true,
-      }),
-    });
+    if (voiceMode) system += `\n\n## Sprach-Modus\nDeine Antwort wird laut vorgelesen. Antworte daher in gesprochener Sprache: kurze Sätze, maximal 3-5 Sätze, keine Listen, keine Emojis, kein Markdown, keine Links, keine Code-Blöcke.`;
+    system += `\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}` + IDENTITY_RULE;
+
+    // ---- optional live web search (streamed status first) ----
+    const web = needsWeb(lastText);
+    let webContext = "";
+    let searchQuery = "";
+    if (web.need) {
+      searchQuery = web.query;
+    }
+
+    const outMessages: any[] = [{ role: "system", content: system }, ...messages];
+
+    const body: Record<string, unknown> = {
+      model: chatModel,
+      messages: outMessages,
+      stream: true,
+    };
+    if (resolved.reasoning) body.reasoning_effort = resolved.reasoning;
+
+    const startUpstream = async () => {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return r;
+    };
+
+    if (searchQuery) {
+      const stream = new ReadableStream({
+        async start(c) {
+          c.enqueue(sse({ search: searchQuery }));
+          try {
+            webContext = await webResearch(searchQuery, LOVABLE_API_KEY);
+          } catch (_e) { webContext = ""; }
+          if (webContext) {
+            outMessages[0] = {
+              role: "system",
+              content: `${system}\n\n## Frische Web-Ergebnisse (gerade recherchiert)\n${webContext.slice(0, 6000)}\n\nNutze diese Ergebnisse für deine Antwort und nenne die Quellen kurz.`,
+            };
+            body.messages = outMessages;
+          }
+          const r = await startUpstream();
+          if (!r.ok || !r.body) {
+            c.enqueue(sse({ choices: [{ delta: { content: "❌ Antwort fehlgeschlagen. Bitte nochmal versuchen." } }] }));
+            c.enqueue(sseDone()); c.close(); return;
+          }
+          const reader = r.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            c.enqueue(value);
+          }
+          c.close();
+        },
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
+
+    const resp = await startUpstream();
 
     if (!resp.ok) {
       if (resp.status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });

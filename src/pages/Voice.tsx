@@ -7,7 +7,9 @@ import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
 import { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mic, MicOff, X } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, X, Square } from "lucide-react";
+import VoiceOrb from "@/components/VoiceOrb";
+import { DEFAULT_MYTHOS_ID } from "@/lib/mythosModels";
 import { toast } from "sonner";
 
 /**
@@ -22,7 +24,6 @@ export default function Voice() {
   const [level, setLevel] = useState(0);
   const [aiText, setAiText] = useState("");
   const [history, setHistory] = useState<{ role: "user"|"assistant"; content: string }[]>([]);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -42,6 +43,8 @@ export default function Voice() {
         body: JSON.stringify({
           userId: user?.id,
           mode: "support",
+          mythos: (typeof window !== "undefined" && localStorage.getItem("mythos.model")) || DEFAULT_MYTHOS_ID,
+          voice: true,
           messages: [...historyRef.current, { role: "user", content: text }],
         }),
       });
@@ -107,49 +110,6 @@ export default function Voice() {
     };
   }, [isPro]);
 
-  // Orb canvas render
-  useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d"); if (!ctx) return;
-    let t = 0, raf = 0;
-    const dpr = window.devicePixelRatio || 1;
-    const resize = () => { canvas.width = canvas.clientWidth*dpr; canvas.height = canvas.clientHeight*dpr; };
-    resize(); window.addEventListener("resize", resize);
-    const draw = () => {
-      t += 0.016;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const cx = canvas.width/2, cy = canvas.height/2;
-      const base = Math.min(canvas.width, canvas.height) * 0.28;
-      const isSpeaking = voice.status === "speaking";
-      const reactive = isSpeaking ? (0.5 + 0.5*Math.sin(t*6)) : level;
-      const r = base * (1 + reactive*0.35);
-      // outer glow
-      const grad = ctx.createRadialGradient(cx,cy,r*0.2,cx,cy,r*1.8);
-      const colA = isSpeaking ? "hsla(280, 90%, 65%, 0.9)" : "hsla(200, 90%, 60%, 0.9)";
-      const colB = isSpeaking ? "hsla(320, 90%, 55%, 0)" : "hsla(160, 90%, 50%, 0)";
-      grad.addColorStop(0, colA); grad.addColorStop(1, colB);
-      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx,cy,r*1.8,0,Math.PI*2); ctx.fill();
-      // orb body — wobbling blob
-      ctx.beginPath();
-      const points = 64;
-      for (let i = 0; i <= points; i++) {
-        const a = (i/points)*Math.PI*2;
-        const wob = 1 + 0.08*Math.sin(a*3 + t*2) + 0.06*Math.sin(a*5 - t*3) + reactive*0.15*Math.sin(a*7 + t*4);
-        const rr = r*wob;
-        const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
-        i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-      }
-      ctx.closePath();
-      const inner = ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,r*0.1,cx,cy,r);
-      inner.addColorStop(0, isSpeaking ? "hsla(300,100%,80%,1)" : "hsla(190,100%,75%,1)");
-      inner.addColorStop(1, isSpeaking ? "hsla(280,80%,40%,1)" : "hsla(220,80%,30%,1)");
-      ctx.fillStyle = inner; ctx.fill();
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
-  }, [level, voice.status]);
-
   useEffect(() => {
     if (!loading && !isPro) setShowPaywall(true);
   }, [loading, isPro]);
@@ -170,18 +130,22 @@ export default function Voice() {
       </div>
 
       <div className="flex-1 relative">
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+        <VoiceOrb level={level} status={voice.status} />
         <div className="absolute bottom-32 left-0 right-0 px-6 text-center">
           <p className="text-white/70 text-sm min-h-[2rem]">
-            {voice.status === "listening" && (voice.interim || "Ich höre zu …")}
+            {voice.status === "listening" && (voice.interim || "Ich höre zu … sprich einfach los")}
             {voice.status === "speaking" && (aiText.slice(-160) || "…")}
-            {voice.status === "idle" && (isPro ? "Tippe das Mikrofon zum Sprechen" : "Pro erforderlich")}
+            {voice.status === "idle" && (isPro ? (aiText ? aiText.slice(-160) : "Tippe das Mikrofon zum Sprechen") : "Pro erforderlich")}
           </p>
         </div>
       </div>
 
       <div className="p-8 flex justify-center" style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
-        {voice.status === "listening" ? (
+        {voice.status === "speaking" ? (
+          <Button size="lg" variant="secondary" className="h-16 w-16 rounded-full" onClick={() => voice.stopSpeaking()} aria-label="Sprechen stoppen">
+            <Square className="h-6 w-6" />
+          </Button>
+        ) : voice.status === "listening" ? (
           <Button size="lg" variant="destructive" className="h-16 w-16 rounded-full" onClick={() => voice.stopListening()}>
             <MicOff className="h-7 w-7" />
           </Button>

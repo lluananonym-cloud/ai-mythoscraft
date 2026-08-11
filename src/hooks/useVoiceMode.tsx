@@ -22,13 +22,20 @@ const pickBestVoice = (lang: string): SpeechSynthesisVoice | null => {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
   const short = lang.toLowerCase().slice(0, 2);
-  const preferredNames = ["google", "microsoft", "natural", "neural", "premium", "anna", "petra", "katharina", "stefan", "markus"];
+  // Prefer high quality neural / cloud voices, then local premium voices.
+  const preferredNames = [
+    "google deutsch", "google", "natural", "neural", "premium", "enhanced", "siri",
+    "anna", "petra", "katharina", "helena", "eddy", "flo", "markus", "stefan",
+  ];
   const sameLang = voices.filter(v => v.lang?.toLowerCase().startsWith(short));
+  const pool = sameLang.length ? sameLang : voices;
   for (const name of preferredNames) {
-    const hit = sameLang.find(v => v.name.toLowerCase().includes(name));
+    const hit = pool.find(v => v.name.toLowerCase().includes(name));
     if (hit) return hit;
   }
-  return sameLang[0] ?? voices[0] ?? null;
+  // non-local (cloud) voices usually sound much better
+  const cloud = pool.find(v => v.localService === false);
+  return cloud ?? pool[0] ?? null;
 };
 
 export type VoiceMode = "live" | "dictate";
@@ -176,8 +183,15 @@ export function useVoiceMode(opts?: {
 
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const clean = text.replace(/```[\s\S]*?```/g, "").replace(/!\[.*?\]\(.*?\)/g, "").replace(/[#*_`>]/g, "").slice(0, 1500);
-    if (!clean.trim()) return;
+    const clean = text
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/!\[.*?\]\(.*?\)/g, " ")
+      .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+      .replace(/[#*_`>|]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 2500);
+    if (!clean) return;
     try { window.speechSynthesis.cancel(); } catch {}
 
     const rec = recognitionRef.current;
@@ -185,14 +199,20 @@ export function useVoiceMode(opts?: {
     // pause mic while speaking so it doesn't hear itself
     try { rec?.stop(); } catch {}
 
-    const u = new SpeechSynthesisUtterance(clean);
-    u.lang = lang;
-    u.rate = 1.05;
-    u.pitch = 1.0;
+    // Split into sentence-sized chunks — long single utterances get cut off
+    // by some browsers and sound robotic without natural pauses.
+    const chunks: string[] = [];
+    let cur = "";
+    for (const part of clean.split(/(?<=[.!?…:;])\s+/)) {
+      if ((cur + " " + part).trim().length > 180) { if (cur) chunks.push(cur.trim()); cur = part; }
+      else cur = (cur ? cur + " " : "") + part;
+    }
+    if (cur.trim()) chunks.push(cur.trim());
+
     const v = voiceRef.current ?? pickBestVoice(lang);
-    if (v) { u.voice = v; voiceRef.current = v; }
-    u.onstart = () => setStatus("speaking");
-    u.onend = () => {
+    if (v) voiceRef.current = v;
+
+    const finish = () => {
       isSpeakingRef.current = false;
       setStatus(s => (s === "speaking" ? "idle" : s));
       if (modeRef.current === "live") {
@@ -200,11 +220,19 @@ export function useVoiceMode(opts?: {
         restartTimerRef.current = window.setTimeout(safeStart, 250);
       }
     };
-    u.onerror = () => {
-      isSpeakingRef.current = false;
-      setStatus("idle");
-    };
-    window.speechSynthesis.speak(u);
+
+    chunks.forEach((chunk, i) => {
+      const u = new SpeechSynthesisUtterance(chunk);
+      u.lang = lang;
+      u.rate = 1.0;
+      u.pitch = 1.02;
+      u.volume = 1;
+      if (v) u.voice = v;
+      if (i === 0) u.onstart = () => setStatus("speaking");
+      if (i === chunks.length - 1) u.onend = finish;
+      u.onerror = () => { if (i === chunks.length - 1) finish(); };
+      window.speechSynthesis.speak(u);
+    });
   }, [lang, safeStart]);
 
   const stopSpeaking = useCallback(() => {
