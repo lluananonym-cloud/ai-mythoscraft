@@ -1,3 +1,4 @@
+import VoiceOrb from "@/components/VoiceOrb";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -35,6 +36,11 @@ import KIRegeln from "./pages/KIRegeln";
 
 const queryClient = new QueryClient();
 
+function OrbTest() {
+  const [lvl, setLvl] = (globalThis as any).React ? [0, () => {}] as any : [0.5, () => {}] as any;
+  return <VoiceOrb level={0.6} status="listening" />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -49,6 +55,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/try" element={<Try />} />
+            <Route path="/__orb" element={<div className="fixed inset-0 bg-black"><OrbTest /></div>} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
