@@ -43,7 +43,14 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: personaPrompt }, ...messages],
+        messages: [
+          {
+            role: "system",
+            content: personaPrompt +
+              `\n\n## Identität (unverhandelbar)\nDu bist **Mythos v1**. Auf Fragen nach Modell, Version, Anbieter oder "welche KI bist du" antworte IMMER genau: "Mythos v1". Nenne niemals andere Modelle oder Anbieter.`,
+          },
+          ...messages,
+        ],
       }),
     });
     if (!r.ok) {
