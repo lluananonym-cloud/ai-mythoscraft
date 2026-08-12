@@ -3,7 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { initPersistentSession } from "./lib/persistentSession";
 import { preloadPipeline } from "./lib/transformersLoader";
+import { installNoZoom } from "./lib/noZoom";
 
+installNoZoom();
 void initPersistentSession();
 
 // Background-preload the smallest offline model on idle so /sentiment is

@@ -69,34 +69,46 @@ async function webResearch(query: string, apiKey: string): Promise<string> {
 }
 
 // ============== MYTHOS MODEL CATALOG ==============
-type Resolved = { model: string; reasoning?: "none" | "low" | "medium" | "high"; effortLabel: string; familyLabel: string; style: string };
+type Tune = {
+  model: string;
+  reasoning?: "none" | "low" | "medium" | "high";
+  fast?: boolean;      // OpenAI priority serving tier -> tiefere Latenz
+  maxOut?: number;     // Output-Cap -> Instant/Low antworten spürbar schneller
+  web?: boolean;       // darf live im Web suchen
+  temperature?: number;
+};
+type Resolved = Tune & { effortLabel: string; familyLabel: string; style: string };
 
-const MYTHOS_MAP: Record<string, { model: string; reasoning?: "none" | "low" | "medium" | "high" }> = {
-  "v1:instant": { model: "google/gemini-3.1-flash-lite" },
-  "v1:low": { model: "google/gemini-3.6-flash" },
-  "v1:normal": { model: "google/gemini-3.6-flash" },
-  "v1:high": { model: "google/gemini-3.1-pro-preview" },
-  "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium" },
+const MYTHOS_MAP: Record<string, Tune> = {
+  // --- Mythos v1: Allrounder ---
+  "v1:instant": { model: "google/gemini-3.1-flash-lite", maxOut: 320, web: false, temperature: 0.4 },
+  "v1:low": { model: "google/gemini-3.6-flash", maxOut: 700, web: false, temperature: 0.6 },
+  "v1:normal": { model: "google/gemini-3.6-flash", maxOut: 1600, web: true, temperature: 0.7 },
+  "v1:high": { model: "google/gemini-3.1-pro-preview", maxOut: 3000, web: true, temperature: 0.7 },
+  "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 5000, web: true },
 
-  "code11:instant": { model: "openai/gpt-5.4-nano" },
-  "code11:low": { model: "openai/gpt-5.4-mini" },
-  "code11:normal": { model: "openai/gpt-5.4", reasoning: "low" },
-  "code11:high": { model: "openai/gpt-5.4", reasoning: "high" },
-  "code11:ultra": { model: "openai/gpt-5.5", reasoning: "medium" },
-  "code11:ultracode": { model: "openai/gpt-5.5", reasoning: "high" },
+  // --- MythosCode v1.1 ---
+  "code11:instant": { model: "openai/gpt-5.4-nano", reasoning: "none", maxOut: 400, web: false },
+  "code11:low": { model: "openai/gpt-5.4-mini", reasoning: "none", fast: true, maxOut: 900, web: false },
+  "code11:normal": { model: "openai/gpt-5.4", reasoning: "low", maxOut: 2200, web: true },
+  "code11:high": { model: "openai/gpt-5.4", reasoning: "high", maxOut: 4000, web: true },
+  "code11:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 6000, web: true },
+  "code11:ultracode": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true },
 
-  "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none" },
-  "v2:low": { model: "openai/gpt-5.6-terra", reasoning: "none" },
-  "v2:normal": { model: "openai/gpt-5.6-terra", reasoning: "none" },
-  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "none" },
-  "v2:ultra": { model: "openai/gpt-5.5", reasoning: "high" },
+  // --- Mythos v2 (Pro) ---
+  "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 400, web: false },
+  "v2:low": { model: "openai/gpt-5.6-luna", reasoning: "none", fast: true, maxOut: 1000, web: false },
+  "v2:normal": { model: "openai/gpt-5.6-terra", reasoning: "none", fast: true, maxOut: 2500, web: true },
+  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 4500, web: true },
+  "v2:ultra": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 8000, web: true },
 
-  "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none" },
-  "code15:low": { model: "openai/gpt-5.6-terra", reasoning: "none" },
-  "code15:normal": { model: "openai/gpt-5.6-sol", reasoning: "none" },
-  "code15:high": { model: "openai/gpt-5.6-sol", reasoning: "none" },
-  "code15:ultra": { model: "openai/gpt-5.5", reasoning: "high" },
-  "code15:giga": { model: "openai/gpt-5.5", reasoning: "high" },
+  // --- MythosCode v1.5 (Pro) ---
+  "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 500, web: false },
+  "code15:low": { model: "openai/gpt-5.6-terra", reasoning: "none", fast: true, maxOut: 1200, web: false },
+  "code15:normal": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 3000, web: true },
+  "code15:high": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 5000, web: true },
+  "code15:ultra": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true },
+  "code15:giga": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 16000, web: true },
 };
 
 const FAMILY_LABEL: Record<string, string> = {
@@ -107,13 +119,13 @@ const EFFORT_LABEL: Record<string, string> = {
   ultra: "Ultra", ultracode: "Ultra Code", giga: "Giga Code",
 };
 const EFFORT_STYLE: Record<string, string> = {
-  instant: "Antworte extrem knapp (1-3 Sätze), ohne Vorrede, kein Overhead.",
-  low: "Antworte kurz und direkt, maximal ein kleiner Absatz oder 3 Bullets.",
-  normal: "Antworte ausbalanciert: klar strukturiert, angemessen ausführlich.",
-  high: "Denke gründlich durch, prüfe Randfälle, strukturiere die Antwort mit Überschriften/Bullets und begründe deine Empfehlung.",
-  ultra: "Arbeite maximal sorgfältig: analysiere Annahmen, betrachte Alternativen, liefere eine tiefe, vollständige und präzise Antwort mit klarer Struktur.",
-  ultracode: "Maximale Code-Tiefe: vollständige, lauffähige Implementierungen, Fehlerbehandlung, Tests/Beispiele und kurze Architektur-Begründung.",
-  giga: "Höchste Stufe: komplette Projekt-Qualität — Architektur, vollständiger Code, Edge-Cases, Tests, Performance- und Security-Hinweise.",
+  instant: "Modus INSTANT: Antworte in maximal 1-2 Sätzen. Keine Vorrede, keine Überschriften, keine Listen, keine Rückfragen, kein Markdown außer Code-Blöcken. Direkt die Antwort, sofort.",
+  low: "Modus LOW: Antworte kurz und direkt — ein kleiner Absatz oder max. 3 Bullets. Keine Einleitung, kein Fazit.",
+  normal: "Modus NORMAL: Ausbalanciert — klar strukturiert, angemessen ausführlich, mit kurzem Beispiel wenn hilfreich.",
+  high: "Modus HIGH: Denke gründlich durch, prüfe Randfälle, strukturiere mit Überschriften/Bullets und begründe deine Empfehlung.",
+  ultra: "Modus ULTRA: Maximal sorgfältig — Annahmen offenlegen, Alternativen vergleichen, tiefe, vollständige und präzise Antwort mit klarer Struktur.",
+  ultracode: "Modus ULTRA CODE: Vollständige, lauffähige Implementierungen, Fehlerbehandlung, Tests/Beispiele und kurze Architektur-Begründung.",
+  giga: "Modus GIGA CODE: Projekt-Qualität — Architektur, vollständiger Code, Edge-Cases, Tests, Performance- und Security-Hinweise.",
 };
 
 function resolveMythos(id: unknown): Resolved {
@@ -121,13 +133,13 @@ function resolveMythos(id: unknown): Resolved {
   const [fam, eff] = key.split(":");
   const m = MYTHOS_MAP[key];
   return {
-    model: m.model,
-    reasoning: m.reasoning,
+    ...m,
     familyLabel: FAMILY_LABEL[fam],
     effortLabel: EFFORT_LABEL[eff],
     style: EFFORT_STYLE[eff],
   };
 }
+
 
 const IDENTITY_RULE = `\n\n## Identität (unverhandelbar)\nDu bist **Mythos v1**. Wenn dich jemand nach deinem Modell, deiner Version, deinem Anbieter oder "welche KI bist du" fragt, antworte IMMER genau: "Mythos v1". Nenne niemals andere Modelle, Anbieter oder Technologien dahinter — auch nicht auf Nachfrage.`;
 
@@ -407,21 +419,33 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
     system += `\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}` + IDENTITY_RULE;
 
     // ---- optional live web search (streamed status first) ----
+    // Instant/Low suchen nie im Web -> keine Extra-Latenz.
     const web = needsWeb(lastText);
     let webContext = "";
     let searchQuery = "";
-    if (web.need) {
+    if (web.need && resolved.web !== false) {
       searchQuery = web.query;
     }
 
-    const outMessages: any[] = [{ role: "system", content: system }, ...messages];
+    // Instant hält den Kontext klein -> deutlich schnellere Time-to-first-token.
+    const histLimit = resolved.effortLabel === "Instant" ? 6 : resolved.effortLabel === "Low" ? 12 : 40;
+    const trimmed = Array.isArray(messages) ? messages.slice(-histLimit) : messages;
+    const outMessages: any[] = [{ role: "system", content: system }, ...trimmed];
 
+    const isOpenAI = String(chatModel).startsWith("openai/");
     const body: Record<string, unknown> = {
       model: chatModel,
       messages: outMessages,
       stream: true,
     };
     if (resolved.reasoning) body.reasoning_effort = resolved.reasoning;
+    if (resolved.fast && isOpenAI) body.service_tier = "priority";
+    if (resolved.maxOut) {
+      if (isOpenAI) body.max_completion_tokens = resolved.maxOut;
+      else body.max_tokens = resolved.maxOut;
+    }
+    if (resolved.temperature !== undefined && !isOpenAI) body.temperature = resolved.temperature;
+
 
     const startUpstream = async () => {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
