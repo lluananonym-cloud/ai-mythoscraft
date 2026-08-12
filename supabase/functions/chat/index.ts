@@ -419,21 +419,33 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
     system += `\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}` + IDENTITY_RULE;
 
     // ---- optional live web search (streamed status first) ----
+    // Instant/Low suchen nie im Web -> keine Extra-Latenz.
     const web = needsWeb(lastText);
     let webContext = "";
     let searchQuery = "";
-    if (web.need) {
+    if (web.need && resolved.web !== false) {
       searchQuery = web.query;
     }
 
-    const outMessages: any[] = [{ role: "system", content: system }, ...messages];
+    // Instant hält den Kontext klein -> deutlich schnellere Time-to-first-token.
+    const histLimit = resolved.effortLabel === "Instant" ? 6 : resolved.effortLabel === "Low" ? 12 : 40;
+    const trimmed = Array.isArray(messages) ? messages.slice(-histLimit) : messages;
+    const outMessages: any[] = [{ role: "system", content: system }, ...trimmed];
 
+    const isOpenAI = String(chatModel).startsWith("openai/");
     const body: Record<string, unknown> = {
       model: chatModel,
       messages: outMessages,
       stream: true,
     };
     if (resolved.reasoning) body.reasoning_effort = resolved.reasoning;
+    if (resolved.fast && isOpenAI) body.service_tier = "priority";
+    if (resolved.maxOut) {
+      if (isOpenAI) body.max_completion_tokens = resolved.maxOut;
+      else body.max_tokens = resolved.maxOut;
+    }
+    if (resolved.temperature !== undefined && !isOpenAI) body.temperature = resolved.temperature;
+
 
     const startUpstream = async () => {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
