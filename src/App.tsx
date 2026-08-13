@@ -1,80 +1,43 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
-import RequireAuth from "@/components/RequireAuth";
-import MythosBackground from "@/components/MythosBackground";
-import SplashScreen from "@/components/SplashScreen";
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Chat from "./pages/Chat";
-import Voice from "./pages/Voice";
-import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
-import Docs from "./pages/Docs";
-import Redeem from "./pages/Redeem";
-import Memories from "./pages/Memories";
-import Personas from "./pages/Personas";
-import McServers from "./pages/McServers";
-import Agents from "./pages/Agents";
-import Analytics from "./pages/Analytics";
-import Groups from "./pages/Groups";
-import Twin from "./pages/Twin";
-import Games from "./pages/Games";
-import Try from "./pages/Try";
-import BrowserAgent from "./pages/BrowserAgent";
-import Onboarding from "./pages/Onboarding";
-import NotFound from "./pages/NotFound.tsx";
-import Impressum from "./pages/Impressum";
-import Datenschutz from "./pages/Datenschutz";
-import Nutzungsbedingungen from "./pages/Nutzungsbedingungen";
-import Cookie from "./pages/Cookie";
-import KIRegeln from "./pages/KIRegeln";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './lib/auth';
+import AuthPage from './pages/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ChatPage from './pages/ChatPage';
+import VideoPage from './pages/VideoPage';
+import AppLayout from './components/AppLayout';
 
-const queryClient = new QueryClient();
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  if (!session) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <SplashScreen />
-          <MythosBackground />
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
-            <Route path="/try" element={<Try />} />
-            <Route path="/docs" element={<Docs />} />
-            <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
-            <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
-            <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-            <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
-            <Route path="/redeem" element={<Redeem />} />
-            <Route path="/memories" element={<RequireAuth><Memories /></RequireAuth>} />
-            <Route path="/personas" element={<RequireAuth><Personas /></RequireAuth>} />
-            <Route path="/mc-servers" element={<RequireAuth><McServers /></RequireAuth>} />
-            <Route path="/agents" element={<RequireAuth><Agents /></RequireAuth>} />
-            <Route path="/browser" element={<RequireAuth><BrowserAgent /></RequireAuth>} />
-            <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
-            <Route path="/twin" element={<RequireAuth><Twin /></RequireAuth>} />
-            <Route path="/games" element={<RequireAuth><Games /></RequireAuth>} />
-            <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
-            <Route path="/impressum" element={<Impressum />} />
-            <Route path="/datenschutz" element={<Datenschutz />} />
-            <Route path="/nutzungsbedingungen" element={<Nutzungsbedingungen />} />
-            <Route path="/cookie" element={<Cookie />} />
-            <Route path="/ki-regeln" element={<KIRegeln />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+export default function App() {
+  const { session, loading } = useAuth();
 
-export default App;
+  if (loading) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-bg">
+        <div className="h-8 w-8 animate-spin-slow rounded-full border-2 border-border border-t-primary-500" />
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/auth" element={session ? <Navigate to="/" replace /> : <AuthPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
