@@ -74,10 +74,10 @@ export function toGeminiBody(body: Record<string, any>) {
 }
 
 async function googleFetch(model: string, stream: boolean, payload: unknown, key: string) {
-  const url = `${GOOGLE_BASE}/${model}:${stream ? "streamGenerateContent?alt=sse&" : "generateContent?"}key=${encodeURIComponent(key)}`;
+  const url = `${GOOGLE_BASE}/${model}:${stream ? "streamGenerateContent?alt=sse" : "generateContent"}`;
   return await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify(payload),
   });
 }
