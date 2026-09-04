@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Inbound webhook for WhatsApp/SMS messages.
 // Currently accepts simple JSON: { phone_number, content, channel?, display_name? }
 // Plug Twilio later: parse Twilio's form-urlencoded body (From, Body) and send replies via Twilio API.
@@ -14,7 +15,7 @@ async function aiReply(history: { role: string; content: string }[], identity: s
   const system = identity
     ? `Du bist **${identity}**. Antworte freundlich und kurz auf WhatsApp/SMS (kein Markdown, max. 600 Zeichen).`
     : `Du bist Mythos AI Support für mythoscraft.online. Antworte freundlich und kurz auf WhatsApp/SMS (kein Markdown, max. 600 Zeichen). Bei Unklarheit sage, ein Mitarbeiter meldet sich.`;
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await aiFetch("gateway", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

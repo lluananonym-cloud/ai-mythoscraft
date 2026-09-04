@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Gehirn der Mythos-Browser-Erweiterung: bekommt den Seiten-Kontext und gibt
 // konkrete Aktionen zurück, die die Extension im echten Browser ausführt.
 const corsHeaders = {
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
 
     let r: Response | null = null;
     for (let i = 0; i < 3; i++) {
-      r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      r = await aiFetch("gateway", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({

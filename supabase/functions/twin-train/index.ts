@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Twin training - analyzes user's recent messages to build a style profile
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';

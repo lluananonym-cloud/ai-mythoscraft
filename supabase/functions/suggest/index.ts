@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Generate 3 short follow-up suggestions based on chat history
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
       `${m.role === "user" ? "USER" : "AI"}: ${typeof m.content === "string" ? m.content : "[multimodal]"}`
     ).join("\n").slice(0, 2500);
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

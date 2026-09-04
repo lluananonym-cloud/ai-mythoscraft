@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Analyze an uploaded file (image or PDF) using a vision model.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -20,7 +21,7 @@ Deno.serve(async (req) => {
       const fileRes = await fetch(url);
       const buf = new Uint8Array(await fileRes.arrayBuffer());
       const b64 = btoa(String.fromCharCode(...buf));
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await aiFetch("gateway", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

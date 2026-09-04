@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const SYSTEM = `You are a songwriter + composer. Given a user prompt, output STRICT JSON for a short song WITH VOCALS. Schema:

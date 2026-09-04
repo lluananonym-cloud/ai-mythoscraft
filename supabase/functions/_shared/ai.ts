@@ -197,3 +197,16 @@ export async function aiText(body: Record<string, any>, lovableKey?: string): Pr
   const j = await r.json().catch(() => null);
   return j?.choices?.[0]?.message?.content ?? "";
 }
+
+/**
+ * Drop-in-Ersatz für `fetch("https://ai.gateway.lovable.dev/v1/chat/completions", init)`.
+ * Gleiche Signatur wie fetch, aber mit automatischem Google-Gemini-Fallback.
+ */
+export async function aiFetch(_url: string, init: RequestInit): Promise<Response> {
+  let body: Record<string, any> = {};
+  try { body = JSON.parse(String(init?.body ?? "{}")); } catch { /* ignore */ }
+  const h = new Headers(init?.headers as HeadersInit);
+  const auth = h.get("Authorization") || "";
+  const key = auth.replace(/^Bearer\s+/i, "").trim() || undefined;
+  return await aiChat(body, key);
+}

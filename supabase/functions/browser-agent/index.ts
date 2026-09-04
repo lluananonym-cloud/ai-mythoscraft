@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Browser-Agent: die KI surft wirklich (Suche + Seiten lesen) und streamt jeden Schritt,
 // damit das Frontend einen "Browser der KI" anzeigen kann.
 const corsHeaders = {
@@ -67,7 +68,7 @@ async function searchWeb(query: string) {
   // 2) Fallback: grounded Google-Suche über das Lovable AI Gateway
   try {
     const key = Deno.env.get("LOVABLE_API_KEY")!;
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -155,7 +156,7 @@ Du bist **Mythos v1**. Auf Fragen nach Modell, Version, Anbieter oder "welche KI
           // Live-Signal: der Agent denkt/plant gerade
           send({ browser: { type: "think", status: "running", step } });
 
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
