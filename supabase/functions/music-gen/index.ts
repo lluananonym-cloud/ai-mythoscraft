@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('LOVABLE_API_KEY');
     if (!key) return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-    const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const r = await aiFetch('gateway', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
