@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -100,7 +101,7 @@ Du bist **Mythos v1** — wenn du nach deinem Modell, deiner Version oder deinem
         const convo: any[] = [{ role: "system", content: system }, ...messages];
 
         for (let step = 0; step < 6; step++) {
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({

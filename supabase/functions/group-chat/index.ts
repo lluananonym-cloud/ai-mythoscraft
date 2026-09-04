@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Friend-group chat: AI replies into group_messages when triggered (@ai or AI-enabled mention)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
         : { role: "user", content: `${m.sender_name}: ${m.content}` }
     );
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

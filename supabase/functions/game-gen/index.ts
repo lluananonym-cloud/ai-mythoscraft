@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const SYSTEM = `Du bist ein Senior Game Developer für 3D-Browser-Casual-Games (Poki/Crazy-Games-Stil).
@@ -36,7 +37,7 @@ Beschreibung: ${prompt}
 
 Liefere jetzt das vollständige HTML.`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Claude-compatible /v1/messages endpoint, backed by Lovable AI Gateway.
 // MythosAI identity is locked: regardless of any client-supplied system prompt,
 // the model is instructed to identify as MythosAI and never claim to be another assistant.
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
   };
   if (typeof temperature === "number") gatewayBody.temperature = temperature;
 
-  const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const upstream = await aiFetch("gateway", {
     method: "POST",
     headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
     body: JSON.stringify(gatewayBody),

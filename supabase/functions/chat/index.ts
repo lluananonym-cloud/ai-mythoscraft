@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -18,7 +19,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<{ url: str
   let lastErr = "Unknown";
   for (const model of models) {
     try {
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await aiFetch("gateway", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -51,7 +52,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<{ url: str
 
 async function webResearch(query: string, apiKey: string): Promise<string> {
   // Use Lovable AI with google_search tool for grounded research
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await aiFetch("gateway", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -235,7 +236,7 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(c) {
           c.enqueue(sse({ tool: `🎵 Komponiere Funk-Track: ${desc}` }));
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -276,7 +277,7 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(c) {
           c.enqueue(sse({ tool: `🌍 Übersetze nach ${lang}` }));
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -309,7 +310,7 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(c) {
           c.enqueue(sse({ tool: "📝 Fasse Konversation zusammen" }));
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -448,7 +449,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
 
 
     const startUpstream = async () => {
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await aiFetch("gateway", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),

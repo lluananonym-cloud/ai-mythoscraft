@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Background memory extractor — called by frontend after each user message.
 // Looks at the last user message, extracts durable facts (name, hobbies, preferences),
 // and inserts them into user_memories. Skips if nothing worth remembering.
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("gateway", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

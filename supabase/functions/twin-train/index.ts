@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai.ts";
 // Twin training - analyzes user's recent messages to build a style profile
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -55,7 +56,7 @@ Antworte AUSSCHLIESSLICH als JSON:
   "vocabulary": ["<8-15 typische Wörter/Phrasen/Slang dieser Person>"]
 }`;
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiRes = await aiFetch('gateway', {
       method: 'POST',
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
