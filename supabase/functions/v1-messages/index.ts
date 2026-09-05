@@ -1,5 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
 import { buildSystemMessages } from "../_shared/identity.ts";
+import { MYTHOS_CATALOG } from "../_shared/catalog.ts";
 // Claude-compatible /v1/messages endpoint, backed by Lovable AI Gateway.
 // MythosAI identity is locked: regardless of any client-supplied system prompt,
 // the model is instructed to identify as MythosAI and never claim to be another assistant.
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
     : "";
 
   const oaiMessages: any[] = [
+    { role: "system", content: MYTHOS_CATALOG },
     ...buildSystemMessages(userSystem, {
       modelLabel: mythosLabelFor(model),
       surface: "api",
