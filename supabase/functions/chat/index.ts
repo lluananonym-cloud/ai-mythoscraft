@@ -429,7 +429,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
       persona: personaName ?? identityOverride ?? null,
       lang: "de" as const,
     };
-    system = `${mythosIdentity(identityOpts)}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
+    system = `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
 
     // ---- optional live web search (streamed status first) ----
     // Instant/Low suchen nie im Web -> keine Extra-Latenz.
