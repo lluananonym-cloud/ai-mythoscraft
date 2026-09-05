@@ -20,10 +20,10 @@ export function googleKeys(): string[] {
 /** Lovable-Modell-ID -> Google-Modellname */
 export function mapToGemini(model: string): string {
   const m = String(model || "").toLowerCase();
-  if (m.includes("image")) return "gemini-2.5-flash-image";
-  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) return "gemini-2.5-flash-lite";
-  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) return "gemini-2.5-pro";
-  return "gemini-2.5-flash";
+  if (m.includes("image")) return "gemini-3.1-flash-image";
+  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) return "gemini-3.1-flash-lite";
+  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) return "gemini-3.1-pro-preview";
+  return "gemini-3.6-flash";
 }
 
 type AnyMsg = { role: string; content: unknown };
