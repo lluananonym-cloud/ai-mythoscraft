@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
     : "";
 
   const oaiMessages: any[] = [
+    { role: "system", content: MYTHOS_CATALOG },
     ...buildSystemMessages(userSystem, {
       modelLabel: mythosLabelFor(model),
       surface: "api",
