@@ -1,5 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
+import { MYTHOS_CATALOG } from "../_shared/catalog.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
