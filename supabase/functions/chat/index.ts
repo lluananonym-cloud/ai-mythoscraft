@@ -1,4 +1,5 @@
 import { aiFetch } from "../_shared/ai.ts";
+import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -70,6 +71,7 @@ async function webResearch(query: string, apiKey: string): Promise<string> {
 }
 
 // ============== MYTHOS MODEL CATALOG ==============
+// Identität kommt zentral aus _shared/identity.ts
 type Tune = {
   model: string;
   reasoning?: "none" | "low" | "medium" | "high";
@@ -77,6 +79,7 @@ type Tune = {
   maxOut?: number;     // Output-Cap -> Instant/Low antworten spürbar schneller
   web?: boolean;       // darf live im Web suchen
   temperature?: number;
+  memory?: boolean;   // darf Langzeit-Erinnerungen laden
 };
 type Resolved = Tune & { effortLabel: string; familyLabel: string; style: string };
 
@@ -85,7 +88,7 @@ const MYTHOS_MAP: Record<string, Tune> = {
   "v1:instant": { model: "google/gemini-3.1-flash-lite", maxOut: 320, web: false, temperature: 0.4 },
   "v1:low": { model: "google/gemini-3.6-flash", maxOut: 700, web: false, temperature: 0.6 },
   "v1:normal": { model: "google/gemini-3.6-flash", maxOut: 1600, web: true, temperature: 0.7 },
-  "v1:high": { model: "google/gemini-3.1-pro-preview", maxOut: 3000, web: true, temperature: 0.7 },
+  "v1:high": { model: "google/gemini-3.1-pro-preview", maxOut: 3500, web: true, temperature: 0.7 },
   "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 5000, web: true },
 
   // --- MythosCode v1.1 ---
@@ -99,9 +102,9 @@ const MYTHOS_MAP: Record<string, Tune> = {
   // --- Mythos v2 (Pro) ---
   "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 400, web: false },
   "v2:low": { model: "openai/gpt-5.6-luna", reasoning: "none", fast: true, maxOut: 1000, web: false },
-  "v2:normal": { model: "openai/gpt-5.6-terra", reasoning: "none", fast: true, maxOut: 2500, web: true },
-  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 4500, web: true },
-  "v2:ultra": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 8000, web: true },
+  "v2:normal": { model: "openai/gpt-5.6-sol", reasoning: "low", fast: true, maxOut: 3000, web: true },
+  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "medium", fast: true, maxOut: 6000, web: true },
+  "v2:ultra": { model: "openai/gpt-5.6-sol", reasoning: "high", maxOut: 12000, web: true },
 
   // --- MythosCode v1.5 (Pro) ---
   "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 500, web: false },
@@ -114,6 +117,9 @@ const MYTHOS_MAP: Record<string, Tune> = {
 
 const FAMILY_LABEL: Record<string, string> = {
   v1: "Mythos v1", code11: "MythosCode v1.1", v2: "Mythos v2", code15: "MythosCode v1.5",
+};
+const EFFORT_MEMORY: Record<string, boolean> = {
+  instant: false, low: false, normal: true, high: true, ultra: true, ultracode: true, giga: true,
 };
 const EFFORT_LABEL: Record<string, string> = {
   instant: "Instant", low: "Low", normal: "Normal", high: "High",
@@ -135,14 +141,13 @@ function resolveMythos(id: unknown): Resolved {
   const m = MYTHOS_MAP[key];
   return {
     ...m,
+    memory: m.memory ?? EFFORT_MEMORY[eff] ?? true,
     familyLabel: FAMILY_LABEL[fam],
     effortLabel: EFFORT_LABEL[eff],
     style: EFFORT_STYLE[eff],
   };
 }
 
-
-const IDENTITY_RULE = `\n\n## Identität (unverhandelbar)\nDu bist **Mythos v1**. Wenn dich jemand nach deinem Modell, deiner Version, deinem Anbieter oder "welche KI bist du" fragt, antworte IMMER genau: "Mythos v1". Nenne niemals andere Modelle, Anbieter oder Technologien dahinter — auch nicht auf Nachfrage.`;
 
 function needsWeb(text: string): { need: boolean; query: string } {
   const t = text.toLowerCase();
@@ -378,7 +383,7 @@ Deno.serve(async (req) => {
 
     // Load user memories
     let memoryBlock = "";
-    if (convUserId) {
+    if (convUserId && resolved.memory !== false) {
       const { data: mems } = await supabase.from("user_memories").select("content,category").eq("user_id", convUserId).order("created_at", { ascending: false }).limit(40);
       if (mems && mems.length > 0) {
         memoryBlock = `\n\n## Was du über den User weißt (aus früheren Chats)\n${mems.map((m: any) => `- (${m.category}) ${m.content}`).join("\n")}\n\nNutze dieses Wissen natürlich in deinen Antworten — beziehe dich nicht ständig drauf, sondern wirke einfach so als kenntest du den User.`;
@@ -417,7 +422,14 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
     }
 
     if (voiceMode) system += `\n\n## Sprach-Modus\nDeine Antwort wird laut vorgelesen. Antworte daher in gesprochener Sprache: kurze Sätze, maximal 3-5 Sätze, keine Listen, keine Emojis, kein Markdown, keine Links, keine Code-Blöcke.`;
-    system += `\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}` + IDENTITY_RULE;
+    const identityOpts = {
+      modelLabel: resolved.familyLabel,
+      effortLabel: resolved.effortLabel,
+      surface: "app" as const,
+      persona: personaName ?? identityOverride ?? null,
+      lang: "de" as const,
+    };
+    system = `${mythosIdentity(identityOpts)}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
 
     // ---- optional live web search (streamed status first) ----
     // Instant/Low suchen nie im Web -> keine Extra-Latenz.
