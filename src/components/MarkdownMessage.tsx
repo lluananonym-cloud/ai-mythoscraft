@@ -66,9 +66,11 @@ function CodeCard({ lang, code }: { lang: string; code: string }) {
   };
 
   const run = () => {
-    const w = window.open("", "_blank");
-    if (!w) { toast.error("Popup blockiert — bitte erlauben"); return; }
-    w.document.open(); w.document.write(code); w.document.close();
+    const url = URL.createObjectURL(new Blob([code], { type: "text/html;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   return (
