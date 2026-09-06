@@ -1,6 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
-import { MYTHOS_CATALOG } from "../_shared/catalog.ts";
+import { MYTHOS_CATALOG, MYTHOS_FILES } from "../_shared/catalog.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -430,7 +430,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
       persona: personaName ?? identityOverride ?? null,
       lang: "de" as const,
     };
-    system = `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
+    system = `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${MYTHOS_FILES}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
 
     // ---- optional live web search (streamed status first) ----
     // Instant/Low suchen nie im Web -> keine Extra-Latenz.

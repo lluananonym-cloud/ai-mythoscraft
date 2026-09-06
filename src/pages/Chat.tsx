@@ -13,8 +13,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownMessage from "@/components/MarkdownMessage";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
@@ -877,7 +876,7 @@ const Chat = () => {
                               </div>
                             )}
                             {m.content ? (
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                              <MarkdownMessage content={m.content} />
                             ) : !m.image && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
