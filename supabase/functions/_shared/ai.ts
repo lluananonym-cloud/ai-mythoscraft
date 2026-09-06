@@ -163,36 +163,39 @@ export async function aiChat(
 
   // ---- Google Fallback ----
   const keys = googleKeys();
-  const gModel = mapToGemini(body.model);
+  const chain = geminiChain(body.model);
   const payload = toGeminiBody(body);
   let lastStatus = 503;
   let lastText = "no google key configured";
 
-  for (const gk of keys) {
-    try {
-      const r = await googleFetch(gModel, streaming, payload, gk);
-      if (!r.ok) {
-        lastStatus = r.status;
-        lastText = (await r.text().catch(() => "")).slice(0, 300);
-        console.warn("[ai] google key failed", r.status, lastText);
-        continue;
+  for (const gModel of chain) {
+    for (const gk of keys) {
+      try {
+        const r = await googleFetch(gModel, streaming, payload, gk);
+        if (!r.ok) {
+          lastStatus = r.status;
+          lastText = (await r.text().catch(() => "")).slice(0, 300);
+          console.warn("[ai] google failed", gModel, r.status, lastText.slice(0, 120));
+          continue;
+        }
+        if (streaming && r.body) {
+          return new Response(googleSseToOpenAi(r.body), {
+            headers: { "Content-Type": "text/event-stream" },
+          });
+        }
+        const j = await r.json();
+        const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text || "").join("");
+        return new Response(
+          JSON.stringify({ choices: [{ message: { role: "assistant", content: text }, finish_reason: "stop" }] }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      } catch (e) {
+        lastText = e instanceof Error ? e.message : String(e);
+        console.warn("[ai] google exception", gModel, lastText);
       }
-      if (streaming && r.body) {
-        return new Response(googleSseToOpenAi(r.body), {
-          headers: { "Content-Type": "text/event-stream" },
-        });
-      }
-      const j = await r.json();
-      const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text || "").join("");
-      return new Response(
-        JSON.stringify({ choices: [{ message: { role: "assistant", content: text }, finish_reason: "stop" }] }),
-        { headers: { "Content-Type": "application/json" } },
-      );
-    } catch (e) {
-      lastText = e instanceof Error ? e.message : String(e);
-      console.warn("[ai] google exception", lastText);
     }
   }
+
 
   return new Response(JSON.stringify({ error: `AI unavailable: ${lastText}` }), {
     status: lastStatus,
