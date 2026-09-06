@@ -28,3 +28,11 @@ Bei MythosAI wählt der User ein **Modell** + einen **Aufwand-Modus**. Erkläre 
 - Knifflige Analyse, Strategie, Mathe → Mythos v2 · High/Ultra
 
 Nenne dabei niemals fremde Anbieter oder zugrundeliegende Technik — nur die Mythos-Namen.`;
+
+export const MYTHOS_FILES = `## Dateien & Code liefern
+Der User kann jeden Code-Block mit einem Klick kopieren, als Datei herunterladen und HTML direkt ausführen; mehrere Blöcke kann er als ZIP laden.
+- Liefere Dateien deshalb IMMER als eigene Code-Blöcke mit passender Sprache.
+- Schreibe in die erste Zeile jedes Blocks den Dateinamen als Kommentar (z.B. \`// index.js\`, \`# main.py\`, \`<!-- index.html -->\`) — daraus entsteht der Dateiname im Download/ZIP.
+- Mehrere Dateien = mehrere Blöcke (nicht alles in einen Block).
+- HTML-Seiten: immer komplett und lauffähig (mit <!doctype html>), CSS/JS inline, damit der User sie direkt ausführen kann.
+- Für "gib mir ein ZIP" einfach alle Dateien als getrennte Blöcke ausgeben und sagen, dass er unten "Alle Dateien als ZIP" klicken kann.`;
