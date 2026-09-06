@@ -17,14 +17,24 @@ export function googleKeys(): string[] {
   ].filter((k): k is string => !!k && k.length > 5);
 }
 
-/** Lovable-Modell-ID -> Google-Modellname */
-export function mapToGemini(model: string): string {
+/** Lovable-Modell-ID -> Google-Modellkette (erstes verfügbares gewinnt) */
+export function geminiChain(model: string): string[] {
   const m = String(model || "").toLowerCase();
-  if (m.includes("image")) return "gemini-3.1-flash-image";
-  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) return "gemini-3.1-flash-lite";
-  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) return "gemini-3.1-pro-preview";
-  return "gemini-3.6-flash";
+  if (m.includes("image")) return ["gemini-3.1-flash-image"];
+  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) {
+    return ["gemini-3.1-flash-lite", "gemini-3.6-flash"];
+  }
+  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) {
+    // pro-preview ist im Free-Tier oft quota-gesperrt -> starke Flash-Modelle als Ersatz
+    return ["gemini-3.1-pro-preview", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"];
+  }
+  return ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.1-flash-lite"];
 }
+
+export function mapToGemini(model: string): string {
+  return geminiChain(model)[0];
+}
+
 
 type AnyMsg = { role: string; content: unknown };
 
