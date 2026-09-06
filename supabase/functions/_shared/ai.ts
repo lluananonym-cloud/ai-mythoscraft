@@ -17,14 +17,24 @@ export function googleKeys(): string[] {
   ].filter((k): k is string => !!k && k.length > 5);
 }
 
-/** Lovable-Modell-ID -> Google-Modellname */
-export function mapToGemini(model: string): string {
+/** Lovable-Modell-ID -> Google-Modellkette (erstes verfügbares gewinnt) */
+export function geminiChain(model: string): string[] {
   const m = String(model || "").toLowerCase();
-  if (m.includes("image")) return "gemini-3.1-flash-image";
-  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) return "gemini-3.1-flash-lite";
-  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) return "gemini-3.1-pro-preview";
-  return "gemini-3.6-flash";
+  if (m.includes("image")) return ["gemini-3.1-flash-image"];
+  if (m.includes("lite") || m.includes("nano") || m.includes("luna")) {
+    return ["gemini-3.1-flash-lite", "gemini-3.6-flash"];
+  }
+  if (m.includes("pro") || m.includes("ultra") || m.includes("gpt-5.5") || m.includes("sol")) {
+    // pro-preview ist im Free-Tier oft quota-gesperrt -> starke Flash-Modelle als Ersatz
+    return ["gemini-3.1-pro-preview", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"];
+  }
+  return ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.1-flash-lite"];
 }
+
+export function mapToGemini(model: string): string {
+  return geminiChain(model)[0];
+}
+
 
 type AnyMsg = { role: string; content: unknown };
 
@@ -153,36 +163,39 @@ export async function aiChat(
 
   // ---- Google Fallback ----
   const keys = googleKeys();
-  const gModel = mapToGemini(body.model);
+  const chain = geminiChain(body.model);
   const payload = toGeminiBody(body);
   let lastStatus = 503;
   let lastText = "no google key configured";
 
-  for (const gk of keys) {
-    try {
-      const r = await googleFetch(gModel, streaming, payload, gk);
-      if (!r.ok) {
-        lastStatus = r.status;
-        lastText = (await r.text().catch(() => "")).slice(0, 300);
-        console.warn("[ai] google key failed", r.status, lastText);
-        continue;
+  for (const gModel of chain) {
+    for (const gk of keys) {
+      try {
+        const r = await googleFetch(gModel, streaming, payload, gk);
+        if (!r.ok) {
+          lastStatus = r.status;
+          lastText = (await r.text().catch(() => "")).slice(0, 300);
+          console.warn("[ai] google failed", gModel, r.status, lastText.slice(0, 120));
+          continue;
+        }
+        if (streaming && r.body) {
+          return new Response(googleSseToOpenAi(r.body), {
+            headers: { "Content-Type": "text/event-stream" },
+          });
+        }
+        const j = await r.json();
+        const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text || "").join("");
+        return new Response(
+          JSON.stringify({ choices: [{ message: { role: "assistant", content: text }, finish_reason: "stop" }] }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      } catch (e) {
+        lastText = e instanceof Error ? e.message : String(e);
+        console.warn("[ai] google exception", gModel, lastText);
       }
-      if (streaming && r.body) {
-        return new Response(googleSseToOpenAi(r.body), {
-          headers: { "Content-Type": "text/event-stream" },
-        });
-      }
-      const j = await r.json();
-      const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text || "").join("");
-      return new Response(
-        JSON.stringify({ choices: [{ message: { role: "assistant", content: text }, finish_reason: "stop" }] }),
-        { headers: { "Content-Type": "application/json" } },
-      );
-    } catch (e) {
-      lastText = e instanceof Error ? e.message : String(e);
-      console.warn("[ai] google exception", lastText);
     }
   }
+
 
   return new Response(JSON.stringify({ error: `AI unavailable: ${lastText}` }), {
     status: lastStatus,
