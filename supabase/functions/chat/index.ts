@@ -455,7 +455,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
     }
 
     // Instant hält den Kontext klein -> deutlich schnellere Time-to-first-token.
-    const histLimit = resolved.effortLabel === "Instant" ? 6 : resolved.effortLabel === "Low" ? 12 : 40;
+    const histLimit = resolved.effortLabel === "Instant" ? 4 : resolved.effortLabel === "Low" ? 8 : 40;
     const trimmed = Array.isArray(messages) ? messages.slice(-histLimit) : messages;
     const outMessages: any[] = [{ role: "system", content: system }, ...trimmed];
 
