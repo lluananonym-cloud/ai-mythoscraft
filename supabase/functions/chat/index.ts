@@ -402,7 +402,10 @@ Deno.serve(async (req) => {
     } else if (mode === "support") {
       const { data: kb } = await supabase
         .from("knowledge_articles").select("title,category,body").eq("is_published", true);
-      const kbText = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
+      const kbAll = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
+      // Spar-Modus: Wissensbasis stark gekürzt -> deutlich weniger Tokens pro Anfrage.
+      const kbText = resolved.lean ? kbAll.slice(0, 2500) : kbAll;
+
       system = `Du bist **Mythos AI**, der offizielle Support-Assistent für den Minecraft-Server **mythoscraft.online** (SMP).
 Antworte freundlich, präzise und auf Deutsch. Nutze Markdown.
 
