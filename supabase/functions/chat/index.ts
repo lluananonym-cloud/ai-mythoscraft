@@ -436,7 +436,14 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
       persona: personaName ?? identityOverride ?? null,
       lang: "de" as const,
     };
-    system = `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${MYTHOS_FILES}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
+    const depthHint = resolved.depth
+      ? `\n\n## Denk-Tiefe\nDenke vor dem Antworten still Schritt für Schritt durch: Ziel klären, Annahmen prüfen, Randfälle und Alternativen abwägen, dann die beste Lösung begründet ausgeben. Zeige den Denkprozess nicht rohkopiert, sondern nur das saubere Ergebnis mit kurzer Begründung.`
+      : "";
+    // Spar-Modus (Instant/Low): Katalog- und Datei-Blöcke weglassen -> viel kleinerer Prompt.
+    system = resolved.lean
+      ? `${mythosIdentity(identityOpts)}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}`
+      : `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${MYTHOS_FILES}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}${depthHint}\n\n${mythosIdentityReminder(identityOpts)}`;
+
 
     // ---- optional live web search (streamed status first) ----
     // Instant/Low suchen nie im Web -> keine Extra-Latenz.
