@@ -81,40 +81,43 @@ type Tune = {
   web?: boolean;       // darf live im Web suchen
   temperature?: number;
   memory?: boolean;   // darf Langzeit-Erinnerungen laden
+  lean?: boolean;     // Spar-Modus: minimaler System-Prompt, kurzer Kontext
+  depth?: boolean;    // Denk-Tiefe: extra Reasoning-Anleitung im Prompt
 };
 type Resolved = Tune & { effortLabel: string; familyLabel: string; style: string };
 
 const MYTHOS_MAP: Record<string, Tune> = {
   // --- Mythos v1: Allrounder ---
-  "v1:instant": { model: "google/gemini-3.1-flash-lite", maxOut: 320, web: false, temperature: 0.4 },
-  "v1:low": { model: "google/gemini-3.6-flash", maxOut: 700, web: false, temperature: 0.6 },
+  "v1:instant": { model: "google/gemini-3.1-flash-lite", maxOut: 220, web: false, temperature: 0.3, lean: true },
+  "v1:low": { model: "google/gemini-3.1-flash-lite", maxOut: 550, web: false, temperature: 0.5, lean: true },
   "v1:normal": { model: "google/gemini-3.6-flash", maxOut: 1600, web: true, temperature: 0.7 },
-  "v1:high": { model: "google/gemini-3.1-pro-preview", maxOut: 3500, web: true, temperature: 0.7 },
-  "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 5000, web: true },
+  "v1:high": { model: "google/gemini-3.1-pro-preview", maxOut: 3500, web: true, temperature: 0.7, depth: true },
+  "v1:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 5000, web: true, depth: true },
 
   // --- MythosCode v1.1 ---
-  "code11:instant": { model: "openai/gpt-5.4-nano", reasoning: "none", maxOut: 400, web: false },
-  "code11:low": { model: "openai/gpt-5.4-mini", reasoning: "none", fast: true, maxOut: 900, web: false },
+  "code11:instant": { model: "openai/gpt-5.4-nano", reasoning: "none", maxOut: 300, web: false, lean: true },
+  "code11:low": { model: "openai/gpt-5.4-mini", reasoning: "none", fast: true, maxOut: 700, web: false, lean: true },
   "code11:normal": { model: "openai/gpt-5.4", reasoning: "low", maxOut: 2200, web: true },
-  "code11:high": { model: "openai/gpt-5.4", reasoning: "high", maxOut: 4000, web: true },
-  "code11:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 6000, web: true },
-  "code11:ultracode": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true },
+  "code11:high": { model: "openai/gpt-5.4", reasoning: "high", maxOut: 4000, web: true, depth: true },
+  "code11:ultra": { model: "openai/gpt-5.5", reasoning: "medium", maxOut: 6000, web: true, depth: true },
+  "code11:ultracode": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true, depth: true },
 
-  // --- Mythos v2 (Pro) ---
-  "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 400, web: false },
-  "v2:low": { model: "openai/gpt-5.6-luna", reasoning: "none", fast: true, maxOut: 1000, web: false },
-  "v2:normal": { model: "openai/gpt-5.6-sol", reasoning: "low", fast: true, maxOut: 3000, web: true },
-  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "medium", fast: true, maxOut: 6000, web: true },
-  "v2:ultra": { model: "openai/gpt-5.6-sol", reasoning: "high", maxOut: 12000, web: true },
+  // --- Mythos v2 (Pro) — mehr Denk-Tiefe ---
+  "v2:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 300, web: false, lean: true },
+  "v2:low": { model: "openai/gpt-5.6-luna", reasoning: "none", fast: true, maxOut: 750, web: false, lean: true },
+  "v2:normal": { model: "openai/gpt-5.6-sol", reasoning: "medium", fast: true, maxOut: 3500, web: true, depth: true },
+  "v2:high": { model: "openai/gpt-5.6-sol", reasoning: "high", fast: true, maxOut: 7000, web: true, depth: true },
+  "v2:ultra": { model: "openai/gpt-5.6-sol", reasoning: "high", maxOut: 14000, web: true, depth: true },
 
   // --- MythosCode v1.5 (Pro) ---
-  "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 500, web: false },
-  "code15:low": { model: "openai/gpt-5.6-terra", reasoning: "none", fast: true, maxOut: 1200, web: false },
-  "code15:normal": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 3000, web: true },
-  "code15:high": { model: "openai/gpt-5.6-sol", reasoning: "none", fast: true, maxOut: 5000, web: true },
-  "code15:ultra": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true },
-  "code15:giga": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 16000, web: true },
+  "code15:instant": { model: "openai/gpt-5.6-luna", reasoning: "none", maxOut: 400, web: false, lean: true },
+  "code15:low": { model: "openai/gpt-5.6-terra", reasoning: "none", fast: true, maxOut: 900, web: false, lean: true },
+  "code15:normal": { model: "openai/gpt-5.6-sol", reasoning: "low", fast: true, maxOut: 3000, web: true },
+  "code15:high": { model: "openai/gpt-5.6-sol", reasoning: "medium", fast: true, maxOut: 5500, web: true, depth: true },
+  "code15:ultra": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 9000, web: true, depth: true },
+  "code15:giga": { model: "openai/gpt-5.5", reasoning: "high", maxOut: 16000, web: true, depth: true },
 };
+
 
 const FAMILY_LABEL: Record<string, string> = {
   v1: "Mythos v1", code11: "MythosCode v1.1", v2: "Mythos v2", code15: "MythosCode v1.5",
@@ -399,7 +402,10 @@ Deno.serve(async (req) => {
     } else if (mode === "support") {
       const { data: kb } = await supabase
         .from("knowledge_articles").select("title,category,body").eq("is_published", true);
-      const kbText = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
+      const kbAll = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
+      // Spar-Modus: Wissensbasis stark gekürzt -> deutlich weniger Tokens pro Anfrage.
+      const kbText = resolved.lean ? kbAll.slice(0, 2500) : kbAll;
+
       system = `Du bist **Mythos AI**, der offizielle Support-Assistent für den Minecraft-Server **mythoscraft.online** (SMP).
 Antworte freundlich, präzise und auf Deutsch. Nutze Markdown.
 
@@ -430,7 +436,14 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
       persona: personaName ?? identityOverride ?? null,
       lang: "de" as const,
     };
-    system = `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${MYTHOS_FILES}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}\n\n${mythosIdentityReminder(identityOpts)}`;
+    const depthHint = resolved.depth
+      ? `\n\n## Denk-Tiefe\nDenke vor dem Antworten still Schritt für Schritt durch: Ziel klären, Annahmen prüfen, Randfälle und Alternativen abwägen, dann die beste Lösung begründet ausgeben. Zeige den Denkprozess nicht rohkopiert, sondern nur das saubere Ergebnis mit kurzer Begründung.`
+      : "";
+    // Spar-Modus (Instant/Low): Katalog- und Datei-Blöcke weglassen -> viel kleinerer Prompt.
+    system = resolved.lean
+      ? `${mythosIdentity(identityOpts)}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}`
+      : `${mythosIdentity(identityOpts)}\n\n${MYTHOS_CATALOG}\n\n${MYTHOS_FILES}\n\n${system}\n\n## Antwort-Aufwand: ${resolved.effortLabel}\n${resolved.style}${depthHint}\n\n${mythosIdentityReminder(identityOpts)}`;
+
 
     // ---- optional live web search (streamed status first) ----
     // Instant/Low suchen nie im Web -> keine Extra-Latenz.
@@ -442,7 +455,7 @@ Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memo
     }
 
     // Instant hält den Kontext klein -> deutlich schnellere Time-to-first-token.
-    const histLimit = resolved.effortLabel === "Instant" ? 6 : resolved.effortLabel === "Low" ? 12 : 40;
+    const histLimit = resolved.effortLabel === "Instant" ? 4 : resolved.effortLabel === "Low" ? 8 : 40;
     const trimmed = Array.isArray(messages) ? messages.slice(-histLimit) : messages;
     const outMessages: any[] = [{ role: "system", content: system }, ...trimmed];
 
