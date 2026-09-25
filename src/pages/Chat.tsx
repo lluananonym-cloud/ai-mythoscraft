@@ -214,6 +214,28 @@ const Chat = () => {
       }
       text = `/image ${prompt}`;
     }
+    if (/^\/codeadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      if (localStorage.getItem("mythos_cli_built")) {
+        setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: "Das Mythos-Code-Paket wurde bereits erstellt. **/codeadmin** geht nur einmal." }]);
+        return;
+      }
+      const { buildCliZip, ADMIN_GUIDE, CLI_PKG } = await import("@/lib/mythosCli");
+      const blob = await buildCliZip();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `${CLI_PKG}.zip`; a.click();
+      localStorage.setItem("mythos_cli_built", "1");
+      setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: ADMIN_GUIDE }]);
+      return;
+    }
+    if (/^\/code\s*$/i.test(text)) {
+      if (!override) setInput("");
+      if (!sub.isPro) { setPaywall({ open: true, reason: "Mythos Code (CLI) ist eine Pro-Funktion." }); return; }
+      const { USER_GUIDE } = await import("@/lib/mythosCli");
+      setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: USER_GUIDE }]);
+      return;
+    }
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
