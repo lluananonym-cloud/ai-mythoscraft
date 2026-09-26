@@ -26,7 +26,8 @@ function err(code: string, message: string, status: number) {
 function mapModel(m: string): string {
   const lc = (m || "").toLowerCase();
   if (lc.includes("mythos-v2") || lc.includes("opus")) return "openai/gpt-5.6-sol";
-  if (lc.includes("sonnet") || lc.includes("code")) return "google/gemini-3.1-pro-preview";
+  if (lc.includes("code")) return "openai/gpt-5.6-sol";
+  if (lc.includes("sonnet")) return "google/gemini-3.1-pro-preview";
   if (lc.includes("haiku") || lc.includes("lite")) return "google/gemini-3.1-flash-lite";
   return "google/gemini-3.6-flash";
 }
@@ -64,7 +65,13 @@ Deno.serve(async (req) => {
 
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count } = await supabase.from("api_usage").select("*", { count: "exact", head: true }).eq("api_key_id", keyRow.id).gte("created_at", since);
-  if ((count || 0) >= keyRow.daily_limit) return err("rate_limit_error", `Daily limit of ${keyRow.daily_limit} reached`, 429);
+  const [{ data: subRow }, { data: roleRows }] = await Promise.all([
+    supabase.from("subscriptions").select("tier,expires_at").eq("user_id", keyRow.user_id).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", keyRow.user_id),
+  ]);
+  const isPro = !!roleRows?.some((r: any) => r.role === "admin") ||
+    (subRow?.tier === "pro" && (!subRow.expires_at || new Date(subRow.expires_at) > new Date()));
+  if (!isPro && (count || 0) >= keyRow.daily_limit) return err("rate_limit_error", `Daily limit of ${keyRow.daily_limit} reached`, 429);
 
   let body: any;
   try { body = await req.json(); } catch { return err("invalid_request_error", "Invalid JSON", 400); }
@@ -90,9 +97,9 @@ Deno.serve(async (req) => {
   const gatewayBody: any = {
     model: mapModel(model),
     messages: oaiMessages,
-    max_tokens,
     stream,
   };
+  if (!gatewayBody.model.startsWith("openai/")) gatewayBody.max_tokens = max_tokens;
   if (typeof temperature === "number") gatewayBody.temperature = temperature;
 
   const upstream = await aiFetch("gateway", {
