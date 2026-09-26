@@ -5,7 +5,7 @@ const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/fun
 
 const pkgJson = () => JSON.stringify({
   name: CLI_PKG,
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Mythos Code – KI-Coding-Agent im Terminal (by Mythoscraft)",
   bin: { "mythos": "bin/mythos.js", "mythos-code": "bin/mythos.js" },
   type: "module",
@@ -48,15 +48,38 @@ async function login() {
   cfg.key = k; save(cfg); console.log(C.g + "✓ Gespeichert in " + CFG + C.x);
 }
 
-async function call(messages) {
+const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
+
+async function once(messages) {
   const r = await fetch(API, {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages }),
+    body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages, stream: true }),
   });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j?.error?.message || ("HTTP " + r.status));
-  return (j.content || []).map((p) => p.text || "").join("");
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
+  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+  while (true) {
+    const { done, value } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i; while ((i = buf.indexOf("\\n")) !== -1) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      try { const p = JSON.parse(line.slice(5)); if (p.delta?.text) out += p.delta.text; } catch {}
+    }
+  }
+  if (!out.trim()) throw new Error("Leere Antwort");
+  return out;
+}
+
+async function call(messages) {
+  const t0 = Date.now();
+  const tick = setInterval(() => process.stdout.write("\\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - t0) + C.x + "   "), 250);
+  try {
+    for (let a = 1; a <= 4; a++) {
+      try { return await once(messages); }
+      catch (e) { if (a === 4 || e.status === 401) throw e; await new Promise((r) => setTimeout(r, 1500 * a)); }
+    }
+  } finally { clearInterval(tick); process.stdout.write("\\r\\x1b[K"); }
 }
 
 async function runTool(t) {
@@ -76,9 +99,13 @@ async function runTool(t) {
 }
 
 async function turn(history, input) {
+  const T0 = Date.now();
+  try { await turnInner(history, input); }
+  finally { console.log(C.g + "✓ Mythos hat " + fmt(Date.now() - T0) + " gearbeitet" + C.x + "\\n"); }
+}
+async function turnInner(history, input) {
   history.push({ role: "user", content: input });
-  for (let i = 0; i < 25; i++) {
-    process.stdout.write(C.d + "… denkt" + C.x + "\\r");
+  for (let i = 0; i < 40; i++) {
     const out = await call(history);
     history.push({ role: "assistant", content: out });
     const m = out.match(/<tool>([\\s\\S]*?)<\\/tool>/);
