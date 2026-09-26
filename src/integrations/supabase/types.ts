@@ -226,6 +226,24 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
       boost_codes: {
         Row: {
           bonus_requests: number | null
@@ -311,6 +329,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cli_device_auth: {
+        Row: {
+          api_key: string | null
+          code: string
+          created_at: string
+          poll_secret: string
+          user_id: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          code: string
+          created_at?: string
+          poll_secret: string
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          code?: string
+          created_at?: string
+          poll_secret?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       conversations: {
         Row: {

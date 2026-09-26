@@ -5,7 +5,7 @@ const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/fun
 
 const pkgJson = () => JSON.stringify({
   name: CLI_PKG,
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Mythos Code – KI-Coding-Agent im Terminal (by Mythoscraft)",
   bin: { "mythos": "bin/mythos.js", "mythos-code": "bin/mythos.js" },
   type: "module",
@@ -48,15 +48,38 @@ async function login() {
   cfg.key = k; save(cfg); console.log(C.g + "✓ Gespeichert in " + CFG + C.x);
 }
 
-async function call(messages) {
+const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
+
+async function once(messages) {
   const r = await fetch(API, {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages }),
+    body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages, stream: true }),
   });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j?.error?.message || ("HTTP " + r.status));
-  return (j.content || []).map((p) => p.text || "").join("");
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
+  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+  while (true) {
+    const { done, value } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i; while ((i = buf.indexOf("\\n")) !== -1) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      try { const p = JSON.parse(line.slice(5)); if (p.delta?.text) out += p.delta.text; } catch {}
+    }
+  }
+  if (!out.trim()) throw new Error("Leere Antwort");
+  return out;
+}
+
+async function call(messages) {
+  const t0 = Date.now();
+  const tick = setInterval(() => process.stdout.write("\\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - t0) + C.x + "   "), 250);
+  try {
+    for (let a = 1; a <= 4; a++) {
+      try { return await once(messages); }
+      catch (e) { if (a === 4 || e.status === 401) throw e; await new Promise((r) => setTimeout(r, 1500 * a)); }
+    }
+  } finally { clearInterval(tick); process.stdout.write("\\r\\x1b[K"); }
 }
 
 async function runTool(t) {
@@ -76,9 +99,13 @@ async function runTool(t) {
 }
 
 async function turn(history, input) {
+  const T0 = Date.now();
+  try { await turnInner(history, input); }
+  finally { console.log(C.g + "✓ Mythos hat " + fmt(Date.now() - T0) + " gearbeitet" + C.x + "\\n"); }
+}
+async function turnInner(history, input) {
   history.push({ role: "user", content: input });
-  for (let i = 0; i < 25; i++) {
-    process.stdout.write(C.d + "… denkt" + C.x + "\\r");
+  for (let i = 0; i < 40; i++) {
     const out = await call(history);
     history.push({ role: "assistant", content: out });
     const m = out.match(/<tool>([\\s\\S]*?)<\\/tool>/);
@@ -173,3 +200,199 @@ mythos
 \`\`\`
 Mythos Code kann Dateien lesen/schreiben und Befehle ausführen – vor jeder Aktion fragt es dich (\`a\` = immer erlauben, oder mit \`mythos --yes\` starten).
 Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.`;
+
+// ================= Mythos Code Desktop-App (Electron) =================
+export const APP_PKG = "mythos-code-app";
+const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+
+const appPkg = () => JSON.stringify({
+  name: APP_PKG,
+  productName: "Mythos Code",
+  version: "1.0.0",
+  description: "Mythos Code – KI-Coding-Agent als App (by Mythoscraft)",
+  main: "main.js",
+  author: "Mythoscraft",
+  license: "MIT",
+  scripts: { start: "electron .", dist: "electron-builder --win nsis --publish never" },
+  devDependencies: { electron: "^31.0.0", "electron-builder": "^24.13.3" },
+  build: {
+    appId: "online.mythoscraft.mythoscode",
+    productName: "Mythos Code",
+    files: ["main.js", "preload.js", "index.html", "renderer.js", "config.json"],
+    win: { target: "nsis" },
+    nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, artifactName: "MythosCode-Setup.exe" },
+  },
+}, null, 2);
+
+const appMain = () => `const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const fs = require("fs"); const path = require("path"); const { exec } = require("child_process");
+const CFG = () => path.join(app.getPath("userData"), "mythos.json");
+const load = () => { try { return JSON.parse(fs.readFileSync(CFG(), "utf8")); } catch { return {}; } };
+function win() {
+  const w = new BrowserWindow({ width: 1200, height: 820, backgroundColor: "#0a0a0a", title: "Mythos Code",
+    autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true } });
+  w.loadFile("index.html");
+}
+app.whenReady().then(win);
+app.on("window-all-closed", () => app.quit());
+ipcMain.handle("cfg:get", () => load());
+ipcMain.handle("cfg:set", (_e, c) => { fs.writeFileSync(CFG(), JSON.stringify(c, null, 2)); return true; });
+ipcMain.handle("open", (_e, url) => shell.openExternal(url));
+ipcMain.handle("pickFolder", async () => { const r = await dialog.showOpenDialog({ properties: ["openDirectory"] }); return r.canceled ? null : r.filePaths[0]; });
+ipcMain.handle("pickFiles", async () => {
+  const r = await dialog.showOpenDialog({ properties: ["openFile", "multiSelections"] });
+  if (r.canceled) return [];
+  return r.filePaths.map((p) => { let c = ""; try { c = fs.readFileSync(p, "utf8").slice(0, 60000); } catch { c = "(Binärdatei)"; } return { name: path.basename(p), path: p, content: c }; });
+});
+ipcMain.handle("tool", async (_e, t, cwd) => {
+  const P = (p) => path.resolve(cwd || process.cwd(), p || ".");
+  try {
+    if (t.name === "run") return await new Promise((res) => exec(t.cmd, { cwd, timeout: 180000, maxBuffer: 1e7, shell: true },
+      (err, so, se) => res(((so || "") + (se || "") + (err ? "\\nExit: " + err.code : "")).slice(-8000) || "(keine Ausgabe)")));
+    if (t.name === "read") return fs.readFileSync(P(t.path), "utf8").slice(0, 20000);
+    if (t.name === "write") { fs.mkdirSync(path.dirname(P(t.path)), { recursive: true }); fs.writeFileSync(P(t.path), t.content || ""); return "OK geschrieben: " + t.path; }
+    if (t.name === "ls") return fs.readdirSync(P(t.path), { withFileTypes: true }).map((e) => (e.isDirectory() ? "[D] " : "    ") + e.name).join("\\n");
+    return "Unbekanntes Werkzeug";
+  } catch (e) { return "FEHLER: " + e.message; }
+});
+`;
+
+const appPreload = () => `const { contextBridge, ipcRenderer } = require("electron");
+contextBridge.exposeInMainWorld("mythos", {
+  getCfg: () => ipcRenderer.invoke("cfg:get"), setCfg: (c) => ipcRenderer.invoke("cfg:set", c),
+  open: (u) => ipcRenderer.invoke("open", u), pickFolder: () => ipcRenderer.invoke("pickFolder"),
+  pickFiles: () => ipcRenderer.invoke("pickFiles"), tool: (t, cwd) => ipcRenderer.invoke("tool", t, cwd),
+});
+`;
+
+const appHtml = () => `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Mythos Code</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,system-ui,sans-serif;background:radial-gradient(circle at 20% 0%,#2a2a2a,#050505 60%);color:#eee;height:100vh;display:flex;flex-direction:column}
+.glass{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(20px);border-radius:16px}
+button{background:#fff;color:#000;border:0;border-radius:12px;padding:10px 16px;font-weight:600;cursor:pointer}button.ghost{background:rgba(255,255,255,.08);color:#eee}
+#login{margin:auto;padding:40px;text-align:center;width:420px}#login h1{letter-spacing:.2em;margin:0 0 8px}
+header{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1)}header .sp{flex:1}
+.pill{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.08)}
+#log{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.m{padding:12px 14px;max-width:85%;white-space:pre-wrap;line-height:1.5}.u{align-self:flex-end;background:rgba(255,255,255,.14)}.a{align-self:flex-start}.t{font-family:Consolas,monospace;font-size:12px;opacity:.7}
+footer{padding:12px 16px;display:flex;gap:8px;align-items:flex-end}textarea{flex:1;resize:none;height:60px;background:rgba(255,255,255,.06);color:#eee;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;font:inherit}
+#files{font-size:12px;opacity:.8;padding:0 16px}
+</style></head><body>
+<div id="login" class="glass"><h1>✦ MYTHOS CODE</h1><p style="opacity:.7">KI-Coding-Agent von Mythoscraft</p>
+<button id="btnLogin">Mit MythosAI anmelden</button><p id="lstat" style="opacity:.6;font-size:13px"></p></div>
+<div id="app" style="display:none;flex:1;flex-direction:column;min-height:0">
+<header><b>✦ MYTHOS CODE</b><span class="pill" id="folder">Kein Ordner</span><button class="ghost" id="btnFolder">Ordner wählen</button>
+<label class="pill"><input type="checkbox" id="auto"> Vollzugriff (nicht nachfragen)</label><span class="sp"></span>
+<span class="pill" id="timer">⏱ 0s</span><span class="pill" id="usage">Usage …</span><button class="ghost" id="btnOut">Abmelden</button></header>
+<div id="log"></div><div id="files"></div>
+<footer><button class="ghost" id="btnUp">📎 Dateien</button><textarea id="inp" placeholder="Was soll Mythos bauen? (Enter = senden)"></textarea><button id="btnSend">Senden</button></footer></div>
+<script src="renderer.js"></script></body></html>`;
+
+const appRenderer = () => `const CFG = ${JSON.stringify({ site: "__SITE__", fn: FN_BASE })};
+CFG.site = location.protocol === "file:" ? CFG.site : CFG.site;
+const $ = (id) => document.getElementById(id);
+let cfg = {}, history = [], attach = [], busy = false;
+const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
+const post = (fn, body, h) => fetch(CFG.fn + "/" + fn, { method: "POST", headers: Object.assign({ "content-type": "application/json" }, h || {}), body: JSON.stringify(body) });
+function add(cls, text) { const d = document.createElement("div"); d.className = "m glass " + cls; d.textContent = text; $("log").appendChild(d); $("log").scrollTop = 1e9; return d; }
+const SYSTEM = () => "Du bist Mythos Code, ein autonomer Coding-Agent als Desktop-App (Windows). Arbeitsordner: " + (cfg.folder || "(keiner)") +
+  ". Werkzeuge – antworte mit GENAU EINEM Block:\\n<tool>{\\"name\\":\\"run\\",\\"cmd\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"read\\",\\"path\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"write\\",\\"path\\":\\"...\\",\\"content\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"ls\\",\\"path\\":\\".\\"}</tool>\\nPfade relativ zum Arbeitsordner. Arbeite Schritt für Schritt, am Ende normal ohne <tool> antworten.";
+async function once(messages) {
+  const r = await post("v1-messages", { model: "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }, { "x-api-key": cfg.key, "anthropic-version": "2023-06-01" });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "";
+  for (;;) { const x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true }); let i;
+    while ((i = buf.indexOf("\\n")) !== -1) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (l.startsWith("data:")) { try { const p = JSON.parse(l.slice(5)); if (p.delta && p.delta.text) out += p.delta.text; } catch (e) {} } } }
+  if (!out.trim()) throw new Error("Leere Antwort"); return out;
+}
+async function call(m) { for (let a = 1; a <= 4; a++) { try { return await once(m); } catch (e) { if (a === 4 || e.status === 401) throw e; await new Promise((r) => setTimeout(r, 1500 * a)); } } }
+async function usage() { try { const j = await (await post("cli-auth", { action: "usage", api_key: cfg.key })).json();
+  $("usage").textContent = j.limit == null ? "Usage " + j.used + " / ∞ (Pro)" : "Usage " + j.used + " / " + j.limit; } catch (e) {} }
+async function send() {
+  const q = $("inp").value.trim(); if (!q || busy) return; $("inp").value = ""; busy = true;
+  let content = q; if (attach.length) content += "\\n\\nHochgeladene Dateien:\\n" + attach.map((f) => "### " + f.name + "\\n" + f.content).join("\\n\\n");
+  attach = []; $("files").textContent = ""; add("u", q); history.push({ role: "user", content });
+  const t0 = Date.now(); const tick = setInterval(() => $("timer").textContent = "⏱ arbeitet… " + fmt(Date.now() - t0), 250);
+  try {
+    for (let i = 0; i < 40; i++) {
+      const out = await call(history); history.push({ role: "assistant", content: out });
+      const m = out.match(/<tool>([\\s\\S]*?)<\\/tool>/); const text = out.replace(/<tool>[\\s\\S]*?<\\/tool>/g, "").trim();
+      if (text) add("a", text); if (!m) break;
+      let t; try { t = JSON.parse(m[1]); } catch (e) { history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+      add("t", "⚙ " + t.name + " " + (t.cmd || t.path || ""));
+      let res; if ((t.name === "run" || t.name === "write") && !$("auto").checked && !confirm("Mythos möchte ausführen:\\n" + t.name + " " + (t.cmd || t.path))) res = "Vom Nutzer abgelehnt.";
+      else res = await window.mythos.tool(t, cfg.folder);
+      history.push({ role: "user", content: "Werkzeug-Ergebnis:\\n" + res });
+    }
+  } catch (e) { add("a", "Fehler: " + e.message); }
+  clearInterval(tick); const took = fmt(Date.now() - t0); $("timer").textContent = "⏱ " + took; add("t", "✓ Mythos hat " + took + " gearbeitet"); busy = false; usage();
+}
+async function login() {
+  $("lstat").textContent = "Browser öffnet sich …";
+  const s = await (await post("cli-auth", { action: "start" })).json();
+  window.mythos.open(CFG.site + "/cli-auth?code=" + s.code);
+  $("lstat").textContent = "Code: " + s.code + " – bestätige im Browser.";
+  const iv = setInterval(async () => { const p = await (await post("cli-auth", { action: "poll", code: s.code, poll_secret: s.poll_secret })).json();
+    if (p.status === "ok") { clearInterval(iv); cfg.key = p.api_key; cfg.name = p.name; await window.mythos.setCfg(cfg); show(); }
+    if (p.status === "expired") { clearInterval(iv); $("lstat").textContent = "Abgelaufen – nochmal versuchen."; } }, 2000);
+}
+function show() { $("login").style.display = "none"; $("app").style.display = "flex"; $("folder").textContent = cfg.folder || "Kein Ordner"; usage(); }
+$("btnLogin").onclick = login; $("btnSend").onclick = send;
+$("inp").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+$("btnFolder").onclick = async () => { const f = await window.mythos.pickFolder(); if (f) { cfg.folder = f; await window.mythos.setCfg(cfg); $("folder").textContent = f; } };
+$("btnUp").onclick = async () => { const fs = await window.mythos.pickFiles(); attach = attach.concat(fs); $("files").textContent = "📎 " + attach.map((f) => f.name).join(", "); };
+$("btnOut").onclick = async () => { cfg = {}; await window.mythos.setCfg(cfg); location.reload(); };
+window.mythos.getCfg().then((c) => { cfg = c || {}; if (cfg.key) show(); });
+`;
+
+const appWorkflow = () => `name: Build Mythos Code Setup
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MythosCode-Setup
+          path: dist/*.exe
+`;
+
+export async function buildAppZip(site: string): Promise<Blob> {
+  const zip = new JSZip();
+  const root = zip.folder(APP_PKG)!;
+  root.file("package.json", appPkg());
+  root.file("main.js", appMain());
+  root.file("preload.js", appPreload());
+  root.file("index.html", appHtml());
+  root.file("renderer.js", appRenderer().replace("__SITE__", site));
+  root.file("config.json", JSON.stringify({ site }, null, 2));
+  root.file("README.md", "# Mythos Code App\n\nWird per GitHub Actions zu `MythosCode-Setup.exe` gebaut.\n");
+  root.folder(".github")!.folder("workflows")!.file("build.yml", appWorkflow());
+  return zip.generateAsync({ type: "blob", platform: "UNIX" });
+}
+
+export const APP_ADMIN_GUIDE = `## ✦ Mythos Code App – Paket bereit
+
+Die ZIP **${APP_PKG}.zip** wurde heruntergeladen. So wird daraus eine **Setup-EXE**:
+
+1. ZIP entpacken.
+2. Auf https://github.com/new ein neues Repository erstellen, z. B. \`mythos-code-app\` (Privat geht auch).
+3. Auf der Repo-Seite **„uploading an existing file“** klicken und **den Inhalt** des Ordners \`${APP_PKG}\` hineinziehen – **inklusive dem Ordner \`.github\`** (versteckter Ordner! In Windows unter *Ansicht → Ausgeblendete Elemente* einschalten). → **Commit changes**.
+4. Oben auf **Actions** klicken. Der Build „Build Mythos Code Setup“ startet automatisch (ca. 3–5 Min.). Falls nicht: links auswählen → **Run workflow**.
+5. Wenn er grün ist: den Build öffnen → unten bei **Artifacts** auf **MythosCode-Setup** klicken → ZIP entpacken → darin liegt **MythosCode-Setup.exe**.
+6. Die EXE in **Google Drive** hochladen → Rechtsklick → **Freigeben** → „Jeder mit dem Link“ → Link kopieren.
+7. Hier im Chat eingeben:
+\`\`\`
+/codeprogrammadminupload <dein Google-Drive-Link>
+\`\`\`
+Danach kann jeder mit **/codeprogramm** die Setup-EXE herunterladen.`;
