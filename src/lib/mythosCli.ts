@@ -1,11 +1,12 @@
 import JSZip from "jszip";
 
 export const CLI_PKG = "mythos-code";
+export const CLI_VERSION = "1.2.0";
 const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/v1-messages`;
 
 const pkgJson = () => JSON.stringify({
   name: CLI_PKG,
-  version: "1.1.0",
+  version: CLI_VERSION,
   description: "Mythos Code – KI-Coding-Agent im Terminal (by Mythoscraft)",
   bin: { "mythos": "bin/mythos.js", "mythos-code": "bin/mythos.js" },
   type: "module",
@@ -21,7 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
-import { execSync } from "node:child_process";
+import { exec } from "node:child_process";
 
 const API = process.env.MYTHOS_API_URL || "${API}";
 const CFG = path.join(os.homedir(), ".mythos-code.json");
@@ -50,47 +51,73 @@ async function login() {
 
 const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
 
-async function once(messages) {
-  const r = await fetch(API, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages, stream: true }),
-  });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
-  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
-  while (true) {
-    const { done, value } = await reader.read(); if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i; while ((i = buf.indexOf("\\n")) !== -1) {
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (!line.startsWith("data:")) continue;
-      try { const p = JSON.parse(line.slice(5)); if (p.delta?.text) out += p.delta.text; } catch {}
-    }
-  }
-  if (!out.trim()) throw new Error("Leere Antwort");
-  return out;
+// Live-Timer: läuft während der ganzen Aufgabe (auch während Befehle laufen), pausiert nur für Rückfragen.
+let T0 = 0, tick = null;
+const clearLine = () => process.stdout.write("\\r\\x1b[K");
+const startTick = () => { if (tick) return; tick = setInterval(() => process.stdout.write("\\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - T0) + C.x + "   "), 250); };
+const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } clearLine(); };
+const say = (s) => { const was = !!tick; stopTick(); console.log(s); if (was) startTick(); };
+
+// Verlauf kürzen, damit lange Aufgaben nicht an zu großem Kontext scheitern. level 0 = mild, 2 = stark.
+const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\\n…[gekürzt]…\\n" + s.slice(s.length - Math.floor(max * 0.3));
+function compact(history, level) {
+  const keep = [6, 8, 4][level], recentMax = [20000, 3000, 1500][level], oldMax = [1500, 800, 400][level];
+  const cut = Math.max(0, history.length - keep);
+  const older = level === 0 ? history.slice(0, cut) : history.slice(0, Math.min(1, cut));
+  return older.map((m) => ({ role: m.role, content: shorten(m.content, oldMax) }))
+    .concat(history.slice(cut).map((m) => ({ role: m.role, content: shorten(m.content, recentMax) })));
 }
 
-async function call(messages) {
-  const t0 = Date.now();
-  const tick = setInterval(() => process.stdout.write("\\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - t0) + C.x + "   "), 250);
+async function once(messages) {
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 170000);
   try {
-    for (let a = 1; a <= 4; a++) {
-      try { return await once(messages); }
-      catch (e) { if (a === 4 || e.status === 401) throw e; await new Promise((r) => setTimeout(r, 1500 * a)); }
+    const r = await fetch(API, {
+      method: "POST", signal: ctl.signal,
+      headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM, messages, stream: true }),
+    });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i; while ((i = buf.indexOf("\\n")) !== -1) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        let p; try { p = JSON.parse(line.slice(5)); } catch { continue; }
+        if (p.type === "error") { const e = new Error(p.error?.message || "Überlastet"); e.status = 529; throw e; }
+        if (p.delta?.text) out += p.delta.text;
+      }
     }
-  } finally { clearInterval(tick); process.stdout.write("\\r\\x1b[K"); }
+    if (!out.trim()) throw new Error("Leere Antwort");
+    return out;
+  } finally { clearTimeout(to); }
+}
+
+async function call(history) {
+  for (let a = 0; a < 6; a++) {
+    try { return await once(compact(history, Math.min(2, Math.floor(a / 2)))); }
+    catch (e) {
+      if (e.status === 401) throw new Error("API-Key ungültig – bitte neu anmelden: mythos login");
+      if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
+      await new Promise((r) => setTimeout(r, Math.min(8000, 1500 * (a + 1))));
+    }
+  }
+  throw new Error("Mythos ist gerade nicht erreichbar – bitte gleich nochmal versuchen.");
 }
 
 async function runTool(t) {
   const show = t.name === "write" ? \`write \${t.path} (\${(t.content || "").length} Zeichen)\` : \`\${t.name} \${t.cmd || t.path || ""}\`;
-  console.log(C.y + "⚙  " + show + C.x);
+  say(C.y + "⚙  " + show + C.x);
   if ((t.name === "run" || t.name === "write") && !autoYes) {
+    stopTick();
     const a = (await ask(C.d + "   Erlauben? [j/N/a=immer] " + C.x)).trim().toLowerCase();
+    startTick();
     if (a === "a") autoYes = true; else if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt.";
   }
   try {
-    if (t.name === "run") return execSync(t.cmd, { encoding: "utf8", stdio: "pipe", timeout: 120000, maxBuffer: 1e7 }).slice(-8000) || "(keine Ausgabe)";
+    if (t.name === "run") return await new Promise((res) => exec(t.cmd, { encoding: "utf8", timeout: 180000, maxBuffer: 1e7 },
+      (err, so, se) => res(((so || "") + (se || "") + (err ? "\\nExit: " + (err.code ?? err.message) : "")).slice(-8000) || "(keine Ausgabe)")));
     if (t.name === "read") return fs.readFileSync(t.path, "utf8").slice(0, 20000);
     if (t.name === "write") { fs.mkdirSync(path.dirname(path.resolve(t.path)), { recursive: true }); fs.writeFileSync(t.path, t.content ?? ""); return "OK geschrieben: " + t.path; }
     if (t.name === "ls") return fs.readdirSync(t.path || ".", { withFileTypes: true }).map((e) => (e.isDirectory() ? "📁 " : "   ") + e.name).join("\\n");
@@ -99,9 +126,10 @@ async function runTool(t) {
 }
 
 async function turn(history, input) {
-  const T0 = Date.now();
+  T0 = Date.now(); startTick();
   try { await turnInner(history, input); }
-  finally { console.log(C.g + "✓ Mythos hat " + fmt(Date.now() - T0) + " gearbeitet" + C.x + "\\n"); }
+  catch (e) { say(C.r + "⚠ " + e.message + C.x); }
+  finally { stopTick(); console.log(C.g + "✓ Mythos hat " + fmt(Date.now() - T0) + " gearbeitet" + C.x + "\\n"); }
 }
 async function turnInner(history, input) {
   history.push({ role: "user", content: input });
@@ -110,7 +138,7 @@ async function turnInner(history, input) {
     history.push({ role: "assistant", content: out });
     const m = out.match(/<tool>([\\s\\S]*?)<\\/tool>/);
     const text = out.replace(/<tool>[\\s\\S]*?<\\/tool>/g, "").trim();
-    if (text) console.log(C.b + "Mythos: " + C.x + text + "\\n");
+    if (text) say(C.b + "Mythos: " + C.x + text + "\\n");
     if (!m) return;
     let t; try { t = JSON.parse(m[1]); } catch { history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
     const res = await runTool(t);
@@ -131,7 +159,7 @@ async function main() {
     if (!q) continue;
     if (q === "/exit") break;
     if (q === "/clear") { history.length = 0; console.log("Verlauf geleert."); continue; }
-    try { await turn(history, q); } catch (e) { console.log(C.r + "Fehler: " + e.message + C.x); }
+    await turn(history, q);
   }
   rl.close();
 }
@@ -203,12 +231,33 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.`;
 
 // ================= Mythos Code Desktop-App (Electron) =================
 export const APP_PKG = "mythos-code-app";
+export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
+
+/** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
+export function toDirectDownloadUrl(input: string): string | null {
+  let u: URL;
+  try { u = new URL(input.trim()); } catch { return null; }
+  if (u.protocol !== "https:") return null;
+  if (/(^|\.)google\.com$/.test(u.hostname)) {
+    const id = u.pathname.match(/\/file\/d\/([\w-]+)/)?.[1] || u.searchParams.get("id");
+    if (id) return `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`;
+  }
+  return u.toString();
+}
+
+export const APP_USER_GUIDE = (url: string) => `## ✦ Mythos Code App
+
+Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier klicken](${url}).
+
+1. **MythosCode-Setup.exe** ausführen. Falls Windows „Der Computer wurde durch Windows geschützt“ zeigt: **Weitere Informationen → Trotzdem ausführen**.
+2. App öffnen → **Mit MythosAI anmelden** → im Browser auf **Authentifizieren** klicken.
+3. Ordner wählen, optional **Vollzugriff** einschalten – fertig. Mit 📎 kannst du Dateien hochladen, oben siehst du Laufzeit und Usage (Pro = unbegrenzt).`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({
   name: APP_PKG,
   productName: "Mythos Code",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Mythos Code – KI-Coding-Agent als App (by Mythoscraft)",
   main: "main.js",
   author: "Mythoscraft",
@@ -298,23 +347,49 @@ const post = (fn, body, h) => fetch(CFG.fn + "/" + fn, { method: "POST", headers
 function add(cls, text) { const d = document.createElement("div"); d.className = "m glass " + cls; d.textContent = text; $("log").appendChild(d); $("log").scrollTop = 1e9; return d; }
 const SYSTEM = () => "Du bist Mythos Code, ein autonomer Coding-Agent als Desktop-App (Windows). Arbeitsordner: " + (cfg.folder || "(keiner)") +
   ". Werkzeuge – antworte mit GENAU EINEM Block:\\n<tool>{\\"name\\":\\"run\\",\\"cmd\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"read\\",\\"path\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"write\\",\\"path\\":\\"...\\",\\"content\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"ls\\",\\"path\\":\\".\\"}</tool>\\nPfade relativ zum Arbeitsordner. Arbeite Schritt für Schritt, am Ende normal ohne <tool> antworten.";
-async function once(messages) {
-  const r = await post("v1-messages", { model: "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }, { "x-api-key": cfg.key, "anthropic-version": "2023-06-01" });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
-  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "";
-  for (;;) { const x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true }); let i;
-    while ((i = buf.indexOf("\\n")) !== -1) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (l.startsWith("data:")) { try { const p = JSON.parse(l.slice(5)); if (p.delta && p.delta.text) out += p.delta.text; } catch (e) {} } } }
-  if (!out.trim()) throw new Error("Leere Antwort"); return out;
+const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\\n…[gekürzt]…\\n" + s.slice(s.length - Math.floor(max * 0.3));
+function compact(h, level) {
+  const keep = [6, 8, 4][level], recentMax = [20000, 3000, 1500][level], oldMax = [1500, 800, 400][level];
+  const cut = Math.max(0, h.length - keep);
+  const older = level === 0 ? h.slice(0, cut) : h.slice(0, Math.min(1, cut));
+  return older.map((m) => ({ role: m.role, content: shorten(m.content, oldMax) }))
+    .concat(h.slice(cut).map((m) => ({ role: m.role, content: shorten(m.content, recentMax) })));
 }
-async function call(m) { for (let a = 1; a <= 4; a++) { try { return await once(m); } catch (e) { if (a === 4 || e.status === 401) throw e; await new Promise((r) => setTimeout(r, 1500 * a)); } } }
+async function once(messages) {
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 170000);
+  try {
+    const r = await fetch(CFG.fn + "/v1-messages", { method: "POST", signal: ctl.signal,
+      headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }) });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "";
+    for (;;) { const x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true }); let i;
+      while ((i = buf.indexOf("\\n")) !== -1) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!l.startsWith("data:")) continue; let p; try { p = JSON.parse(l.slice(5)); } catch (e) { continue; }
+        if (p.type === "error") { const e = new Error((p.error && p.error.message) || "Überlastet"); e.status = 529; throw e; }
+        if (p.delta && p.delta.text) out += p.delta.text; } }
+    if (!out.trim()) throw new Error("Leere Antwort"); return out;
+  } finally { clearTimeout(to); }
+}
+async function call(h) {
+  for (let a = 0; a < 6; a++) {
+    try { return await once(compact(h, Math.min(2, Math.floor(a / 2)))); }
+    catch (e) {
+      if (e.status === 401) throw new Error("Anmeldung abgelaufen – bitte abmelden und neu anmelden.");
+      if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
+      await new Promise((r) => setTimeout(r, Math.min(8000, 1500 * (a + 1))));
+    }
+  }
+  throw new Error("Mythos ist gerade nicht erreichbar – bitte gleich nochmal versuchen.");
+}
 async function usage() { try { const j = await (await post("cli-auth", { action: "usage", api_key: cfg.key })).json();
   $("usage").textContent = j.limit == null ? "Usage " + j.used + " / ∞ (Pro)" : "Usage " + j.used + " / " + j.limit; } catch (e) {} }
 async function send() {
   const q = $("inp").value.trim(); if (!q || busy) return; $("inp").value = ""; busy = true;
   let content = q; if (attach.length) content += "\\n\\nHochgeladene Dateien:\\n" + attach.map((f) => "### " + f.name + "\\n" + f.content).join("\\n\\n");
   attach = []; $("files").textContent = ""; add("u", q); history.push({ role: "user", content });
-  const t0 = Date.now(); const tick = setInterval(() => $("timer").textContent = "⏱ arbeitet… " + fmt(Date.now() - t0), 250);
+  const t0 = Date.now(); const live = add("t", "⏳ Mythos arbeitet… 0s");
+  const tick = setInterval(() => { const s = fmt(Date.now() - t0); $("timer").textContent = "⏱ arbeitet… " + s; live.textContent = "⏳ Mythos arbeitet… " + s; $("log").appendChild(live); }, 250);
   try {
     for (let i = 0; i < 40; i++) {
       const out = await call(history); history.push({ role: "assistant", content: out });
@@ -326,8 +401,9 @@ async function send() {
       else res = await window.mythos.tool(t, cfg.folder);
       history.push({ role: "user", content: "Werkzeug-Ergebnis:\\n" + res });
     }
-  } catch (e) { add("a", "Fehler: " + e.message); }
-  clearInterval(tick); const took = fmt(Date.now() - t0); $("timer").textContent = "⏱ " + took; add("t", "✓ Mythos hat " + took + " gearbeitet"); busy = false; usage();
+  } catch (e) { add("a", "⚠ " + e.message); }
+  clearInterval(tick); const took = fmt(Date.now() - t0); $("timer").textContent = "⏱ " + took;
+  live.textContent = "✓ Mythos hat " + took + " gearbeitet"; $("log").appendChild(live); $("log").scrollTop = 1e9; busy = false; usage();
 }
 async function login() {
   $("lstat").textContent = "Browser öffnet sich …";

@@ -1,4 +1,4 @@
-import { aiFetch } from "../_shared/ai.ts";
+import { aiChat } from "../_shared/ai.ts";
 import { buildSystemMessages } from "../_shared/identity.ts";
 import { MYTHOS_CATALOG } from "../_shared/catalog.ts";
 // Claude-compatible /v1/messages endpoint, backed by Lovable AI Gateway.
@@ -11,6 +11,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-api-key, anthropic-version, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const FALLBACK_MODEL = "google/gemini-3.6-flash";
+// Bleibt unter dem Edge-Function-Limit, damit wir immer selbst sauber antworten.
+const TIME_BUDGET_MS = 140_000;
 
 async function sha256(s: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
@@ -42,17 +46,45 @@ function mythosLabelFor(m: string): string {
   return "Mythos v1";
 }
 
-function toOpenAI(messages: any[]): any[] {
+function blockText(b: any): string {
+  if (!b) return "";
+  if (typeof b === "string") return b;
+  if (b.type === "text") return b.text || "";
+  if (b.type === "tool_use") return `[tool_use ${b.name}] ${JSON.stringify(b.input ?? {})}`;
+  if (b.type === "tool_result") {
+    const c = b.content;
+    const t = typeof c === "string" ? c : Array.isArray(c) ? c.map(blockText).join("\n") : "";
+    return `[tool_result${b.is_error ? " error" : ""}]\n${t}`;
+  }
+  return "";
+}
+
+// Anthropic-Blöcke (auch tool_use/tool_result) -> reiner Text, sonst entstehen leere Nachrichten.
+function toOpenAI(messages: any[]): { role: string; content: string }[] {
   return messages.map((m) => {
-    if (typeof m.content === "string") return { role: m.role, content: m.content };
-    const text = (m.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
-    return { role: m.role, content: text };
+    const content = typeof m.content === "string"
+      ? m.content
+      : (m.content || []).map(blockText).filter(Boolean).join("\n");
+    return { role: m.role === "assistant" ? "assistant" : "user", content: content || "(leer)" };
   });
+}
+
+function shorten(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const head = Math.floor(max * 0.7);
+  return s.slice(0, head) + "\n…[gekürzt]…\n" + s.slice(s.length - (max - head));
+}
+
+// Kürzt lange Verläufe: erste Nachricht (Aufgabe) + die letzten `keepLast`, jede Nachricht max. `maxChars`.
+function compact(msgs: { role: string; content: string }[], keepLast: number, maxChars: number) {
+  const picked = msgs.length > keepLast + 1 ? [msgs[0], ...msgs.slice(-keepLast)] : msgs;
+  return picked.map((m) => ({ role: m.role, content: shorten(m.content, maxChars) }));
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return err("invalid_request_error", "Use POST", 405);
+  const startedAt = Date.now();
 
   const apiKey = req.headers.get("x-api-key") || req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!apiKey || !apiKey.startsWith("sk-ant-mythos-")) return err("authentication_error", "Invalid API key", 401);
@@ -84,107 +116,154 @@ Deno.serve(async (req) => {
     ? (typeof system === "string" ? system : (system || []).map((b: any) => b.text).join("\n"))
     : "";
 
-  const oaiMessages: any[] = [
+  const systemMsgs: any[] = [
     { role: "system", content: MYTHOS_CATALOG },
     ...buildSystemMessages(userSystem, {
       modelLabel: mythosLabelFor(model),
       surface: "api",
       lang: "en",
     }),
-    ...toOpenAI(messages),
+  ];
+  const conv = toOpenAI(messages);
+  const primary = mapModel(model);
+
+  // Erst voller Verlauf, dann gekürzt, dann schnelles Ausweichmodell mit stark gekürztem Verlauf.
+  const attempts = [
+    { model: primary, msgs: conv },
+    { model: primary, msgs: compact(conv, 12, 6000) },
+    { model: FALLBACK_MODEL, msgs: compact(conv, 8, 3000) },
   ];
 
-  const gatewayBody: any = {
-    model: mapModel(model),
-    messages: oaiMessages,
-    stream,
+  const gatewayBodyFor = (a: { model: string; msgs: any[] }, streamFlag: boolean) => {
+    const b: any = { model: a.model, messages: [...systemMsgs, ...a.msgs], stream: streamFlag };
+    if (!a.model.startsWith("openai/")) b.max_tokens = max_tokens;
+    if (typeof temperature === "number") b.temperature = temperature;
+    return b;
   };
-  if (!gatewayBody.model.startsWith("openai/")) gatewayBody.max_tokens = max_tokens;
-  if (typeof temperature === "number") gatewayBody.temperature = temperature;
 
-  const upstream = await aiFetch("gateway", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
-    body: JSON.stringify(gatewayBody),
-  });
+  let lastStatus = 503;
+  let usedModel = primary;
 
-  const logUsage = async (input_tokens?: number, output_tokens?: number) => {
+  /** Nächster erfolgreicher Upstream-Response ab Versuch `from`, oder null. */
+  const nextUpstream = async (from: number, streamFlag: boolean): Promise<{ resp: Response; index: number } | null> => {
+    for (let i = from; i < attempts.length; i++) {
+      const remaining = TIME_BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < 5_000) break;
+      try {
+        const r = await Promise.race([
+          aiChat(gatewayBodyFor(attempts[i], streamFlag), Deno.env.get("LOVABLE_API_KEY")),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), remaining)),
+        ]);
+        if (r.ok) { usedModel = attempts[i].model; return { resp: r, index: i }; }
+        lastStatus = r.status;
+        console.error("upstream failed", attempts[i].model, r.status, (await r.text().catch(() => "")).slice(0, 300));
+      } catch (e) {
+        lastStatus = 504;
+        console.error("upstream exception", attempts[i].model, e instanceof Error ? e.message : String(e));
+      }
+    }
+    return null;
+  };
+
+  const logUsage = async (status: number, input_tokens?: number, output_tokens?: number) => {
     await supabase.from("api_usage").insert({
-      api_key_id: keyRow.id, user_id: keyRow.user_id, model: gatewayBody.model,
-      input_tokens, output_tokens, status_code: upstream.status,
+      api_key_id: keyRow.id, user_id: keyRow.user_id, model: usedModel,
+      input_tokens, output_tokens, status_code: status,
     });
     await supabase.from("api_keys").update({ total_requests: Number(keyRow.total_requests) + 1, last_used_at: new Date().toISOString() }).eq("id", keyRow.id);
   };
 
-  if (!upstream.ok) {
-    const t = await upstream.text();
-    await logUsage();
-    if (upstream.status === 429) return err("rate_limit_error", "Upstream rate limit", 429);
-    if (upstream.status === 402) return err("api_error", "Provider credits exhausted", 502);
-    console.error("Gateway error", upstream.status, t);
-    return err("api_error", "Upstream error", 502);
-  }
+  const failureError = () => lastStatus === 429
+    ? { type: "rate_limit_error", message: "Mythos ist gerade stark ausgelastet – bitte kurz warten.", status: 429 }
+    : { type: "overloaded_error", message: "Mythos ist gerade überlastet – bitte gleich nochmal versuchen.", status: 529 };
 
   if (!stream) {
-    const data = await upstream.json();
-    const text = data.choices?.[0]?.message?.content || "";
-    const usage = data.usage || {};
-    await logUsage(usage.prompt_tokens, usage.completion_tokens);
-
-    const respId = `msg_${crypto.randomUUID().replace(/-/g, "")}`;
-    return new Response(JSON.stringify({
-      id: respId,
-      type: "message",
-      role: "assistant",
-      model,
-      content: [{ type: "text", text }],
-      stop_reason: "end_turn",
-      stop_sequence: null,
-      usage: { input_tokens: usage.prompt_tokens || 0, output_tokens: usage.completion_tokens || 0 },
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    for (let from = 0; from < attempts.length;) {
+      const got = await nextUpstream(from, false);
+      if (!got) break;
+      const data = await got.resp.json().catch(() => null);
+      const text = data?.choices?.[0]?.message?.content || "";
+      if (!text) { from = got.index + 1; continue; }
+      const usage = data.usage || {};
+      await logUsage(200, usage.prompt_tokens, usage.completion_tokens);
+      return new Response(JSON.stringify({
+        id: `msg_${crypto.randomUUID().replace(/-/g, "")}`,
+        type: "message",
+        role: "assistant",
+        model,
+        content: [{ type: "text", text }],
+        stop_reason: "end_turn",
+        stop_sequence: null,
+        usage: { input_tokens: usage.prompt_tokens || 0, output_tokens: usage.completion_tokens || 0 },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    await logUsage(lastStatus);
+    const f = failureError();
+    return err(f.type, f.message, f.status);
   }
 
-  await logUsage();
+  // Streaming: Header sofort senden und per Ping wach halten, damit lange Anfragen nicht in einen Timeout laufen.
   const respId = `msg_${crypto.randomUUID().replace(/-/g, "")}`;
   const enc = new TextEncoder();
 
   const out = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: any) => controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      const ping = setInterval(() => { try { send("ping", { type: "ping" }); } catch { /* closed */ } }, 5000);
 
       send("message_start", { type: "message_start", message: { id: respId, type: "message", role: "assistant", content: [], model, stop_reason: null, stop_sequence: null, usage: { input_tokens: 0, output_tokens: 0 } } });
-      send("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } });
 
-      const reader = upstream.body!.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          let idx;
-          while ((idx = buf.indexOf("\n")) !== -1) {
-            let line = buf.slice(0, idx); buf = buf.slice(idx + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line.startsWith("data: ")) continue;
-            const json = line.slice(6).trim();
-            if (json === "[DONE]") continue;
-            try {
-              const p = JSON.parse(json);
-              const c = p.choices?.[0]?.delta?.content;
-              if (c) send("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: c } });
-            } catch { buf = line + "\n" + buf; break; }
+      let emitted = 0;
+      let blockOpen = false;
+      const emit = (text: string) => {
+        if (!blockOpen) { send("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }); blockOpen = true; }
+        emitted += text.length;
+        send("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } });
+      };
+
+      for (let from = 0; from < attempts.length && emitted === 0;) {
+        const got = await nextUpstream(from, true);
+        if (!got) break;
+        from = got.index + 1;
+        const reader = got.resp.body!.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let idx;
+            while ((idx = buf.indexOf("\n")) !== -1) {
+              let line = buf.slice(0, idx); buf = buf.slice(idx + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (!line.startsWith("data: ")) continue;
+              const json = line.slice(6).trim();
+              if (json === "[DONE]") continue;
+              try {
+                const c = JSON.parse(json).choices?.[0]?.delta?.content;
+                if (c) emit(c);
+              } catch { buf = line + "\n" + buf; break; }
+            }
           }
-        }
-      } catch (e) { console.error("stream err", e); }
+        } catch (e) { console.error("stream err", e); }
+      }
 
+      clearInterval(ping);
+      if (emitted === 0) {
+        await logUsage(lastStatus);
+        const f = failureError();
+        send("error", { type: "error", error: { type: f.type, message: f.message } });
+        controller.close();
+        return;
+      }
+      await logUsage(200, undefined, Math.ceil(emitted / 4));
       send("content_block_stop", { type: "content_block_stop", index: 0 });
-      send("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 0 } });
+      send("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: Math.ceil(emitted / 4) } });
       send("message_stop", { type: "message_stop" });
       controller.close();
     },
   });
 
-  return new Response(out, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+  return new Response(out, { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
 });

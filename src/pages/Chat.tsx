@@ -51,6 +51,9 @@ const SLASH_COMMANDS = [
   { cmd: "/offline",   args: "<frage>",         icon: WifiOff,   desc: "Offline-Chat im Browser (Qwen2.5-0.5B, ~500MB einmalig)" },
   { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
   { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
+  { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
+  { cmd: "/codeprogrammadmin", args: "",        icon: Shield,    desc: "Admin: App-ZIP für den Setup-Build erzeugen", admin: true },
+  { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
 ];
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
@@ -214,19 +217,53 @@ const Chat = () => {
       }
       text = `/image ${prompt}`;
     }
+    const localReply = (content: string) => setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content }]);
+    const downloadBlob = (blob: Blob, name: string) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    };
     if (/^\/codeadmin\b/i.test(text)) {
       if (!override) setInput("");
       if (!isAdmin) { toast.error("Nur für Admins."); return; }
-      if (localStorage.getItem("mythos_cli_built")) {
-        setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: "Das Mythos-Code-Paket wurde bereits erstellt. **/codeadmin** geht nur einmal." }]);
+      const { buildCliZip, ADMIN_GUIDE, CLI_PKG, CLI_VERSION } = await import("@/lib/mythosCli");
+      if (localStorage.getItem("mythos_cli_built") === CLI_VERSION) {
+        localReply(`Das Mythos-Code-Paket v${CLI_VERSION} wurde bereits erstellt. **/codeadmin** geht nur einmal pro Version.`);
         return;
       }
-      const { buildCliZip, ADMIN_GUIDE, CLI_PKG } = await import("@/lib/mythosCli");
-      const blob = await buildCliZip();
+      downloadBlob(await buildCliZip(), `${CLI_PKG}.zip`);
+      localStorage.setItem("mythos_cli_built", CLI_VERSION);
+      localReply(ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/codeprogrammadminupload\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const { toDirectDownloadUrl, APP_DOWNLOAD_SETTING } = await import("@/lib/mythosCli");
+      const url = toDirectDownloadUrl(text.replace(/^\/codeprogrammadminupload\b/i, ""));
+      if (!url) { localReply("Bitte einen gültigen https-Link angeben:\n```\n/codeprogrammadminupload https://drive.google.com/file/d/…/view\n```"); return; }
+      const { error } = await supabase.from("app_settings")
+        .upsert({ key: APP_DOWNLOAD_SETTING, value: url, updated_at: new Date().toISOString() });
+      if (error) { toast.error("Speichern fehlgeschlagen: " + error.message); return; }
+      localReply(`✓ Download-Link gespeichert. Ab jetzt kann jeder mit **/codeprogramm** die Setup-EXE herunterladen.\n\nDirekter Link: ${url}`);
+      return;
+    }
+    if (/^\/codeprogrammadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const { buildAppZip, APP_ADMIN_GUIDE, APP_PKG } = await import("@/lib/mythosCli");
+      downloadBlob(await buildAppZip(window.location.origin), `${APP_PKG}.zip`);
+      localReply(APP_ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/codeprogramm\b/i.test(text)) {
+      if (!override) setInput("");
+      const { APP_DOWNLOAD_SETTING, APP_USER_GUIDE } = await import("@/lib/mythosCli");
+      const { data } = await supabase.from("app_settings").select("value").eq("key", APP_DOWNLOAD_SETTING).maybeSingle();
+      if (!data?.value) { localReply("Die Mythos Code App ist noch nicht verfügbar – schau bald wieder vorbei."); return; }
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = `${CLI_PKG}.zip`; a.click();
-      localStorage.setItem("mythos_cli_built", "1");
-      setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: ADMIN_GUIDE }]);
+      a.href = data.value; a.target = "_blank"; a.rel = "noopener"; a.click();
+      localReply(APP_USER_GUIDE(data.value));
       return;
     }
     if (/^\/code\s*$/i.test(text)) {
@@ -1016,7 +1053,7 @@ const Chat = () => {
 
               {input.startsWith("/") && (() => {
                 const q = input.slice(1).split(/\s/)[0].toLowerCase();
-                const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+                const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q) && (!("admin" in c) || isAdmin));
                 if (!filtered.length) return null;
                 const pick = (cmd: string, args: string) => {
                   setInput(args ? `${cmd} ` : cmd + " ");
@@ -1062,7 +1099,7 @@ const Chat = () => {
                   onKeyDown={(e) => {
                     if (input.startsWith("/")) {
                       const q = input.slice(1).split(/\s/)[0].toLowerCase();
-                      const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q));
+                      const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(q) && (!("admin" in c) || isAdmin));
                       if (filtered.length && !input.includes(" ")) {
                         if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => (i + 1) % filtered.length); return; }
                         if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIndex(i => (i - 1 + filtered.length) % filtered.length); return; }

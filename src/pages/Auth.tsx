@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +20,19 @@ const getPasswordStrength = (pwd: string) => {
 
 const Auth = () => {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const rawNext = params.get("next") || "";
+  // Nur interne Pfade zulassen (kein Open Redirect).
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/app";
 
   useEffect(() => {
-    if (user) nav("/app");
-  }, [user, nav]);
+    if (user) nav(next);
+  }, [user, nav, next]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +43,7 @@ const Auth = () => {
       toast.error(error.message);
     } else {
       toast.success("Willkommen zurück!");
-      nav("/app");
+      nav(next);
     }
   };
 
@@ -50,7 +54,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin + "/app",
+        emailRedirectTo: window.location.origin + next,
         data: { display_name: name },
       },
     });
@@ -59,7 +63,7 @@ const Auth = () => {
       toast.error(error.message);
     } else {
       toast.success("Account erstellt! Du wirst eingeloggt...");
-      nav("/app");
+      nav(next);
     }
   };
 
