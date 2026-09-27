@@ -8,9 +8,9 @@ import APP_HTML from "./mythos-code-app/index.html?raw";
 import APP_RENDERER from "./mythos-code-app/renderer.js?raw";
 import APP_MARKDOWN from "./mythos-code-app/markdown.js?raw";
 
-/** Platzhalter ersetzen (alle Vorkommen). */
-const fill = (src: string, vars: Record<string, string>) =>
-  Object.entries(vars).reduce((out, [k, v]) => out.split(k).join(v), src);
+/** Platzhalter ersetzen (alle Vorkommen). Zeilenenden auf LF, sonst bricht z. B. die Shebang-Zeile unter Linux/macOS. */
+const fill = (src: string, vars: Record<string, string> = {}) =>
+  Object.entries(vars).reduce((out, [k, v]) => out.split(k).join(v.replace(/\r\n/g, "\n")), src.replace(/\r\n/g, "\n"));
 
 export const CLI_PKG = "mythos-code";
 export const CLI_VERSION = "1.4.0";
@@ -172,9 +172,9 @@ export async function buildAppZip(site: string): Promise<Blob> {
   root.file("icon.png", icon);
   root.file("package.json", appPkg());
   root.file("main.js", fill(APP_MAIN, { "// @@SHARED_TOOLS@@": SHARED_TOOLS }));
-  root.file("preload.js", APP_PRELOAD);
-  root.file("index.html", APP_HTML);
-  root.file("markdown.js", APP_MARKDOWN);
+  root.file("preload.js", fill(APP_PRELOAD));
+  root.file("index.html", fill(APP_HTML));
+  root.file("markdown.js", fill(APP_MARKDOWN));
   root.file("renderer.js", fill(APP_RENDERER, { "__SITE__": site, "__FN__": FN_BASE }));
   root.file("config.json", JSON.stringify({ site }, null, 2));
   root.file("README.md", "# Mythos Code App\n\nWird per GitHub Actions zu `MythosCode-Setup.exe` gebaut.\n");
