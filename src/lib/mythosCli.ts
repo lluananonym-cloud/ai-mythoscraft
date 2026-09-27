@@ -8,6 +8,17 @@ import APP_HTML from "./mythos-code-app/index.html?raw";
 import APP_RENDERER from "./mythos-code-app/renderer.js?raw";
 import APP_MARKDOWN from "./mythos-code-app/markdown.js?raw";
 import APP_MCP from "./mythos-code-app/mcp.js?raw";
+import APP_VOICE from "./mythos-code-app/voice.js?raw";
+// Gebündelte Sprach-Worker (npm run build:app-voice): Piper (Stimme) und Whisper (Erkennung), gzip + base64.
+import APP_TTS_WORKER_GZ from "./mythos-code-app/tts-worker.js.gz.b64?raw";
+import APP_STT_WORKER_GZ from "./mythos-code-app/stt-worker.js.gz.b64?raw";
+
+/** base64-kodiertes gzip entpacken (im Browser beim ZIP-Bau). */
+async function gunzipB64(b64: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(b64.replace(/\s+/g, "")), (c) => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).text();
+}
 
 /** Platzhalter ersetzen (alle Vorkommen). Zeilenenden auf LF, sonst bricht z. B. die Shebang-Zeile unter Linux/macOS. */
 const fill = (src: string, vars: Record<string, string> = {}) =>
@@ -98,7 +109,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.7.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -123,7 +134,8 @@ Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier kli
 5. Tippe **/** für Befehle. Mit **/goal <ziel>** arbeitet Mythos selbstständig, bis das Ziel erreicht ist – du kannst das Fenster schließen (Mythos läuft im Tray weiter), der PC muss aber anbleiben. Nach einem Neustart geht es mit **▶ Weitermachen** weiter.
 6. Dateien und Bilder einfach ins Fenster ziehen oder mit **Strg+V** einfügen. Während Mythos arbeitet, reiht **Enter** weitere Aufgaben in die **Warteschlange** ein.
 7. \`/merken\` füllt das Projekt-Gedächtnis (\`MYTHOS.md\`), \`/commit\` und \`/push\` erledigen Git, \`/handy <ntfy-link>\` schickt dir Nachrichten aufs Handy.
-8. Oben: Modell wählen, 👁 Live-Vorschau, 🗂 Dateibaum mit Editor, ⌨ Terminal, ☀ helles Design. Mehrere Chats können gleichzeitig arbeiten. **Automatisch testen** unten einschalten – Mythos repariert fehlschlagende Tests selbst. \`/mcp\` und \`/hooks\` richten MCP-Server und Hooks ein.`;
+8. Oben: Modell wählen, 👁 Live-Vorschau, 🗂 Dateibaum mit Editor, ⌨ Terminal, ☀ helles Design. Mehrere Chats können gleichzeitig arbeiten. **Automatisch testen** unten einschalten – Mythos repariert fehlschlagende Tests selbst. \`/mcp\` und \`/hooks\` richten MCP-Server und Hooks ein.
+9. 🎙 **Sprachmodus**: einfach mit Mythos reden – er hört zu (Whisper), arbeitet und antwortet mit natürlicher Stimme (Piper). Beides läuft lokal, beim ersten Mal werden die Sprachmodelle geladen.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({
@@ -139,7 +151,7 @@ const appPkg = () => JSON.stringify({
   build: {
     appId: "online.mythoscraft.mythoscode",
     productName: "Mythos Code",
-    files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "renderer.js", "config.json", "icon.png"],
+    files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "voice.js", "tts-worker.js", "stt-worker.js", "renderer.js", "config.json", "icon.png"],
     win: { target: "nsis", icon: "icon.png" },
     nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup.exe" },
   },
@@ -178,6 +190,9 @@ export async function buildAppZip(site: string): Promise<Blob> {
   root.file("index.html", fill(APP_HTML));
   root.file("markdown.js", fill(APP_MARKDOWN));
   root.file("mcp.js", fill(APP_MCP));
+  root.file("voice.js", fill(APP_VOICE));
+  root.file("tts-worker.js", await gunzipB64(APP_TTS_WORKER_GZ));
+  root.file("stt-worker.js", await gunzipB64(APP_STT_WORKER_GZ));
   root.file("renderer.js", fill(APP_RENDERER, { "__SITE__": site, "__FN__": FN_BASE }));
   root.file("config.json", JSON.stringify({ site }, null, 2));
   root.file("README.md", "# Mythos Code App\n\nWird per GitHub Actions zu `MythosCode-Setup.exe` gebaut.\n");

@@ -9,6 +9,8 @@ import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   build: { minify: true, sourcemap: false },
+  // Web Worker als ES-Module (der Sprach-Worker mit Piper lädt Teile nach).
+  worker: { format: "es" },
   server: {
     host: "::",
     port: 8080,

@@ -5,10 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
-import { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mic, MicOff, X, Square } from "lucide-react";
-import VoiceOrb from "@/components/VoiceOrb";
+import LogoOrb from "@/components/LogoOrb";
+import { VOICES, getVoice, setVoice } from "@/lib/mythosVoice";
 import { DEFAULT_MYTHOS_ID } from "@/lib/mythosModels";
 import { toast } from "sonner";
 
@@ -21,7 +21,8 @@ export default function Voice() {
   const nav = useNavigate();
   const { isPro, loading } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [level, setLevel] = useState(0);
+  const levelRef = useRef(0);
+  const [voiceId, setVoiceId] = useState(getVoice);
   const [aiText, setAiText] = useState("");
   const [history, setHistory] = useState<{ role: "user"|"assistant"; content: string }[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -96,7 +97,7 @@ export default function Voice() {
         const loop = () => {
           an.getByteFrequencyData(data);
           let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i];
-          setLevel(sum / data.length / 255);
+          levelRef.current = sum / data.length / 255;
           rafRef.current = requestAnimationFrame(loop);
         };
         loop();
@@ -125,13 +126,23 @@ export default function Voice() {
         <Link to="/app" onClick={() => { voice.stopListening(); voice.stopSpeaking(); }}>
           <ArrowLeft className="h-6 w-6 text-white/80" />
         </Link>
-        <LogoMark size="sm" className="opacity-90" />
+        <select
+          value={voiceId}
+          onChange={(e) => { setVoice(e.target.value); setVoiceId(e.target.value); voice.prepare(); }}
+          className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs text-white/80 outline-none"
+          aria-label="Stimme"
+        >
+          {VOICES.map((v) => <option key={v.id} value={v.id} className="bg-neutral-900">{v.label}</option>)}
+        </select>
         <button onClick={exit}><X className="h-6 w-6 text-white/80" /></button>
       </div>
 
       <div className="flex-1 relative">
-        <VoiceOrb level={level} status={voice.status} />
+        <LogoOrb status={voice.status} getLevel={() => (voice.status === "speaking" ? voice.speechLevel() : Math.min(1, levelRef.current * 1.8))} />
         <div className="absolute bottom-32 left-0 right-0 px-6 text-center">
+          {voice.voiceLoad.status === "loading" && (
+            <p className="text-white/50 text-xs mb-2">Natürliche Stimme wird geladen … {voice.voiceLoad.pct}% (nur beim ersten Mal)</p>
+          )}
           <p className="text-white/70 text-sm min-h-[2rem]">
             {voice.status === "listening" && (voice.interim || "Ich höre zu … sprich einfach los")}
             {voice.status === "speaking" && (aiText.slice(-160) || "…")}
@@ -152,7 +163,7 @@ export default function Voice() {
         ) : (
           <Button size="lg" className="h-16 w-16 rounded-full bg-gradient-primary text-primary-foreground"
             disabled={!isPro || !voice.supported}
-            onClick={() => { setAiText(""); voice.startLive(); }}>
+            onClick={() => { setAiText(""); voice.prepare(); voice.startLive(); }}>
             <Mic className="h-7 w-7" />
           </Button>
         )}

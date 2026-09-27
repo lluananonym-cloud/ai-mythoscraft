@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { speaker, loadVoice, onLoadState, type LoadState } from "@/lib/mythosVoice";
 
 /**
  * Browser-native voice + dictation using the Web Speech API.
@@ -15,27 +16,6 @@ type Status = "idle" | "listening" | "speaking";
 const getRecognitionCtor = (): any => {
   if (typeof window === "undefined") return null;
   return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
-};
-
-const pickBestVoice = (lang: string): SpeechSynthesisVoice | null => {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices.length) return null;
-  const short = lang.toLowerCase().slice(0, 2);
-  // Prefer high quality neural / cloud voices, then local premium voices.
-  const preferredNames = [
-    "google deutsch", "google", "natural", "neural", "premium", "enhanced", "siri",
-    "anna", "petra", "katharina", "helena", "eddy", "flo", "markus", "stefan",
-  ];
-  const sameLang = voices.filter(v => v.lang?.toLowerCase().startsWith(short));
-  const pool = sameLang.length ? sameLang : voices;
-  for (const name of preferredNames) {
-    const hit = pool.find(v => v.name.toLowerCase().includes(name));
-    if (hit) return hit;
-  }
-  // non-local (cloud) voices usually sound much better
-  const cloud = pool.find(v => v.localService === false);
-  return cloud ?? pool[0] ?? null;
 };
 
 export type VoiceMode = "live" | "dictate";
@@ -59,20 +39,12 @@ export function useVoiceMode(opts?: {
   const modeRef = useRef<VoiceMode | null>(null); // null = nothing requested
   const isSpeakingRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const startingRef = useRef(false);
 
   useEffect(() => {
     const Ctor = getRecognitionCtor();
-    const ttsOk = typeof window !== "undefined" && "speechSynthesis" in window;
     setSupported(!!Ctor);
     if (!Ctor) return;
-
-    if (ttsOk) {
-      const loadVoices = () => { voiceRef.current = pickBestVoice(lang); };
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
 
     const rec = new Ctor();
     rec.lang = lang;
@@ -135,7 +107,7 @@ export function useVoiceMode(opts?: {
       modeRef.current = null;
       if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
       try { rec.stop(); } catch {}
-      try { window.speechSynthesis?.cancel(); } catch {}
+      speaker.stop();
     };
   }, [lang]);
 
@@ -158,7 +130,8 @@ export function useVoiceMode(opts?: {
     const rec = recognitionRef.current;
     if (!rec) return;
     modeRef.current = "dictate";
-    try { window.speechSynthesis?.cancel(); } catch {}
+    speaker.stop();
+    speaker.unlock();
     isSpeakingRef.current = false;
     safeStart();
   }, [safeStart]);
@@ -167,7 +140,8 @@ export function useVoiceMode(opts?: {
     const rec = recognitionRef.current;
     if (!rec) return;
     modeRef.current = "live";
-    try { window.speechSynthesis?.cancel(); } catch {}
+    speaker.stop();
+    speaker.unlock();
     isSpeakingRef.current = false;
     safeStart();
   }, [safeStart]);
@@ -182,36 +156,10 @@ export function useVoiceMode(opts?: {
   }, []);
 
   const speak = useCallback((text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const clean = text
-      .replace(/```[\s\S]*?```/g, " ")
-      .replace(/!\[.*?\]\(.*?\)/g, " ")
-      .replace(/\[(.*?)\]\(.*?\)/g, "$1")
-      .replace(/[#*_`>|]/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 2500);
-    if (!clean) return;
-    try { window.speechSynthesis.cancel(); } catch {}
-
     const rec = recognitionRef.current;
     isSpeakingRef.current = true;
-    // pause mic while speaking so it doesn't hear itself
-    try { rec?.stop(); } catch {}
-
-    // Split into sentence-sized chunks — long single utterances get cut off
-    // by some browsers and sound robotic without natural pauses.
-    const chunks: string[] = [];
-    let cur = "";
-    for (const part of clean.split(/(?<=[.!?…:;])\s+/)) {
-      if ((cur + " " + part).trim().length > 180) { if (cur) chunks.push(cur.trim()); cur = part; }
-      else cur = (cur ? cur + " " : "") + part;
-    }
-    if (cur.trim()) chunks.push(cur.trim());
-
-    const v = voiceRef.current ?? pickBestVoice(lang);
-    if (v) voiceRef.current = v;
-
+    // Mikro pausieren, damit es sich nicht selbst hört.
+    try { rec?.stop(); } catch { /* läuft nicht */ }
     const finish = () => {
       isSpeakingRef.current = false;
       setStatus(s => (s === "speaking" ? "idle" : s));
@@ -220,26 +168,18 @@ export function useVoiceMode(opts?: {
         restartTimerRef.current = window.setTimeout(safeStart, 250);
       }
     };
-
-    chunks.forEach((chunk, i) => {
-      const u = new SpeechSynthesisUtterance(chunk);
-      u.lang = lang;
-      u.rate = 1.0;
-      u.pitch = 1.02;
-      u.volume = 1;
-      if (v) u.voice = v;
-      if (i === 0) u.onstart = () => setStatus("speaking");
-      if (i === chunks.length - 1) u.onend = finish;
-      u.onerror = () => { if (i === chunks.length - 1) finish(); };
-      window.speechSynthesis.speak(u);
-    });
+    speaker.speak(text, { lang, onStart: () => setStatus("speaking"), onEnd: finish });
   }, [lang, safeStart]);
 
   const stopSpeaking = useCallback(() => {
-    try { window.speechSynthesis?.cancel(); } catch {}
+    speaker.stop();
     isSpeakingRef.current = false;
     setStatus(s => (s === "speaking" ? "idle" : s));
   }, []);
+
+  // Ladezustand der Piper-Stimme (für Fortschrittsanzeige beim ersten Mal).
+  const [voiceLoad, setVoiceLoad] = useState<LoadState>({ status: "idle", pct: 0 });
+  useEffect(() => onLoadState(setVoiceLoad), []);
 
   return {
     supported,
@@ -251,6 +191,11 @@ export function useVoiceMode(opts?: {
     stopListening,
     speak,
     stopSpeaking,
+    /** Lautstärke der Mythos-Stimme 0..1 (für den Logo-Orb). */
+    speechLevel: () => speaker.level(),
+    /** Piper beim Klick entsperren + im Hintergrund laden. */
+    prepare: () => { speaker.unlock(); loadVoice()?.catch(() => {}); },
+    voiceLoad,
     /** legacy alias = live mode */
     startListening: startLive,
     isLiveListening: modeRef.current === "live",

@@ -30,7 +30,10 @@ function draw(it, i) {
   let d;
   if (it.cls === "a" || it.cls === "sum") {
     d = el("div", "m a" + (it.cls === "sum" ? " sum glass" : "")); const img = el("img"); img.src = "icon.png";
-    const b = el("div", "body"); if (it.cls === "sum") b.appendChild(el("div", "sumhead", "📋 Zusammenfassung")); md(b, it.text); d.append(img, b);
+    const b = el("div", "body"); if (it.cls === "sum") b.appendChild(el("div", "sumhead", "📋 Zusammenfassung")); md(b, it.text);
+    const sp = el("button", "speak", "🔊"); sp.title = "Vorlesen";
+    sp.onclick = () => { const S = window.MythosVoice.speaker; S.setVoice(cfg.voice || window.MythosVoice.VOICES[0].id); S.prepare(); S.speak(it.text); };
+    d.append(img, b, sp);
   } else if (it.cls === "u") {
     d = el("div", "m u glass"); d.appendChild(document.createTextNode(it.text));
     const imgs = (it.att || []).filter((a) => a.image);
@@ -43,6 +46,7 @@ function draw(it, i) {
 }
 function addTo(c, cls, text, extra) {
   c.view.push(Object.assign({ cls: cls, text: text }, extra || {}));
+  if ((cls === "a" || cls === "sum") && runs.has(c.id)) runs.get(c.id).lastText = text;
   if (c !== chat) return null;
   const e = $("empty"); if (e) e.remove();
   const d = draw(c.view[c.view.length - 1], c.view.length - 1);
@@ -317,6 +321,7 @@ async function runAgent(c) {
   const title = run.stopped ? "■ Gestoppt nach " + took : reached ? "🎯 Ziel erreicht" : finished ? "✓ Fertig nach " + took : "⚠ Unterbrochen – Mythos braucht dich";
   window.mythos.notify("Mythos Code – " + c.title, title);
   if (cfg.notify && (goal || Date.now() - run.t0 > 60000)) window.mythos.push(cfg.notify, "Mythos Code – " + (run.folder ? base(run.folder) : c.title), title + (summary ? "\n\n" + summary.slice(0, 1500) : ""));
+  if (typeof voiceReply === "function") voiceReply(c, run.lastText || (run.stopped ? "Gestoppt." : "Fertig."));
   if (!run.stopped) processQueue(c); else if (c === chat) renderQueue();
 }
 
@@ -370,6 +375,8 @@ function mcpReport() {
 
 // ---------- Befehle ----------
 const COMMANDS = [
+  ["/sprache", "", "Sprachmodus: mit Mythos sprechen (Whisper + Piper, lokal)"],
+  ["/stimme", "[name]", "Stimme für den Sprachmodus wählen"],
   ["/goal", "<ziel>", "Mythos arbeitet selbstständig, bis das Ziel erreicht ist – danach Zusammenfassung"],
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
@@ -406,6 +413,15 @@ async function command(q) {
     pushUser(chat, "🎯 /goal " + arg, "Neues Ziel: " + arg + "\nArbeite jetzt komplett selbstständig daran, bis es erreicht und geprüft ist.", { q: "/goal " + arg });
     chat.goal = arg; renderGoal();
     return runAgent(chat);
+  }
+  if (cmd === "/sprache") return vm.on ? voiceStop() : voiceStart();
+  if (cmd === "/stimme") {
+    const vs = window.MythosVoice.VOICES;
+    if (!arg) return note("🔊 Stimmen:\n" + vs.map((v) => ((cfg.voice || vs[0].id) === v.id ? "● " : "○ ") + v.label).join("\n") + "\nWechseln: /stimme <name> oder im Sprachmodus oben rechts");
+    const v = vs.find((x) => x.id === arg || x.label.toLowerCase().startsWith(arg.toLowerCase()));
+    if (!v) return note("Unbekannte Stimme. Verfügbar: " + vs.map((x) => x.label.split(" ")[0]).join(", "));
+    cfg.voice = v.id; window.mythos.setCfg(cfg); $("vvoice").value = v.id; window.MythosVoice.speaker.setVoice(v.id);
+    return note("🔊 Stimme: " + v.label);
   }
   if (cmd === "/weiter") return chat.history.length ? continueChat() : note("Hier gibt es noch nichts zum Weitermachen.");
   if (cmd === "/neu") return newChat();
@@ -797,6 +813,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if ($("editor").style.display !== "none") return closeEditor();
   if ($("slash").style.display !== "none") { $("slash").style.display = "none"; return; }
+  if (typeof vm !== "undefined" && vm.on) return voiceStop();
   if (isBusy(chat)) stop(chat); else cancelEdit();
 });
 let searchTimer = 0;
@@ -845,6 +862,68 @@ $("btnOut").onclick = async () => {
   await window.mythos.setCfg(cfg); location.reload();
 };
 Promise.all([window.mythos.prompts(), window.mythos.getCfg()]).then(([p, c]) => {
-  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; addProject(cfg.folder); applyTheme();
+  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme();
   if (cfg.key) show();
 });
+
+// ---------- Sprachmodus: zuhören → Whisper → Mythos → Antwort vorlesen → wieder zuhören ----------
+const V = window.MythosVoice;
+const vm = { on: false, phase: "idle", rec: null, waitChat: null, orbStop: null };
+function setVStatus(text, sub) { $("vstatus").textContent = text; if (sub != null) $("vsub").textContent = sub; }
+const voiceLevel = () => (vm.phase === "listening" && vm.rec ? vm.rec.level() : vm.phase === "speaking" ? V.speaker.level() : 0);
+function voiceStart() {
+  if (vm.on) return;
+  vm.on = true; document.body.classList.add("voice-on"); $("voicebar").style.display = "flex";
+  V.speaker.setVoice(cfg.voice || V.VOICES[0].id); V.speaker.prepare(); V.loadStt();
+  if (!vm.orbStop) vm.orbStop = V.createOrb($("vorb"), () => ({ status: vm.phase, level: voiceLevel() }));
+  voiceListen();
+}
+function voiceStop() {
+  vm.on = false; vm.waitChat = null;
+  if (vm.rec) { vm.rec.cancel(); vm.rec = null; }
+  V.speaker.stop(); vm.phase = "idle";
+  document.body.classList.remove("voice-on"); $("voicebar").style.display = "none";
+  if (vm.orbStop) { vm.orbStop(); vm.orbStop = null; }
+}
+async function voiceListen() {
+  if (!vm.on || vm.rec) return;
+  vm.phase = "listening"; setVStatus("Ich höre zu … sprich einfach los", "Kurze Pause = fertig · Klick auf das Logo = sofort senden");
+  try {
+    vm.rec = await V.record({
+      onSpeech: () => setVStatus("Ich höre zu …"),
+      onDone: async (pcm) => {
+        vm.rec = null;
+        if (!vm.on) return;
+        if (!pcm) return voiceListen();
+        vm.phase = "thinking"; setVStatus("Verstehe …", "");
+        let text = "";
+        try { text = await V.transcribe(pcm); } catch (e) { note("🎙 Spracherkennung fehlgeschlagen: " + e.message); return voiceStop(); }
+        if (!vm.on) return;
+        text = text.replace(/^\[.*?\]$|^\(.*?\)$/g, "").trim(); // Whisper-Geräusch-Markierungen
+        if (text.length < 2) return voiceListen();
+        if (/^(stopp?|beenden|tschüss|sprachmodus aus)[.!]?$/i.test(text)) { voiceStop(); return note("🎙 Sprachmodus beendet."); }
+        setVStatus("„" + text + "“", "Mythos arbeitet …");
+        vm.waitChat = chat;
+        if (isBusy(chat)) { (chat.queue = chat.queue || []).push({ q: text, att: [] }); renderQueue(); }
+        else submit(chat, text, []);
+      },
+    });
+  } catch (e) { note("🎙 Mikrofon nicht verfügbar: " + e.message); voiceStop(); }
+}
+function voiceReply(c, text) {
+  if (!vm.on || vm.waitChat !== c) return;
+  vm.waitChat = null; vm.phase = "speaking"; setVStatus("Mythos spricht …", "Klick auf das Logo = unterbrechen");
+  V.speaker.speak(text, { onEnd: () => { if (vm.on && vm.phase === "speaking") { vm.phase = "idle"; voiceListen(); } } });
+}
+function voiceInterrupt() {
+  if (!vm.on) return;
+  if (vm.phase === "listening" && vm.rec) vm.rec.stop();
+  else if (vm.phase === "speaking") { V.speaker.stop(); vm.phase = "idle"; voiceListen(); }
+  else if (vm.phase === "thinking" && isBusy(chat)) stop(chat);
+}
+V.onSttState((s) => { if (vm.on && s.status === "loading") $("vsub").textContent = "Spracherkennung wird geladen … " + s.pct + "% (nur beim ersten Mal)"; });
+V.onTtsState((s) => { if (vm.on && s.status === "loading" && vm.phase !== "listening") $("vsub").textContent = "Stimme wird geladen … " + s.pct + "%"; });
+V.VOICES.forEach((v) => { const o = el("option", "", v.label); o.value = v.id; $("vvoice").appendChild(o); });
+$("vvoice").onchange = () => { cfg.voice = $("vvoice").value; window.mythos.setCfg(cfg); V.speaker.setVoice(cfg.voice); };
+$("btnVoice").onclick = () => (vm.on ? voiceStop() : voiceStart());
+$("vclose").onclick = voiceStop; $("vstop").onclick = voiceInterrupt; $("vorb").onclick = voiceInterrupt;

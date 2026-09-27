@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker } = require("electron");
 const fs = require("fs"); const path = require("path"); const { exec, execFile, spawn } = require("child_process");
 const { McpManager } = require("./mcp.js");
+// Sprachmodus: mehrere Threads für die lokale Spracherkennung, falls keine Grafikkarte (WebGPU) nutzbar ist.
+app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
 
 // @@SHARED_TOOLS@@
 

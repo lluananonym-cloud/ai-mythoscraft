@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import LogoOrb from "@/components/LogoOrb";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
@@ -930,7 +931,7 @@ const Chat = () => {
                   <Button
                     variant="ghost" size="icon"
                     className={`h-9 w-9 ${voiceMode ? "text-foreground bg-white/10" : ""}`}
-                    onClick={() => setVoiceMode(v => !v)}
+                    onClick={() => { voice.prepare(); setVoiceMode(v => !v); }}
                     aria-label="Voice-Modus umschalten"
                   >
                     {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -1050,7 +1051,7 @@ const Chat = () => {
                               </button>
                               {voice.supported && (
                                 <button
-                                  onClick={() => voice.status === "speaking" ? voice.stopSpeaking() : voice.speak(m.content)}
+                                  onClick={() => { if (voice.status === "speaking") voice.stopSpeaking(); else { voice.prepare(); voice.speak(m.content); } }}
                                   title={voice.status === "speaking" ? "Stop" : "Vorlesen"}
                                   className="p-1.5 rounded-md hover:bg-white/5"
                                 >
@@ -1086,15 +1087,9 @@ const Chat = () => {
           <div className="shrink-0 px-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
             <div className="max-w-3xl mx-auto">
               {voiceMode && (voice.status === "listening" || voice.status === "speaking") && (
-                <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-foreground/70 animate-fade-in">
-                  <span className="flex items-end gap-0.5 h-3">
-                    {[0, 1, 2, 3].map(i => (
-                      <span
-                        key={i}
-                        className="w-0.5 bg-foreground/80 rounded-full"
-                        style={{ height: "100%", animation: `voice-wave 0.9s ease-in-out ${i * 0.12}s infinite` }}
-                      />
-                    ))}
+                <div className="flex items-center justify-center gap-2 mb-2 text-xs text-foreground/70 animate-fade-in">
+                  <span className="relative h-12 w-12 shrink-0">
+                    <LogoOrb status={voice.status} getLevel={() => (voice.status === "speaking" ? voice.speechLevel() : 0.25)} />
                   </span>
                   <span>
                     {voice.status === "speaking" ? "🔊 spricht..." : voice.interim || "👂 höre zu... (sprich einfach drauf los)"}
