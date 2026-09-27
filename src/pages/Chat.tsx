@@ -231,7 +231,7 @@ const Chat = () => {
         localReply(`Das Mythos-Code-Paket v${CLI_VERSION} wurde bereits erstellt. **/codeadmin** geht nur einmal pro Version.`);
         return;
       }
-      downloadBlob(await buildCliZip(), `${CLI_PKG}.zip`);
+      downloadBlob(await buildCliZip(window.location.origin), `${CLI_PKG}.zip`);
       localStorage.setItem("mythos_cli_built", CLI_VERSION);
       localReply(ADMIN_GUIDE);
       return;

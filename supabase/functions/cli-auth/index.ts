@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       if (row.user_id) return json({ error: "Bereits bestätigt." }, 409);
       const key = `sk-ant-mythos-${rnd(48, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")}`;
       const { error: e1 } = await db.from("api_keys").insert({
-        user_id: userId, name: "Mythos Code App", key_prefix: key.slice(0, 22), key_hash: await sha256(key),
+        user_id: userId, name: "Mythos Code", key_prefix: key.slice(0, 22), key_hash: await sha256(key),
       });
       if (e1) throw e1;
       await db.from("cli_device_auth").update({ user_id: userId, api_key: key }).eq("code", code);

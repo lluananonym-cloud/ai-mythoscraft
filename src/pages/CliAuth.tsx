@@ -47,16 +47,16 @@ const CliAuth = () => {
           {state === "done" ? (
             <>
               <h1 className="font-display text-2xl font-bold">Angemeldet!</h1>
-              <p className="text-sm text-muted-foreground">Die Mythos Code App ist jetzt mit deinem Konto verbunden. Du kannst dieses Fenster schließen und zur App zurückkehren.</p>
+              <p className="text-sm text-muted-foreground">Mythos Code ist jetzt mit deinem Konto verbunden. Du kannst dieses Fenster schließen und zurück zur App bzw. zum Terminal wechseln.</p>
             </>
           ) : !code ? (
             <>
               <h1 className="font-display text-2xl font-bold">Kein Code</h1>
-              <p className="text-sm text-muted-foreground">Starte die Anmeldung in der Mythos Code App über „Mit MythosAI anmelden“.</p>
+              <p className="text-sm text-muted-foreground">Starte die Anmeldung in der Mythos Code App („Mit MythosAI anmelden“) oder im Terminal mit <code className="font-mono">mythos login</code>.</p>
             </>
           ) : (
             <>
-              <h1 className="font-display text-2xl font-bold">Mythos Code App anmelden</h1>
+              <h1 className="font-display text-2xl font-bold">Mythos Code anmelden</h1>
               <p className="text-sm text-muted-foreground">
                 Angemeldet als <span className="text-foreground">{user.email}</span>. Prüfe, dass der Code mit dem in der App übereinstimmt:
               </p>
