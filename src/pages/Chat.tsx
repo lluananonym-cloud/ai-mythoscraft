@@ -54,6 +54,7 @@ const SLASH_COMMANDS = [
   { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
   { cmd: "/codeprogrammadmin", args: "",        icon: Shield,    desc: "Admin: App-ZIP für den Setup-Build erzeugen", admin: true },
   { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
+  { cmd: "/exeupdateadmin", args: "<drive-link> [version]", icon: Shield, desc: "Admin: Update-EXE für Mythos Code veröffentlichen", admin: true },
 ];
 
 type Persona = { id: string; name: string; avatar_emoji: string | null };
@@ -234,6 +235,26 @@ const Chat = () => {
       downloadBlob(await buildCliZip(window.location.origin), `${CLI_PKG}.zip`);
       localStorage.setItem("mythos_cli_built", CLI_VERSION);
       localReply(ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/exeupdateadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const { toDirectDownloadUrl, APP_DOWNLOAD_SETTING, APP_UPDATE_SETTING, APP_VERSION } = await import("@/lib/mythosCli");
+      const [rawLink = "", rawVersion] = text.replace(/^\/exeupdateadmin\b/i, "").trim().split(/\s+/);
+      const url = toDirectDownloadUrl(rawLink);
+      const version = rawVersion || APP_VERSION;
+      if (!url || !/^\d+\.\d+\.\d+$/.test(version)) {
+        localReply("So geht's:\n```\n/exeupdateadmin https://drive.google.com/file/d/…/view 1.3.0\n```\nOhne Version wird die Version der aktuellen ZIP (" + APP_VERSION + ") genommen.");
+        return;
+      }
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("app_settings").upsert([
+        { key: APP_UPDATE_SETTING, value: JSON.stringify({ version, url }), updated_at: now },
+        { key: APP_DOWNLOAD_SETTING, value: url, updated_at: now },
+      ]);
+      if (error) { toast.error("Speichern fehlgeschlagen: " + error.message); return; }
+      localReply(`✓ Update **v${version}** veröffentlicht. Neue Downloads über **/codeprogramm** bekommen ab jetzt diese Version.\n\nDirekter Link: ${url}`);
       return;
     }
     if (/^\/codeprogrammadminupload\b/i.test(text)) {

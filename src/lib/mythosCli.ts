@@ -262,6 +262,8 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.`;
 // ================= Mythos Code Desktop-App (Electron) =================
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
+export const APP_UPDATE_SETTING = "codeprogram_update";
+export const APP_VERSION = "1.3.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -281,13 +283,14 @@ Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier kli
 
 1. **MythosCode-Setup.exe** ausführen. Falls Windows „Der Computer wurde durch Windows geschützt“ zeigt: **Weitere Informationen → Trotzdem ausführen**.
 2. App öffnen → **Mit MythosAI anmelden** → im Browser auf **Authentifizieren** klicken.
-3. Ordner wählen, optional **Vollzugriff** einschalten – fertig. Mit 📎 kannst du Dateien hochladen, oben siehst du Laufzeit und Usage (Pro = unbegrenzt).`;
+3. Ordner wählen, optional **Vollzugriff** einschalten – fertig. Mit 📎 kannst du Dateien hochladen, oben siehst du Laufzeit und Usage (Pro = unbegrenzt).
+4. Links findest du deine **Projekte** und **gespeicherten Chats**. Mit ✎ bearbeitest du eine Nachricht, mit ■ (oder Esc) stoppst du Mythos.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({
   name: APP_PKG,
   productName: "Mythos Code",
-  version: "1.2.0",
+  version: APP_VERSION,
   description: "Mythos Code – KI-Coding-Agent als App (by Mythoscraft)",
   main: "main.js",
   author: "Mythoscraft",
@@ -324,11 +327,28 @@ ipcMain.handle("pickFiles", async () => {
   if (r.canceled) return [];
   return r.filePaths.map((p) => { let c = ""; try { c = fs.readFileSync(p, "utf8").slice(0, 60000); } catch { c = "(Binärdatei)"; } return { name: path.basename(p), path: p, content: c }; });
 });
+// Gespeicherte Chats: ein JSON pro Chat im Benutzerordner.
+const CHATS = () => path.join(app.getPath("userData"), "chats");
+const chatFile = (id) => path.join(CHATS(), String(id || "").replace(/[^a-zA-Z0-9_-]/g, "") + ".json");
+ipcMain.handle("chats:list", () => {
+  let names = []; try { names = fs.readdirSync(CHATS()).filter((f) => f.endsWith(".json")); } catch { return []; }
+  return names.map((f) => { try { const c = JSON.parse(fs.readFileSync(path.join(CHATS(), f), "utf8")); return { id: c.id, title: c.title, folder: c.folder, updated: c.updated }; } catch { return null; } })
+    .filter(Boolean).sort((a, b) => b.updated - a.updated);
+});
+ipcMain.handle("chats:get", (_e, id) => { try { return JSON.parse(fs.readFileSync(chatFile(id), "utf8")); } catch { return null; } });
+ipcMain.handle("chats:save", (_e, c) => { fs.mkdirSync(CHATS(), { recursive: true }); fs.writeFileSync(chatFile(c.id), JSON.stringify(c)); return true; });
+ipcMain.handle("chats:delete", (_e, id) => { try { fs.unlinkSync(chatFile(id)); } catch {} return true; });
+// Stopp-Knopf: laufenden Befehl samt Unterprozessen beenden.
+let child = null;
+ipcMain.handle("abort", () => {
+  if (child) { try { if (process.platform === "win32") exec("taskkill /pid " + child.pid + " /T /F"); else child.kill(); } catch {} }
+  return true;
+});
 ipcMain.handle("tool", async (_e, t, cwd) => {
   const P = (p) => path.resolve(cwd || process.cwd(), p || ".");
   try {
-    if (t.name === "run") return await new Promise((res) => exec(t.cmd, { cwd, timeout: 180000, maxBuffer: 1e7, shell: true },
-      (err, so, se) => res(((so || "") + (se || "") + (err ? "\\nExit: " + err.code : "")).slice(-8000) || "(keine Ausgabe)")));
+    if (t.name === "run") return await new Promise((res) => { child = exec(t.cmd, { cwd, timeout: 180000, maxBuffer: 1e7, shell: true },
+      (err, so, se) => { child = null; res(((so || "") + (se || "") + (err ? "\\nExit: " + err.code : "")).slice(-8000) || "(keine Ausgabe)"); }); });
     if (t.name === "read") return fs.readFileSync(P(t.path), "utf8").slice(0, 20000);
     if (t.name === "write") { fs.mkdirSync(path.dirname(P(t.path)), { recursive: true }); fs.writeFileSync(P(t.path), t.content || ""); return "OK geschrieben: " + t.path; }
     if (t.name === "ls") return fs.readdirSync(P(t.path), { withFileTypes: true }).map((e) => (e.isDirectory() ? "[D] " : "    ") + e.name).join("\\n");
@@ -342,6 +362,9 @@ contextBridge.exposeInMainWorld("mythos", {
   getCfg: () => ipcRenderer.invoke("cfg:get"), setCfg: (c) => ipcRenderer.invoke("cfg:set", c),
   open: (u) => ipcRenderer.invoke("open", u), pickFolder: () => ipcRenderer.invoke("pickFolder"),
   pickFiles: () => ipcRenderer.invoke("pickFiles"), tool: (t, cwd) => ipcRenderer.invoke("tool", t, cwd),
+  abort: () => ipcRenderer.invoke("abort"),
+  chats: { list: () => ipcRenderer.invoke("chats:list"), get: (id) => ipcRenderer.invoke("chats:get", id),
+    save: (c) => ipcRenderer.invoke("chats:save", c), remove: (id) => ipcRenderer.invoke("chats:delete", id) },
 });
 `;
 
@@ -402,6 +425,24 @@ textarea::placeholder{color:#737373}
 .switch input::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
 .switch input:checked{background:#8b5cf6}.switch input:checked::after{left:14px}
 #files .chip{margin-right:4px}
+.main2{flex:1;display:flex;min-height:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+aside{width:250px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+#btnNew{justify-content:center;padding:9px;margin-bottom:6px}
+.sec{display:flex;align-items:center;justify-content:space-between;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 8px 4px}
+.sec button{font-size:15px;color:var(--muted);padding:0 4px}.sec button:hover{color:var(--fg)}
+.item{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:10px;font-size:13px;color:#d4d4d4;cursor:pointer}
+.item:hover{background:rgba(255,255,255,.05)}.item.on{background:rgba(255,255,255,.09);color:var(--fg)}
+.item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .date{font-size:11px;color:var(--muted)}
+.item .x{opacity:0;font-size:12px;color:var(--muted);padding:0 3px}.item:hover .x{opacity:1}.item .x:hover{color:var(--fg)}
+.item .ren{flex:1;min-width:0;background:#111;border:1px solid var(--line2);color:var(--fg);border-radius:6px;padding:3px 6px;font:inherit;font-size:13px;outline:0}
+.hint{font-size:12px;color:#666;padding:4px 8px}
+.u{position:relative}.u .edit{position:absolute;left:-32px;top:50%;transform:translateY(-50%);opacity:0;color:var(--muted);font-size:14px;padding:4px}
+.u:hover .edit{opacity:1}.u .edit:hover{color:var(--fg)}body.busy .u .edit{display:none}
+#btnSend.stop{background:#ef4444;color:#fff;font-size:14px}
+#editbar{color:#c4b5fd}
+@media (max-width:860px){aside{display:none}}
 ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px;border:3px solid var(--bg)}
 </style></head><body>
 <div class="bg"><div class="blob b1"></div><div class="blob b2"></div></div>
@@ -421,6 +462,15 @@ textarea::placeholder{color:#737373}
     <span class="chip" id="usage">Usage …</span>
     <button class="chip" id="btnOut">Abmelden</button>
   </header>
+  <div class="main2">
+  <aside id="side">
+    <button class="chip" id="btnNew">＋ Neuer Chat</button>
+    <div class="sec">Projekte <button id="btnAddProj" title="Projekt hinzufügen">＋</button></div>
+    <div id="plist"></div>
+    <div class="sec">Chats</div>
+    <div id="clist"></div>
+  </aside>
+  <div class="main">
   <div id="log"><div class="col" id="col">
     <div id="empty">
       <img src="icon.png" alt="">
@@ -434,9 +484,10 @@ textarea::placeholder{color:#737373}
     </div>
   </div></div>
   <footer>
+    <div class="under" id="editbar" style="display:none;margin:0 auto 8px">✎ Du bearbeitest eine Nachricht – beim Senden geht der Chat ab dort neu weiter. <button class="chip" id="btnEditCancel">Abbrechen</button></div>
     <div class="composer">
       <button class="round" id="btnUp" title="Dateien hochladen">📎</button>
-      <textarea id="inp" rows="1" placeholder="Was soll Mythos bauen?  (Enter = senden, Shift+Enter = neue Zeile)"></textarea>
+      <textarea id="inp" rows="1" placeholder="Was soll Mythos bauen?  (Enter = senden, Shift+Enter = neue Zeile, Esc = stoppen)"></textarea>
       <button class="round" id="btnSend" title="Senden">↑</button>
     </div>
     <div class="under">
@@ -444,28 +495,46 @@ textarea::placeholder{color:#737373}
       <span class="sp" style="flex:1"></span><span id="files"></span>
     </div>
   </footer>
+  </div>
+  </div>
 </div>
 <script src="renderer.js"></script></body></html>`;
 
 const appRenderer = () => `const CFG = ${JSON.stringify({ site: "__SITE__", fn: FN_BASE })};
-CFG.site = location.protocol === "file:" ? CFG.site : CFG.site;
 const $ = (id) => document.getElementById(id);
-let cfg = {}, history = [], attach = [], busy = false;
+let cfg = {}, chat = null, attach = [], busy = false, stopped = false, ctl = null, editing = null;
+const EMPTY = $("empty").cloneNode(true);
 const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
 const post = (fn, body, h) => fetch(CFG.fn + "/" + fn, { method: "POST", headers: Object.assign({ "content-type": "application/json" }, h || {}), body: JSON.stringify(body) });
 const el = (tag, cls, text) => { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; };
+const base = (p) => p.split(/[\\\\/]/).filter(Boolean).pop() || p;
 // Text mit \`\`\`-Codeblöcken sicher (nur textContent) darstellen.
 function renderText(box, text) {
   text.split(/\`\`\`[\\w+-]*\\n?/).forEach((part, i) => { if (!part) return; box.appendChild(i % 2 ? el("pre", "", part.replace(/\\n$/, "")) : document.createTextNode(part)); });
 }
-function add(cls, text) {
-  const e = $("empty"); if (e) e.remove();
+// ---------- Chat-Ansicht ----------
+function draw(it, i) {
   let d;
-  if (cls === "a") { d = el("div", "m a"); const img = el("img"); img.src = "icon.png"; const b = el("div", "body"); renderText(b, text); d.append(img, b); }
-  else if (cls === "u") { d = el("div", "m u glass"); renderText(d, text); }
-  else d = el("div", "t " + cls, text);
+  if (it.cls === "a") { d = el("div", "m a"); const img = el("img"); img.src = "icon.png"; const b = el("div", "body"); renderText(b, it.text); d.append(img, b); }
+  else if (it.cls === "u") { d = el("div", "m u glass"); renderText(d, it.text); const b = el("button", "edit", "✎"); b.title = "Nachricht bearbeiten"; b.onclick = () => startEdit(i); d.appendChild(b); }
+  else d = el("div", "t " + it.cls, it.text);
   $("col").appendChild(d); $("log").scrollTop = 1e9; return d;
 }
+function add(cls, text, extra) {
+  const e = $("empty"); if (e) e.remove();
+  chat.view.push(Object.assign({ cls: cls, text: text }, extra || {}));
+  return draw(chat.view[chat.view.length - 1], chat.view.length - 1);
+}
+function renderChat() {
+  const col = $("col"); col.textContent = "";
+  if (!chat.view.length) {
+    const e = EMPTY.cloneNode(true);
+    e.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { $("inp").value = b.dataset.s; grow(); $("inp").focus(); });
+    col.appendChild(e);
+  }
+  chat.view.forEach(draw);
+}
+// ---------- Modell ----------
 const SYSTEM = () => "Du bist Mythos Code, ein autonomer Coding-Agent als Desktop-App (Windows). Arbeitsordner: " + (cfg.folder || "(keiner)") +
   ". Werkzeuge – antworte mit GENAU EINEM Block:\\n<tool>{\\"name\\":\\"run\\",\\"cmd\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"read\\",\\"path\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"write\\",\\"path\\":\\"...\\",\\"content\\":\\"...\\"}</tool>\\n<tool>{\\"name\\":\\"ls\\",\\"path\\":\\".\\"}</tool>\\nPfade relativ zum Arbeitsordner. Arbeite Schritt für Schritt, am Ende normal ohne <tool> antworten.";
 const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\\n…[gekürzt]…\\n" + s.slice(s.length - Math.floor(max * 0.3));
@@ -477,9 +546,9 @@ function compact(h, level) {
     .concat(h.slice(cut).map((m) => ({ role: m.role, content: shorten(m.content, recentMax) })));
 }
 async function once(messages) {
-  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 170000);
+  const c = ctl = new AbortController(); const to = setTimeout(() => c.abort(), 170000);
   try {
-    const r = await fetch(CFG.fn + "/v1-messages", { method: "POST", signal: ctl.signal,
+    const r = await fetch(CFG.fn + "/v1-messages", { method: "POST", signal: c.signal,
       headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model: "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }) });
     if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
@@ -494,39 +563,148 @@ async function once(messages) {
 }
 async function call(h) {
   for (let a = 0; a < 6; a++) {
+    if (stopped) throw new Error("Gestoppt");
     try { return await once(compact(h, Math.min(2, Math.floor(a / 2)))); }
     catch (e) {
+      if (stopped) throw e;
       if (e.status === 401) throw new Error("Anmeldung abgelaufen – bitte abmelden und neu anmelden.");
       if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
-      await new Promise((r) => setTimeout(r, Math.min(8000, 1500 * (a + 1))));
+      const wait = Math.min(8000, 1500 * (a + 1));
+      for (let w = 0; w < wait && !stopped; w += 250) await new Promise((r) => setTimeout(r, 250));
     }
   }
   throw new Error("Mythos ist gerade nicht erreichbar – bitte gleich nochmal versuchen.");
 }
 async function usage() { try { const j = await (await post("cli-auth", { action: "usage", api_key: cfg.key })).json();
   $("usage").textContent = j.limit == null ? "Usage " + j.used + " · ∞ Pro" : "Usage " + j.used + " / " + j.limit; } catch (e) {} }
+// ---------- Senden & Stoppen ----------
+function setBusy(b) {
+  busy = b; const s = $("btnSend");
+  s.textContent = b ? "■" : "↑"; s.title = b ? "Stoppen (Esc)" : "Senden"; s.classList.toggle("stop", b); s.disabled = false;
+  $("timer").classList.toggle("busy", b); document.body.classList.toggle("busy", b);
+}
+function stop() {
+  if (!busy || stopped) return;
+  stopped = true; $("btnSend").disabled = true;
+  if (ctl) ctl.abort(); window.mythos.abort();
+}
 async function send() {
-  const q = $("inp").value.trim(); if (!q || busy) return; $("inp").value = ""; grow(); busy = true; $("btnSend").disabled = true;
+  const q = $("inp").value.trim(); if (!q || busy) return;
+  if (editing != null) { const it = chat.view[editing]; chat.history.length = it.h; chat.view.length = editing; editing = null; renderEdit(); renderChat(); }
+  $("inp").value = ""; grow();
+  if (!chat.history.length) { chat.title = q.replace(/\\s+/g, " ").slice(0, 48); chat.folder = cfg.folder || ""; }
   let content = q; if (attach.length) content += "\\n\\nHochgeladene Dateien:\\n" + attach.map((f) => "### " + f.name + "\\n" + f.content).join("\\n\\n");
-  add("u", q + (attach.length ? "\\n📎 " + attach.map((f) => f.name).join(", ") : "")); attach = []; renderFiles(); history.push({ role: "user", content });
-  const t0 = Date.now(); const live = add("live", "⏳ Mythos arbeitet… 0s"); $("timer").classList.add("busy");
+  add("u", q + (attach.length ? "\\n📎 " + attach.map((f) => f.name).join(", ") : ""), { q: q, h: chat.history.length, att: attach });
+  attach = []; renderFiles(); chat.history.push({ role: "user", content });
+  stopped = false; setBusy(true); saveChat();
+  const t0 = Date.now(); const live = draw({ cls: "live", text: "⏳ Mythos arbeitet… 0s" }, -1);
   const tick = setInterval(() => { const s = fmt(Date.now() - t0); $("timer").textContent = "arbeitet… " + s; live.textContent = "⏳ Mythos arbeitet… " + s; $("col").appendChild(live); }, 250);
   try {
-    for (let i = 0; i < 40; i++) {
-      const out = await call(history); history.push({ role: "assistant", content: out });
+    for (let i = 0; i < 40 && !stopped; i++) {
+      const out = await call(chat.history); if (stopped) break;
+      chat.history.push({ role: "assistant", content: out });
       const m = out.match(/<tool>([\\s\\S]*?)<\\/tool>/); const text = out.replace(/<tool>[\\s\\S]*?<\\/tool>/g, "").trim();
       if (text) add("a", text); if (!m) break;
-      let t; try { t = JSON.parse(m[1]); } catch (e) { history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+      let t; try { t = JSON.parse(m[1]); } catch (e) { chat.history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
       add("tool", "⚙ " + t.name + " " + (t.cmd || t.path || ""));
       let res; if ((t.name === "run" || t.name === "write") && !$("auto").checked && !confirm("Mythos möchte ausführen:\\n" + t.name + " " + (t.cmd || t.path))) res = "Vom Nutzer abgelehnt.";
       else res = await window.mythos.tool(t, cfg.folder);
-      history.push({ role: "user", content: "Werkzeug-Ergebnis:\\n" + res });
+      chat.history.push({ role: "user", content: "Werkzeug-Ergebnis:\\n" + res });
+      saveChat();
     }
-  } catch (e) { add("a", "⚠ " + e.message); }
-  clearInterval(tick); const took = fmt(Date.now() - t0); $("timer").textContent = "⏱ " + took; $("timer").classList.remove("busy");
-  live.textContent = "✓ Mythos hat " + took + " gearbeitet"; live.className = "t done"; $("col").appendChild(live); $("log").scrollTop = 1e9;
-  busy = false; $("btnSend").disabled = false; usage();
+  } catch (e) { if (!stopped) add("a", "⚠ " + e.message); }
+  clearInterval(tick); live.remove();
+  const took = fmt(Date.now() - t0); $("timer").textContent = "⏱ " + took;
+  if (stopped && chat.history[chat.history.length - 1].role === "user") chat.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
+  add("done", stopped ? "■ Gestoppt nach " + took : "✓ Mythos hat " + took + " gearbeitet");
+  setBusy(false); saveChat(); usage();
 }
+// ---------- Bearbeiten ----------
+function renderEdit() { $("editbar").style.display = editing == null ? "none" : "flex"; }
+function startEdit(i) {
+  if (busy) return; const it = chat.view[i]; if (!it) return;
+  editing = i; $("inp").value = it.q != null ? it.q : it.text; attach = (it.att || []).slice(); renderFiles(); grow(); renderEdit(); $("inp").focus();
+}
+function cancelEdit() {
+  if (editing == null) return;
+  editing = null; $("inp").value = ""; attach = []; renderFiles(); grow(); renderEdit();
+}
+// ---------- Gespeicherte Chats ----------
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function newChat() {
+  chat = { id: newId(), title: "Neuer Chat", folder: cfg.folder || "", created: Date.now(), updated: Date.now(), history: [], view: [] };
+  cancelEdit(); renderChat(); renderSide(); $("inp").focus();
+}
+async function saveChat() { if (!chat.history.length) return; chat.updated = Date.now(); await window.mythos.chats.save(chat); renderSide(); }
+async function openChat(id) {
+  if (busy || (chat && chat.id === id)) return;
+  const c = await window.mythos.chats.get(id); if (!c) return renderSide();
+  chat = c; chat.view = chat.view || []; chat.history = chat.history || []; cancelEdit();
+  if (c.folder && c.folder !== cfg.folder) { cfg.folder = c.folder; addProject(c.folder); await window.mythos.setCfg(cfg); renderHeader(); }
+  renderChat(); renderSide();
+}
+async function deleteChat(c) {
+  if (busy && chat.id === c.id) return;
+  if (!confirm("Chat „" + (c.title || "Chat") + "“ löschen?")) return;
+  await window.mythos.chats.remove(c.id);
+  if (chat.id === c.id) newChat(); else renderSide();
+}
+function renameChat(c, span) {
+  const inp = el("input", "ren"); inp.value = c.title || ""; span.replaceWith(inp); inp.focus(); inp.select();
+  inp.onclick = (e) => e.stopPropagation();
+  let done = false;
+  const finish = async (ok) => {
+    if (done) return; done = true; const t = inp.value.trim().slice(0, 80);
+    if (ok && t) {
+      const full = chat.id === c.id ? chat : await window.mythos.chats.get(c.id);
+      if (full) { full.title = t; await window.mythos.chats.save(full); }
+    }
+    renderSide();
+  };
+  inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); };
+  inp.onblur = () => finish(true);
+}
+// ---------- Projekte ----------
+const projects = () => (cfg.projects = cfg.projects || []);
+function addProject(p) { if (p && !projects().includes(p)) projects().unshift(p); }
+function renderHeader() { $("folder").textContent = cfg.folder ? base(cfg.folder) : "Projekt wählen"; $("btnFolder").title = cfg.folder || "Projektordner wählen"; }
+async function setProject(p) {
+  if (busy) return;
+  cfg.folder = p || ""; addProject(p); await window.mythos.setCfg(cfg); renderHeader();
+  if (chat.history.length) newChat(); else { chat.folder = cfg.folder; renderSide(); }
+}
+async function pickProject() { if (busy) return; const f = await window.mythos.pickFolder(); if (f) setProject(f); }
+async function removeProject(p) {
+  if (busy) return;
+  cfg.projects = projects().filter((x) => x !== p);
+  if (cfg.folder === p) return setProject(cfg.projects[0] || "");
+  await window.mythos.setCfg(cfg); renderSide();
+}
+async function renderSide() {
+  const pl = $("plist"); pl.textContent = "";
+  projects().forEach((p) => {
+    const row = el("div", "item" + (p === cfg.folder ? " on" : "")); row.title = p;
+    const x = el("button", "x", "✕"); x.title = "Aus der Liste entfernen (Dateien bleiben)"; x.onclick = (e) => { e.stopPropagation(); removeProject(p); };
+    row.append(el("span", "name", "📁 " + base(p)), x);
+    row.onclick = () => { if (p !== cfg.folder) setProject(p); };
+    pl.appendChild(row);
+  });
+  if (!projects().length) pl.appendChild(el("div", "hint", "Noch keine Projekte"));
+  let list = []; try { list = await window.mythos.chats.list(); } catch (e) {}
+  list = list.filter((c) => (c.folder || "") === (cfg.folder || ""));
+  const cl = $("clist"); cl.textContent = "";
+  list.forEach((c) => {
+    const row = el("div", "item" + (chat && c.id === chat.id ? " on" : "")); row.title = c.title || "Chat";
+    const name = el("span", "name", c.title || "Chat");
+    const date = el("span", "date", new Date(c.updated).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+    const ed = el("button", "x", "✎"); ed.title = "Umbenennen"; ed.onclick = (e) => { e.stopPropagation(); renameChat(c, name); };
+    const x = el("button", "x", "✕"); x.title = "Löschen"; x.onclick = (e) => { e.stopPropagation(); deleteChat(c); };
+    row.append(name, date, ed, x); row.onclick = () => openChat(c.id);
+    cl.appendChild(row);
+  });
+  if (!list.length) cl.appendChild(el("div", "hint", "Noch keine gespeicherten Chats"));
+}
+// ---------- Anmeldung ----------
 function setStatus(text, code) {
   const s = $("lstat"); s.textContent = text;
   if (code) { s.appendChild(document.createElement("br")); s.appendChild(el("span", "code mono glass", code)); }
@@ -543,10 +721,9 @@ async function login() {
     if (p.status === "expired") { clearInterval(iv); setStatus("Abgelaufen – bitte nochmal versuchen."); $("btnLogin").disabled = false; }
   }, 2000);
 }
-const base = (p) => p.split(/[\\\\/]/).filter(Boolean).pop() || p;
 function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
-  $("folder").textContent = cfg.folder ? base(cfg.folder) : "Ordner wählen"; $("btnFolder").title = cfg.folder || "Arbeitsordner wählen";
+  renderHeader(); if (!chat) newChat(); else renderSide();
   usage(); $("inp").focus();
 }
 function renderFiles() {
@@ -554,14 +731,17 @@ function renderFiles() {
   attach.forEach((a, i) => { const c = el("button", "chip", "📎 " + a.name + "  ✕"); c.title = "Entfernen"; c.onclick = () => { attach.splice(i, 1); renderFiles(); }; f.appendChild(c); });
 }
 function grow() { const t = $("inp"); t.style.height = "auto"; t.style.height = Math.min(200, t.scrollHeight) + "px"; }
-$("btnLogin").onclick = login; $("btnSend").onclick = send;
+$("btnLogin").onclick = login;
+$("btnSend").onclick = () => (busy ? stop() : send());
 $("inp").oninput = grow;
-$("inp").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
-document.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { $("inp").value = b.dataset.s; grow(); $("inp").focus(); });
-$("btnFolder").onclick = async () => { const f = await window.mythos.pickFolder(); if (f) { cfg.folder = f; await window.mythos.setCfg(cfg); show(); } };
+$("inp").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send(); } };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (busy) stop(); else cancelEdit(); } });
+$("btnFolder").onclick = pickProject; $("btnAddProj").onclick = pickProject;
+$("btnNew").onclick = () => { if (!busy) newChat(); };
+$("btnEditCancel").onclick = cancelEdit;
 $("btnUp").onclick = async () => { const fs = await window.mythos.pickFiles(); attach = attach.concat(fs); renderFiles(); };
-$("btnOut").onclick = async () => { cfg = {}; await window.mythos.setCfg(cfg); location.reload(); };
-window.mythos.getCfg().then((c) => { cfg = c || {}; if (cfg.key) show(); });
+$("btnOut").onclick = async () => { stop(); cfg = { projects: cfg.projects, folder: cfg.folder }; await window.mythos.setCfg(cfg); location.reload(); };
+window.mythos.getCfg().then((c) => { cfg = c || {}; addProject(cfg.folder); if (cfg.key) show(); });
 `;
 
 const appWorkflow = () => `name: Build Mythos Code Setup
