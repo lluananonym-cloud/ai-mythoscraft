@@ -6,7 +6,7 @@ import { useVoiceMode } from "@/hooks/useVoiceMode";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mic, MicOff, X, Square } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, X, Square, Camera, MonitorUp } from "lucide-react";
 import LogoOrb from "@/components/LogoOrb";
 import { VOICES, getVoice, setVoice } from "@/lib/mythosVoice";
 import { DEFAULT_MYTHOS_ID } from "@/lib/mythosModels";
@@ -31,6 +31,46 @@ export default function Voice() {
   const rafRef = useRef<number | null>(null);
   const historyRef = useRef(history);
   historyRef.current = history;
+  // Kamera / Bildschirm: nur auf Knopfdruck, mit Vorschau. Pro Frage wird ein Standbild mitgeschickt.
+  const camRef = useRef<HTMLVideoElement>(null);
+  const scrRef = useRef<HTMLVideoElement>(null);
+  const [cam, setCam] = useState<MediaStream | null>(null);
+  const [scr, setScr] = useState<MediaStream | null>(null);
+  const seeRef = useRef<{ cam: MediaStream | null; scr: MediaStream | null }>({ cam: null, scr: null });
+  seeRef.current = { cam, scr };
+  const grabFrame = (v: HTMLVideoElement | null, maxSide: number) => {
+    if (!v || !v.videoWidth) return null;
+    const k = Math.min(1, maxSide / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.82);
+  };
+  const stopSee = (kind: "cam" | "scr") => {
+    const st = seeRef.current[kind];
+    st?.getTracks().forEach(t => t.stop());
+    (kind === "cam" ? setCam : setScr)(null);
+  };
+  const toggleSee = async (kind: "cam" | "scr") => {
+    if (seeRef.current[kind]) return stopSee(kind);
+    try {
+      const st = kind === "cam"
+        ? await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+        : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      st.getVideoTracks()[0].onended = () => (kind === "cam" ? setCam : setScr)(null);
+      (kind === "cam" ? setCam : setScr)(st);
+    } catch { toast.error(kind === "cam" ? "Kamera nicht verfügbar" : "Bildschirm teilen abgebrochen"); }
+  };
+  useEffect(() => { if (camRef.current) camRef.current.srcObject = cam; }, [cam]);
+  useEffect(() => { if (scrRef.current) scrRef.current.srcObject = scr; }, [scr]);
+  useEffect(() => () => { seeRef.current.cam?.getTracks().forEach(t => t.stop()); seeRef.current.scr?.getTracks().forEach(t => t.stop()); }, []);
+
+  // Frage + (falls eingeschaltet) Standbild von Kamera/Bildschirm.
+  const userContent = (text: string) => {
+    const imgs = [grabFrame(camRef.current, 1280), grabFrame(scrRef.current, 1568)].filter((x): x is string => !!x);
+    if (!imgs.length) return text;
+    return [{ type: "text", text }, ...imgs.map(url => ({ type: "image_url", image_url: { url } }))];
+  };
 
   const askAI = async (text: string) => {
     setHistory(h => [...h, { role: "user", content: text }]);
@@ -46,7 +86,7 @@ export default function Voice() {
           mode: "support",
           mythos: (typeof window !== "undefined" && localStorage.getItem("mythos.model")) || DEFAULT_MYTHOS_ID,
           voice: true,
-          messages: [...historyRef.current, { role: "user", content: text }],
+          messages: [...historyRef.current, { role: "user", content: userContent(text) }],
         }),
       });
       if (!resp.ok || !resp.body) {
@@ -116,7 +156,7 @@ export default function Voice() {
   }, [loading, isPro]);
 
   const exit = () => {
-    voice.stopListening(); voice.stopSpeaking();
+    voice.stopListening(); voice.stopSpeaking(); stopSee("cam"); stopSee("scr");
     nav("/app");
   };
 
@@ -138,6 +178,14 @@ export default function Voice() {
       </div>
 
       <div className="flex-1 relative">
+        {(cam || scr) && (
+          <div className="absolute top-2 right-4 z-10 flex gap-2">
+            <video ref={camRef} autoPlay muted playsInline className={cam ? "h-24 rounded-xl border border-white/15 bg-black" : "hidden"} />
+            <video ref={scrRef} autoPlay muted playsInline className={scr ? "h-24 rounded-xl border border-white/15 bg-black" : "hidden"} />
+            <span className="absolute left-2 bottom-1 text-[10px] text-red-300 drop-shadow">● Mythos sieht mit</span>
+          </div>
+        )}
+        {!(cam || scr) && <><video ref={camRef} className="hidden" muted /><video ref={scrRef} className="hidden" muted /></>}
         <LogoOrb status={voice.status} getLevel={() => (voice.status === "speaking" ? voice.speechLevel() : Math.min(1, levelRef.current * 1.8))} />
         <div className="absolute bottom-32 left-0 right-0 px-6 text-center">
           {voice.voiceLoad.status === "loading" && (
@@ -151,7 +199,11 @@ export default function Voice() {
         </div>
       </div>
 
-      <div className="p-8 flex justify-center" style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
+      <div className="p-8 flex justify-center items-center gap-4" style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
+        <Button size="lg" variant="secondary" className={`h-12 w-12 rounded-full ${cam ? "bg-violet-500 text-white hover:bg-violet-500/90" : ""}`}
+          onClick={() => toggleSee("cam")} aria-label="Kamera" title="Kamera: Mythos sieht bei deiner nächsten Frage ein Bild" disabled={!isPro}>
+          <Camera className="h-5 w-5" />
+        </Button>
         {voice.status === "speaking" ? (
           <Button size="lg" variant="secondary" className="h-16 w-16 rounded-full" onClick={() => voice.stopSpeaking()} aria-label="Sprechen stoppen">
             <Square className="h-6 w-6" />
@@ -167,6 +219,10 @@ export default function Voice() {
             <Mic className="h-7 w-7" />
           </Button>
         )}
+        <Button size="lg" variant="secondary" className={`h-12 w-12 rounded-full ${scr ? "bg-violet-500 text-white hover:bg-violet-500/90" : ""}`}
+          onClick={() => toggleSee("scr")} aria-label="Bildschirm teilen" title="Bildschirm teilen: Mythos sieht bei deiner nächsten Frage deinen Bildschirm" disabled={!isPro}>
+          <MonitorUp className="h-5 w-5" />
+        </Button>
       </div>
 
       <Paywall open={showPaywall} onOpenChange={(o) => { setShowPaywall(o); if (!o && !isPro) nav("/app"); }} reason="Live-Sprachchat ist eine Pro-Funktion." />

@@ -61,7 +61,9 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[] };
+/** Status eines Teil-Agenten im Multi-Agent-Modus (vom agent-Endpunkt gestreamt). */
+type AgentStatus = { i: number; title: string; status: "läuft" | "fertig" | "fehler"; phase?: string };
 
 const MODES = [
   { value: "support", label: "Support", icon: HelpCircle, desc: "Mythoscraft Server-Support" },
@@ -168,6 +170,7 @@ const Chat = () => {
         offline: m.metadata?.offline,
         attachments: m.metadata?.attachments,
         ext: m.metadata?.ext,
+        agents: m.metadata?.agents,
       })) as Msg[];
       setMessages(enriched);
     }
@@ -515,6 +518,7 @@ const Chat = () => {
       let buf = "", full = "";
       let imageData: { url: string; prompt: string } | undefined;
       let musicData: FunkPattern | undefined;
+      let agentsData: AgentStatus[] | undefined;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -533,6 +537,15 @@ const Chat = () => {
                 const next = [...prev];
                 const last = next[next.length - 1];
                 last.content = (last.content || "") + `\n\n> 🔧 *${p.tool}*\n\n`;
+                return next;
+              });
+              continue;
+            }
+            if (p.agents) {
+              agentsData = p.agents;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], agents: p.agents };
                 return next;
               });
               continue;
@@ -581,7 +594,7 @@ const Chat = () => {
           conversation_id: convId,
           role: "assistant",
           content: full,
-          metadata: { image: imageData, music: musicData },
+          metadata: { image: imageData, music: musicData, agents: agentsData },
         });
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
@@ -997,6 +1010,18 @@ const Chat = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="prose-mythos text-[15px] break-words">
+                            {m.agents && m.agents.length > 0 && (
+                              <div className="not-prose mb-3 rounded-xl border border-violet-400/20 bg-violet-500/5 px-3 py-2 text-xs">
+                                <div className="mb-1 font-semibold text-violet-300">🧩 Multi-Agent: {m.agents.length} Agenten parallel</div>
+                                {m.agents.map(a => (
+                                  <div key={a.i} className="flex items-center gap-2 py-0.5">
+                                    <span className="w-4 text-center">{a.status === "fertig" ? "✓" : a.status === "fehler" ? "⚠" : <Loader2 className="inline h-3 w-3 animate-spin" />}</span>
+                                    <span className="flex-1 truncate text-foreground/90">Agent {a.i + 1}: {a.title}</span>
+                                    {a.phase && <span className="max-w-[45%] truncate text-muted-foreground">{a.phase}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             {m.search && m.content && (
                               <div className="not-prose mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
                                 <Globe className="h-3 w-3" /> Im Internet gesucht: <span className="text-foreground/80">{m.search}</span>

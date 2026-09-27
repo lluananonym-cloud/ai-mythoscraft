@@ -236,6 +236,63 @@
     return { level: () => level, stop: () => finish(false), cancel: () => finish(true) };
   }
 
+  // ---------- „Hey Mythos“: lokal zuhören, nur bei Gesprochenem kurz erkennen ----------
+  // Kein eigenes Weckwort-Modell: Sprachabschnitte werden lokal mit Whisper erkannt und
+  // auf „Hey Mythos …“ geprüft. Nichts verlässt den PC, bis das Weckwort gefallen ist.
+  // Whisper schreibt „Hey Mythos“ mal als „Hey Mythos“, „Hallo Mitos“, „Myth OS“ oder „Heimitus“.
+  // Deshalb lautlich vereinfachen und höchstens einen Laut Abweichung zu „mitos“ erlauben.
+  const sound = (w) => w.toLowerCase().replace(/[^a-zäöüß]/g, "").replace(/th/g, "t").replace(/[yü]/g, "i").replace(/ey|ei/g, "ai");
+  const GREET = /^(hallo|okay|okai|ok|hai|hi|he|hej|ai)$/;
+  function lev(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  /** Rest des Satzes nach „Hey Mythos“ ("" wenn nur das Weckwort) oder null. */
+  function matchWake(text) {
+    const words = String(text).trim().split(/\s+/).filter(Boolean);
+    const start = words.length && GREET.test(sound(words[0])) ? 1 : 0;
+    for (let take = 1; take <= 2; take++) { // Name kann getrennt sein: „Myth OS“
+      const joined = words.slice(start, start + take).map(sound).join("");
+      const variants = [joined];
+      if (start === 0) variants.push(joined.replace(/^(hallo|okay|ok|hai|hi|he)/, "")); // zusammengezogen: „Heimitus“
+      if (variants.some((v) => v.length >= 4 && lev(v, "mitos") <= 1)) return words.slice(start + take).join(" ").replace(/^[,.!?:\s]+/, "");
+    }
+    return null;
+  }
+  function wakeListener(opts) {
+    let active = true, rec = null;
+    const loop = async () => {
+      while (active) {
+        const pcm = await new Promise((res) => {
+          api.record({ silenceMs: 700, maxMs: 9000, onDone: res }).then((r) => { rec = r; if (!active) r.cancel(); }).catch((e) => { opts.onError && opts.onError(e); active = false; res(null); });
+        });
+        rec = null;
+        if (!active) break;
+        if (!pcm || pcm.length < 16000 * 0.35) continue; // zu kurz für „Hey Mythos“
+        let text = "";
+        try { text = await api.transcribe(pcm); } catch (e) { continue; }
+        if (!active) break;
+        const rest = matchWake(text);
+        if (rest != null) { active = false; opts.onWake(rest.replace(/^[,.!?]\s*/, "")); }
+      }
+    };
+    api.loadStt(); loop();
+    return { stop: () => { active = false; if (rec) rec.cancel(); }, level: () => (rec ? rec.level() : 0) };
+  }
+
+  // ---------- Kamera / Bildschirm: Standbild für die nächste Frage ----------
+  function grabFrame(video, maxSide) {
+    if (!video || !video.videoWidth) return null;
+    const s = Math.min(1, (maxSide || 1280) / Math.max(video.videoWidth, video.videoHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(video.videoWidth * s); c.height = Math.round(video.videoHeight * s);
+    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+    return { media_type: "image/jpeg", data: c.toDataURL("image/jpeg", 0.82).split(",")[1] };
+  }
+
   // ---------- Logo-Orb (wie auf der Website) ----------
   function createOrb(canvas, getState) {
     const ctx = canvas.getContext("2d");
@@ -285,8 +342,8 @@
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }
 
-  window.MythosVoice = {
-    VOICES, speaker: new Speaker(), loadStt, transcribe, record, createOrb, cleanForSpeech,
+  const api = window.MythosVoice = {
+    VOICES, speaker: new Speaker(), loadStt, transcribe, record, createOrb, cleanForSpeech, wakeListener, matchWake, grabFrame,
     onTtsState: (f) => { ttsSubs.add(f); f(ttsState); }, onSttState: (f) => { sttSubs.add(f); f(sttState); },
   };
 })();

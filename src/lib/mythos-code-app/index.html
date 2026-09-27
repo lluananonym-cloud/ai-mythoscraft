@@ -150,6 +150,13 @@ body.term-open #term{display:flex}
 .vtext{flex:1;min-width:0}#vstatus{font-size:14px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#vsub{padding:2px 0 0}
 #voicebar .x{color:var(--muted);font-size:14px;padding:4px 6px}#voicebar .x:hover{color:var(--fg)}
 #voicebar select.chip{max-width:170px}
+#vsee{position:relative;display:flex;gap:6px}#vsee video{height:64px;border-radius:10px;border:1px solid var(--line2);background:#000;display:none}
+#vsee .rec{position:absolute;left:6px;bottom:4px;font-size:10px;color:#fca5a5;text-shadow:0 1px 2px #000}
+#voicebar .chip.on{background:#8b5cf6;color:#fff;border-color:#8b5cf6}
+#wakechip{color:#86efac}#wakechip.heard{color:#fff;background:#16a34a}
+.agents{align-self:stretch;border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;background:rgba(124,58,237,.06)}
+.agents .ah{font-weight:600;color:#c4b5fd;margin-bottom:2px}.agents .ag{display:flex;gap:8px;align-items:center}.agents .ag .st{width:18px;text-align:center}.agents .ag .ti{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agents .ag .ph{color:var(--muted);font-family:"JetBrains Mono",Consolas,monospace;font-size:11.5px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.light .agents{background:rgba(124,58,237,.05)}body.light .agents .ah{color:#6d28d9}
 .a .speak{opacity:0;color:var(--muted);font-size:13px;padding:2px 4px;align-self:flex-start}.a:hover .speak{opacity:1}.a .speak:hover{color:var(--fg)}
 body.light #btnVoice{background:rgba(0,0,0,.05)}
 /* Helles Design */
@@ -202,6 +209,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     <button class="chip" id="btnFolder" title="Arbeitsordner wählen">📁 <span id="folder">Ordner wählen</span></button>
     <button class="chip mono" id="git" style="display:none">⎇ <span id="gitb"></span></button>
     <button class="chip" id="mcp" style="display:none">🔌</button>
+    <button class="chip" id="wakechip" style="display:none" title="Mikrofon hört auf „Hey Mythos“ – klicken zum Ausschalten">👂 Hey Mythos</button>
     <span class="sp"></span>
     <button class="chip icon" id="btnPreview" title="Live-Vorschau (/vorschau)">👁</button>
     <button class="chip icon" id="btnTree" title="Dateibaum (/dateien)">🗂</button>
@@ -243,6 +251,9 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     <div id="voicebar" class="glass" style="display:none">
       <canvas id="vorb" title="Klicken: unterbrechen / fertig sprechen"></canvas>
       <div class="vtext"><div id="vstatus">Sprachmodus</div><div id="vsub" class="hint"></div></div>
+      <div id="vsee" style="display:none"><video id="vcam" muted playsinline></video><video id="vscr" muted playsinline></video><span class="rec">● sieht mit</span></div>
+      <button class="chip icon" id="vcamBtn" title="Kamera einschalten – Mythos sieht bei deiner nächsten Frage ein Bild">📷</button>
+      <button class="chip icon" id="vscrBtn" title="Bildschirm teilen – Mythos sieht bei deiner nächsten Frage deinen Bildschirm">🖥</button>
       <select class="chip" id="vvoice" title="Stimme"></select>
       <button class="chip" id="vstop" title="Unterbrechen">■</button>
       <button class="x" id="vclose" title="Sprachmodus beenden">✕</button>
@@ -258,6 +269,8 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     <div class="under">
       <label class="switch"><input type="checkbox" id="auto"> Vollzugriff (nicht nachfragen)</label>
       <label class="switch" title="Nach Änderungen die Tests laufen lassen und Fehler reparieren (/tests)"><input type="checkbox" id="autotest"> Automatisch testen</label>
+      <label class="switch" title="Große Aufgaben werden in Teilaufgaben zerlegt und von mehreren Agenten parallel bearbeitet (/agenten)"><input type="checkbox" id="multi"> Multi-Agent</label>
+      <label class="switch" title="Mythos hört im Hintergrund auf „Hey Mythos“ – alles bleibt lokal (/heymythos)"><input type="checkbox" id="wake"> „Hey Mythos“</label>
       <span class="sp" style="flex:1"></span><span id="files"></span>
     </div>
   </footer>

@@ -40,6 +40,7 @@ function draw(it, i) {
     if (imgs.length) { const box = el("div", "imgs"); imgs.forEach((a) => { const im = el("img"); im.src = "data:" + a.image.media_type + ";base64," + a.image.data; im.title = a.name; box.appendChild(im); }); d.appendChild(box); }
     const b = el("button", "edit", "✎"); b.title = "Nachricht bearbeiten"; b.onclick = () => startEdit(i); d.appendChild(b);
   } else if (it.cls === "diff") d = diffBox(it);
+  else if (it.cls === "agents") { d = el("div", "agents"); renderAgents(d, it); agentEls.set(it, d); }
   else if (it.cls === "out") { d = el("details", "out"); d.append(el("summary", "", "▸ Ausgabe von " + (it.cmd || "Befehl")), el("pre", "", it.text)); }
   else d = el("div", "t " + it.cls, it.text);
   $("col").appendChild(d); scrollDown(); return d;
@@ -181,6 +182,7 @@ function stop(c) {
   const run = runOf(c || chat); if (!run || run.stopped) return;
   run.stopped = true; if (run.chat === chat) $("btnSend").disabled = true;
   if (run.ctl) run.ctl.abort(); window.mythos.abort(run.id);
+  (run.subs || []).forEach((s) => { if (s.ctl) s.ctl.abort(); window.mythos.abort(s.id); });
 }
 function setAuto(on) { $("auto").checked = !!on; cfg.auto = !!on; window.mythos.setCfg(cfg); }
 // Neue Nutzer-Nachricht anhängen (beim Bearbeiten wird der Chat vorher ab dort abgeschnitten).
@@ -199,12 +201,12 @@ function send() {
   if (isBusy(chat)) { (chat.queue = chat.queue || []).push(item); renderQueue(); return; }
   submit(chat, item.q, item.att);
 }
-function submit(c, q, att) {
+function submit(c, q, att, opts) {
   if (q.startsWith("/")) return c === chat ? command(q) : noteTo(c, "Befehl übersprungen: " + q);
   const files = att.filter((f) => !f.image);
   let content = q; if (files.length) content += "\n\nHochgeladene Dateien:\n" + files.map((f) => "### " + f.name + "\n" + f.content).join("\n\n");
   pushUser(c, q + (files.length ? "\n📎 " + files.map((f) => f.name).join(", ") : ""), content, { q: q, att: att });
-  runAgent(c);
+  runAgent(c, opts || { fresh: true });
 }
 function renderQueue() {
   const bar = $("queuebar"), q = (chat && chat.queue) || [];
@@ -230,7 +232,7 @@ function toolLabel(t) {
 const needsConfirm = (t) => ["run", "write", "edit", "mcp"].includes(t.name);
 const autoTestOn = (folder) => !!(folder && cfg.autoTest && cfg.autoTest[folder]);
 
-async function runAgent(c) {
+async function runAgent(c, opts) {
   if (runs.has(c.id)) return;
   const run = { id: "run-" + c.id + "-" + Date.now(), chat: c, stopped: false, ctl: null, t0: Date.now(), stream: "", out: null, els: {}, phase: "",
     folder: c.folder || cfg.folder || "", model: cfg.model || "mythos-code" };
@@ -247,6 +249,8 @@ async function runAgent(c) {
     finally { run.stream = ""; paintRun(run); }
   };
   try {
+    // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.
+    if (opts && opts.fresh && cfg.multi && await multiAgentPhase(run, c)) changed = true;
     for (; steps < max && !run.stopped; steps++) {
       const out = await ask();
       if (run.stopped) break;
@@ -376,6 +380,8 @@ function mcpReport() {
 // ---------- Befehle ----------
 const COMMANDS = [
   ["/sprache", "", "Sprachmodus: mit Mythos sprechen (Whisper + Piper, lokal)"],
+  ["/heymythos", "an|aus", "Im Hintergrund auf „Hey Mythos“ hören (lokal)"],
+  ["/agenten", "an|aus", "Multi-Agent: große Aufgaben parallel von mehreren Agenten bearbeiten"],
   ["/stimme", "[name]", "Stimme für den Sprachmodus wählen"],
   ["/goal", "<ziel>", "Mythos arbeitet selbstständig, bis das Ziel erreicht ist – danach Zusammenfassung"],
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
@@ -412,9 +418,11 @@ async function command(q) {
     if (!$("auto").checked) { if (!confirm("Mit /goal arbeitet Mythos ohne Nachfragen weiter.\nVollzugriff dafür einschalten?")) return; setAuto(true); }
     pushUser(chat, "🎯 /goal " + arg, "Neues Ziel: " + arg + "\nArbeite jetzt komplett selbstständig daran, bis es erreicht und geprüft ist.", { q: "/goal " + arg });
     chat.goal = arg; renderGoal();
-    return runAgent(chat);
+    return runAgent(chat, { fresh: true });
   }
   if (cmd === "/sprache") return vm.on ? voiceStop() : voiceStart();
+  if (cmd === "/heymythos") { const on = !/^(aus|off)$/i.test(arg); setWake(on); return note(on ? "👂 „Hey Mythos“ ist an – sag einfach „Hey Mythos, …“. Alles bleibt lokal auf deinem PC." : "👂 „Hey Mythos“ ist aus."); }
+  if (cmd === "/agenten") { const on = !/^(aus|off)$/i.test(arg); setMulti(on); return note(on ? "🧩 Multi-Agent ist an – neue Aufgaben werden aufgeteilt und parallel bearbeitet." : "🧩 Multi-Agent ist aus."); }
   if (cmd === "/stimme") {
     const vs = window.MythosVoice.VOICES;
     if (!arg) return note("🔊 Stimmen:\n" + vs.map((v) => ((cfg.voice || vs[0].id) === v.id ? "● " : "○ ") + v.label).join("\n") + "\nWechseln: /stimme <name> oder im Sprachmodus oben rechts");
@@ -785,6 +793,7 @@ async function login() {
 function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
   renderHeader(); refreshGit(); configureMcp(); renderModels();
+  $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }
   if (!chat) newChat(); else renderSide();
@@ -868,22 +877,26 @@ Promise.all([window.mythos.prompts(), window.mythos.getCfg()]).then(([p, c]) => 
 
 // ---------- Sprachmodus: zuhören → Whisper → Mythos → Antwort vorlesen → wieder zuhören ----------
 const V = window.MythosVoice;
-const vm = { on: false, phase: "idle", rec: null, waitChat: null, orbStop: null };
+const vm = { on: false, phase: "idle", rec: null, waitChat: null, orbStop: null, cam: null, scr: null };
 function setVStatus(text, sub) { $("vstatus").textContent = text; if (sub != null) $("vsub").textContent = sub; }
 const voiceLevel = () => (vm.phase === "listening" && vm.rec ? vm.rec.level() : vm.phase === "speaking" ? V.speaker.level() : 0);
-function voiceStart() {
+function voiceStart(firstText) {
   if (vm.on) return;
+  wakeOff();
   vm.on = true; document.body.classList.add("voice-on"); $("voicebar").style.display = "flex";
   V.speaker.setVoice(cfg.voice || V.VOICES[0].id); V.speaker.prepare(); V.loadStt();
   if (!vm.orbStop) vm.orbStop = V.createOrb($("vorb"), () => ({ status: vm.phase, level: voiceLevel() }));
-  voiceListen();
+  // „Hey Mythos, mach …“ – der Rest des Satzes ist schon die erste Aufgabe.
+  if (firstText && firstText.length > 2) voiceHandleText(firstText); else voiceListen();
 }
 function voiceStop() {
   vm.on = false; vm.waitChat = null;
   if (vm.rec) { vm.rec.cancel(); vm.rec = null; }
   V.speaker.stop(); vm.phase = "idle";
+  stopSee("cam"); stopSee("scr");
   document.body.classList.remove("voice-on"); $("voicebar").style.display = "none";
   if (vm.orbStop) { vm.orbStop(); vm.orbStop = null; }
+  if (cfg.wake) setTimeout(wakeOn, 600);
 }
 async function voiceListen() {
   if (!vm.on || vm.rec) return;
@@ -899,16 +912,64 @@ async function voiceListen() {
         let text = "";
         try { text = await V.transcribe(pcm); } catch (e) { note("🎙 Spracherkennung fehlgeschlagen: " + e.message); return voiceStop(); }
         if (!vm.on) return;
-        text = text.replace(/^\[.*?\]$|^\(.*?\)$/g, "").trim(); // Whisper-Geräusch-Markierungen
-        if (text.length < 2) return voiceListen();
-        if (/^(stopp?|beenden|tschüss|sprachmodus aus)[.!]?$/i.test(text)) { voiceStop(); return note("🎙 Sprachmodus beendet."); }
-        setVStatus("„" + text + "“", "Mythos arbeitet …");
-        vm.waitChat = chat;
-        if (isBusy(chat)) { (chat.queue = chat.queue || []).push({ q: text, att: [] }); renderQueue(); }
-        else submit(chat, text, []);
+        voiceHandleText(text);
       },
     });
   } catch (e) { note("🎙 Mikrofon nicht verfügbar: " + e.message); voiceStop(); }
+}
+function voiceHandleText(raw) {
+  const text = String(raw).replace(/^\[.*?\]$|^\(.*?\)$/g, "").trim(); // Whisper-Geräusch-Markierungen
+  if (text.length < 2) return voiceListen();
+  if (/^(stopp?|beenden|tschüss|sprachmodus aus)[.!]?$/i.test(text)) { voiceStop(); return note("🎙 Sprachmodus beendet."); }
+  // Kamera / Bildschirm: nur wenn eingeschaltet, ein Standbild pro Frage.
+  const att = [];
+  const cam = vm.cam && V.grabFrame($("vcam"), 1280); if (cam) att.push({ name: "Kamera.jpg", image: cam });
+  const scr = vm.scr && V.grabFrame($("vscr"), 1568); if (scr) att.push({ name: "Bildschirm.jpg", image: scr });
+  vm.phase = "thinking";
+  setVStatus("„" + text + "“", "Mythos arbeitet …" + (att.length ? " (mit " + att.map((a) => a.name.replace(".jpg", "")).join(" + ") + ")" : ""));
+  vm.waitChat = chat;
+  if (isBusy(chat)) { (chat.queue = chat.queue || []).push({ q: text, att: att }); renderQueue(); }
+  else submit(chat, text, att, { fresh: true });
+}
+// ---------- Kamera & Bildschirm (nur auf Knopfdruck, mit Vorschau) ----------
+function stopSee(key) {
+  if (!vm[key]) return;
+  vm[key].getTracks().forEach((t) => t.stop()); vm[key] = null;
+  const vid = $(key === "cam" ? "vcam" : "vscr"); vid.srcObject = null; vid.style.display = "none";
+  $(key === "cam" ? "vcamBtn" : "vscrBtn").classList.remove("on");
+  $("vsee").style.display = vm.cam || vm.scr ? "flex" : "none";
+}
+async function toggleSee(key) {
+  if (vm[key]) return stopSee(key);
+  try {
+    vm[key] = key === "cam"
+      ? await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+      : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    const vid = $(key === "cam" ? "vcam" : "vscr");
+    vid.srcObject = vm[key]; vid.style.display = "block"; await vid.play();
+    $(key === "cam" ? "vcamBtn" : "vscrBtn").classList.add("on");
+    $("vsee").style.display = "flex";
+    vm[key].getVideoTracks()[0].onended = () => stopSee(key);
+  } catch (e) { vm[key] = null; note((key === "cam" ? "📷 Kamera" : "🖥 Bildschirm") + " nicht verfügbar: " + e.message); }
+}
+// ---------- „Hey Mythos“ ----------
+let wake = null;
+function wakeOn() {
+  if (wake || vm.on || !cfg.wake || $("app").style.display === "none") return;
+  $("wakechip").style.display = "";
+  wake = V.wakeListener({
+    onWake: (rest) => {
+      wake = null;
+      const chip = $("wakechip"); chip.classList.add("heard"); setTimeout(() => chip.classList.remove("heard"), 1500);
+      voiceStart(rest);
+    },
+    onError: (e) => { wake = null; note("👂 „Hey Mythos“ braucht das Mikrofon: " + e.message); setWake(false); },
+  });
+}
+function wakeOff() { if (wake) { wake.stop(); wake = null; } }
+function setWake(on) {
+  cfg.wake = !!on; window.mythos.setCfg(cfg); $("wake").checked = !!on;
+  if (on) wakeOn(); else { wakeOff(); $("wakechip").style.display = "none"; }
 }
 function voiceReply(c, text) {
   if (!vm.on || vm.waitChat !== c) return;
@@ -926,4 +987,91 @@ V.onTtsState((s) => { if (vm.on && s.status === "loading" && vm.phase !== "liste
 V.VOICES.forEach((v) => { const o = el("option", "", v.label); o.value = v.id; $("vvoice").appendChild(o); });
 $("vvoice").onchange = () => { cfg.voice = $("vvoice").value; window.mythos.setCfg(cfg); V.speaker.setVoice(cfg.voice); };
 $("btnVoice").onclick = () => (vm.on ? voiceStop() : voiceStart());
+$("vcamBtn").onclick = () => toggleSee("cam"); $("vscrBtn").onclick = () => toggleSee("scr");
+$("wake").onchange = () => setWake($("wake").checked); $("wakechip").onclick = () => setWake(false);
 $("vclose").onclick = voiceStop; $("vstop").onclick = voiceInterrupt; $("vorb").onclick = voiceInterrupt;
+
+// ---------- Multi-Agent: Aufgabe aufteilen, Teil-Agenten parallel, danach Koordinator ----------
+const AGENT_ICON = { wartet: "⏳", läuft: "⚙", fertig: "✓", fehler: "⚠", gestoppt: "■" };
+const agentEls = new WeakMap();
+function renderAgents(d, it) {
+  d.textContent = "";
+  d.appendChild(el("div", "ah", "🧩 Multi-Agent: " + it.agents.length + " Agenten arbeiten parallel"));
+  it.agents.forEach((a) => {
+    const row = el("div", "ag");
+    row.append(el("span", "st", AGENT_ICON[a.status] || "⏳"), el("span", "ti", "Agent " + (a.i + 1) + ": " + a.title), el("span", "ph", a.phase || a.status));
+    d.appendChild(row);
+  });
+}
+const PLAN_PROMPT = "Zerlege die folgende Aufgabe in 2 bis 4 Teilaufgaben, die GLEICHZEITIG von verschiedenen Agenten erledigt werden können, ohne sich gegenseitig zu stören – also möglichst getrennte Dateien pro Teilaufgabe. " +
+  "Wenn die Aufgabe klein ist oder sich nicht sinnvoll aufteilen lässt (z. B. eine Frage oder eine einzige Datei), gib genau EINE Teilaufgabe zurück. " +
+  "Antworte NUR mit JSON, ohne Werkzeuge: {\"subtasks\":[{\"title\":\"kurzer Titel\",\"task\":\"was genau zu tun ist\",\"files\":[\"pfad/datei\"]}]}";
+function parsePlan(text) {
+  const m = String(text).match(/\{[\s\S]*\}/);
+  try { const j = JSON.parse(m ? m[0] : text); return Array.isArray(j.subtasks) ? j.subtasks.filter((s) => s && s.task) : []; } catch (e) { return []; }
+}
+/** Liefert true, wenn Teil-Agenten Dateien geändert haben. */
+async function multiAgentPhase(run, c) {
+  const task = c.history[c.history.length - 1].content;
+  run.phase = "plant Teilaufgaben";
+  const top = run.folder ? (await window.mythos.files.list(run.folder, "")).map((f) => (f.dir ? f.name + "/" : f.name)).slice(0, 80).join(", ") : "";
+  const plan = parsePlan(await call(run, [{ role: "user", content: PLAN_PROMPT + (top ? "\n\nProjektordner enthält: " + top : "") + "\n\nAUFGABE:\n" + task }], await systemPrompt(run)));
+  run.phase = "";
+  if (run.stopped || plan.length < 2) { if (!run.stopped) noteTo(c, "🧩 Die Aufgabe ist überschaubar – ein Agent reicht."); return false; }
+  const subs = plan.slice(0, 4).map((s, i) => ({
+    i, title: String(s.title || "Teil " + (i + 1)).slice(0, 60), task: String(s.task), files: Array.isArray(s.files) ? s.files.map(String) : [],
+    status: "wartet", phase: "", id: run.id + "-a" + i, ctl: null, chat: c, model: run.model, result: "", changed: false,
+    get stopped() { return run.stopped; },
+  }));
+  run.subs = subs;
+  addTo(c, "agents", "", { agents: [] });
+  const item = c.view[c.view.length - 1];
+  const update = () => {
+    item.agents = subs.map((s) => ({ i: s.i, title: s.title, status: s.status, phase: s.phase }));
+    const d = agentEls.get(item); if (d && d.isConnected) renderAgents(d, item);
+  };
+  update();
+  const sys = (await systemPrompt(run)) + "\n\nMULTI-AGENT: Du bist ein Teil-Agent und arbeitest parallel mit anderen. Bleib strikt bei deiner Teilaufgabe und deinen Dateien.";
+  await Promise.all(subs.map((s) => runSubAgent(run, c, s, subs.length, task, sys, update)));
+  const list = subs.map((s) => "- Agent " + (s.i + 1) + ": " + s.title).join("\n");
+  c.history.push({ role: "assistant", content: "Ich habe die Aufgabe auf " + subs.length + " parallele Agenten aufgeteilt:\n" + list });
+  c.history.push({ role: "user", content: "Ergebnisse der Teil-Agenten:\n\n" + subs.map((s) => "### Agent " + (s.i + 1) + ": " + s.title + " (" + s.status + ")\n" + s.result).join("\n\n") +
+    "\n\nPrüfe jetzt als Koordinator, ob alles zusammenpasst (Dateien lesen, ggf. Build/Tests ausführen), behebe Konflikte oder Lücken und gib dann die Abschlussantwort." });
+  saveChat(c);
+  return subs.some((s) => s.changed);
+}
+async function runSubAgent(run, c, s, n, task, sys, update) {
+  s.status = "läuft"; update();
+  const tag = "🤖" + (s.i + 1) + " ";
+  const hist = [{ role: "user", content: "Gesamtaufgabe:\n" + task + "\n\nDEINE Teilaufgabe (Agent " + (s.i + 1) + " von " + n + "): " + s.title + "\n" + s.task +
+    (s.files.length ? "\nDu bist zuständig für: " + s.files.join(", ") + ". Ändere keine anderen Dateien – andere Agenten arbeiten gleichzeitig daran." : "") +
+    "\nArbeite selbstständig und ohne Rückfragen. Am Ende: kurze Zusammenfassung, was du gemacht hast." }];
+  try {
+    for (let step = 0; step < 25 && !run.stopped; step++) {
+      s.phase = "denkt …"; update();
+      const out = await call(s, hist, sys);
+      if (run.stopped) break;
+      hist.push({ role: "assistant", content: out });
+      const m = out.match(/<tool>([\s\S]*?)<\/tool>/), text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+      if (!m) { s.result = text || "(fertig, ohne Bericht)"; break; }
+      let t; try { t = JSON.parse(m[1]); } catch (e) { hist.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+      s.phase = toolLabel(t); update();
+      addTo(c, "tool", tag + toolLabel(t));
+      let r;
+      if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
+      else {
+        r = await window.mythos.tool(t, run.folder, s.id);
+        if (t.name === "run") addTo(c, "out", r.result.slice(-3000), { cmd: tag + t.cmd });
+        if (r.diff && r.diff.lines.length) { addTo(c, "diff", "", { path: tag + t.path, d: r.diff }); s.changed = true; }
+      }
+      hist.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + r.result });
+    }
+    s.status = run.stopped ? "gestoppt" : "fertig"; s.phase = "";
+    if (s.result && !run.stopped) addTo(c, "a", "**" + tag + "Agent " + (s.i + 1) + " – " + s.title + ":** " + s.result);
+  } catch (e) {
+    s.status = run.stopped ? "gestoppt" : "fehler"; s.phase = run.stopped ? "" : e.message; s.result = "FEHLER: " + e.message;
+  }
+  update();
+}
+function setMulti(on) { cfg.multi = !!on; window.mythos.setCfg(cfg); $("multi").checked = !!on; }
+$("multi").onchange = () => setMulti($("multi").checked);

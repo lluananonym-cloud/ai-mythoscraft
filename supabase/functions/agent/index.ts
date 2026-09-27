@@ -76,6 +76,66 @@ async function runTool(name: string, args: any, supabase: any): Promise<string> 
   return JSON.stringify({ error: "Unknown tool" });
 }
 
+const MODEL = "google/gemini-3-flash-preview";
+const toolLabel = (name: string, args: any) =>
+  name === "get_minecraft_server_status" ? "Hole Server-Status…"
+    : name === "search_knowledge_base" ? `Suche in Knowledge Base: "${args.query}"`
+    : `Web-Suche: "${args.query}"`;
+
+/** Ein Agent: ruft Werkzeuge auf, bis er antwortet. Liefert die Antwort (oder "" bei Fehler). */
+async function agentLoop(convo: any[], key: string, supabase: any, onTool: (label: string) => void, maxSteps = 6): Promise<string> {
+  for (let step = 0; step < maxSteps; step++) {
+    const r = await aiFetch("gateway", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: MODEL, messages: convo, tools: TOOLS, tool_choice: "auto" }),
+    });
+    if (!r.ok) throw new Error(r.status === 429 ? "Rate limit erreicht" : r.status === 402 ? "AI-Credits aufgebraucht" : "Fehler beim AI Gateway");
+    const msg = (await r.json()).choices?.[0]?.message;
+    if (!msg) return "";
+    if (msg.tool_calls?.length) {
+      convo.push(msg);
+      for (const tc of msg.tool_calls) {
+        const args = JSON.parse(tc.function.arguments || "{}");
+        onTool(toolLabel(tc.function.name, args));
+        convo.push({ role: "tool", tool_call_id: tc.id, content: await runTool(tc.function.name, args, supabase) });
+      }
+      continue;
+    }
+    return msg.content || "";
+  }
+  return "";
+}
+
+/** Multi-Agent: Aufgabe in unabhängige Teilaufgaben zerlegen (max. 3). */
+async function planSubtasks(question: string, key: string): Promise<{ title: string; task: string }[]> {
+  const r = await aiFetch("gateway", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{
+        role: "user",
+        content: "Zerlege die Anfrage in 2–3 UNABHÄNGIGE Teilrecherchen, die parallel erledigt werden können. " +
+          "Ist die Anfrage einfach (Smalltalk, eine einzelne Frage, ein einzelner Fakt), gib genau EINE Teilaufgabe zurück. " +
+          'Antworte NUR mit JSON: {"subtasks":[{"title":"kurz","task":"was genau herausfinden"}]}\n\nANFRAGE:\n' + question,
+      }],
+    }),
+  });
+  if (!r.ok) return [];
+  const text = (await r.json()).choices?.[0]?.message?.content || "";
+  try {
+    const j = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "{}");
+    return Array.isArray(j.subtasks) ? j.subtasks.filter((s: any) => s?.task).slice(0, 3) : [];
+  } catch { return []; }
+}
+
+const lastUserText = (messages: any[]) => {
+  const m = [...messages].reverse().find((x) => x.role === "user");
+  if (!m) return "";
+  return typeof m.content === "string" ? m.content : (m.content || []).map((p: any) => p.text || "").join(" ");
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -84,6 +144,9 @@ Deno.serve(async (req) => {
       const enc = new TextEncoder();
       const sendEvent = (obj: any) => controller.enqueue(enc.encode(`data: ${JSON.stringify(obj)}\n\n`));
       const sendDelta = (text: string) => sendEvent({ choices: [{ delta: { content: text } }] });
+      const streamText = async (text: string) => {
+        for (let i = 0; i < text.length; i += 14) { sendDelta(text.slice(i, i + 14)); await new Promise((r) => setTimeout(r, 8)); }
+      };
 
       try {
         const { messages } = await req.json();
@@ -98,62 +161,55 @@ Nutze Tools aktiv:
 Plane mehrstufig, kombiniere Tools wenn nötig. Antworte am Ende auf Deutsch in Markdown.
 Du bist **Mythos v1** — wenn du nach deinem Modell, deiner Version oder deinem Anbieter gefragt wirst, antworte IMMER genau "Mythos v1" und nenne niemals andere Modelle oder Anbieter.`;
 
-        const convo: any[] = [{ role: "system", content: system }, ...messages];
+        const question = lastUserText(messages);
+        const plan = question ? await planSubtasks(question, LOVABLE_API_KEY) : [];
 
-        for (let step = 0; step < 6; step++) {
+        if (plan.length < 2) {
+          // Einfache Anfrage: ein Agent wie bisher.
+          const final = await agentLoop([{ role: "system", content: system }, ...messages], LOVABLE_API_KEY, supabase, (label) => sendEvent({ tool: label }));
+          await streamText(final || "Ich konnte dazu leider nichts finden.");
+        } else {
+          // Multi-Agent: Teil-Agenten recherchieren parallel, danach fasst der Haupt-Agent zusammen.
+          const status = plan.map((p, i) => ({ i, title: String(p.title || `Teil ${i + 1}`).slice(0, 60), status: "läuft", phase: "startet…" }));
+          sendEvent({ agents: status });
+          const results = await Promise.all(plan.map(async (p, i) => {
+            const sub = [
+              { role: "system", content: system + "\n\nDu bist Teil-Agent " + (i + 1) + " von " + plan.length + ". Bearbeite NUR deine Teilaufgabe und antworte knapp mit den gefundenen Fakten und Quellen." },
+              { role: "user", content: "Gesamtanfrage: " + question + "\n\nDeine Teilaufgabe: " + p.task },
+            ];
+            try {
+              const text = await agentLoop(sub, LOVABLE_API_KEY, supabase, (label) => { status[i].phase = label; sendEvent({ agents: status }); }, 5);
+              status[i].status = "fertig"; status[i].phase = "";
+              sendEvent({ agents: status });
+              return text;
+            } catch (e) {
+              status[i].status = "fehler"; status[i].phase = e instanceof Error ? e.message : "Fehler";
+              sendEvent({ agents: status });
+              return "";
+            }
+          }));
           const r = await aiFetch("gateway", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: convo,
-              tools: TOOLS,
-              tool_choice: "auto",
+              model: MODEL,
+              messages: [
+                { role: "system", content: system },
+                ...messages,
+                { role: "user", content: "Ergebnisse deiner parallelen Teil-Agenten:\n\n" + plan.map((p, i) => `### ${status[i].title}\n${results[i] || "(kein Ergebnis)"}`).join("\n\n") +
+                  "\n\nFasse das jetzt zu EINER vollständigen, gut strukturierten Antwort auf die ursprüngliche Anfrage zusammen (Markdown, Deutsch)." },
+              ],
             }),
           });
-
-          if (!r.ok) {
-            if (r.status === 429) { sendDelta("\n\n⚠️ Rate limit erreicht."); break; }
-            if (r.status === 402) { sendDelta("\n\n⚠️ AI-Credits aufgebraucht."); break; }
-            sendDelta("\n\n⚠️ Fehler beim AI Gateway."); break;
-          }
-
-          const data = await r.json();
-          const msg = data.choices?.[0]?.message;
-          if (!msg) break;
-
-          if (msg.tool_calls?.length) {
-            convo.push(msg);
-            for (const tc of msg.tool_calls) {
-              const args = JSON.parse(tc.function.arguments || "{}");
-              const label = tc.function.name === "get_minecraft_server_status"
-                ? "Hole Server-Status…"
-                : tc.function.name === "search_knowledge_base"
-                ? `Suche in Knowledge Base: "${args.query}"`
-                : `Web-Suche: "${args.query}"`;
-              sendEvent({ tool: label });
-              const result = await runTool(tc.function.name, args, supabase);
-              convo.push({ role: "tool", tool_call_id: tc.id, content: result });
-            }
-            continue;
-          }
-
-          // Final answer — stream char-by-char for nicer UX
-          const final = msg.content || "";
-          // chunk in ~12 char pieces
-          for (let i = 0; i < final.length; i += 14) {
-            sendDelta(final.slice(i, i + 14));
-            await new Promise(r => setTimeout(r, 8));
-          }
-          break;
+          const final = r.ok ? (await r.json()).choices?.[0]?.message?.content || "" : "";
+          await streamText(final || results.filter(Boolean).join("\n\n") || "⚠️ Die Agenten konnten keine Antwort liefern.");
         }
 
         controller.enqueue(enc.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (e) {
         console.error("agent error:", e);
-        const enc = new TextEncoder();
-        controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n⚠️ Agent-Fehler: " + (e instanceof Error ? e.message : "unbekannt") } }] })}\n\n`));
+        sendDelta("\n\n⚠️ Agent-Fehler: " + (e instanceof Error ? e.message : "unbekannt"));
         controller.enqueue(enc.encode("data: [DONE]\n\n"));
         controller.close();
       }

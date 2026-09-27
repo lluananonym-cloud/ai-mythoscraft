@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker, session, desktopCapturer } = require("electron");
 const fs = require("fs"); const path = require("path"); const { exec, execFile, spawn } = require("child_process");
 const { McpManager } = require("./mcp.js");
 // Sprachmodus: mehrere Threads für die lokale Spracherkennung, falls keine Grafikkarte (WebGPU) nutzbar ist.
@@ -29,7 +29,13 @@ function toTray() {
 }
 const single = app.requestSingleInstanceLock();
 if (!single) app.quit(); else app.on("second-instance", showWin);
-app.whenReady().then(win);
+app.whenReady().then(() => {
+  // Sprachmodus „Bildschirm teilen“: nur auf Knopfdruck im Fenster, dann den Hauptbildschirm freigeben.
+  session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
+    desktopCapturer.getSources({ types: ["screen"] }).then((src) => cb(src.length ? { video: src[0] } : {})).catch(() => cb({}));
+  });
+  win();
+});
 app.on("before-quit", () => { quitting = true; });
 app.on("window-all-closed", () => app.quit());
 // AFK: Solange Mythos arbeitet, geht der PC nicht in den Energiesparmodus.
