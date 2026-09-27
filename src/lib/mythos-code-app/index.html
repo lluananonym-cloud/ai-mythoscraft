@@ -117,6 +117,65 @@ details.out pre{padding:10px 12px;white-space:pre-wrap;color:#bdbdbd}
 #drop{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(10,10,10,.6);border:2px dashed #8b5cf6;pointer-events:none}
 #drop .glass{padding:22px 34px;border-radius:18px;font-size:17px}
 body.dragging #drop{display:flex}
+/* Kopfleiste */
+header{flex-wrap:wrap}
+.chip.icon{padding:7px 10px;font-size:13px}
+select.chip{appearance:none;cursor:pointer;outline:0;font:inherit;font-size:12px;color:#d4d4d4}
+select.chip option{background:#171717;color:#fafafa}
+#tokens,#mcp{color:#c4b5fd}
+.item.running .name{color:#c4b5fd}
+/* Seitenpanels */
+.phead{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
+.phead .sp{flex:1}.phead .x{color:var(--muted);font-size:13px;padding:2px 6px}.phead .x:hover{color:var(--fg)}
+#rpanel{display:none;width:280px;flex-shrink:0;border-left:1px solid var(--line);border-right:0;padding:0;flex-direction:column;overflow:hidden}
+body.tree-open #rpanel{display:flex}
+#tree{flex:1;overflow:auto;padding:6px 0;font-size:12.5px}
+.trow{display:flex;gap:6px;align-items:center;padding:3px 10px;cursor:pointer;white-space:nowrap;color:#d4d4d4}
+.trow:hover{background:rgba(255,255,255,.05)}.trow .tic{width:10px;color:var(--muted);flex-shrink:0}.trow .tname{overflow:hidden;text-overflow:ellipsis}
+#term{display:none;height:240px;flex-shrink:0;border-top:1px solid var(--line);flex-direction:column;background:rgba(0,0,0,.35)}
+body.term-open #term{display:flex}
+#termout{flex:1;margin:0;padding:8px 12px;overflow:auto;white-space:pre-wrap;font-family:"JetBrains Mono",Consolas,monospace;font-size:12px;color:#d4d4d4}
+.termline{display:flex;gap:8px;align-items:center;padding:6px 12px;border-top:1px solid var(--line)}
+#termcwd{color:#86efac;font-size:12px;white-space:nowrap}
+#termin{flex:1;background:transparent;border:0;outline:0;color:var(--fg);font-size:12.5px}
+/* Editor */
+#editor{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);padding:30px}
+.edbox{width:min(1100px,100%);height:100%;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+#edtext{flex:1;resize:none;border:0;outline:0;background:#0d0d0d;color:#e5e5e5;padding:14px 16px;font-size:13px;line-height:1.55;tab-size:2;white-space:pre;overflow:auto;min-height:0;max-height:none}
+#edstatus{padding:6px 12px}
+/* Helles Design */
+body.light{--bg:#f6f6f7;--fg:#141414;--muted:#6b6b6b;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.16);--panel:#ffffff}
+body.light .blob{opacity:.12}
+body.light .grad{background:linear-gradient(180deg,#141414,#555);-webkit-background-clip:text;background-clip:text}
+body.light .glass{background:rgba(255,255,255,.75);box-shadow:0 6px 24px rgba(0,0,0,.08)}
+body.light .chip,body.light select.chip{background:rgba(0,0,0,.03);color:#333}
+body.light button.chip:hover{background:rgba(0,0,0,.07)}
+body.light select.chip option{background:#fff;color:#141414}
+body.light .btn,body.light #btnSend{background:#141414;color:#fff}
+body.light #btnUp{background:rgba(0,0,0,.05)}
+body.light .composer{box-shadow:0 6px 24px rgba(0,0,0,.08)}
+body.light .item,body.light .trow,body.light #termout{color:#333}
+body.light .item:hover,body.light .trow:hover,body.light .hit:hover{background:rgba(0,0,0,.04)}
+body.light .item.on{background:rgba(0,0,0,.07)}
+body.light .t{color:#555;background:rgba(0,0,0,.03)}
+body.light .t.note{color:#333}
+body.light .t.live,body.light #tokens,body.light #mcp,body.light #git,body.light #editbar,body.light #goalbar,body.light .sumhead,body.light .item.running .name{color:#6d28d9}
+body.light .t.done{color:#15803d}
+body.light .m pre,body.light .codeblock,body.light details.diff,body.light details.out,body.light .liveout,body.light #edtext,body.light .item .ren{background:#fbfbfb;color:#222}
+body.light .codeblock pre{background:transparent}
+body.light code.ic{background:rgba(0,0,0,.06)}
+body.light details summary{color:#333}
+body.light .ln{color:#555}body.light .ln.gap{color:#999}
+body.light .ln.add{background:rgba(34,197,94,.14);color:#14532d}
+body.light .ln.del{background:rgba(239,68,68,.12);color:#7f1d1d}
+body.light .plus{color:#15803d}body.light .minus{color:#b91c1c}
+body.light #term{background:rgba(0,0,0,.03)}
+body.light #termcwd{color:#15803d}
+body.light .a th{background:rgba(0,0,0,.04)}
+body.light .a .body blockquote{color:#555}
+body.light .slash button:hover,body.light .slash button:first-child{background:rgba(0,0,0,.05)}
+body.light #drop{background:rgba(255,255,255,.6)}
+body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
 @media (max-width:860px){aside{display:none}}
 ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px;border:3px solid var(--bg)}
 </style></head><body>
@@ -133,9 +192,16 @@ body.dragging #drop{display:flex}
     <div class="brand"><img src="icon.png" alt=""><span class="serif">Mythos Code</span></div>
     <button class="chip" id="btnFolder" title="Arbeitsordner wählen">📁 <span id="folder">Ordner wählen</span></button>
     <button class="chip mono" id="git" style="display:none">⎇ <span id="gitb"></span></button>
+    <button class="chip" id="mcp" style="display:none">🔌</button>
     <span class="sp"></span>
+    <button class="chip icon" id="btnPreview" title="Live-Vorschau (/vorschau)">👁</button>
+    <button class="chip icon" id="btnTree" title="Dateibaum (/dateien)">🗂</button>
+    <button class="chip icon" id="btnTerm" title="Terminal (/terminal)">⌨</button>
+    <select class="chip" id="model" title="Modell"></select>
     <span class="chip mono" id="timer">⏱ 0s</span>
+    <button class="chip mono" id="tokens" title="Geschätzte Tokens in diesem Chat">≈ 0 Tokens</button>
     <span class="chip" id="usage">Usage …</span>
+    <button class="chip icon" id="btnTheme" title="Helles / dunkles Design">☀</button>
     <button class="chip" id="btnOut">Abmelden</button>
   </header>
   <div class="main2">
@@ -143,6 +209,7 @@ body.dragging #drop{display:flex}
     <button class="chip" id="btnNew">＋ Neuer Chat</button>
     <div class="sec">Projekte <button id="btnAddProj" title="Projekt hinzufügen">＋</button></div>
     <div id="plist"></div>
+    <div id="asec" style="display:none"><div class="sec">Arbeitet gerade</div><div id="alist"></div></div>
     <div class="sec">Chats</div>
     <input id="csearch" class="search" placeholder="🔎 Chats durchsuchen…">
     <div id="clist"></div>
@@ -172,11 +239,32 @@ body.dragging #drop{display:flex}
       <button class="round" id="btnSend" title="Senden">↑</button>
     </div>
     <div class="under">
-      <label class="switch"><input type="checkbox" id="auto"> Vollzugriff auf alle Dateien (nicht nachfragen)</label>
+      <label class="switch"><input type="checkbox" id="auto"> Vollzugriff (nicht nachfragen)</label>
+      <label class="switch" title="Nach Änderungen die Tests laufen lassen und Fehler reparieren (/tests)"><input type="checkbox" id="autotest"> Automatisch testen</label>
       <span class="sp" style="flex:1"></span><span id="files"></span>
     </div>
   </footer>
+  <section id="term">
+    <div class="phead"><span>⌨ Terminal</span><span class="sp"></span><button class="chip" id="termkill" style="display:none" title="Befehl abbrechen (Strg+C)">■ Stopp</button><button class="x" id="termClose" title="Schließen">✕</button></div>
+    <pre id="termout"></pre>
+    <div class="termline"><span id="termcwd" class="mono">~ ›</span><input id="termin" class="mono" spellcheck="false" placeholder="Befehl eingeben (↑ = letzter Befehl)"></div>
+  </section>
   </div>
+  <aside id="rpanel">
+    <div class="phead"><span id="treeTitle">Dateien</span><span class="sp"></span><button class="x" id="treeRefresh" title="Neu laden">⟳</button><button class="x" id="treeClose" title="Schließen">✕</button></div>
+    <div id="tree"></div>
+  </aside>
+  </div>
+</div>
+<div id="editor">
+  <div class="edbox glass">
+    <div class="phead"><span id="edpath" class="mono"></span><span class="sp"></span>
+      <button class="chip" id="edattach" title="Datei an die nächste Nachricht hängen">📎 An Mythos</button>
+      <button class="chip" id="edreveal">Im Explorer</button>
+      <button class="chip" id="edsave">💾 Speichern</button>
+      <button class="x" id="edclose" title="Schließen (Esc)">✕</button></div>
+    <textarea id="edtext" class="mono" spellcheck="false"></textarea>
+    <div id="edstatus" class="hint"></div>
   </div>
 </div>
 <div id="drop"><div class="glass">⬇ Dateien oder Bilder hier ablegen</div></div>

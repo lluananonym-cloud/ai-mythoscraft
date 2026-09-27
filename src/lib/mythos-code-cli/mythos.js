@@ -133,13 +133,16 @@ function compact(history, level) {
     .concat(history.slice(cut).map((m) => withImages(m, shorten(m.content, recentMax))));
 }
 
+let tokens = { in: 0, out: 0 };
 async function once(messages, onText) {
   const c = ctl = new AbortController(); const to = setTimeout(() => c.abort(), 170000);
+  const system = SYSTEM();
+  tokens.in += estimateTokens(system, messages);
   try {
     const r = await fetch(API, {
       method: "POST", signal: c.signal,
       headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }),
+      body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system, messages, stream: true }),
     });
     if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
@@ -155,6 +158,7 @@ async function once(messages, onText) {
       }
     }
     if (!out.trim()) throw new Error("Leere Antwort");
+    tokens.out += Math.ceil(out.length / 4);
     return out;
   } finally { clearTimeout(to); }
 }
@@ -204,6 +208,8 @@ async function runTool(t) {
   const label = t.name === "run" ? "run " + t.cmd
     : t.name === "search" ? "search /" + t.pattern + "/" + (t.glob ? " " + t.glob : "")
     : t.name === "write" ? "write " + t.path + " (" + String(t.content || "").length + " Zeichen)"
+    : t.name === "websearch" ? "websearch " + t.query
+    : t.name === "fetch" ? "fetch " + t.url
     : t.name + " " + (t.path || "");
   say(C.y + "⚙  " + label + C.x);
   if ((t.name === "run" || t.name === "write" || t.name === "edit") && !autoYes) {
@@ -213,6 +219,11 @@ async function runTool(t) {
     if (a === "a") autoYes = true; else if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt.";
   }
   if (t.name === "run") return runLive(t.cmd);
+  if (isWebTool(t)) {
+    const r = await webTool(t);
+    say(C.d + "   " + r.result.split("\n").filter(Boolean).slice(0, 3).join(" · ").slice(0, 160) + C.x);
+    return r.result;
+  }
   const r = fileTool(t, ROOT);
   if (r.diff && r.diff.lines.length) say(diffText(r.diff));
   return r.result;
@@ -257,6 +268,7 @@ async function summarize(history) {
 async function turn(history, input, images) {
   if (input != null) history.push({ role: "user", content: input, images });
   T0 = Date.now(); working = true; stopped = false; startTick();
+  const tok0 = tokens.in + tokens.out;
   const wasGoal = goal;
   let status = "error", summary = "";
   try {
@@ -266,7 +278,8 @@ async function turn(history, input, images) {
   if (stopped) { status = "stopped"; if (history[history.length - 1]?.role === "user") history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" }); }
   working = false; stopTick();
   const took = fmt(Date.now() - T0);
-  console.log((stopped ? C.r + "■ Gestoppt nach " + took : C.g + "✓ Mythos hat " + took + " gearbeitet") + C.x + "\n");
+  console.log((stopped ? C.r + "■ Gestoppt nach " + took : C.g + "✓ Mythos hat " + took + " gearbeitet") + C.x +
+    C.d + "  · ≈ " + fmtTokens(tokens.in + tokens.out - tok0) + " Tokens (Sitzung ≈ " + fmtTokens(tokens.in + tokens.out) + ")" + C.x + "\n");
   if (status === "reached") { console.log(C.g + "🎯 Ziel erreicht: " + wasGoal + C.x + "\n"); goal = ""; }
   // Handy-Benachrichtigung bei /goal oder längeren Aufgaben.
   if (cfg.notify && (wasGoal || Date.now() - T0 > 60000)) {
@@ -330,6 +343,8 @@ const HELP = [
   ["/push", "git push"],
   ["/handy <url>", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook) · /handy test · /handy aus"],
   ["/vollzugriff an|aus", "Ohne Nachfragen arbeiten"],
+  ["/modell [name]", "Modell anzeigen oder wechseln"],
+  ["/tokens", "Geschätzten Token-Verbrauch dieser Sitzung anzeigen"],
   ["/clear", "Verlauf leeren"],
   ["/exit", "Beenden"],
 ];
@@ -361,6 +376,15 @@ async function command(q, history) {
     cfg.notify = arg; save(cfg);
     return console.log(C.g + "✓ Gespeichert. Bei /goal und Aufgaben über 1 Minute bekommst du eine Nachricht. Test: /handy test" + C.x + "\n");
   }
+  if (cmd === "/modell" || cmd === "/model") {
+    const cur = cfg.model || "mythos-code";
+    if (!arg) return console.log(MODELS.map((m) => (m.id === cur ? C.g + "● " : "  ") + m.id.padEnd(15) + C.x + m.label + C.d + " – " + m.desc + C.x).join("\n") + "\n\nWechseln mit /modell <name>\n");
+    const m = MODELS.find((x) => x.id === arg.toLowerCase() || x.label.toLowerCase() === arg.toLowerCase());
+    if (!m) return console.log(C.r + "Unbekanntes Modell. Verfügbar: " + MODELS.map((x) => x.id).join(", ") + C.x + "\n");
+    cfg.model = m.id; save(cfg);
+    return console.log(C.g + "✓ Modell: " + m.label + C.x + "\n");
+  }
+  if (cmd === "/tokens") return console.log("≈ " + fmtTokens(tokens.in) + " Eingabe + " + fmtTokens(tokens.out) + " Ausgabe = " + fmtTokens(tokens.in + tokens.out) + " Tokens (geschätzt)\n");
   if (cmd === "/vollzugriff") { autoYes = !/^(aus|off)$/i.test(arg); return console.log(autoYes ? "Vollzugriff an.\n" : "Vollzugriff aus – Mythos fragt vor Befehlen nach.\n"); }
   console.log("Unbekannter Befehl: " + cmd + " – /hilfe zeigt alle Befehle.\n");
 }

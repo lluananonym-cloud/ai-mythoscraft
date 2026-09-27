@@ -10,9 +10,29 @@ const TOOL_PROMPT = [
   '<tool>{"name":"write","path":"...","content":"..."}</tool>  Neue Datei anlegen oder komplett neu schreiben',
   '<tool>{"name":"search","pattern":"regex","path":".","glob":"*.ts"}</tool>  Im Projekt suchen (path und glob optional)',
   '<tool>{"name":"ls","path":"."}</tool>  Ordner auflisten',
+  '<tool>{"name":"websearch","query":"..."}</tool>  Im Internet suchen (z. B. Doku, Fehlermeldungen)',
+  '<tool>{"name":"fetch","url":"https://..."}</tool>  Webseite als Text lesen',
   "Nach jedem Werkzeug bekommst du das Ergebnis. Suche erst, statt Dateien blind zu lesen. Ändere bestehende Dateien mit edit statt write.",
   "Arbeite Schritt für Schritt, bis die Aufgabe erledigt ist, dann antworte normal ohne <tool> (Markdown erlaubt).",
 ].join("\n");
+
+// Modelle, die v1-messages versteht (siehe mapModel dort).
+const MODELS = [
+  { id: "mythos-code", label: "MythosCode", desc: "Standard fürs Programmieren" },
+  { id: "mythos-v2", label: "Mythos v2", desc: "am stärksten, etwas langsamer" },
+  { id: "mythos-sonnet", label: "Mythos v1", desc: "ausgewogen" },
+  { id: "mythos-lite", label: "Mythos Lite", desc: "am schnellsten" },
+];
+/** Grobe Token-Schätzung (≈ 4 Zeichen pro Token, Bilder pauschal). */
+function estimateTokens(system, messages) {
+  let chars = String(system || "").length, images = 0;
+  for (const m of messages) {
+    if (typeof m.content === "string") chars += m.content.length;
+    else for (const b of m.content || []) { if (b.type === "image") images++; else chars += String(b.text || "").length; }
+  }
+  return Math.ceil(chars / 4) + images * 1500;
+}
+const fmtTokens = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + " Mio." : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n));
 
 const MEMORY_FILE = "MYTHOS.md";
 const memoryPrompt = (mem) => mem
@@ -167,6 +187,61 @@ function fileTool(t, root) {
     return { result: "Unbekanntes Werkzeug: " + t.name };
   } catch (e) { return { result: "FEHLER: " + e.message }; }
 }
+
+// ---------- Web: Seite lesen & Suche ----------
+const WEB_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36 MythosCode";
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", auml: "ä", ouml: "ö", uuml: "ü", Auml: "Ä", Ouml: "Ö", Uuml: "Ü", szlig: "ß" };
+const decodeEntities = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) =>
+  e[0] === "#" ? String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : +e.slice(1)) : ENTITIES[e] ?? m);
+function htmlToText(html) {
+  return decodeEntities(html
+    .replace(/<(script|style|noscript|svg|head)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<\/(p|div|li|h[1-6]|tr|section|article|header|footer|pre|blockquote)>|<br\s*\/?>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, " "))
+    .replace(/[ \t\f\v]+/g, " ").replace(/\n\s*\n\s*/g, "\n\n").trim();
+}
+async function webGet(url) {
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(url, { headers: { "user-agent": WEB_UA, "accept-language": "de,en;q=0.8" }, redirect: "follow", signal: ctl.signal });
+    const type = r.headers.get("content-type") || "";
+    const buf = Buffer.from(await r.arrayBuffer()).subarray(0, 3e6);
+    return { ok: r.ok, status: r.status, type, text: buf.toString("utf8"), url: r.url };
+  } finally { clearTimeout(to); }
+}
+async function webTool(t) {
+  try {
+    if (t.name === "fetch") {
+      const url = String(t.url || "");
+      if (!/^https?:\/\//i.test(url)) return { result: "FEHLER: Bitte eine vollständige http(s)-URL angeben." };
+      const r = await webGet(url);
+      if (!r.ok) return { result: "FEHLER: HTTP " + r.status + " für " + url };
+      const text = /html/i.test(r.type) ? htmlToText(r.text) : r.text;
+      return { result: "Inhalt von " + r.url + ":\n\n" + text.slice(0, 20000) + (text.length > 20000 ? "\n…[gekürzt]" : "") };
+    }
+    if (t.name === "websearch") {
+      const q = String(t.query || "").trim();
+      if (!q) return { result: "FEHLER: query fehlt." };
+      const r = await webGet("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q));
+      const hits = [];
+      // Jeder Treffer ist ein eigener Block mit Titel-Link und (meist) Kurzbeschreibung.
+      for (const block of r.text.split(/<div[^>]+class="[^"]*\bresult\b/).slice(1)) {
+        if (hits.length >= 8) break;
+        const a = block.match(/class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+        if (!a) continue;
+        let href = decodeEntities(a[1]);
+        const u = href.match(/[?&]uddg=([^&]+)/); if (u) href = decodeURIComponent(u[1]);
+        if (/duckduckgo\.com\/y\.js|result--ad/.test(href + block.slice(0, 200))) continue; // Werbung
+        const sn = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/(?:a|div)>/);
+        hits.push((hits.length + 1) + ". " + htmlToText(a[2]) + "\n   " + href + (sn ? "\n   " + htmlToText(sn[1]).slice(0, 300) : ""));
+      }
+      return { result: hits.length ? "Suchergebnisse für „" + q + "“:\n\n" + hits.join("\n\n") + "\n\nMit fetch kannst du eine Seite genauer lesen." : "Keine Suchergebnisse für „" + q + "“." };
+    }
+    return { result: "Unbekanntes Werkzeug: " + t.name };
+  } catch (e) { return { result: "FEHLER: " + (e.name === "AbortError" ? "Zeitüberschreitung" : e.message) }; }
+}
+const isWebTool = (t) => t.name === "fetch" || t.name === "websearch";
 
 function readMemory(root) { const t = readText(path.join(root, MEMORY_FILE)); return t ? t.slice(0, 8000) : ""; }
 function addMemory(root, text) {

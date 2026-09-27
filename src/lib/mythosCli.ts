@@ -7,13 +7,14 @@ import APP_PRELOAD from "./mythos-code-app/preload.js?raw";
 import APP_HTML from "./mythos-code-app/index.html?raw";
 import APP_RENDERER from "./mythos-code-app/renderer.js?raw";
 import APP_MARKDOWN from "./mythos-code-app/markdown.js?raw";
+import APP_MCP from "./mythos-code-app/mcp.js?raw";
 
 /** Platzhalter ersetzen (alle Vorkommen). Zeilenenden auf LF, sonst bricht z. B. die Shebang-Zeile unter Linux/macOS. */
 const fill = (src: string, vars: Record<string, string> = {}) =>
   Object.entries(vars).reduce((out, [k, v]) => out.split(k).join(v.replace(/\r\n/g, "\n")), src.replace(/\r\n/g, "\n"));
 
 export const CLI_PKG = "mythos-code";
-export const CLI_VERSION = "1.4.0";
+export const CLI_VERSION = "1.5.0";
 const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/v1-messages`;
 
 const pkgJson = () => JSON.stringify({
@@ -91,13 +92,13 @@ mythos
 Mythos Code kann Dateien lesen/schreiben und Befehle ausführen – vor jeder Aktion fragt es dich (\`a\` = immer erlauben, oder mit \`mythos --yes\` starten).
 Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 
-**Im Terminal:** \`/hilfe\` zeigt alle Befehle, **Strg+C** stoppt Mythos. \`/goal <ziel>\` arbeitet selbstständig bis zum Ziel (mit Zusammenfassung), \`/merken <text>\` schreibt ins Projekt-Gedächtnis \`MYTHOS.md\`, \`/commit\` committet mit einer von Mythos geschriebenen Nachricht, \`/handy <ntfy-link>\` schickt dir eine Nachricht aufs Handy. Bilder: Datei einfach ins Terminal ziehen.`;
+**Im Terminal:** \`/hilfe\` zeigt alle Befehle, **Strg+C** stoppt Mythos. \`/goal <ziel>\` arbeitet selbstständig bis zum Ziel (mit Zusammenfassung), \`/merken <text>\` schreibt ins Projekt-Gedächtnis \`MYTHOS.md\`, \`/commit\` committet mit einer von Mythos geschriebenen Nachricht, \`/handy <ntfy-link>\` schickt dir eine Nachricht aufs Handy. Bilder: Datei einfach ins Terminal ziehen. Mythos kann im Internet suchen, \`/modell\` wechselt das Modell, \`/tokens\` zeigt den Verbrauch.`;
 
 // ================= Mythos Code Desktop-App (Electron) =================
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -121,7 +122,8 @@ Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier kli
 4. Links findest du deine **Projekte** und **gespeicherten Chats**. Mit ✎ bearbeitest du eine Nachricht, mit ■ (oder Esc) stoppst du Mythos.
 5. Tippe **/** für Befehle. Mit **/goal <ziel>** arbeitet Mythos selbstständig, bis das Ziel erreicht ist – du kannst das Fenster schließen (Mythos läuft im Tray weiter), der PC muss aber anbleiben. Nach einem Neustart geht es mit **▶ Weitermachen** weiter.
 6. Dateien und Bilder einfach ins Fenster ziehen oder mit **Strg+V** einfügen. Während Mythos arbeitet, reiht **Enter** weitere Aufgaben in die **Warteschlange** ein.
-7. \`/merken\` füllt das Projekt-Gedächtnis (\`MYTHOS.md\`), \`/commit\` und \`/push\` erledigen Git, \`/handy <ntfy-link>\` schickt dir Nachrichten aufs Handy.`;
+7. \`/merken\` füllt das Projekt-Gedächtnis (\`MYTHOS.md\`), \`/commit\` und \`/push\` erledigen Git, \`/handy <ntfy-link>\` schickt dir Nachrichten aufs Handy.
+8. Oben: Modell wählen, 👁 Live-Vorschau, 🗂 Dateibaum mit Editor, ⌨ Terminal, ☀ helles Design. Mehrere Chats können gleichzeitig arbeiten. **Automatisch testen** unten einschalten – Mythos repariert fehlschlagende Tests selbst. \`/mcp\` und \`/hooks\` richten MCP-Server und Hooks ein.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({
@@ -137,7 +139,7 @@ const appPkg = () => JSON.stringify({
   build: {
     appId: "online.mythoscraft.mythoscode",
     productName: "Mythos Code",
-    files: ["main.js", "preload.js", "index.html", "markdown.js", "renderer.js", "config.json", "icon.png"],
+    files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "renderer.js", "config.json", "icon.png"],
     win: { target: "nsis", icon: "icon.png" },
     nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup.exe" },
   },
@@ -175,6 +177,7 @@ export async function buildAppZip(site: string): Promise<Blob> {
   root.file("preload.js", fill(APP_PRELOAD));
   root.file("index.html", fill(APP_HTML));
   root.file("markdown.js", fill(APP_MARKDOWN));
+  root.file("mcp.js", fill(APP_MCP));
   root.file("renderer.js", fill(APP_RENDERER, { "__SITE__": site, "__FN__": FN_BASE }));
   root.file("config.json", JSON.stringify({ site }, null, 2));
   root.file("README.md", "# Mythos Code App\n\nWird per GitHub Actions zu `MythosCode-Setup.exe` gebaut.\n");

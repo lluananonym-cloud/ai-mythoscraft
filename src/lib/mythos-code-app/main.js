@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker } = require("electron");
 const fs = require("fs"); const path = require("path"); const { exec, execFile, spawn } = require("child_process");
+const { McpManager } = require("./mcp.js");
 
 // @@SHARED_TOOLS@@
 
@@ -85,32 +86,207 @@ ipcMain.handle("chats:search", (_e, q) => {
 });
 
 // ---------- Werkzeuge ----------
-ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
-ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, memoryFile: MEMORY_FILE }));
-let child = null;
-function killChild() {
-  if (!child) return;
-  try { if (process.platform === "win32") exec("taskkill /pid " + child.pid + " /T /F"); else child.kill(); } catch {}
+const send = (ch, payload) => { if (w && !w.isDestroyed()) w.webContents.send(ch, payload); };
+const mcp = new McpManager({ onChange: () => send("mcp-changed", mcp.status()) });
+app.on("will-quit", () => { mcp.stopAll(); killAll(); });
+
+// System-Prompt: Werkzeuge + verbundene MCP-Werkzeuge + Gedächtnis + Ziel.
+function mcpPrompt() {
+  const tools = mcp.status().filter((s) => s.status === "connected").flatMap((s) => s.tools.map((t) => ({ server: s.name, ...t })));
+  if (!tools.length) return "";
+  const args = (t) => (t.inputSchema && t.inputSchema.properties
+    ? " · args: " + JSON.stringify(Object.fromEntries(Object.entries(t.inputSchema.properties).map(([k, v]) => [k, (v && v.type) || "any"]))).slice(0, 200) : "");
+  return '\n\nMCP-Werkzeuge (externe Server) – Aufruf: <tool>{"name":"mcp","server":"...","tool":"...","args":{...}}</tool>\n' +
+    tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n");
 }
-// Stopp-Knopf: laufenden Befehl samt Unterprozessen beenden.
-ipcMain.handle("abort", () => { killChild(); return true; });
-// Befehl ausführen, Ausgabe live an das Fenster schicken.
-function runLive(cmd, cwd) {
+ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + mcpPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
+ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
+
+// Laufende Prozesse je Kennung – mehrere Aufgaben (und das Terminal) laufen parallel.
+const children = new Map();
+function killTree(p) { try { if (process.platform === "win32") exec("taskkill /pid " + p.pid + " /T /F"); else p.kill(); } catch {} }
+function killAll() { for (const p of children.values()) killTree(p); }
+ipcMain.handle("abort", (_e, id) => { const p = children.get(id); if (p) killTree(p); return true; });
+
+/** Befehl ausführen, Ausgabe live ans Fenster ({ id, chunk } auf `channel`). Ergebnis: { text, code }. */
+function runLive(cmd, cwd, id, channel, timeoutMs = 600000, env) {
   return new Promise((res) => {
     let out = "";
-    child = spawn(cmd, { cwd: cwd || undefined, shell: true, windowsHide: true });
-    const on = (decode) => (d) => { const s = decode(d); out += s; if (out.length > 200000) out = out.slice(-100000); send("tool-output", s); };
-    child.stdout.on("data", on(outputDecoder())); child.stderr.on("data", on(outputDecoder()));
-    const to = setTimeout(() => { out += "\n[Nach 10 Minuten abgebrochen]"; killChild(); }, 600000);
-    child.on("error", (e) => { out += "\nFEHLER: " + e.message; });
-    child.on("close", (code) => { clearTimeout(to); child = null; res((out + (code ? "\nExit: " + code : "")).slice(-8000) || "(keine Ausgabe)"); });
+    const p = spawn(cmd, { cwd: cwd || undefined, shell: true, windowsHide: true, env: { ...process.env, ...(env || {}) } });
+    children.set(id, p);
+    const on = (decode) => (d) => { const s = decode(d); out += s; if (out.length > 200000) out = out.slice(-100000); send(channel, { id, chunk: s }); };
+    p.stdout.on("data", on(outputDecoder())); p.stderr.on("data", on(outputDecoder()));
+    const to = setTimeout(() => { out += "\n[Nach " + Math.round(timeoutMs / 60000) + " Minuten abgebrochen]"; killTree(p); }, timeoutMs);
+    p.on("error", (e) => { out += "\nFEHLER: " + e.message; });
+    p.on("close", (code) => { clearTimeout(to); if (children.get(id) === p) children.delete(id); res({ text: out, code: code == null ? 1 : code }); });
   });
 }
-const send = (ch, payload) => { if (w && !w.isDestroyed()) w.webContents.send(ch, payload); };
-// Liefert { result, diff? } – diff wird im Chat als Änderungsansicht gezeigt.
-ipcMain.handle("tool", async (_e, t, cwd) => {
-  if (t.name === "run") return { result: await runLive(t.cmd, cwd) };
-  return fileTool(t, cwd || process.cwd());
+
+// ---------- Hooks: <projekt>/.mythos/hooks.json und hooks.json im App-Datenordner ----------
+// Format wie bei Claude Code: { "PreToolUse": [{ "matcher": "edit|write", "command": "..." }], "PostToolUse": [...], "Stop": [...] }
+// Exit-Code 2 bei PreToolUse blockiert das Werkzeug (Ausgabe geht als Begründung an Mythos).
+const readJsonFile = (f, fallback) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return fallback; } };
+function loadHooks(cwd) {
+  const all = {};
+  const sources = [readJsonFile(path.join(app.getPath("userData"), "hooks.json"), {}), cwd ? readJsonFile(path.join(cwd, ".mythos", "hooks.json"), {}) : {}];
+  for (const src of sources) for (const [ev, list] of Object.entries(src.hooks || src)) if (Array.isArray(list)) (all[ev] = all[ev] || []).push(...list);
+  return all;
+}
+function hookMatches(h, toolName) {
+  if (!h || !h.command || h.disabled) return false;
+  if (!h.matcher || !toolName) return true;
+  try { return new RegExp("^(" + h.matcher + ")$", "i").test(toolName); } catch { return false; }
+}
+function runHooks(event, payload, cwd) {
+  const list = (loadHooks(cwd)[event] || []).filter((h) => hookMatches(h, payload.tool_name));
+  return Promise.all(list.map((h) => new Promise((res) => {
+    const p = spawn(h.command, { cwd: cwd || undefined, shell: true, windowsHide: true, env: { ...process.env, MYTHOS_PROJECT_DIR: cwd || "", MYTHOS_HOOK_EVENT: event } });
+    let out = "";
+    const d1 = outputDecoder(), d2 = outputDecoder();
+    const t = setTimeout(() => killTree(p), (h.timeout || 60) * 1000);
+    p.stdout.on("data", (d) => (out += d1(d))); p.stderr.on("data", (d) => (out += d2(d)));
+    p.on("close", (code) => { clearTimeout(t); res({ event, command: h.command, code: code == null ? 1 : code, out: out.trim().slice(-4000) }); });
+    p.on("error", (e) => { clearTimeout(t); res({ event, command: h.command, code: 1, out: e.message }); });
+    p.stdin.on("error", () => {});
+    p.stdin.end(JSON.stringify({ hook_event_name: event, cwd, ...payload }));
+  })));
+}
+ipcMain.handle("hooks:run", (_e, event, payload, cwd) => runHooks(event, payload, cwd));
+ipcMain.handle("hooks:list", (_e, cwd) => loadHooks(cwd));
+
+// Ein Werkzeug ausführen (mit Hooks). Liefert { result, diff?, code?, hooks }.
+ipcMain.handle("tool", async (_e, t, cwd, runId) => {
+  const root = cwd || process.cwd();
+  const toolName = t.name === "mcp" ? "mcp__" + t.server + "__" + t.tool : t.name;
+  const pre = await runHooks("PreToolUse", { tool_name: toolName, tool_input: t }, cwd);
+  const blocked = pre.filter((h) => h.code === 2);
+  if (blocked.length) return { result: "Durch Hook blockiert: " + (blocked.map((h) => h.out).join("\n") || "ohne Begründung"), hooks: pre };
+  let r;
+  if (t.name === "run") {
+    const x = await runLive(t.cmd, root, runId, "tool-output");
+    r = { result: (x.text + (x.code ? "\nExit: " + x.code : "")).slice(-8000) || "(keine Ausgabe)", code: x.code };
+  } else if (isWebTool(t)) r = await webTool(t);
+  else if (t.name === "mcp") { const x = await mcp.call(t.server, t.tool, t.args || {}); r = { result: String(x.output).slice(0, 20000) }; }
+  else r = fileTool(t, root);
+  const post = await runHooks("PostToolUse", { tool_name: toolName, tool_input: t, tool_output: r.result.slice(0, 4000) }, cwd);
+  const notes = post.filter((h) => h.out || h.code).map((h) => "[Hook „" + h.command + "“ → Exit " + h.code + "]\n" + h.out);
+  if (notes.length) r.result += "\n\nHook-Ausgabe:\n" + notes.join("\n");
+  return { ...r, hooks: pre.concat(post) };
+});
+
+// ---------- Automatisch testen ----------
+ipcMain.handle("tests:detect", (_e, cwd) => {
+  if (!cwd) return null;
+  const has = (f) => fs.existsSync(path.join(cwd, f));
+  const pkg = readJsonFile(path.join(cwd, "package.json"), null);
+  const t = pkg && pkg.scripts && pkg.scripts.test;
+  if (t && !/no test specified/i.test(t)) return "npm test";
+  if (has("Cargo.toml")) return "cargo test";
+  if (has("go.mod")) return "go test ./...";
+  if (has("pytest.ini") || has("conftest.py") || (has("tests") && fs.readdirSync(path.join(cwd, "tests")).some((f) => /^test_.*\.py$|_test\.py$/.test(f)))) return "python -m pytest -q";
+  if (has("pom.xml")) return "mvn -q test";
+  return null;
+});
+// CI=1: Test-Runner wie vitest/jest laufen einmal durch statt im Watch-Modus.
+ipcMain.handle("tests:run", async (_e, cwd, cmd, runId) => {
+  const x = await runLive(cmd, cwd, runId, "tool-output", 600000, { CI: "1", FORCE_COLOR: "0" });
+  return { text: x.text.slice(-8000), code: x.code };
+});
+
+// ---------- MCP-Server: <projekt>/.mcp.json und mcp.json im App-Datenordner ----------
+ipcMain.handle("mcp:configure", (_e, cwd) => {
+  const servers = (f) => readJsonFile(f, {}).mcpServers || {};
+  mcp.configure(servers(path.join(app.getPath("userData"), "mcp.json")), { cwd, servers: cwd ? servers(path.join(cwd, ".mcp.json")) : {} });
+  return mcp.status();
+});
+ipcMain.handle("mcp:status", () => mcp.status());
+ipcMain.handle("mcp:restart", (_e, name) => mcp.restart(name));
+// Konfigurationsdatei öffnen (bei Bedarf mit Vorlage anlegen).
+ipcMain.handle("config:open", (_e, which, cwd) => {
+  const file = which === "mcp-global" ? path.join(app.getPath("userData"), "mcp.json")
+    : which === "mcp-project" ? path.join(cwd, ".mcp.json")
+    : which === "hooks-global" ? path.join(app.getPath("userData"), "hooks.json")
+    : path.join(cwd, ".mythos", "hooks.json");
+  if (!fs.existsSync(file)) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tpl = /mcp/.test(which)
+      ? { mcpServers: { beispiel: { command: "npx", args: ["-y", "@modelcontextprotocol/server-filesystem", "."], disabled: true } } }
+      : { PreToolUse: [], PostToolUse: [{ matcher: "edit|write", command: "echo Datei geändert", disabled: true }], Stop: [] };
+    fs.writeFileSync(file, JSON.stringify(tpl, null, 2));
+  }
+  shell.openPath(file);
+  return file;
+});
+
+// ---------- Live-Vorschau: eigenes Fenster, lädt bei Dateiänderungen neu ----------
+let preview = null, watcher = null, reloadTimer = null;
+ipcMain.handle("preview:open", (_e, target, cwd) => {
+  let url = String(target || "").trim();
+  if (!url) {
+    const idx = cwd && ["index.html", "public/index.html", "dist/index.html", "build/index.html"].map((f) => path.join(cwd, f)).find((f) => fs.existsSync(f));
+    if (!idx) return { error: "Keine index.html gefunden – gib eine Adresse an, z. B. /vorschau http://localhost:5173" };
+    url = idx;
+  } else if (!/^https?:\/\//i.test(url)) {
+    const f = path.resolve(cwd || ".", url);
+    if (!fs.existsSync(f)) return { error: "Nicht gefunden: " + url };
+    url = f;
+  }
+  if (!preview || preview.isDestroyed()) {
+    preview = new BrowserWindow({ width: 1024, height: 768, title: "Mythos Code – Vorschau", icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, sandbox: true } });
+    preview.webContents.setWindowOpenHandler(({ url: u }) => { shell.openExternal(u); return { action: "deny" }; });
+    preview.on("closed", () => { preview = null; if (watcher) { watcher.close(); watcher = null; } });
+  }
+  if (/^https?:/i.test(url)) preview.loadURL(url); else preview.loadFile(url);
+  preview.show(); preview.focus();
+  if (watcher) { watcher.close(); watcher = null; }
+  if (cwd) {
+    try {
+      watcher = fs.watch(cwd, { recursive: true }, (_ev, f) => {
+        if (!f || /(^|[\\/])(node_modules|\.git)([\\/]|$)/.test(f)) return;
+        clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(() => { if (preview && !preview.isDestroyed()) preview.webContents.reloadIgnoringCache(); }, 400);
+      });
+    } catch {}
+  }
+  return { ok: true, url };
+});
+
+// ---------- Dateibaum & Editor ----------
+const inside = (cwd, rel) => { const f = path.resolve(cwd, rel || "."); const r = path.relative(path.resolve(cwd), f); return r.startsWith("..") || path.isAbsolute(r) ? null : f; };
+ipcMain.handle("files:list", (_e, cwd, rel) => {
+  const dir = cwd && inside(cwd, rel);
+  if (!dir) return [];
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.name !== ".git")
+      .map((e) => ({ name: e.name, dir: e.isDirectory(), rel: path.relative(cwd, path.join(dir, e.name)).split(path.sep).join("/") }))
+      .sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, "de"));
+  } catch { return []; }
+});
+ipcMain.handle("files:read", (_e, cwd, rel) => {
+  const f = cwd && inside(cwd, rel);
+  if (!f) return { error: "Ungültiger Pfad" };
+  try {
+    const st = fs.statSync(f);
+    if (st.size > 2e6) return { error: "Datei zu groß (" + (st.size / 1e6).toFixed(1) + " MB)" };
+    const buf = fs.readFileSync(f);
+    if (buf.includes(0)) return { error: "Binärdatei – kann hier nicht angezeigt werden" };
+    return { text: buf.toString("utf8") };
+  } catch (e) { return { error: e.message }; }
+});
+ipcMain.handle("files:save", (_e, cwd, rel, text) => {
+  const f = cwd && inside(cwd, rel);
+  if (!f) return { error: "Ungültiger Pfad" };
+  try { const before = readText(f) ?? ""; fs.writeFileSync(f, text); return { ok: true, diff: lineDiff(before, text) }; } catch (e) { return { error: e.message }; }
+});
+ipcMain.handle("files:reveal", (_e, cwd, rel) => { const f = cwd && inside(cwd, rel); if (f) shell.showItemInFolder(f); return !!f; });
+
+// ---------- Eingebautes Terminal ----------
+ipcMain.handle("term:run", (_e, cwd, cmd) => runLive(cmd, cwd, "term", "term-output", 30 * 60000));
+ipcMain.handle("term:kill", () => { const p = children.get("term"); if (p) killTree(p); return true; });
+ipcMain.handle("term:cd", (_e, cwd, dir) => {
+  const d = path.resolve(cwd || require("os").homedir(), dir || require("os").homedir());
+  try { return fs.statSync(d).isDirectory() ? d : null; } catch { return null; }
 });
 
 // ---------- Projekt-Gedächtnis (MYTHOS.md) ----------
