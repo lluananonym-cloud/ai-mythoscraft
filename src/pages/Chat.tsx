@@ -98,6 +98,11 @@ const Chat = () => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
   const [convSearch, setConvSearch] = useState("");
+  // Chats, in deren Nachrichten der Suchtext vorkommt (nicht nur im Titel).
+  const [contentHits, setContentHits] = useState<Set<string>>(new Set());
+  // Nachrichten, die während einer laufenden Antwort eingegeben wurden – werden danach der Reihe nach gesendet.
+  const [queue, setQueue] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -638,9 +643,36 @@ const Chat = () => {
       }
     }, [input]);
 
+  useEffect(() => {
+    const q = convSearch.trim();
+    if (q.length < 2 || !user) { setContentHits(new Set()); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from("messages").select("conversation_id")
+        .ilike("content", `%${q.replace(/[\\%_]/g, (m) => "\\" + m)}%`).limit(300);
+      setContentHits(new Set((data || []).map((m: { conversation_id: string }) => m.conversation_id)));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [convSearch, user]);
+
   const filteredConvs = convSearch
-    ? convs.filter(c => c.title.toLowerCase().includes(convSearch.toLowerCase()))
+    ? convs.filter(c => c.title.toLowerCase().includes(convSearch.toLowerCase()) || contentHits.has(c.id))
     : convs;
+
+  // Warteschlange abarbeiten, sobald die aktuelle Antwort fertig ist.
+  useEffect(() => {
+    if (sending || !queue.length) return;
+    const [next, ...rest] = queue;
+    setQueue(rest);
+    send(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sending, queue]);
+
+  const submitOrQueue = () => {
+    const text = input.trim();
+    if (!text) return;
+    if (sending) { setQueue(q => [...q, text]); setInput(""); return; }
+    send();
+  };
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Account";
 
@@ -793,7 +825,21 @@ const Chat = () => {
         </Sheet>
 
         {/* Main column */}
-        <main className="flex-1 min-w-0 flex flex-col h-full">
+        <main
+          className="relative flex-1 min-w-0 flex flex-col h-full"
+          onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragging(true); } }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false); }}
+          onDrop={(e) => {
+            if (!e.dataTransfer.files.length) return;
+            e.preventDefault(); setDragging(false);
+            uploadFiles(e.dataTransfer.files);
+          }}
+        >
+          {dragging && (
+            <div className="pointer-events-none absolute inset-2 z-50 flex items-center justify-center rounded-3xl border-2 border-dashed border-violet-400/70 bg-background/70 backdrop-blur-sm">
+              <div className="glass-strong rounded-2xl px-6 py-4 text-sm">⬇ Dateien oder Bilder hier ablegen</div>
+            </div>
+          )}
           {/* Top bar */}
           <header className="shrink-0 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 h-14 border-b border-white/5 pt-[env(safe-area-inset-top)]">
             {/* Sidebar toggle */}
@@ -1056,6 +1102,20 @@ const Chat = () => {
                 </div>
               )}
 
+              {queue.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-2 text-xs text-muted-foreground">
+                  <span>⏳ Warteschlange:</span>
+                  {queue.map((q, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-foreground/90">
+                      <span className="max-w-[180px] truncate">{q}</span>
+                      <button onClick={() => setQueue(prev => prev.filter((_, j) => j !== i))} aria-label="Aus Warteschlange entfernen">
+                        <XIcon className="h-3 w-3 hover:text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {attachments.map((a, i) => (
@@ -1133,16 +1193,22 @@ const Chat = () => {
                         }
                       }
                     }
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitOrQueue(); }
+                  }}
+                  onPaste={(e) => {
+                    // Bilder/Dateien aus der Zwischenablage (Strg+V) direkt anhängen.
+                    if (!e.clipboardData.files.length) return;
+                    e.preventDefault();
+                    uploadFiles(e.clipboardData.files);
                   }}
                   placeholder={
+                    sending ? "Nächste Nachricht? Enter reiht sie in die Warteschlange ein" :
                     voiceMode ? "Tippe oder drücke das Mikro..." :
                     mode === "support" ? "Frage Mythos AI…" :
                     mode === "agent" ? "Was soll der Agent tun?" : "Frag mich alles…"
                   }
                   className="min-h-[56px] max-h-[200px] overflow-hidden resize-none border-0 bg-transparent focus-visible:ring-0 text-[15px] px-4 pt-4 pb-14 shadow-none"
                                     style={{ height: 'auto' }}
-                                    disabled={sending}
                 />
                 {/* Action row inside composer */}
                 <div className="absolute left-2 bottom-2 flex items-center gap-1">
@@ -1201,13 +1267,13 @@ const Chat = () => {
                     </Tooltip>
                   )}
                   <Button
-                    onClick={() => send()}
-                    disabled={!input.trim() || sending}
+                    onClick={submitOrQueue}
+                    disabled={!input.trim() && !sending}
                     size="icon"
                     className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30"
-                    aria-label="Senden"
+                    aria-label={sending ? "In die Warteschlange" : "Senden"}
                   >
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {sending && !input.trim() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>

@@ -1,0 +1,389 @@
+#!/usr/bin/env node
+// Mythos Code CLI – KI-Coding-Agent im Terminal (by Mythoscraft)
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import readline from "node:readline";
+import { exec, spawn, execFileSync } from "node:child_process";
+
+// @@SHARED_TOOLS@@
+
+const API = process.env.MYTHOS_API_URL || "__API__";
+const CFG = path.join(os.homedir(), ".mythos-code.json");
+const ROOT = process.cwd();
+const C = { c: "\x1b[36m", g: "\x1b[32m", y: "\x1b[33m", r: "\x1b[31m", m: "\x1b[35m", d: "\x1b[2m", b: "\x1b[1m", x: "\x1b[0m" };
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const ask = (q) => new Promise((r) => rl.question(q, r));
+const load = () => { try { return JSON.parse(fs.readFileSync(CFG, "utf8")); } catch { return {}; } };
+const save = (c) => fs.writeFileSync(CFG, JSON.stringify(c, null, 2));
+let cfg = load();
+let autoYes = process.argv.includes("--yes");
+let goal = "";
+
+const SYSTEM = () => "Du bist Mythos Code, ein autonomer Coding-Agent im Terminal des Nutzers (OS: " + process.platform + ", Projektordner: " + ROOT + ").\n" +
+  TOOL_PROMPT + memoryPrompt(readMemory(ROOT)) + goalPrompt(goal);
+
+const SITE = process.env.MYTHOS_SITE_URL || "__SITE__";
+const FN = process.env.MYTHOS_FN_URL || API.replace(/\/v1-messages$/, "");
+const authPost = async (body) => (await fetch(FN + "/cli-auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json();
+
+function openBrowser(url) {
+  const cmd = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+  exec(cmd, () => {});
+}
+
+async function loginWithKey() {
+  const k = (await ask("API-Key (sk-ant-mythos-...): ")).trim();
+  if (!k.startsWith("sk-ant-mythos-")) { console.log(C.r + "Ungültiger Key." + C.x); process.exit(1); }
+  cfg.key = k; save(cfg); console.log(C.g + "✓ Angemeldet" + C.x);
+}
+
+// Anmeldung über die Website: Browser öffnet sich, dort auf "Authentifizieren" klicken.
+async function login() {
+  if (process.argv.includes("--key")) return loginWithKey();
+  let s;
+  try { s = await authPost({ action: "start", client: "cli" }); } catch { s = null; }
+  if (!s?.code) { console.log(C.r + "Anmeldung gerade nicht möglich – versuch es gleich nochmal." + C.x); process.exit(1); }
+  const url = SITE + "/cli-auth?code=" + s.code;
+  console.log(C.c + "\n  Anmeldung mit MythosAI" + C.x);
+  console.log("  Dein Browser öffnet sich. Klicke dort auf " + C.b + "Authentifizieren" + C.x + ".");
+  console.log(C.d + "  Code: " + s.code + "  ·  Falls sich nichts öffnet: " + url + C.x + "\n");
+  openBrowser(url);
+  const until = Date.now() + 15 * 60e3;
+  process.stdout.write(C.d + "  Warte auf Bestätigung…" + C.x);
+  while (Date.now() < until) {
+    await new Promise((r) => setTimeout(r, 2000));
+    let p; try { p = await authPost({ action: "poll", code: s.code, poll_secret: s.poll_secret }); } catch { continue; }
+    if (p.status === "ok") { cfg.key = p.api_key; cfg.name = p.name; save(cfg); clearLine(); console.log(C.g + "  ✓ Angemeldet als " + p.name + C.x + "\n"); return; }
+    if (p.status === "expired") break;
+  }
+  clearLine(); console.log(C.r + "  Anmeldung abgelaufen – starte nochmal mit: mythos login" + C.x); process.exit(1);
+}
+
+const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
+
+// Live-Timer: läuft während der ganzen Aufgabe, pausiert für Ausgaben und Rückfragen.
+let T0 = 0, tick = null;
+const clearLine = () => process.stdout.write("\r\x1b[K");
+const startTick = () => { if (tick || !working) return; tick = setInterval(() => process.stdout.write("\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - T0) + "  (Strg+C = stoppen)" + C.x + "   "), 250); };
+const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } clearLine(); };
+const say = (s) => { const was = !!tick; stopTick(); console.log(s); if (was) startTick(); };
+
+// ---------- Stoppen mit Strg+C ----------
+let working = false, stopped = false, ctl = null, child = null;
+function killChild() {
+  if (!child) return;
+  try { if (process.platform === "win32") exec("taskkill /pid " + child.pid + " /T /F"); else child.kill("SIGTERM"); } catch {}
+}
+rl.on("SIGINT", () => {
+  if (!working) { console.log(); rl.close(); process.exit(0); }
+  if (stopped) return;
+  stopped = true; killChild(); if (ctl) ctl.abort();
+  say(C.r + "■ Wird gestoppt…" + C.x);
+});
+
+// ---------- Markdown im Terminal ----------
+function mdLine(line, st) {
+  if (/^\s*```/.test(line)) { st.code = !st.code; return C.d + (st.code ? "┌─ " + line.trim().slice(3) : "└─") + C.x; }
+  if (st.code) return C.c + "│ " + line + C.x;
+  const h = line.match(/^(#{1,6})\s+(.*)/);
+  if (h) return C.b + C.m + h[2] + C.x;
+  return line
+    .replace(/^(\s*)[-*]\s+/, "$1• ")
+    .replace(/\*\*(.+?)\*\*/g, C.b + "$1" + C.x)
+    .replace(/`([^`]+)`/g, C.c + "$1" + C.x)
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, "$1 " + C.d + "($2)" + C.x);
+}
+
+// Antwort live mitlesen: fertige Zeilen sofort formatiert ausgeben, <tool>-Blöcke ausblenden.
+function streamPrinter() {
+  let printed = 0, buf = "", started = false;
+  const st = { code: false };
+  const line = (l) => {
+    stopTick();
+    if (!started) { if (!l.trim()) { startTick(); return; } started = true; process.stdout.write(C.b + "Mythos: " + C.x); }
+    console.log(mdLine(l, st));
+    startTick();
+  };
+  return {
+    push(full) {
+      let vis = full;
+      const k = vis.indexOf("<tool>");
+      if (k >= 0) vis = vis.slice(0, k);
+      else for (let n = 5; n > 0; n--) if (vis.endsWith("<tool>".slice(0, n))) { vis = vis.slice(0, -n); break; }
+      if (vis.length <= printed) return;
+      buf += vis.slice(printed); printed = vis.length;
+      let i; while ((i = buf.indexOf("\n")) !== -1) { line(buf.slice(0, i)); buf = buf.slice(i + 1); }
+    },
+    end() { if (buf.trim()) line(buf); buf = ""; if (started) { stopTick(); console.log(); startTick(); } },
+  };
+}
+
+// ---------- Modell ----------
+// Verlauf kürzen, damit lange Aufgaben nicht an zu großem Kontext scheitern. level 0 = mild, 2 = stark.
+const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\n…[gekürzt]…\n" + s.slice(s.length - Math.floor(max * 0.3));
+const withImages = (m, content) => m.images && m.images.length
+  ? { role: m.role, content: [{ type: "text", text: content }].concat(m.images.map((i) => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } }))) }
+  : { role: m.role, content };
+function compact(history, level) {
+  const keep = [6, 8, 4][level], recentMax = [20000, 3000, 1500][level], oldMax = [1500, 800, 400][level];
+  const cut = Math.max(0, history.length - keep);
+  const older = level === 0 ? history.slice(0, cut) : history.slice(0, Math.min(1, cut));
+  return older.map((m) => ({ role: m.role, content: shorten(m.content, oldMax) }))
+    .concat(history.slice(cut).map((m) => withImages(m, shorten(m.content, recentMax))));
+}
+
+async function once(messages, onText) {
+  const c = ctl = new AbortController(); const to = setTimeout(() => c.abort(), 170000);
+  try {
+    const r = await fetch(API, {
+      method: "POST", signal: c.signal,
+      headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system: SYSTEM(), messages, stream: true }),
+    });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i; while ((i = buf.indexOf("\n")) !== -1) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        let p; try { p = JSON.parse(line.slice(5)); } catch { continue; }
+        if (p.type === "error") { const e = new Error(p.error?.message || "Überlastet"); e.status = 529; throw e; }
+        if (p.delta?.text) { out += p.delta.text; if (onText) onText(out); }
+      }
+    }
+    if (!out.trim()) throw new Error("Leere Antwort");
+    return out;
+  } finally { clearTimeout(to); }
+}
+
+async function call(history, onText) {
+  for (let a = 0; a < 6; a++) {
+    if (stopped) throw new Error("Gestoppt");
+    try { return await once(compact(history, Math.min(2, Math.floor(a / 2))), onText); }
+    catch (e) {
+      if (stopped) throw e;
+      if (e.status === 401) throw new Error("Anmeldung ungültig – bitte neu anmelden: mythos login");
+      if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
+      await new Promise((r) => setTimeout(r, Math.min(8000, 1500 * (a + 1))));
+    }
+  }
+  throw new Error("Mythos ist gerade nicht erreichbar – bitte gleich nochmal versuchen.");
+}
+
+// ---------- Werkzeuge ----------
+function diffText(d) {
+  const shown = d.lines.slice(0, 80).map(([op, l]) =>
+    op === "+" ? C.g + "  + " + l + C.x : op === "-" ? C.r + "  - " + l + C.x : op === "@" ? C.d + "  " + l + C.x : C.d + "    " + l + C.x);
+  if (d.lines.length > 80) shown.push(C.d + "  … (" + (d.lines.length - 80) + " weitere Zeilen)" + C.x);
+  return shown.join("\n");
+}
+
+// Befehl ausführen und die Ausgabe live im Terminal zeigen.
+function runLive(cmd) {
+  stopTick();
+  return new Promise((res) => {
+    let out = "";
+    child = spawn(cmd, { shell: true, cwd: ROOT, env: process.env });
+    const on = (decode) => (d) => { const s = decode(d); out += s; if (out.length > 200000) out = out.slice(-100000); process.stdout.write(C.d + s + C.x); };
+    child.stdout.on("data", on(outputDecoder())); child.stderr.on("data", on(outputDecoder()));
+    const to = setTimeout(() => { out += "\n[Nach 10 Minuten abgebrochen]"; killChild(); }, 600000);
+    child.on("error", (e) => { out += "\nFEHLER: " + e.message; });
+    child.on("close", (code) => {
+      clearTimeout(to); child = null;
+      if (out && !out.endsWith("\n")) process.stdout.write("\n");
+      startTick();
+      res((out + (code ? "\nExit: " + code : "")).slice(-8000) || "(keine Ausgabe)");
+    });
+  });
+}
+
+async function runTool(t) {
+  const label = t.name === "run" ? "run " + t.cmd
+    : t.name === "search" ? "search /" + t.pattern + "/" + (t.glob ? " " + t.glob : "")
+    : t.name === "write" ? "write " + t.path + " (" + String(t.content || "").length + " Zeichen)"
+    : t.name + " " + (t.path || "");
+  say(C.y + "⚙  " + label + C.x);
+  if ((t.name === "run" || t.name === "write" || t.name === "edit") && !autoYes) {
+    stopTick();
+    const a = (await ask(C.d + "   Erlauben? [j/N/a=immer] " + C.x)).trim().toLowerCase();
+    startTick();
+    if (a === "a") autoYes = true; else if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt.";
+  }
+  if (t.name === "run") return runLive(t.cmd);
+  const r = fileTool(t, ROOT);
+  if (r.diff && r.diff.lines.length) say(diffText(r.diff));
+  return r.result;
+}
+
+// ---------- Eine Aufgabe (auch /goal) ----------
+async function turnInner(history) {
+  const max = goal ? 200 : 40;
+  let nudges = 0;
+  for (let i = 0; i < max && !stopped; i++) {
+    const pr = streamPrinter();
+    const out = await call(history, (full) => pr.push(full));
+    pr.end();
+    if (stopped) break;
+    history.push({ role: "assistant", content: out });
+    const m = out.match(/<tool>([\s\S]*?)<\/tool>/);
+    if (!m) {
+      if (!goal || /ZIEL ERREICHT/.test(out)) return goal ? "reached" : "done";
+      if (++nudges > 5) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
+      history.push({ role: "user", content: GOAL_NUDGE });
+      continue;
+    }
+    nudges = 0;
+    let t; try { t = JSON.parse(m[1]); } catch { history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+    const res = await runTool(t);
+    history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + res });
+  }
+  if (!stopped) say(C.y + "Schrittlimit (" + max + ") erreicht – mit /weiter macht Mythos weiter." + C.x);
+  return stopped ? "stopped" : "limit";
+}
+
+async function summarize(history) {
+  history.push({ role: "user", content: SUMMARY_PROMPT });
+  say(C.m + C.b + "📋 Zusammenfassung" + C.x);
+  const pr = streamPrinter();
+  const out = await call(history, (full) => pr.push(full));
+  pr.end();
+  history.push({ role: "assistant", content: out });
+  return out;
+}
+
+async function turn(history, input, images) {
+  if (input != null) history.push({ role: "user", content: input, images });
+  T0 = Date.now(); working = true; stopped = false; startTick();
+  const wasGoal = goal;
+  let status = "error", summary = "";
+  try {
+    status = await turnInner(history);
+    if (wasGoal && status !== "stopped" && !stopped) summary = await summarize(history);
+  } catch (e) { if (!stopped) say(C.r + "⚠ " + e.message + C.x); }
+  if (stopped) { status = "stopped"; if (history[history.length - 1]?.role === "user") history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" }); }
+  working = false; stopTick();
+  const took = fmt(Date.now() - T0);
+  console.log((stopped ? C.r + "■ Gestoppt nach " + took : C.g + "✓ Mythos hat " + took + " gearbeitet") + C.x + "\n");
+  if (status === "reached") { console.log(C.g + "🎯 Ziel erreicht: " + wasGoal + C.x + "\n"); goal = ""; }
+  // Handy-Benachrichtigung bei /goal oder längeren Aufgaben.
+  if (cfg.notify && (wasGoal || Date.now() - T0 > 60000)) {
+    const title = status === "reached" ? "🎯 Ziel erreicht" : status === "done" ? "✓ Mythos ist fertig" : status === "stopped" ? "■ Gestoppt" : "⚠ Mythos braucht dich";
+    pushNotify(cfg.notify, "Mythos Code – " + path.basename(ROOT), title + " (" + took + ")" + (summary ? "\n\n" + summary.slice(0, 1500) : ""));
+  }
+}
+
+// ---------- Git ----------
+const git = (args) => {
+  try { return { ok: true, out: execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1e7 }) }; }
+  catch (e) { return { ok: false, out: ((e.stdout || "") + (e.stderr || "")) || e.message }; }
+};
+const gitBranch = () => { const b = git(["rev-parse", "--abbrev-ref", "HEAD"]); return b.ok ? b.out.trim() : ""; };
+
+async function commit(msg) {
+  const st = git(["status", "--porcelain"]);
+  if (!st.ok) return say(C.r + "Kein Git-Repository: " + st.out.trim() + C.x);
+  if (!st.out.trim()) return say(C.d + "Nichts zu committen – alles sauber." + C.x);
+  if (!msg) {
+    const diff = git(["diff", "HEAD"]).out || git(["diff"]).out;
+    process.stdout.write(C.d + "Mythos schreibt die Commit-Nachricht…" + C.x);
+    stopped = false;
+    try {
+      msg = (await call([{ role: "user", content: "Schreibe eine kurze Git-Commit-Nachricht auf Deutsch für diese Änderungen: erste Zeile max. 72 Zeichen, optional Leerzeile + Stichpunkte. Antworte NUR mit der Nachricht, ohne Werkzeuge, ohne Codeblock.\n\n" + st.out + "\n" + diff.slice(0, 20000) }]))
+        .replace(/<tool>[\s\S]*?<\/tool>/g, "").replace(/^```\w*\n?|```$/g, "").trim();
+    } catch (e) { clearLine(); return say(C.r + "⚠ " + e.message + C.x); }
+    clearLine();
+  }
+  console.log(C.b + "Commit-Nachricht:" + C.x + "\n" + C.c + msg + C.x);
+  if (!autoYes && !/^[jy]/i.test((await ask(C.d + "Committen? [j/N] " + C.x)).trim())) return say("Abgebrochen.");
+  git(["add", "-A"]);
+  const c = git(["commit", "-m", msg]);
+  say((c.ok ? C.g : C.r) + c.out.trim() + C.x);
+}
+
+// ---------- Bilder: Pfade zu Bilddateien in der Eingabe (z. B. per Drag & Drop ins Terminal) ----------
+const IMG = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
+function extractImages(input) {
+  const images = [];
+  const text = input.replace(/"([^"]+\.(png|jpe?g|gif|webp))"|'([^']+\.(png|jpe?g|gif|webp))'|(\S+\.(png|jpe?g|gif|webp))/gi, (all, a, _1, b, _2, c) => {
+    const p = path.resolve(ROOT, a || b || c);
+    try {
+      const st = fs.statSync(p);
+      if (!st.isFile() || st.size > 5e6 || images.length >= 5) return all;
+      images.push({ media_type: IMG[p.split(".").pop().toLowerCase()], data: fs.readFileSync(p).toString("base64") });
+      return "[Bild: " + path.basename(p) + "]";
+    } catch { return all; }
+  });
+  return { text, images };
+}
+
+const HELP = [
+  ["/goal <ziel>", "Mythos arbeitet selbstständig, bis das Ziel erreicht ist (+ Zusammenfassung)"],
+  ["/goal stop", "Ziel beenden"],
+  ["/weiter", "Unterbrochene Arbeit fortsetzen"],
+  ["/merken <text>", "Etwas ins Projekt-Gedächtnis (MYTHOS.md) schreiben"],
+  ["/gedaechtnis", "Projekt-Gedächtnis anzeigen"],
+  ["/git", "Git-Status anzeigen"],
+  ["/commit [nachricht]", "Alles committen (ohne Nachricht schreibt Mythos sie)"],
+  ["/push", "git push"],
+  ["/handy <url>", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook) · /handy test · /handy aus"],
+  ["/vollzugriff an|aus", "Ohne Nachfragen arbeiten"],
+  ["/clear", "Verlauf leeren"],
+  ["/exit", "Beenden"],
+];
+
+async function command(q, history) {
+  const cmd = q.split(/\s+/)[0].toLowerCase(), arg = q.slice(cmd.length).trim();
+  if (cmd === "/hilfe" || cmd === "/help") return console.log(HELP.map(([c, d]) => "  " + C.c + c.padEnd(22) + C.x + d).join("\n") + "\n");
+  if (cmd === "/clear") { history.length = 0; goal = ""; return console.log("Verlauf geleert.\n"); }
+  if (cmd === "/goal" || cmd === "/ziel") {
+    if (!arg) return console.log(goal ? "🎯 Aktuelles Ziel: " + goal : "So geht's: /goal <was Mythos erreichen soll>");
+    if (/^(stop|aus|ende|beenden)$/i.test(arg)) { goal = ""; return console.log("🎯 Ziel beendet.\n"); }
+    if (!autoYes) { autoYes = true; console.log(C.d + "Vollzugriff für /goal eingeschaltet – Mythos fragt nicht mehr nach." + C.x); }
+    goal = arg;
+    return turn(history, "Neues Ziel: " + arg + "\nArbeite jetzt komplett selbstständig daran, bis es erreicht und geprüft ist.");
+  }
+  if (cmd === "/weiter") {
+    if (!history.length) return console.log("Hier gibt es noch nichts zum Weitermachen.");
+    return turn(history, history[history.length - 1].role === "assistant" ? "Mach bitte genau dort weiter, wo du aufgehört hast." : null);
+  }
+  if (cmd === "/merken") { if (!arg) return console.log("So geht's: /merken <text>"); addMemory(ROOT, arg); return console.log(C.g + "✓ In " + MEMORY_FILE + " gemerkt." + C.x + "\n"); }
+  if (cmd === "/gedaechtnis" || cmd === "/gedächtnis") return console.log(readMemory(ROOT) || "Noch kein Projekt-Gedächtnis. Mit /merken <text> anlegen.", "\n");
+  if (cmd === "/git") { const s = git(["status", "--short", "--branch"]); return console.log((s.ok ? s.out : C.r + s.out + C.x).trim() + "\n"); }
+  if (cmd === "/commit") return commit(arg);
+  if (cmd === "/push") { const p = git(["push"]); return console.log((p.ok ? C.g : C.r) + p.out.trim() + C.x + "\n"); }
+  if (cmd === "/handy") {
+    if (/^(aus|off)$/i.test(arg)) { delete cfg.notify; save(cfg); return console.log("Handy-Benachrichtigung aus.\n"); }
+    if (/^test$/i.test(arg)) return console.log(cfg.notify && await pushNotify(cfg.notify, "Mythos Code", "Test – Benachrichtigungen funktionieren ✓") ? C.g + "✓ Gesendet." + C.x : C.r + "Senden fehlgeschlagen – URL prüfen." + C.x);
+    if (!/^https:\/\//i.test(arg)) return console.log("So geht's: App „ntfy“ aufs Handy, Thema abonnieren, dann:\n  /handy https://ntfy.sh/dein-geheimes-thema\nOder einen Discord-Webhook-Link angeben.\n");
+    cfg.notify = arg; save(cfg);
+    return console.log(C.g + "✓ Gespeichert. Bei /goal und Aufgaben über 1 Minute bekommst du eine Nachricht. Test: /handy test" + C.x + "\n");
+  }
+  if (cmd === "/vollzugriff") { autoYes = !/^(aus|off)$/i.test(arg); return console.log(autoYes ? "Vollzugriff an.\n" : "Vollzugriff aus – Mythos fragt vor Befehlen nach.\n"); }
+  console.log("Unbekannter Befehl: " + cmd + " – /hilfe zeigt alle Befehle.\n");
+}
+
+async function main() {
+  const args = process.argv.slice(2).filter((a) => a !== "--yes" && a !== "--key");
+  if (args[0] === "login" || !cfg.key) await login();
+  if (args[0] === "login") process.exit(0);
+  if (args[0] === "logout") { save({}); console.log("Abgemeldet."); process.exit(0); }
+  const branch = gitBranch();
+  console.log(C.c + C.b + "\n  ✦ MYTHOS CODE" + C.x + C.d + "  – by Mythoscraft · " + path.basename(ROOT) + (branch ? " ⎇ " + branch : "") +
+    (readMemory(ROOT) ? " · Gedächtnis ✓" : "") + "\n  /hilfe für Befehle · Strg+C stoppt · Bilder: Datei ins Terminal ziehen\n" + C.x);
+  const history = [];
+  if (args.length) { const { text, images } = extractImages(args.join(" ")); await turn(history, text, images); }
+  while (true) {
+    const q = (await ask(C.c + (goal ? "🎯 " : "") + "› " + C.x)).trim();
+    if (!q) continue;
+    if (q === "/exit") break;
+    if (q.startsWith("/")) { await command(q, history); continue; }
+    const { text, images } = extractImages(q);
+    if (images.length) console.log(C.d + "🖼 " + images.length + " Bild(er) angehängt" + C.x);
+    await turn(history, text, images);
+  }
+  rl.close();
+}
+main();

@@ -59,24 +59,40 @@ function blockText(b: any): string {
   return "";
 }
 
-// Anthropic-Blöcke (auch tool_use/tool_result) -> reiner Text, sonst entstehen leere Nachrichten.
-function toOpenAI(messages: any[]): { role: string; content: string }[] {
+type OpenAIContent = string | ({ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } })[];
+
+/** Anthropic-Bildblock (base64 oder URL) -> Daten-/Bild-URL für den Gateway. */
+function imageUrl(b: any): string | null {
+  const s = b?.source;
+  if (b?.type !== "image" || !s) return null;
+  if (s.type === "base64" && typeof s.data === "string" && /^image\/(png|jpeg|gif|webp)$/.test(s.media_type)) return `data:${s.media_type};base64,${s.data}`;
+  if (s.type === "url" && typeof s.url === "string" && /^https:\/\//.test(s.url)) return s.url;
+  return null;
+}
+
+// Anthropic-Blöcke (auch tool_use/tool_result) -> Text, sonst entstehen leere Nachrichten.
+// Bilder in Nutzer-Nachrichten bleiben als image_url-Teile erhalten.
+function toOpenAI(messages: any[]): { role: string; content: OpenAIContent }[] {
   return messages.map((m) => {
-    const content = typeof m.content === "string"
-      ? m.content
-      : (m.content || []).map(blockText).filter(Boolean).join("\n");
-    return { role: m.role === "assistant" ? "assistant" : "user", content: content || "(leer)" };
+    const role = m.role === "assistant" ? "assistant" : "user";
+    if (typeof m.content === "string") return { role, content: m.content || "(leer)" };
+    const blocks: any[] = m.content || [];
+    const text = blocks.map(blockText).filter(Boolean).join("\n");
+    const images = role === "user" ? blocks.map(imageUrl).filter((u): u is string => !!u).slice(0, 8) : [];
+    if (!images.length) return { role, content: text || "(leer)" };
+    return { role, content: [{ type: "text" as const, text: text || "Siehe Bild." }, ...images.map((url) => ({ type: "image_url" as const, image_url: { url } }))] };
   });
 }
 
-function shorten(s: string, max: number): string {
+function shorten<T extends OpenAIContent>(s: T, max: number): T {
+  if (typeof s !== "string") return s.map((p) => (p.type === "text" ? { ...p, text: shorten(p.text, max) } : p)) as T;
   if (s.length <= max) return s;
   const head = Math.floor(max * 0.7);
-  return s.slice(0, head) + "\n…[gekürzt]…\n" + s.slice(s.length - (max - head));
+  return (s.slice(0, head) + "\n…[gekürzt]…\n" + s.slice(s.length - (max - head))) as T;
 }
 
 // Kürzt lange Verläufe: erste Nachricht (Aufgabe) + die letzten `keepLast`, jede Nachricht max. `maxChars`.
-function compact(msgs: { role: string; content: string }[], keepLast: number, maxChars: number) {
+function compact(msgs: { role: string; content: OpenAIContent }[], keepLast: number, maxChars: number) {
   const picked = msgs.length > keepLast + 1 ? [msgs[0], ...msgs.slice(-keepLast)] : msgs;
   return picked.map((m) => ({ role: m.role, content: shorten(m.content, maxChars) }));
 }
