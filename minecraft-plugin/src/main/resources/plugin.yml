@@ -8,9 +8,9 @@ commands:
   ai:
     description: Chatte mit Mythos AI. /ai <text>, /ai link, /ai unlink, /ai stats
     usage: /ai <text|link|unlink|stats>
-  mythos:
-    description: Admin/root command. /mythos reload|status|help
-    usage: /mythos <reload|status|help>
+  mythosai:
+    description: Admin command. /mythosai reload|status|help (/mythos gehört zum MythosCraft-Plugin)
+    usage: /mythosai <reload|status|help>
     permission: mythosai.admin
 permissions:
   mythosai.use:

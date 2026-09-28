@@ -81,9 +81,9 @@ public class MythosAIPlugin extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         String name = cmd.getName().toLowerCase(Locale.ROOT);
-        if (name.equals("mythos")) {
+        if (name.equals("mythosai")) {
             if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-                sender.sendMessage(PREFIX + "Befehle: /mythos reload, /mythos status, /ai <text>, /ai link, /ai unlink, /ai stats");
+                sender.sendMessage(PREFIX + "Befehle: /mythosai reload, /mythosai status, /ai <text>, /ai link, /ai unlink, /ai stats");
                 return true;
             }
             if (args[0].equalsIgnoreCase("reload")) {

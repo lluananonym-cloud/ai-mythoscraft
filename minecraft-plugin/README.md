@@ -32,7 +32,7 @@ mvn clean package
 | `/ai link` | Zeigt 6-stelligen Verifizierungscode zum Verknüpfen |
 | `/ai unlink` | Trennt den Account |
 | `/ai stats` | Link zur Website mit deinem Profil |
-| `/mythos reload` | Config neu laden (op) |
-| `/mythos status` | Verbindungscheck (op) |
+| `/mythosai reload` | Config neu laden (op) |
+| `/mythosai status` | Verbindungscheck (op) |
 
 Im Chat kann außerdem `!ai <frage>` geschrieben werden (deaktivierbar in der Config).
