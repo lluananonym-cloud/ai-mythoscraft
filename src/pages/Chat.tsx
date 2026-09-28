@@ -36,7 +36,7 @@ import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 import ModelPicker from "@/components/ModelPicker";
 import { DEFAULT_MYTHOS_ID, isAllowed, mythosLabel } from "@/lib/mythosModels";
 
-import { NV_API_KEY, nvidiaLLM } from "@/lib/nvidiaApi";
+import { nvidiaChat, nvidiaLLM } from "@/lib/nvidiaApi";
 
 const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
@@ -469,21 +469,9 @@ const Chat = () => {
         } else if (resp.status === 402) {
           // Fallback to NVIDIA OSS model when credits are exhausted
           try {
-            const nvidiaResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${NV_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model: "gpt-oss-120gb",
-                messages: [...historyForAI, { role: "user", content: userContentForAI }],
-                temperature: 0.7,
-              }),
-            });
-            if (!nvidiaResp.ok) throw new Error(`NVIDIA API error ${nvidiaResp.status}`);
-            const nvidiaData = await nvidiaResp.json();
-            const content = nvidiaData.choices?.[0]?.message?.content ?? "";
+            // Über den Server – der NVIDIA-Schlüssel ist nie im Browser.
+            const asText = (c: unknown) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p: { text?: string }) => p.text || "").join("\n") : "";
+            const content = await nvidiaChat([...historyForAI, { role: "user", content: userContentForAI }].map(m => ({ role: m.role, content: asText(m.content) })));
             // replace the placeholder assistant message with the actual content
             setMessages(prev => {
               const updated = [...prev];

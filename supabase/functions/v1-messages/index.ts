@@ -62,11 +62,14 @@ function blockText(b: any): string {
 type OpenAIContent = string | ({ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } })[];
 
 /** Anthropic-Bildblock (base64 oder URL) -> Daten-/Bild-URL für den Gateway. */
+// Max. ~8 MB pro Bild (base64 ist ~4/3 so groß) – schützt vor überdimensionierten Anfragen.
+const MAX_IMAGE_B64 = 11_000_000;
 function imageUrl(b: any): string | null {
   const s = b?.source;
   if (b?.type !== "image" || !s) return null;
-  if (s.type === "base64" && typeof s.data === "string" && /^image\/(png|jpeg|gif|webp)$/.test(s.media_type)) return `data:${s.media_type};base64,${s.data}`;
-  if (s.type === "url" && typeof s.url === "string" && /^https:\/\//.test(s.url)) return s.url;
+  if (s.type === "base64" && typeof s.data === "string" && /^image\/(png|jpeg|gif|webp)$/.test(s.media_type)
+    && s.data.length <= MAX_IMAGE_B64 && /^[A-Za-z0-9+/=\s]+$/.test(s.data.slice(0, 200))) return `data:${s.media_type};base64,${s.data}`;
+  if (s.type === "url" && typeof s.url === "string" && /^https:\/\/[^\s]{1,2000}$/.test(s.url)) return s.url;
   return null;
 }
 

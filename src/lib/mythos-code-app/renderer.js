@@ -307,6 +307,7 @@ async function runAgent(c, opts) {
       if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
       let r;
       if (t.name === "todo") r = updateTodos(run, c, t);
+      else if ((r = await safetyGate(c, t))) { /* Sicherheitsnetz */ }
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         if (t.name === "run") run.out = "";
@@ -402,6 +403,8 @@ const COMMANDS = [
   ["/heymythos", "an|aus", "Im Hintergrund auf „Hey Mythos“ hören (lokal)"],
   ["/agenten", "an|aus", "Multi-Agent: große Aufgaben parallel von mehreren Agenten bearbeiten"],
   ["/stimme", "[name]", "Stimme für den Sprachmodus wählen"],
+  ["/sicherheit", "", "Sicherheitsstatus anzeigen"],
+  ["/vertrauen", "an|aus", "Hooks/MCP-Server dieses Projekts erlauben oder sperren"],
   ["/besser", "[text]", "✨ Aufgabe von Mythos präziser formulieren lassen"],
   ["/später", "<zeit> <aufgabe>", "Aufgabe planen: 22:30, morgen 8:00, 30m, 2h"],
   ["/geplant", "[löschen <nr>]", "Geplante Aufgaben anzeigen oder löschen"],
@@ -463,6 +466,8 @@ async function command(q) {
     cfg.voice = v.id; window.mythos.setCfg(cfg); $("vvoice").value = v.id; window.MythosVoice.speaker.setVoice(v.id);
     return note("🔊 Stimme: " + v.label);
   }
+  if (cmd === "/sicherheit") return securityReport();
+  if (cmd === "/vertrauen") { if (needFolder()) return; const on = !/^(aus|off|nein)$/i.test(arg); setTrust(cfg.folder, on); return note(on ? "🛡 Du vertraust „" + base(cfg.folder) + "“ – eigene Hooks und MCP-Server sind aktiv." : "🛡 Hooks und MCP-Server aus „" + base(cfg.folder) + "“ sind gesperrt."); }
   if (cmd === "/besser") return improvePrompt(arg);
   if (cmd === "/kompakt") return compactChat();
   if (cmd === "/nochmal") { const k = chat.view.map((v) => v.cls).lastIndexOf("done"); return k < 0 ? note("Es gibt noch keine Antwort zum Neu-Generieren.") : regenerate(k); }
@@ -663,7 +668,7 @@ function renderHeader() {
 // Aktiven Projektordner wechseln (Git, MCP, Dateibaum, Terminal ziehen mit).
 async function setFolder(p) {
   cfg.folder = p || ""; addProject(p); await window.mythos.setCfg(cfg);
-  renderHeader(); refreshGit(); configureMcp(); loadCustomCommands();
+  renderHeader(); refreshGit(); configureMcp(); loadCustomCommands(); checkTrust(cfg.folder);
   if (treeOpen()) { expanded.clear(); renderTree(); }
   if (!termBusy) { termCwd = cfg.folder || termCwd; renderTermPrompt(); }
 }
@@ -864,7 +869,7 @@ async function login() {
 }
 function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
-  renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands();
+  renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands(); setTimeout(() => checkTrust(cfg.folder), 600);
   renderSched(); setTimeout(checkSchedule, 1500);
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
@@ -1133,6 +1138,7 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       if (t.name !== "todo") addTo(c, "tool", tag + toolLabel(t));
       let r;
       if (t.name === "todo") r = updateTodos(s, c, t, "Agent " + (s.i + 1));
+      else if ((r = await safetyGate(c, t, "Agent " + (s.i + 1)))) { /* Sicherheitsnetz */ }
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         r = await window.mythos.tool(t, run.folder, s.id);
@@ -1416,3 +1422,58 @@ async function compactChat() {
     saveChat(chat);
   } catch (e) { note("⚠ " + e.message); } finally { n.remove(); }
 }
+
+// ---------- 🛡 Sicherheit ----------
+/**
+ * Sicherheitsnetz vor einem Befehl: gefährliche Befehle fragen immer nach (auch mit Vollzugriff)
+ * und werden im /goal-Modus blockiert, weil dann niemand bestätigen kann. Liefert ein Ergebnis-Objekt
+ * zum Abbrechen oder null zum Weitermachen.
+ */
+async function safetyGate(c, t, who) {
+  if (t.name !== "run") return null;
+  const why = await window.mythos.safety.check(t.cmd).catch(() => null);
+  if (!why) return null;
+  noteTo(c, "🛡 Sicherheitsnetz: " + (who ? who + " – " : "") + "dieser Befehl " + why + ":\n" + t.cmd);
+  if (c.goal) return { result: "BLOCKIERT vom Sicherheitsnetz: Der Befehl " + why + ". Der Nutzer ist nicht da und kann das nicht bestätigen – finde einen sichereren Weg ohne diesen Befehl." };
+  if (!confirm("🛡 Sicherheitsnetz\n\nDieser Befehl " + why + ":\n\n" + t.cmd + "\n\nWirklich ausführen? (Das fragt Mythos auch bei Vollzugriff.)")) return { result: "Vom Nutzer abgelehnt (Sicherheitsnetz). Finde einen sichereren Weg." };
+  return null;
+}
+const trustAsked = new Set();
+/** Projekte mit eigenen Hooks/MCP-Servern führen Befehle aus → erst nach Zustimmung aktivieren. */
+async function checkTrust(folder) {
+  if (!folder || trustAsked.has(folder)) return;
+  const p = await window.mythos.safety.project(folder).catch(() => null);
+  if (!p || p.trusted || (!p.hooks && !p.mcp)) return;
+  trustAsked.add(folder);
+  const what = [p.hooks ? p.hooks + " Hook" + (p.hooks > 1 ? "s" : "") : "", p.mcp ? p.mcp + " MCP-Server" : ""].filter(Boolean).join(" und ");
+  if (confirm("🛡 Projekt „" + base(folder) + "“ vertrauen?\n\nDas Projekt enthält " + what + ". Diese führen automatisch Befehle auf deinem PC aus.\n\nNur zustimmen, wenn das Projekt von dir oder einer vertrauenswürdigen Quelle stammt.")) setTrust(folder, true);
+  else note("🛡 Hooks und MCP-Server aus „" + base(folder) + "“ sind deaktiviert, bis du dem Projekt vertraust (/vertrauen an).");
+}
+function setTrust(folder, on) {
+  const list = (cfg.trusted = cfg.trusted || []).filter((x) => x.toLowerCase() !== folder.toLowerCase());
+  if (on) list.push(folder);
+  cfg.trusted = list;
+  window.mythos.setCfg(cfg).then(() => configureMcp());
+}
+async function securityReport() {
+  const st = await window.mythos.safety.status().catch(() => ({}));
+  const p = cfg.folder ? await window.mythos.safety.project(cfg.folder).catch(() => null) : null;
+  note("🛡 Sicherheit\n" +
+    "• Sicherheitsnetz: aktiv – gefährliche Befehle (Laufwerk löschen, Force-Push, Registry, Skripte aus dem Netz …) fragen immer nach, im /goal-Modus werden sie blockiert\n" +
+    "• Dateien: Mythos schreibt nur innerhalb des Projektordners, nie in .git/\n" +
+    "• Vollzugriff: " + ($("auto").checked ? "an (normale Befehle ohne Nachfrage)" : "aus (jeder Befehl fragt nach)") + "\n" +
+    "• Projekt: " + (!p ? "keins gewählt" : (p.hooks || p.mcp ? (p.trusted ? "vertraut – " : "NICHT vertraut – deaktiviert: ") + p.hooks + " Hooks, " + p.mcp + " MCP-Server" : "keine eigenen Hooks/MCP-Server")) + "\n" +
+    "• Anmeldung: " + (st.encrypted ? "API-Schlüssel mit Windows-Verschlüsselung gespeichert" : "Verschlüsselung auf diesem System nicht verfügbar") + "\n" +
+    "• Fenster: Sandbox an, Links öffnen nur Webseiten\n" +
+    "/vertrauen an|aus – Hooks/MCP dieses Projekts erlauben oder sperren");
+}
+// Unerwartete Fehler sichtbar machen statt still zu schlucken (höchstens alle 5 Sekunden).
+let lastErrAt = 0;
+function showError(msg) {
+  console.error(msg);
+  if (Date.now() - lastErrAt < 5000 || !chat || $("app").style.display === "none") return;
+  lastErrAt = Date.now();
+  flash("⚠ Interner Fehler: " + String(msg).slice(0, 200));
+}
+window.addEventListener("error", (e) => showError(e.message || e.error));
+window.addEventListener("unhandledrejection", (e) => showError((e.reason && e.reason.message) || e.reason));

@@ -1,6 +1,6 @@
 // Server route to expose NVIDIA model list (for internal sanity checks)
 import { defineEventHandler, createError } from "h3";
-import { NV_API_KEY } from "../../../lib/nvidiaApi";
+import { NV_API_KEY } from "./_utils";
 
 export default defineEventHandler(async () => {
   const resp = await fetch("https://integrate.api.nvidia.com/v1/models", {

@@ -2,7 +2,7 @@
 // POST { model: string, messages: [{role:string, content:string}] }
 // Returns { content: string }
 import { defineEventHandler, readBody, createError } from "h3";
-import { NV_API_KEY } from "../../../lib/nvidiaApi";
+import { NV_API_KEY } from "./_utils";
 import { pickModel, fetchModelList } from "./_utils";
 import { logNvidiaRequest } from "./logger";
 

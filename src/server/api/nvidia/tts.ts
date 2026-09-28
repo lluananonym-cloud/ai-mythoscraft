@@ -2,7 +2,7 @@
 // POST { text: string, model?: string }
 // Returns { audioBase64: string }
 import { defineEventHandler, readBody, createError } from "h3";
-import { NV_API_KEY } from "../../../lib/nvidiaApi";
+import { NV_API_KEY } from "./_utils";
 import { pickModel } from "./_utils";
 import { logNvidiaRequest } from "./logger";
 

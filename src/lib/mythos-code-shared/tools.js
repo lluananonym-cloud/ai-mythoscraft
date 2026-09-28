@@ -169,9 +169,46 @@ function searchFiles(root, pattern, glob, max = 200) {
   return hits.join("\n") + (hits.length >= max ? "\n… (mehr als " + max + " Treffer – Suche eingrenzen)" : "");
 }
 
+// ---------- Sicherheitsnetz für Befehle ----------
+// Diese Befehle fragen IMMER nach (auch mit Vollzugriff) und werden im /goal-Modus blockiert,
+// weil dann niemand da ist, der sie bestätigen könnte.
+const DANGER = [
+  [/\brm\s+-[a-z]*(?:rf|fr)[a-z]*\s+(?:--no-preserve-root\s+)?(?:\/|~|\*|\$HOME|%USERPROFILE%)(?:\s|$)/i, "löscht rekursiv ein System- oder Home-Verzeichnis"],
+  [/\bformat(?:\.com)?\s+[a-z]:/i, "formatiert ein Laufwerk"],
+  [/\b(?:rd|rmdir)\s+\/s\b[^&|;]*\b[a-z]:\\?\s*(?:$|[&|;])/i, "löscht ein ganzes Laufwerk"],
+  [/\b(?:del|erase)\b[^&|;]*\/s\b[^&|;]*\b[a-z]:\\\*?\s*(?:$|[&|;])/i, "löscht ein ganzes Laufwerk"],
+  [/Remove-Item\b[^|;]*-Recurse[^|;]*\s["']?[a-z]:\\?["']?(?:\s|$|;)/i, "löscht rekursiv ein ganzes Laufwerk"],
+  [/\bgit\s+push\b[^;&|]*\s(?:--force(?:-with-lease)?|-f)\b/i, "überschreibt die Git-Historie auf dem Server (Force-Push)"],
+  [/\bgit\s+reset\s+--hard\b|\bgit\s+clean\s+-[a-z]*f/i, "verwirft lokale Änderungen unwiderruflich"],
+  [/\b(?:shutdown|restart-computer|stop-computer)\b/i, "fährt den PC herunter oder startet ihn neu"],
+  [/\breg(?:\.exe)?\s+delete\b|Remove-Item(?:Property)?\b[^|;]*\bHK(?:LM|CU):/i, "löscht Einträge in der Windows-Registry"],
+  [/\b(?:curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)\b[^|]*\|\s*(?:sh|bash|zsh|iex|invoke-expression|powershell|pwsh)\b/i, "lädt ein Skript aus dem Internet und führt es sofort aus"],
+  [/\bmkfs(?:\.\w+)?\b|\bdd\s+[^|;]*\bof=\/dev\//i, "überschreibt ein Laufwerk"],
+  [/:\(\)\s*\{\s*:\|:&\s*\};:/, "startet eine Fork-Bombe"],
+  [/\b(?:npm|pnpm|yarn)\s+publish\b|\bgh\s+release\s+create\b|\bgh\s+repo\s+delete\b/i, "veröffentlicht oder löscht etwas öffentlich"],
+  [/\b(?:Set-MpPreference|netsh\s+advfirewall\s+set)\b/i, "ändert Windows-Sicherheitseinstellungen (Virenschutz/Firewall)"],
+];
+/** Grund, warum ein Befehl gefährlich ist, oder null. */
+function dangerCheck(cmd) {
+  const c = String(cmd || "");
+  for (const [re, why] of DANGER) if (re.test(c)) return why;
+  return null;
+}
+
+/** Liegt `p` (relativ zu root) innerhalb des Projektordners? */
+function insideRoot(root, p) {
+  const r = path.relative(path.resolve(root), path.resolve(root, p || "."));
+  return !(r.startsWith("..") || path.isAbsolute(r));
+}
+
 /** read/write/edit/search/ls ausführen. `run` macht jede Oberfläche selbst (Live-Ausgabe). */
 function fileTool(t, root) {
   const P = (p) => path.resolve(root, p || ".");
+  // Schreiben nur innerhalb des Projekts – und nie in Gits interne Dateien.
+  if (t.name === "write" || t.name === "edit") {
+    if (!insideRoot(root, t.path)) return { result: "FEHLER: Schreiben außerhalb des Projektordners ist gesperrt (" + t.path + "). Arbeite nur mit Dateien im Projekt." };
+    if (/^\.git(?:[\\/]|$)/.test(path.relative(path.resolve(root), P(t.path)))) return { result: "FEHLER: Gits interne Dateien (.git/) werden nicht direkt bearbeitet – nutze git-Befehle." };
+  }
   try {
     if (t.name === "read") {
       const c = readText(P(t.path));

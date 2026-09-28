@@ -57,3 +57,6 @@ verify_jwt = false
 
 [functions.cli-auth]
 verify_jwt = false
+
+[functions.nvidia]
+verify_jwt = false

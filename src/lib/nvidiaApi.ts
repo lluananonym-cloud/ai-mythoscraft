@@ -1,90 +1,37 @@
 /*
- * Helper functions to call NVIDIA hosted AI APIs (gpt-oss, image generation, TTS).
- * The API key is stored in the environment (or hard‑coded for the demo).
+ * NVIDIA-Modelle (LLM, Bilder, TTS) über die Supabase-Funktion „nvidia“.
+ * Der API-Schlüssel liegt nur als Server-Secret (NVIDIA_API_KEY) auf Supabase – nie im Browser.
+ * Die Aufrufe laufen mit der Anmeldung des Nutzers (nur angemeldete Nutzer).
  */
+import { supabase } from "@/integrations/supabase/client";
 
-export const NV_API_KEY = "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";
+type ChatMessage = { role: string; content: string };
 
-/**
- * Generic chat completion using NVIDIA "gpt-oss-120gb" model.
- * @param messages Array of {role, content} objects.
- */
-export async function nvidiaChat(messages: { role: string; content: string }[]): Promise<string> {
-  const resp = await fetch("/api/nvidia/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-oss-120gb",
-      messages,
-      temperature: 0.7,
-    }),
-  });
-  if (!resp.ok) throw new Error(`NVIDIA chat error ${resp.status}`);
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content ?? "";
+async function callNvidia<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("nvidia", { body });
+  if (error) throw new Error(`NVIDIA: ${error.message}`);
+  if (data?.error) throw new Error(`NVIDIA: ${data.error}`);
+  return data as T;
 }
 
-/**
- * Generic LLM chat using a specified NVIDIA model (e.g., meta/llama-3.3-70b-instruct).
- */
-export async function nvidiaLLM(model: string, messages: { role: string; content: string }[]): Promise<string> {
-  const resp = await fetch("/api/nvidia/llm", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-    }),
-  });
-  if (!resp.ok) throw new Error(`NVIDIA LLM error ${resp.status}`);
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content ?? "";
+/** Chat mit dem Standard-Ausweichmodell. */
+export async function nvidiaChat(messages: ChatMessage[]): Promise<string> {
+  return (await callNvidia<{ content: string }>({ kind: "chat", messages })).content ?? "";
 }
 
-/**
- * Image generation using NVIDIA "qwen-image-edit-nvpcb-ovsl2sl" model.
- * Returns a URL to the generated image (base64 data URL or hosted URL).
- */
+/** Chat mit einem bestimmten NVIDIA-Modell (z. B. meta/llama-3.3-70b-instruct). */
+export async function nvidiaLLM(model: string, messages: ChatMessage[]): Promise<string> {
+  return (await callNvidia<{ content: string }>({ kind: "chat", model, messages })).content ?? "";
+}
+
+/** Bild erzeugen – liefert eine URL (gehostet oder data:-URL). */
 export async function nvidiaGenerateImage(prompt: string): Promise<string> {
-  const resp = await fetch("/api/nvidia/image", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "qwen-image-edit-nvpcb-ovsl2sl",
-      prompt,
-      n: 1,
-    }),
-  });
-  if (!resp.ok) throw new Error(`NVIDIA image error ${resp.status}`);
-  const data = await resp.json();
-    return data.url;
+  return (await callNvidia<{ url: string }>({ kind: "image", prompt })).url;
 }
 
-/**
- * Text‑to‑speech using NVIDIA TTS models (magpie‑tts‑multilingual or others).
- * Returns an audio Blob.
- */
+/** Text vorlesen lassen – liefert ein Audio-Blob. */
 export async function nvidiaTTS(text: string, model: string = "magpie-tts-multilingual"): Promise<Blob> {
-  const resp = await fetch("/api/nvidia/tts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      input: text,
-    }),
-  });
-  if (!resp.ok) throw new Error(`NVIDIA TTS error ${resp.status}`);
-    const data = await resp.json();
-    const base64 = data.audioBase64;
-    const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    return new Blob([binary.buffer], { type: "audio/mpeg" });
+  const { audioBase64 } = await callNvidia<{ audioBase64: string }>({ kind: "tts", model, input: text });
+  const binary = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+  return new Blob([binary.buffer], { type: "audio/mpeg" });
 }

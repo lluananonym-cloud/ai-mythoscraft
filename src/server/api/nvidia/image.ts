@@ -2,7 +2,7 @@
 // POST { prompt: string, sourceImage?: string (base64) }
 // Returns { url: string }
 import { defineEventHandler, readBody, createError } from "h3";
-import { NV_API_KEY } from "../../../lib/nvidiaApi";
+import { NV_API_KEY } from "./_utils";
 import { fetchModelList, pickModel } from "./_utils";
 import { logNvidiaRequest } from "./logger";
 

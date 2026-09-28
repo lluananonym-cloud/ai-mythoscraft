@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("mythos", {
   git: { info: inv("git:info"), diff: inv("git:diff"), commit: inv("git:commit"), push: inv("git:push"), pr: inv("git:pr") },
   commands: { list: inv("commands:list"), create: inv("commands:create") },
   stats: inv("project:stats"), exportChat: inv("chats:export"),
+  safety: { check: inv("safety:check"), status: inv("safety:status"), project: inv("project:config") },
   tests: { detect: inv("tests:detect"), run: inv("tests:run") },
   hooks: { run: inv("hooks:run"), list: inv("hooks:list") },
   mcp: { configure: inv("mcp:configure"), status: inv("mcp:status"), restart: inv("mcp:restart"), onChange: on("mcp-changed") },

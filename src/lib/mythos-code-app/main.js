@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker, session, desktopCapturer } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker, session, desktopCapturer, safeStorage } = require("electron");
 const fs = require("fs"); const path = require("path"); const { exec, execFile, spawn } = require("child_process");
 const { McpManager } = require("./mcp.js");
 // Sprachmodus: mehrere Threads für die lokale Spracherkennung, falls keine Grafikkarte (WebGPU) nutzbar ist.
@@ -7,13 +7,32 @@ app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
 // @@SHARED_TOOLS@@
 
 const CFG = () => path.join(app.getPath("userData"), "mythos.json");
-const load = () => { try { return JSON.parse(fs.readFileSync(CFG(), "utf8")); } catch { return {}; } };
+const canEncrypt = () => { try { return safeStorage.isEncryptionAvailable(); } catch { return false; } };
+function load() {
+  let c; try { c = JSON.parse(fs.readFileSync(CFG(), "utf8")); } catch { return {}; }
+  if (c.keyEnc) { try { c.key = safeStorage.decryptString(Buffer.from(c.keyEnc, "base64")); } catch { /* auf anderem PC verschlüsselt */ } delete c.keyEnc; }
+  return c;
+}
+function save(c) {
+  const out = Object.assign({}, c);
+  if (out.key && canEncrypt()) { out.keyEnc = safeStorage.encryptString(out.key).toString("base64"); delete out.key; }
+  const tmp = CFG() + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(out, null, 2)); fs.renameSync(tmp, CFG());
+}
+/** Nur Projekte, denen der Nutzer vertraut, dürfen eigene Hooks und MCP-Server starten. */
+const samePath = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+const isTrusted = (cwd) => !!cwd && (load().trusted || []).some((t) => samePath(t, cwd));
+// Unerwartete Fehler protokollieren statt die App abstürzen zu lassen.
+const logError = (e) => { try { fs.appendFileSync(path.join(app.getPath("userData"), "error.log"), new Date().toISOString() + " " + (e && e.stack || e) + "\n"); } catch { /* egal */ } };
+process.on("uncaughtException", logError);
+process.on("unhandledRejection", logError);
 let w = null, tray = null, working = false, quitting = false, blocker = null;
 const showWin = () => { if (w) { w.show(); w.focus(); } };
 function win() {
   w = new BrowserWindow({ width: 1200, height: 820, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Code",
     icon: path.join(__dirname, "icon.png"),
-    autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false } });
+    autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false } });
+  w.webContents.setWindowOpenHandler(({ url }) => { if (safeUrl(url)) shell.openExternal(url); return { action: "deny" }; });
+  w.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (safeUrl(url)) shell.openExternal(url); } });
   w.loadFile("index.html");
   // AFK: Schließen, während Mythos arbeitet, versteckt das Fenster nur – die Arbeit läuft im Tray weiter.
   w.on("close", (e) => { if (working && !quitting) { e.preventDefault(); w.hide(); toTray(); } });
@@ -30,6 +49,9 @@ function toTray() {
 const single = app.requestSingleInstanceLock();
 if (!single) app.quit(); else app.on("second-instance", showWin);
 app.whenReady().then(() => {
+  const allowed = new Set(["media", "display-capture", "notifications", "clipboard-read", "clipboard-sanitized-write", "fullscreen"]);
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(allowed.has(perm) && wc === (w && w.webContents)));
+  session.defaultSession.setPermissionCheckHandler((wc, perm) => allowed.has(perm));
   // Sprachmodus „Bildschirm teilen“: nur auf Knopfdruck im Fenster, dann den Hauptbildschirm freigeben.
   session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
     desktopCapturer.getSources({ types: ["screen"] }).then((src) => cb(src.length ? { video: src[0] } : {})).catch(() => cb({}));
@@ -50,8 +72,9 @@ ipcMain.handle("notify", (_e, title, body) => {
   const n = new Notification({ title, body }); n.on("click", showWin); n.show(); return true;
 });
 ipcMain.handle("cfg:get", () => load());
-ipcMain.handle("cfg:set", (_e, c) => { fs.writeFileSync(CFG(), JSON.stringify(c, null, 2)); return true; });
-ipcMain.handle("open", (_e, url) => shell.openExternal(url));
+ipcMain.handle("cfg:set", (_e, c) => { save(c || {}); return true; });
+const safeUrl = (u) => /^(https?:\/\/|mailto:)/i.test(String(u || ""));
+ipcMain.handle("open", (_e, url) => (safeUrl(url) ? shell.openExternal(url) : false));
 ipcMain.handle("pickFolder", async () => { const r = await dialog.showOpenDialog({ properties: ["openDirectory"] }); return r.canceled ? null : r.filePaths[0]; });
 ipcMain.handle("pickFiles", async () => {
   const r = await dialog.showOpenDialog({ properties: ["openFile", "multiSelections"] });
@@ -136,7 +159,7 @@ function runLive(cmd, cwd, id, channel, timeoutMs = 600000, env) {
 const readJsonFile = (f, fallback) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return fallback; } };
 function loadHooks(cwd) {
   const all = {};
-  const sources = [readJsonFile(path.join(app.getPath("userData"), "hooks.json"), {}), cwd ? readJsonFile(path.join(cwd, ".mythos", "hooks.json"), {}) : {}];
+  const sources = [readJsonFile(path.join(app.getPath("userData"), "hooks.json"), {}), cwd && isTrusted(cwd) ? readJsonFile(path.join(cwd, ".mythos", "hooks.json"), {}) : {}];
   for (const src of sources) for (const [ev, list] of Object.entries(src.hooks || src)) if (Array.isArray(list)) (all[ev] = all[ev] || []).push(...list);
   return all;
 }
@@ -204,7 +227,7 @@ ipcMain.handle("tests:run", async (_e, cwd, cmd, runId) => {
 // ---------- MCP-Server: <projekt>/.mcp.json und mcp.json im App-Datenordner ----------
 ipcMain.handle("mcp:configure", (_e, cwd) => {
   const servers = (f) => readJsonFile(f, {}).mcpServers || {};
-  mcp.configure(servers(path.join(app.getPath("userData"), "mcp.json")), { cwd, servers: cwd ? servers(path.join(cwd, ".mcp.json")) : {} });
+  mcp.configure(servers(path.join(app.getPath("userData"), "mcp.json")), { cwd, servers: cwd && isTrusted(cwd) ? servers(path.join(cwd, ".mcp.json")) : {} });
   return mcp.status();
 });
 ipcMain.handle("mcp:status", () => mcp.status());
@@ -401,3 +424,15 @@ ipcMain.handle("files:find", (_e, cwd, query) => {
   const score = (r) => (path.basename(r).toLowerCase().startsWith(q) ? 0 : path.basename(r).toLowerCase().includes(q) ? 1 : 2) * 1000 + r.length;
   return hits.sort((a, b) => score(a) - score(b)).slice(0, 12);
 });
+
+// ---------- Sicherheit ----------
+ipcMain.handle("safety:check", (_e, cmd) => dangerCheck(cmd));
+/** Hat das Projekt eigene Hooks / MCP-Server, die Befehle ausführen würden? */
+ipcMain.handle("project:config", (_e, cwd) => {
+  if (!cwd) return { hooks: 0, mcp: 0, trusted: false };
+  const h = readJsonFile(path.join(cwd, ".mythos", "hooks.json"), {}), m = readJsonFile(path.join(cwd, ".mcp.json"), {});
+  const hooks = Object.values(h.hooks || h).filter(Array.isArray).reduce((a, l) => a + l.filter((x) => x && x.command && !x.disabled).length, 0);
+  const mcpN = Object.values(m.mcpServers || {}).filter((x) => x && !x.disabled).length;
+  return { hooks, mcp: mcpN, trusted: isTrusted(cwd) };
+});
+ipcMain.handle("safety:status", () => ({ encrypted: canEncrypt(), sandbox: true }));

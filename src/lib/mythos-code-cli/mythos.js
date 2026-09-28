@@ -15,7 +15,8 @@ const C = { c: "\x1b[36m", g: "\x1b[32m", y: "\x1b[33m", r: "\x1b[31m", m: "\x1b
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = (q) => new Promise((r) => rl.question(q, r));
 const load = () => { try { return JSON.parse(fs.readFileSync(CFG, "utf8")); } catch { return {}; } };
-const save = (c) => fs.writeFileSync(CFG, JSON.stringify(c, null, 2));
+// Konfiguration (mit API-Schlüssel) nur für den eigenen Benutzer lesbar.
+const save = (c) => { fs.writeFileSync(CFG, JSON.stringify(c, null, 2), { mode: 0o600 }); try { fs.chmodSync(CFG, 0o600); } catch { /* Windows: Benutzerordner ist ohnehin privat */ } };
 let cfg = load();
 let autoYes = process.argv.includes("--yes");
 let goal = "";
@@ -225,7 +226,17 @@ async function runTool(t) {
     : t.name === "fetch" ? "fetch " + t.url
     : t.name + " " + (t.path || "");
   say(C.y + "⚙  " + label + C.x);
-  if ((t.name === "run" || t.name === "write" || t.name === "edit") && !autoYes) {
+  // Sicherheitsnetz: gefährliche Befehle fragen immer nach (auch mit --yes) und werden bei /goal blockiert.
+  const why = t.name === "run" ? dangerCheck(t.cmd) : null;
+  if (why) {
+    say(C.r + "🛡 Sicherheitsnetz: dieser Befehl " + why + "." + C.x);
+    if (goal) return "BLOCKIERT vom Sicherheitsnetz: Der Befehl " + why + ". Der Nutzer ist nicht da und kann das nicht bestätigen – finde einen sichereren Weg ohne diesen Befehl.";
+    stopTick();
+    const a = (await ask(C.r + "   Wirklich ausführen? [j/N] " + C.x)).trim().toLowerCase();
+    startTick();
+    if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt (Sicherheitsnetz). Finde einen sichereren Weg.";
+  }
+  if ((t.name === "run" || t.name === "write" || t.name === "edit") && !autoYes && !why) {
     stopTick();
     const a = (await ask(C.d + "   Erlauben? [j/N/a=immer] " + C.x)).trim().toLowerCase();
     startTick();
