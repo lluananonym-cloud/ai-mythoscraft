@@ -1,6 +1,7 @@
 const CFG = { site: "__SITE__", fn: "__FN__" };
 const $ = (id) => document.getElementById(id);
 let cfg = {}, chat = null, attach = [], editing = null, gitInfo = null, searchQ = "", mcpStatus = [];
+let remotePair = null, remoteTimer = null; // Fernsteuerung vom Handy (siehe /handy)
 let prompts = { nudge: "", summary: "", memoryFile: "MYTHOS.md", models: [] };
 // Laufende Aufgaben je Chat – mehrere Chats können gleichzeitig arbeiten.
 const runs = new Map();
@@ -473,6 +474,7 @@ const COMMANDS = [
   ["/mcp", "[neu|bearbeiten|global]", "MCP-Server anzeigen und einrichten"],
   ["/hooks", "[bearbeiten|global]", "Hooks anzeigen und einrichten"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
+  ["/koppeln", "[aus]", "Mit der Mythos-Handy-App koppeln, um diesen Chat von unterwegs fernzusteuern"],
   ["/warteschlange", "[leeren]", "Warteschlange anzeigen oder leeren"],
   ["/suche", "<text>", "Alle Chats durchsuchen"],
   ["/tokens", "", "Geschätzten Token-Verbrauch dieses Chats anzeigen"],
@@ -482,9 +484,62 @@ const COMMANDS = [
   ["/hilfe", "", "Alle Befehle anzeigen"],
 ];
 const needFolder = () => { if (!cfg.folder) { note("Wähle zuerst einen Projektordner."); return true; } return false; };
+
+// ---------- Fernsteuerung vom Handy (/koppeln) ----------
+// Wie beim Koppeln einer Smart-TV-App: PC zeigt einen 6-stelligen Code, das Handy gibt ihn ein.
+// Aufgaben vom Handy laufen im gerade geöffneten Chat, wie normal eingetippt – Mythos merkt keinen Unterschied.
+function remoteStop() { remotePair = null; clearTimeout(remoteTimer); remoteTimer = null; }
+async function remotePairStart() {
+  try {
+    const r = await (await post("remote", { kind: "create", api_key: cfg.key, device_name: "Windows-PC" })).json();
+    if (r.error || !r.pair_id) { note("⚠ Kopplung fehlgeschlagen: " + (r.error || "unbekannt")); return; }
+    remotePair = { id: r.pair_id, code: r.code, claimed: false, device: "" };
+    note("📱 Öffne in der Mythos-Handy-App den „Code“-Tab und gib diesen Code ein:\n\n## " + r.code + "\n\nGültig 10 Minuten. Mit **/koppeln aus** abbrechen.");
+    remotePollLoop();
+  } catch (e) { note("⚠ Kopplung fehlgeschlagen: " + e.message); }
+}
+function remotePollLoop() {
+  clearTimeout(remoteTimer);
+  remoteTimer = setTimeout(async () => {
+    if (!remotePair) return;
+    try {
+      if (!remotePair.claimed) {
+        const r = await (await post("remote", { kind: "status", pair_id: remotePair.id, api_key: cfg.key })).json();
+        if (r.claimed) { remotePair.claimed = true; remotePair.device = r.device_name || ""; note("📱 Handy verbunden" + (remotePair.device ? " (" + remotePair.device + ")" : "") + " – Aufgaben von dort laufen jetzt in diesem Chat."); }
+      } else {
+        const r = await (await post("remote", { kind: "poll", pair_id: remotePair.id, api_key: cfg.key })).json();
+        if (r.task) await remoteRunTask(r.task);
+      }
+    } catch (e) { /* nächster Versuch reicht */ }
+    remotePollLoop();
+  }, remotePair && remotePair.claimed ? 3000 : 2500);
+}
+async function remoteRunTask(task) {
+  if (!cfg.folder || isBusy(chat)) {
+    await post("remote", { kind: "result", pair_id: remotePair.id, api_key: cfg.key, task_id: task.id, status: "error",
+      result: !cfg.folder ? "Auf dem PC ist kein Projektordner geöffnet." : "Mythos arbeitet auf dem PC gerade an etwas anderem – gleich nochmal versuchen." });
+    return;
+  }
+  const startLen = chat.view.length;
+  submit(chat, task.prompt, []);
+  while (isBusy(chat)) await new Promise((r) => setTimeout(r, 400));
+  const pieces = chat.view.slice(startLen).filter((v) => v.cls === "a" || v.cls === "sum").map((v) => v.text);
+  const result = pieces.join("\n\n").trim() || "(Mythos hat geantwortet, aber ohne Text – z. B. nur Dateien geändert. Auf dem PC nachsehen.)";
+  await post("remote", { kind: "result", pair_id: remotePair.id, api_key: cfg.key, task_id: task.id, status: "done", result });
+}
+
 async function command(q) {
   const cmd = q.split(/\s+/)[0].toLowerCase(), arg = q.slice(cmd.length).trim();
   if (cmd !== "/goal" && cmd !== "/ziel" && editing != null) { editing = null; renderEdit(); }
+  if (cmd === "/koppeln") {
+    if (/^(aus|stop|trennen)$/i.test(arg)) { remoteStop(); note("📱 Kopplung getrennt."); return; }
+    if (remotePair && remotePair.claimed) { note("📱 Handy ist schon gekoppelt" + (remotePair.device ? " (" + remotePair.device + ")" : "") + ". Mit **/koppeln aus** trennen."); return; }
+    if (!cfg.key) { note("Erst anmelden, dann koppeln."); return; }
+    if (remotePair) { note("📱 Code: **" + remotePair.code + "** – gib ihn in der Mythos-Handy-App im „Code“-Tab ein. Gültig 10 Minuten."); return; }
+    note("📱 Verbinde …");
+    remotePairStart();
+    return;
+  }
   if (cmd === "/goal" || cmd === "/ziel") {
     if (!arg) return note(chat.goal ? "🎯 Aktuelles Ziel: " + chat.goal + "\nBeenden mit /goal stop" : "So geht's: /goal <was Mythos erreichen soll>\nMythos arbeitet dann ohne Rückfragen, bis das Ziel erreicht ist, und fasst am Ende zusammen.");
     if (/^(stop|aus|ende|beenden)$/i.test(arg)) return endGoal();

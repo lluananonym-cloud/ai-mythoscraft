@@ -60,3 +60,6 @@ verify_jwt = false
 
 [functions.nvidia]
 verify_jwt = false
+
+[functions.remote]
+verify_jwt = false

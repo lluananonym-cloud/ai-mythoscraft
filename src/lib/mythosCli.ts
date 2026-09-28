@@ -12,6 +12,12 @@ import APP_VOICE from "./mythos-code-app/voice.js?raw";
 // Gebündelte Sprach-Worker (npm run build:app-voice): Piper (Stimme) und Whisper (Erkennung), gzip + base64.
 import APP_TTS_WORKER_GZ from "./mythos-code-app/tts-worker.js.gz.b64?raw";
 import APP_STT_WORKER_GZ from "./mythos-code-app/stt-worker.js.gz.b64?raw";
+// Mythos-Handy-App: dünne native iOS-Hülle (SwiftUI + WKWebView) um Chat- und Code-Seite der Website.
+import HANDY_PROJECT_YML from "./mythos-handy/project.yml?raw";
+import HANDY_APP_SWIFT from "./mythos-handy/Sources/App.swift?raw";
+import HANDY_WEBTAB_SWIFT from "./mythos-handy/Sources/WebTab.swift?raw";
+import HANDY_ASSETS_CONTENTS from "./mythos-handy/Resources/Assets.xcassets/Contents.json?raw";
+import HANDY_APPICON_CONTENTS from "./mythos-handy/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json?raw";
 
 /** base64-kodiertes gzip entpacken (im Browser beim ZIP-Bau). */
 async function gunzipB64(b64: string): Promise<string> {
@@ -109,7 +115,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "1.9.3";
+export const APP_VERSION = "1.9.4";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -217,3 +223,109 @@ Die ZIP **${APP_PKG}.zip** wurde heruntergeladen. So wird daraus eine **Setup-EX
 /codeprogrammadminupload <dein Google-Drive-Link>
 \`\`\`
 Danach kann jeder mit **/codeprogramm** die Setup-EXE herunterladen.`;
+
+// ================= Mythos-Handy-App (iOS, per AltStore/AltServer sideloaden) =================
+export const HANDY_PKG = "mythos-handy-app";
+export const HANDY_DOWNLOAD_SETTING = "handyapp_download_url";
+export const HANDY_VERSION = "1.0.0";
+
+/** PNG im Browser auf Zielgröße bringen (für die iOS-App-Icons in allen nötigen Auflösungen). */
+async function resizePng(buf: ArrayBuffer, size: number): Promise<ArrayBuffer> {
+  const bitmap = await createImageBitmap(new Blob([buf], { type: "image/png" }));
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0, size, size);
+  const blob = await canvas.convertToBlob({ type: "image/png" });
+  return blob.arrayBuffer();
+}
+
+const handyWorkflow = () => `name: Mythos-Handy-App bauen
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: XcodeGen installieren
+        run: brew install xcodegen
+      - name: Xcode-Projekt erzeugen
+        run: xcodegen generate
+      - name: Ohne Signatur für ein echtes Gerät bauen
+        run: |
+          xcodebuild -project MythosHandy.xcodeproj -scheme MythosHandy -configuration Release \\
+            -sdk iphoneos -derivedDataPath build \\
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \\
+            build
+      - name: .ipa packen (unsigniert – AltStore/AltServer signiert beim Installieren)
+        run: |
+          set -e
+          mkdir -p ipa/Payload
+          cp -R "build/Build/Products/Release-iphoneos/Mythos.app" ipa/Payload/
+          cd ipa && zip -qr ../Mythos.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mythos-ipa
+          path: Mythos.ipa
+`;
+
+export async function buildHandyZip(site: string): Promise<Blob> {
+  const zip = new JSZip();
+  const root = zip.folder(HANDY_PKG)!;
+  const icon = await fetch(new URL("/icon.png", site)).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  if (!icon) throw new Error("Logo (/icon.png) konnte nicht geladen werden.");
+  root.file("project.yml", fill(HANDY_PROJECT_YML, { "__APP_VERSION__": HANDY_VERSION }));
+  root.folder("Sources")!.file("App.swift", fill(HANDY_APP_SWIFT, { "__SITE__": site }));
+  root.folder("Sources")!.file("WebTab.swift", HANDY_WEBTAB_SWIFT);
+  const assets = root.folder("Resources")!.folder("Assets.xcassets")!;
+  assets.file("Contents.json", HANDY_ASSETS_CONTENTS);
+  const appicon = assets.folder("AppIcon.appiconset")!;
+  appicon.file("Contents.json", HANDY_APPICON_CONTENTS);
+  for (const size of [40, 60, 58, 87, 80, 120, 180, 1024]) {
+    appicon.file(`icon-${size}.png`, await resizePng(icon, size));
+  }
+  root.file(".gitignore", "MythosHandy.xcodeproj/\nbuild/\nipa/\nDerivedData/\nGenerated-Info.plist\n");
+  root.file("README.md", "# Mythos-Handy-App\n\nDünne iOS-Hülle um die Mythos-Website (Chat- und Code-Tab). Wird per GitHub Actions zu einer unsignierten `Mythos.ipa` gebaut – Installation über AltStore/AltServer.\n");
+  root.folder(".github")!.folder("workflows")!.file("build-ipa.yml", handyWorkflow());
+  return zip.generateAsync({ type: "blob", platform: "UNIX" });
+}
+
+export const HANDY_ADMIN_GUIDE = `## ✦ Mythos-Handy-App – Paket bereit
+
+Die ZIP **${HANDY_PKG}.zip** wurde heruntergeladen. So wird daraus eine installierbare iPhone-App:
+
+1. ZIP entpacken.
+2. Auf https://github.com/new ein neues Repository erstellen, z. B. \`mythos-handy-app\` (Privat geht auch).
+3. Auf der Repo-Seite **„uploading an existing file“** klicken und **den Inhalt** des Ordners \`${HANDY_PKG}\` hineinziehen – **inklusive dem Ordner \`.github\`** (versteckter Ordner! In Windows unter *Ansicht → Ausgeblendete Elemente* einschalten). → **Commit changes**.
+4. Oben auf **Actions** klicken. Der Build „Mythos-Handy-App bauen“ startet automatisch (ca. 5–10 Min., da Xcode). Falls nicht: links auswählen → **Run workflow**.
+5. Wenn er grün ist: den Build öffnen → unten bei **Artifacts** auf **Mythos-ipa** klicken → ZIP entpacken → darin liegt **Mythos.ipa**.
+6. Die \`.ipa\` in **Google Drive** hochladen → Rechtsklick → **Freigeben** → „Jeder mit dem Link“ → Link kopieren.
+7. Hier im Chat eingeben:
+\`\`\`
+/handyappupload <dein Google-Drive-Link>
+\`\`\`
+Danach kann jeder mit **/handyapp** die Anleitung zum Installieren bekommen.
+
+**Wichtig:** Die \`.ipa\` ist absichtlich unsigniert – erst **AltStore/AltServer** signiert sie beim Installieren mit einer kostenlosen Apple-ID. Ohne das lässt sich die Datei nicht auf einem iPhone installieren.`;
+
+export const HANDY_USER_GUIDE = (url: string) => `## ✦ Mythos-Handy-App installieren
+
+Die App ist eine schlanke Hülle um die Website: **Chat** funktioniert wie hier, dazu ein **Code**-Tab, mit dem du die Mythos-Code-App auf deinem PC von unterwegs fernsteuern kannst.
+
+**In der EU (z. B. Deutschland) – der einfachste Weg, ohne ständiges Neu-Signieren:**
+1. **AltStore PC** installieren: https://altstore.io (dein iPhone muss auf **Region: EU-Land** stehen, ab iOS 17.4).
+2. Mit einer **kostenlosen Apple-ID** anmelden (keine Kreditkarte, kein Entwicklerkonto nötig).
+3. Die \`.ipa\`-Datei herunterladen: ${url}
+4. In AltStore PC über **„+“ / Datei installieren** die \`.ipa\` auswählen.
+
+**Außerhalb der EU – klassischer AltStore + AltServer:**
+1. AltServer auf einem Windows/Mac-PC installieren: https://altstore.io
+2. iPhone per Kabel verbinden, in AltServer **„Install AltStore“** wählen, mit kostenloser Apple-ID anmelden.
+3. Die \`.ipa\` (${url}) auf das iPhone übertragen (AirDrop/Dateien) und über AltStore installieren.
+4. **Wichtig:** Mit einer kostenlosen Apple-ID läuft die Signatur nach **7 Tagen** ab – AltServer muss dafür ab und zu (mit dem iPhone im selben WLAN) laufen, damit es sich automatisch erneuert.
+
+**Danach in der App:**
+- **Chat-Tab:** wie hier auf der Website, einfach anmelden.
+- **Code-Tab:** in der Mythos-Code-App auf dem PC \`/koppeln\` eingeben, den 6-stelligen Code hier eintippen – schon kannst du dem PC von unterwegs Aufgaben schicken.`;

@@ -16,6 +16,7 @@ import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
 import Redeem from "./pages/Redeem";
 import CliAuth from "./pages/CliAuth";
+import CodeControl from "./pages/CodeControl";
 import Memories from "./pages/Memories";
 import Personas from "./pages/Personas";
 import McServers from "./pages/McServers";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
             <Route path="/redeem" element={<Redeem />} />
             <Route path="/cli-auth" element={<CliAuth />} />
+            <Route path="/code" element={<CodeControl />} />
             <Route path="/memories" element={<RequireAuth><Memories /></RequireAuth>} />
             <Route path="/personas" element={<RequireAuth><Personas /></RequireAuth>} />
             <Route path="/mc-servers" element={<RequireAuth><McServers /></RequireAuth>} />

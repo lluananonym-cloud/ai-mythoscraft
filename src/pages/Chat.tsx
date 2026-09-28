@@ -53,6 +53,9 @@ const SLASH_COMMANDS = [
   { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
   { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
   { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
+  { cmd: "/handyapp", args: "",                 icon: Download,  desc: "Mythos als iPhone-App herunterladen (Chat + Code-Fernsteuerung)" },
+  { cmd: "/handyappadmin", args: "",            icon: Shield,    desc: "Admin: iOS-Projekt-ZIP für den GitHub-Build erzeugen", admin: true },
+  { cmd: "/handyappupload", args: "<drive-link>", icon: Shield,  desc: "Admin: .ipa-Link veröffentlichen", admin: true },
   { cmd: "/codeprogrammadmin", args: "",        icon: Shield,    desc: "Admin: App-ZIP für den Setup-Build erzeugen", admin: true },
   { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
   { cmd: "/apikeyadmin", args: "[2] <AIza…>", icon: Shield, desc: "Admin: gratis Google-AI-Ausweichschlüssel speichern (wenn Lovable-Credits leer sind)", admin: true },
@@ -295,6 +298,34 @@ const Chat = () => {
       ]);
       if (error) { toast.error("Speichern fehlgeschlagen: " + error.message); return; }
       localReply(`✓ Update **v${version}** veröffentlicht. Neue Downloads über **/codeprogramm** bekommen ab jetzt diese Version.\n\nDirekter Link: ${url}`);
+      return;
+    }
+    if (/^\/handyappupload\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const { toDirectDownloadUrl, HANDY_DOWNLOAD_SETTING } = await import("@/lib/mythosCli");
+      const url = toDirectDownloadUrl(text.replace(/^\/handyappupload\b/i, ""));
+      if (!url) { localReply("Bitte einen gültigen https-Link zur .ipa angeben:\n```\n/handyappupload https://drive.google.com/file/d/…/view\n```"); return; }
+      const { error } = await supabase.from("app_settings")
+        .upsert({ key: HANDY_DOWNLOAD_SETTING, value: url, updated_at: new Date().toISOString() });
+      if (error) { toast.error("Speichern fehlgeschlagen: " + error.message); return; }
+      localReply(`✓ Download-Link gespeichert. Ab jetzt kann jeder mit **/handyapp** die Installationsanleitung bekommen.\n\nDirekter Link: ${url}`);
+      return;
+    }
+    if (/^\/handyappadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const { buildHandyZip, HANDY_ADMIN_GUIDE, HANDY_PKG } = await import("@/lib/mythosCli");
+      downloadBlob(await buildHandyZip(window.location.origin), `${HANDY_PKG}.zip`);
+      localReply(HANDY_ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/handyapp\b/i.test(text)) {
+      if (!override) setInput("");
+      const { HANDY_DOWNLOAD_SETTING, HANDY_USER_GUIDE } = await import("@/lib/mythosCli");
+      const { data } = await supabase.from("app_settings").select("value").eq("key", HANDY_DOWNLOAD_SETTING).maybeSingle();
+      if (!data?.value) { localReply("Die Mythos-Handy-App ist noch nicht verfügbar – schau bald wieder vorbei."); return; }
+      localReply(HANDY_USER_GUIDE(data.value));
       return;
     }
     if (/^\/codeprogrammadminupload\b/i.test(text)) {
