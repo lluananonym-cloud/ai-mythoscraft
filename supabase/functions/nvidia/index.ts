@@ -1,6 +1,6 @@
 // NVIDIA-API über den Server: Die Schlüssel liegen nur als Secrets (NVIDIA_API_KEY, optional NVIDIA_IMAGE_API_KEY) auf Supabase,
 // nie im Browser. Nur angemeldete Nutzer dürfen die Funktion aufrufen.
-// POST { kind: "chat" | "tts" | "image", model?, messages?, input?, prompt? }
+// POST { kind: "chat" | "tts" | "image" | "setkey", model?, messages?, input?, prompt?, which?, value? }
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
 
 const corsHeaders = {
@@ -15,10 +15,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
 
-  // Eigener Schlüssel für Bilder möglich (NVIDIA_IMAGE_API_KEY), sonst der allgemeine.
-  const mainKey = Deno.env.get("NVIDIA_API_KEY") || Deno.env.get("NV_API_KEY");
-  const imageKey = Deno.env.get("NVIDIA_IMAGE_API_KEY") || mainKey;
-
   // Nur angemeldete Nutzer
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
@@ -29,8 +25,28 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   const kind = body?.kind;
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Admin: Schlüssel speichern (für Projekte ohne Secrets-Verwaltung). Wird nie zurückgegeben.
+  if (kind === "setkey") {
+    const { data: isAdmin } = await admin.rpc("has_role", { _user_id: claims.claims.sub, _role: "admin" });
+    if (!isAdmin) return json({ error: "Nur für Admins." }, 403);
+    const name = body.which === "image" ? "NVIDIA_IMAGE_API_KEY" : "NVIDIA_API_KEY";
+    const value = typeof body.value === "string" ? body.value.trim() : "";
+    if (!/^nvapi-[\w-]{20,200}$/.test(value)) return json({ error: "Das sieht nicht nach einem NVIDIA-Schlüssel aus (beginnt mit nvapi-)." }, 400);
+    const { error } = await admin.from("app_secrets").upsert({ name, value, updated_at: new Date().toISOString() });
+    if (error) return json({ error: "Speichern fehlgeschlagen – ist die Migration app_secrets angewendet? (" + error.message + ")" }, 500);
+    return json({ ok: true, name });
+  }
+
+  // Schlüssel: Server-Secret hat Vorrang, sonst der per /nvidiakeyadmin gespeicherte. Bilder dürfen einen eigenen haben.
+  const stored: Record<string, string> = {};
+  const { data: rows } = await admin.from("app_secrets").select("name, value").in("name", ["NVIDIA_API_KEY", "NVIDIA_IMAGE_API_KEY"]);
+  for (const r of rows ?? []) stored[r.name] = r.value;
+  const mainKey = Deno.env.get("NVIDIA_API_KEY") || Deno.env.get("NV_API_KEY") || stored.NVIDIA_API_KEY;
+  const imageKey = Deno.env.get("NVIDIA_IMAGE_API_KEY") || stored.NVIDIA_IMAGE_API_KEY || mainKey;
   const key = kind === "image" ? imageKey : mainKey;
-  if (!key) return json({ error: kind === "image" ? "NVIDIA_IMAGE_API_KEY ist auf dem Server nicht gesetzt." : "NVIDIA_API_KEY ist auf dem Server nicht gesetzt." }, 500);
+  if (!key) return json({ error: kind === "image" ? "NVIDIA_IMAGE_API_KEY ist nicht gesetzt (Admin: /nvidiakeyadmin bild <Schlüssel>)." : "NVIDIA_API_KEY ist nicht gesetzt (Admin: /nvidiakeyadmin <Schlüssel>)." }, 500);
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${key}` };
 
   try {

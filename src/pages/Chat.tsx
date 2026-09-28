@@ -55,6 +55,7 @@ const SLASH_COMMANDS = [
   { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
   { cmd: "/codeprogrammadmin", args: "",        icon: Shield,    desc: "Admin: App-ZIP für den Setup-Build erzeugen", admin: true },
   { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
+  { cmd: "/nvidiakeyadmin", args: "[bild] <nvapi-…>", icon: Shield, desc: "Admin: NVIDIA-Schlüssel sicher auf dem Server speichern", admin: true },
   { cmd: "/exeupdateadmin", args: "<drive-link> [version]", icon: Shield, desc: "Admin: Update-EXE für Mythos Code veröffentlichen", admin: true },
 ];
 
@@ -244,6 +245,20 @@ const Chat = () => {
       downloadBlob(await buildCliZip(window.location.origin), `${CLI_PKG}.zip`);
       localStorage.setItem("mythos_cli_built", CLI_VERSION);
       localReply(ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/nvidiakeyadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const parts = text.replace(/^\/nvidiakeyadmin\b/i, "").trim().split(/\s+/).filter(Boolean);
+      const which = /^(bild|image)$/i.test(parts[0] ?? "") ? "image" : "main";
+      const value = which === "image" ? parts[1] : parts[0];
+      // Den Schlüssel nie im Chat anzeigen – nur maskiert.
+      const reply = (content: string) => setMessages(prev => [...prev, { role: "user", content: `/nvidiakeyadmin ${which === "image" ? "bild " : ""}${value ? "nvapi-••••" : ""}` }, { role: "assistant", content }]);
+      if (!value) { reply("So geht's:\n```\n/nvidiakeyadmin nvapi-…        (Chat & Vorlesen, auch Bilder)\n/nvidiakeyadmin bild nvapi-…   (nur Bilder)\n```\nDer Schlüssel wird nur geschützt auf dem Server gespeichert und nie wieder angezeigt."); return; }
+      const { data, error } = await supabase.functions.invoke("nvidia", { body: { kind: "setkey", which, value } });
+      if (error || data?.error) { toast.error("Speichern fehlgeschlagen: " + (data?.error || error?.message)); reply("✗ " + (data?.error || error?.message)); return; }
+      reply(`✓ NVIDIA-Schlüssel${which === "image" ? " für Bilder" : ""} sicher auf dem Server gespeichert.`);
       return;
     }
     if (/^\/exeupdateadmin\b/i.test(text)) {
