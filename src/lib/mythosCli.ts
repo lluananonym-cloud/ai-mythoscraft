@@ -25,7 +25,7 @@ const fill = (src: string, vars: Record<string, string> = {}) =>
   Object.entries(vars).reduce((out, [k, v]) => out.split(k).join(v.replace(/\r\n/g, "\n")), src.replace(/\r\n/g, "\n"));
 
 export const CLI_PKG = "mythos-code";
-export const CLI_VERSION = "1.5.0";
+export const CLI_VERSION = "1.6.0";
 const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/v1-messages`;
 
 const pkgJson = () => JSON.stringify({
@@ -103,13 +103,13 @@ mythos
 Mythos Code kann Dateien lesen/schreiben und Befehle ausführen – vor jeder Aktion fragt es dich (\`a\` = immer erlauben, oder mit \`mythos --yes\` starten).
 Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 
-**Im Terminal:** \`/hilfe\` zeigt alle Befehle, **Strg+C** stoppt Mythos. \`/goal <ziel>\` arbeitet selbstständig bis zum Ziel (mit Zusammenfassung), \`/merken <text>\` schreibt ins Projekt-Gedächtnis \`MYTHOS.md\`, \`/commit\` committet mit einer von Mythos geschriebenen Nachricht, \`/handy <ntfy-link>\` schickt dir eine Nachricht aufs Handy. Bilder: Datei einfach ins Terminal ziehen. Mythos kann im Internet suchen, \`/modell\` wechselt das Modell, \`/tokens\` zeigt den Verbrauch.`;
+**Im Terminal:** \`/hilfe\` zeigt alle Befehle, **Strg+C** stoppt Mythos. \`/goal <ziel>\` arbeitet selbstständig bis zum Ziel (mit Zusammenfassung), \`/merken <text>\` schreibt ins Projekt-Gedächtnis \`MYTHOS.md\`, \`/commit\` committet mit einer von Mythos geschriebenen Nachricht, \`/handy <ntfy-link>\` schickt dir eine Nachricht aufs Handy. Bilder: Datei einfach ins Terminal ziehen. Mythos kann im Internet suchen, \`/modell\` wechselt das Modell, \`/tokens\` zeigt den Verbrauch. Neu: \`/review\`, \`/pr\`, \`/stats\`, \`/export\` und eigene Befehle aus \`.mythos/commands/\`.`;
 
 // ================= Mythos Code Desktop-App (Electron) =================
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "1.7.0";
+export const APP_VERSION = "1.8.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -135,7 +135,8 @@ Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier kli
 6. Dateien und Bilder einfach ins Fenster ziehen oder mit **Strg+V** einfügen. Während Mythos arbeitet, reiht **Enter** weitere Aufgaben in die **Warteschlange** ein.
 7. \`/merken\` füllt das Projekt-Gedächtnis (\`MYTHOS.md\`), \`/commit\` und \`/push\` erledigen Git, \`/handy <ntfy-link>\` schickt dir Nachrichten aufs Handy.
 8. Oben: Modell wählen, 👁 Live-Vorschau, 🗂 Dateibaum mit Editor, ⌨ Terminal, ☀ helles Design. Mehrere Chats können gleichzeitig arbeiten. **Automatisch testen** unten einschalten – Mythos repariert fehlschlagende Tests selbst. \`/mcp\` und \`/hooks\` richten MCP-Server und Hooks ein.
-9. 🎙 **Sprachmodus**: einfach mit Mythos reden – er hört zu (Whisper), arbeitet und antwortet mit natürlicher Stimme (Piper). Beides läuft lokal, beim ersten Mal werden die Sprachmodelle geladen.`;
+9. 🎙 **Sprachmodus**: einfach mit Mythos reden – er hört zu (Whisper), arbeitet und antwortet mit natürlicher Stimme (Piper). Beides läuft lokal, beim ersten Mal werden die Sprachmodelle geladen. „Hey Mythos“, 📷 Kamera und 🖥 Bildschirm lassen sich dazuschalten.
+10. Mythos plant größere Aufgaben als **📋 Aufgabenliste**. \`/review\` prüft deine Änderungen, \`/pr\` erstellt einen Pull Request, \`/stats\` zeigt Projektzahlen, \`/export\` speichert den Chat. Eigene Befehle legst du mit \`/befehl-neu\` an. Tastenkürzel: \`/tasten\`.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({

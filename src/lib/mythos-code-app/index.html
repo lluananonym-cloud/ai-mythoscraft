@@ -100,7 +100,15 @@ code.ic{font-family:"JetBrains Mono",Consolas,monospace;font-size:.88em;backgrou
 .codehead .copy{font-size:11.5px;color:var(--muted)}.codehead .copy:hover{color:var(--fg)}
 .codeblock pre{margin:0;border:0;border-radius:0}
 .streaming .body::after{content:"▍";color:#a78bfa;animation:pulse 1s infinite}
-.sum{padding:14px 16px;border-radius:16px}.sumhead{font-weight:600;margin-bottom:8px;color:#c4b5fd}
+.sum{padding:0;border-radius:16px;align-self:stretch}
+.sum summary{display:flex;align-items:center;gap:8px;padding:12px 16px;cursor:pointer;list-style:none;font-size:14.5px}
+.sum summary::-webkit-details-marker{display:none}
+.sum[open] summary{border-bottom:1px solid var(--line)}
+.sumhead{font-weight:600;color:#c4b5fd;flex-shrink:0}
+.sumline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.sum[open] .sumline{display:none}
+.sum .body{padding:12px 16px}
+.sum .speak{margin-left:auto;flex-shrink:0}
 /* Bilder in Nachrichten */
 .u .imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.u .imgs img{max-width:180px;max-height:130px;border-radius:10px;border:1px solid var(--line2)}
 /* Diff & Befehlsausgabe */
@@ -159,6 +167,11 @@ body.term-open #term{display:flex}
 body.light .agents{background:rgba(124,58,237,.05)}body.light .agents .ah{color:#6d28d9}
 .a .speak{opacity:0;color:var(--muted);font-size:13px;padding:2px 4px;align-self:flex-start}.a:hover .speak{opacity:1}.a .speak:hover{color:var(--fg)}
 body.light #btnVoice{background:rgba(0,0,0,.05)}
+/* Aufgabenliste */
+.todo{align-self:stretch;border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;font-size:13px;background:rgba(14,165,233,.05)}
+.todo .th{font-weight:600;color:#7dd3fc;margin-bottom:4px}.todo .tbar{height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin-bottom:6px;overflow:hidden}.todo .tfill{height:100%;background:linear-gradient(90deg,#0ea5e9,#8b5cf6);transition:width .3s}
+.todo .ti{display:flex;gap:8px;align-items:flex-start}.todo .tb{width:16px;flex-shrink:0}.todo .ti.done .tt{color:var(--muted);text-decoration:line-through}
+body.light .todo .th{color:#0369a1}body.light .todo .tbar{background:rgba(0,0,0,.08)}
 /* Helles Design */
 body.light{--bg:#f6f6f7;--fg:#141414;--muted:#6b6b6b;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.16);--panel:#ffffff}
 body.light .blob{opacity:.12}
@@ -275,7 +288,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     </div>
   </footer>
   <section id="term">
-    <div class="phead"><span>⌨ Terminal</span><span class="sp"></span><button class="chip" id="termkill" style="display:none" title="Befehl abbrechen (Strg+C)">■ Stopp</button><button class="x" id="termClose" title="Schließen">✕</button></div>
+    <div class="phead"><span>⌨ Terminal</span><span class="sp"></span><button class="chip" id="termsend" title="Terminal-Ausgabe an Mythos schicken">📎 An Mythos</button><button class="chip" id="termkill" style="display:none" title="Befehl abbrechen (Strg+C)">■ Stopp</button><button class="x" id="termClose" title="Schließen">✕</button></div>
     <pre id="termout"></pre>
     <div class="termline"><span id="termcwd" class="mono">~ ›</span><input id="termin" class="mono" spellcheck="false" placeholder="Befehl eingeben (↑ = letzter Befehl)"></div>
   </section>

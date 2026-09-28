@@ -86,6 +86,12 @@ rl.on("SIGINT", () => {
 function mdLine(line, st) {
   if (/^\s*```/.test(line)) { st.code = !st.code; return C.d + (st.code ? "┌─ " + line.trim().slice(3) : "└─") + C.x; }
   if (st.code) return C.c + "│ " + line + C.x;
+  // Markdown-Tabellen: Trennzeile als Linie, Zellen als ausgerichtete Spalten.
+  if (/^\s*\|.*\|\s*$/.test(line)) {
+    if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return C.d + "  " + "─".repeat(52) + C.x;
+    const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim().replace(/\*\*(.+?)\*\*/g, "$1"));
+    return "  " + cells.map((c, i) => (i === 0 ? c.padEnd(22) : c.padStart(9))).join(" ");
+  }
   const h = line.match(/^(#{1,6})\s+(.*)/);
   if (h) return C.b + C.m + h[2] + C.x;
   return line
@@ -205,6 +211,13 @@ function runLive(cmd) {
 }
 
 async function runTool(t) {
+  if (t.name === "todo") {
+    const items = normalizeTodos(t);
+    if (!items.length) return 'FEHLER: "items" fehlt – sende die komplette Liste.';
+    const done = items.filter((x) => x.done).length;
+    say(C.c + C.b + "📋 Aufgabenliste " + done + "/" + items.length + C.x + "\n" + items.map((x) => (x.done ? C.g + "  ☑ " + C.d : "  ☐ ") + x.text + C.x).join("\n"));
+    return todoSummary(items);
+  }
   const label = t.name === "run" ? "run " + t.cmd
     : t.name === "search" ? "search /" + t.pattern + "/" + (t.glob ? " " + t.glob : "")
     : t.name === "write" ? "write " + t.path + " (" + String(t.content || "").length + " Zeichen)"
@@ -231,7 +244,7 @@ async function runTool(t) {
 
 // ---------- Eine Aufgabe (auch /goal) ----------
 async function turnInner(history) {
-  const max = goal ? 200 : 40;
+  const max = goal ? 4000 : 40;
   let nudges = 0;
   for (let i = 0; i < max && !stopped; i++) {
     const pr = streamPrinter();
@@ -242,7 +255,7 @@ async function turnInner(history) {
     const m = out.match(/<tool>([\s\S]*?)<\/tool>/);
     if (!m) {
       if (!goal || /ZIEL ERREICHT/.test(out)) return goal ? "reached" : "done";
-      if (++nudges > 5) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
+      if (++nudges > 40) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
       history.push({ role: "user", content: GOAL_NUDGE });
       continue;
     }
@@ -346,8 +359,37 @@ const HELP = [
   ["/modell [name]", "Modell anzeigen oder wechseln"],
   ["/tokens", "Geschätzten Token-Verbrauch dieser Sitzung anzeigen"],
   ["/clear", "Verlauf leeren"],
+  ["/review [schwerpunkt]", "Code-Review der Git-Änderungen (ändert nichts)"],
+  ["/pr [branch]", "Branch pushen und Pull Request erstellen"],
+  ["/stats", "Projektstatistik: Dateien, Zeilen, Sprachen"],
+  ["/export [datei]", "Chat als Markdown-Datei speichern"],
+  ["/befehle", "Eigene Befehle (.mythos/commands/*.md) anzeigen"],
   ["/exit", "Beenden"],
 ];
+
+const COMMAND_DIRS = [path.join(os.homedir(), ".mythos", "commands"), path.join(ROOT, ".mythos", "commands")];
+const mdLines = (md) => { const st = { code: false }; return md.split("\n").map((l) => mdLine(l, st)).join("\n"); };
+async function pullRequest(name) {
+  const head = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (!head.ok) return console.log(C.r + "Kein Git-Repository." + C.x + "\n");
+  if (git(["status", "--porcelain"]).out.trim()) return console.log(C.y + "Es gibt noch nicht committete Änderungen – erst /commit, dann /pr." + C.x + "\n");
+  if (!git(["remote", "get-url", "origin"]).out.trim()) return console.log(C.y + "Kein Remote „origin“ eingerichtet – verbinde das Projekt zuerst mit GitHub (git remote add origin <url>)." + C.x + "\n");
+  let branch = head.out.trim();
+  if (!autoYes && !/^[jy]/i.test((await ask(C.d + "Branch pushen und Pull Request erstellen? [j/N] " + C.x)).trim())) return console.log("Abgebrochen.\n");
+  if (/^(main|master)$/.test(branch)) {
+    branch = name ? name.replace(/\s+/g, "-") : "mythos/" + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+    const co = git(["checkout", "-b", branch]); if (!co.ok) return console.log(C.r + co.out + C.x);
+  }
+  const push = git(["push", "-u", "origin", branch]); if (!push.ok) return console.log(C.r + push.out.trim() + C.x + "\n");
+  try { const out = execFileSync("gh", ["pr", "create", "--fill"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return console.log(C.g + "🔀 " + out.trim() + C.x + "\n"); }
+  catch (e) {
+    const m = git(["remote", "get-url", "origin"]).out.trim().match(/github\.com[:/](.+?)(?:\.git)?$/);
+    if (!m) return console.log(C.r + ((e.stderr || "") + "" || "Kein GitHub-Remote gefunden.") + C.x + "\n");
+    const url = "https://github.com/" + m[1] + "/compare/" + branch + "?expand=1";
+    openBrowser(url);
+    return console.log(C.g + "🔀 Branch „" + branch + "“ gepusht. PR-Seite im Browser: " + url + C.x + (e.code === "ENOENT" ? C.d + "\n   (Mit der GitHub-CLI „gh“ würde der PR direkt erstellt.)" + C.x : "") + "\n");
+  }
+}
 
 async function command(q, history) {
   const cmd = q.split(/\s+/)[0].toLowerCase(), arg = q.slice(cmd.length).trim();
@@ -386,6 +428,27 @@ async function command(q, history) {
   }
   if (cmd === "/tokens") return console.log("≈ " + fmtTokens(tokens.in) + " Eingabe + " + fmtTokens(tokens.out) + " Ausgabe = " + fmtTokens(tokens.in + tokens.out) + " Tokens (geschätzt)\n");
   if (cmd === "/vollzugriff") { autoYes = !/^(aus|off)$/i.test(arg); return console.log(autoYes ? "Vollzugriff an.\n" : "Vollzugriff aus – Mythos fragt vor Befehlen nach.\n"); }
+  if (cmd === "/review") {
+    const st = git(["status", "--porcelain"]);
+    if (!st.ok) return console.log(C.r + "Kein Git-Repository." + C.x + "\n");
+    const diff = (git(["diff", "HEAD"]).out || git(["diff"]).out).trim();
+    if (!diff && !st.out.trim()) return console.log("🔍 Keine Änderungen – nichts zu prüfen.\n");
+    return turn(history, REVIEW_PROMPT + (arg ? "\n\nBesonders beachten: " + arg : "") + "\n\n" + st.out + "\n```diff\n" + diff.slice(0, 60000) + "\n```");
+  }
+  if (cmd === "/pr") return pullRequest(arg);
+  if (cmd === "/stats") { const b = gitBranch(); return console.log(mdLines(projectStats(ROOT) + (b ? "\n**Git:** Branch `" + b + "`" : "")) + "\n"); }
+  if (cmd === "/export") {
+    const file = path.resolve(ROOT, arg || "mythos-chat-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".md");
+    const msgs = history.map((m) => ({ role: /^Werkzeug-Ergebnis/.test(m.content) ? "tool" : m.role, text: String(m.content).replace(/<tool>[\s\S]*?<\/tool>/g, "").slice(0, 20000) })).filter((m) => m.text.trim());
+    fs.writeFileSync(file, chatToMarkdown("Mythos-Chat – " + path.basename(ROOT), msgs));
+    return console.log(C.g + "✓ Gespeichert: " + file + C.x + "\n");
+  }
+  if (cmd === "/befehle") {
+    const list = loadCommands(COMMAND_DIRS);
+    return console.log(list.length ? list.map((c) => "  " + C.c + c.name.padEnd(20) + C.x + c.desc).join("\n") + "\n" : "Noch keine eigenen Befehle. Leg eine Markdown-Datei in .mythos/commands/ an, z. B. tests.md → /tests.\nErste Zeile = Beschreibung, Rest = Anweisung an Mythos, $ARGUMENTS = was du dahinter schreibst.\n");
+  }
+  const own = loadCommands(COMMAND_DIRS).find((c) => c.name === cmd);
+  if (own) return turn(history, fillCommand(own, arg));
   console.log("Unbekannter Befehl: " + cmd + " – /hilfe zeigt alle Befehle.\n");
 }
 

@@ -28,9 +28,18 @@ function diffBox(it) {
 }
 function draw(it, i) {
   let d;
-  if (it.cls === "a" || it.cls === "sum") {
-    d = el("div", "m a" + (it.cls === "sum" ? " sum glass" : "")); const img = el("img"); img.src = "icon.png";
-    const b = el("div", "body"); if (it.cls === "sum") b.appendChild(el("div", "sumhead", "📋 Zusammenfassung")); md(b, it.text);
+  if (it.cls === "sum") {
+    // Zusammenfassung nach /goal: eingeklappt, damit der Chat übersichtlich bleibt.
+    d = el("details", "sum glass"); const sm = el("summary");
+    const first = (it.text.split("\n").find((l) => l.trim()) || "Zusammenfassung").replace(/[#*_`>]/g, "").trim().slice(0, 90);
+    sm.append(el("span", "sumhead", "📋 Zusammenfassung"), el("span", "sumline", first));
+    const b = el("div", "body"); md(b, it.text);
+    const sp = el("button", "speak", "🔊"); sp.title = "Vorlesen";
+    sp.onclick = (e) => { e.preventDefault(); const S = window.MythosVoice.speaker; S.setVoice(cfg.voice || window.MythosVoice.VOICES[0].id); S.prepare(); S.speak(it.text); };
+    sm.appendChild(sp); d.append(sm, b);
+  } else if (it.cls === "a") {
+    d = el("div", "m a"); const img = el("img"); img.src = "icon.png";
+    const b = el("div", "body"); md(b, it.text);
     const sp = el("button", "speak", "🔊"); sp.title = "Vorlesen";
     sp.onclick = () => { const S = window.MythosVoice.speaker; S.setVoice(cfg.voice || window.MythosVoice.VOICES[0].id); S.prepare(); S.speak(it.text); };
     d.append(img, b, sp);
@@ -41,6 +50,7 @@ function draw(it, i) {
     const b = el("button", "edit", "✎"); b.title = "Nachricht bearbeiten"; b.onclick = () => startEdit(i); d.appendChild(b);
   } else if (it.cls === "diff") d = diffBox(it);
   else if (it.cls === "agents") { d = el("div", "agents"); renderAgents(d, it); agentEls.set(it, d); }
+  else if (it.cls === "todo") { d = el("div", "todo"); renderTodo(d, it); todoEls.set(it, d); }
   else if (it.cls === "out") { d = el("details", "out"); d.append(el("summary", "", "▸ Ausgabe von " + (it.cmd || "Befehl")), el("pre", "", it.text)); }
   else d = el("div", "t " + it.cls, it.text);
   $("col").appendChild(d); scrollDown(); return d;
@@ -227,6 +237,7 @@ function toolLabel(t) {
   if (t.name === "websearch") return "🌐 websearch " + t.query;
   if (t.name === "fetch") return "🌐 fetch " + t.url;
   if (t.name === "mcp") return "🔌 " + t.server + " / " + t.tool;
+  if (t.name === "todo") return "📋 Aufgabenliste";
   return "⚙ " + t.name + " " + (t.path || "");
 }
 const needsConfirm = (t) => ["run", "write", "edit", "mcp"].includes(t.name);
@@ -241,7 +252,7 @@ async function runAgent(c, opts) {
   if (c === chat) setBusyUI();
   renderSide(); saveChat(c);
   run.git = run.folder ? await window.mythos.git.info(run.folder).catch(() => null) : null;
-  const goal = c.goal || "", max = goal ? 200 : 40, autoTest = autoTestOn(run.folder);
+  const goal = c.goal || "", max = goal ? 4000 : 40, autoTest = autoTestOn(run.folder);
   let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null;
   const ask = async () => {
     const sys = await systemPrompt(run);
@@ -260,7 +271,7 @@ async function runAgent(c, opts) {
       if (!m) {
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
-          if (++nudges > 5) { noteTo(c, "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an. Mit /weiter geht es weiter."); break; }
+          if (++nudges > 40) { noteTo(c, "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an. Mit /weiter geht es weiter."); break; }
           c.history.push({ role: "user", content: prompts.nudge }); saveChat(c); continue;
         }
         // Automatisch testen: nach Änderungen Tests laufen lassen, Fehler von Mythos reparieren lassen.
@@ -287,9 +298,10 @@ async function runAgent(c, opts) {
       }
       nudges = 0;
       let t; try { t = JSON.parse(m[1]); } catch (e) { c.history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
-      addTo(c, "tool", toolLabel(t));
+      if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
       let r;
-      if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
+      if (t.name === "todo") r = updateTodos(run, c, t);
+      else if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         if (t.name === "run") run.out = "";
         try { r = await window.mythos.tool(t, run.folder, run.id); } finally { run.out = null; paintRun(run); }
@@ -383,6 +395,13 @@ const COMMANDS = [
   ["/heymythos", "an|aus", "Im Hintergrund auf „Hey Mythos“ hören (lokal)"],
   ["/agenten", "an|aus", "Multi-Agent: große Aufgaben parallel von mehreren Agenten bearbeiten"],
   ["/stimme", "[name]", "Stimme für den Sprachmodus wählen"],
+  ["/review", "[schwerpunkt]", "Code-Review der Git-Änderungen (ändert nichts)"],
+  ["/pr", "[branch-name]", "Branch pushen und Pull Request erstellen"],
+  ["/stats", "", "Projektstatistik: Dateien, Zeilen, Sprachen"],
+  ["/export", "", "Chat als Markdown-Datei speichern"],
+  ["/befehle", "", "Eigene Befehle anzeigen (.mythos/commands)"],
+  ["/befehl-neu", "<name>", "Eigenen Befehl anlegen"],
+  ["/tasten", "", "Tastenkürzel anzeigen"],
   ["/goal", "<ziel>", "Mythos arbeitet selbstständig, bis das Ziel erreicht ist – danach Zusammenfassung"],
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
@@ -431,6 +450,13 @@ async function command(q) {
     cfg.voice = v.id; window.mythos.setCfg(cfg); $("vvoice").value = v.id; window.MythosVoice.speaker.setVoice(v.id);
     return note("🔊 Stimme: " + v.label);
   }
+  if (cmd === "/review") return codeReview(arg);
+  if (cmd === "/pr") return pullRequest(arg);
+  if (cmd === "/stats") return projectStatsNote();
+  if (cmd === "/export") return exportChat();
+  if (cmd === "/tasten") return note("⌨ Tastenkürzel:\n" + SHORTCUTS.map((s) => s[0] + " – " + s[1]).join("\n"));
+  if (cmd === "/befehle") { await loadCustomCommands(); return note(customCommands.length ? "🧩 Eigene Befehle:\n" + customCommands.map((c) => c.name + " – " + c.desc).join("\n") + "\n\nNeuer Befehl: /befehl-neu <name>" : "🧩 Noch keine eigenen Befehle.\nLeg einen an mit /befehl-neu <name> – das ist eine Markdown-Datei in .mythos/commands/. Die erste Zeile ist die Beschreibung, der Rest die Anweisung an Mythos; $ARGUMENTS wird durch das ersetzt, was du hinter den Befehl schreibst."); }
+  if (cmd === "/befehl-neu") { if (!arg) return note("So geht's: /befehl-neu <name>, z. B. /befehl-neu tests"); const r = await window.mythos.commands.create(cfg.folder || null, arg); await loadCustomCommands(); return note("🧩 Befehl " + r.name + " angelegt und geöffnet: " + r.file + "\nNach dem Speichern steht er sofort im Befehlsmenü."); }
   if (cmd === "/weiter") return chat.history.length ? continueChat() : note("Hier gibt es noch nichts zum Weitermachen.");
   if (cmd === "/neu") return newChat();
   if (cmd === "/projekt") return pickProject();
@@ -507,11 +533,18 @@ async function command(q) {
   }
   if (cmd === "/vollzugriff") { const on = !/^(aus|off|0)$/i.test(arg); setAuto(on); return note(on ? "Vollzugriff ist an – Mythos fragt nicht mehr nach." : "Vollzugriff ist aus – Mythos fragt vor Befehlen nach."); }
   if (cmd === "/hilfe" || cmd === "/help") return note(COMMANDS.map((c) => c[0] + (c[1] ? " " + c[1] : "") + " – " + c[2]).join("\n"));
+  const own = customCommands.find((c) => c.name === cmd);
+  if (own) {
+    if (isBusy(chat)) { (chat.queue = chat.queue || []).push({ q: fillCustom(own, arg), att: [] }); return renderQueue(); }
+    pushUser(chat, "🧩 " + cmd + (arg ? " " + arg : ""), fillCustom(own, arg), { q: cmd + (arg ? " " + arg : "") });
+    return runAgent(chat, { fresh: true });
+  }
   note("Unbekannter Befehl: " + cmd + " – /hilfe zeigt alle Befehle.");
 }
 function renderSlash() {
   const v = $("inp").value, box = $("slash");
-  const list = /^\/\S*$/.test(v) ? COMMANDS.filter((c) => c[0].startsWith(v.toLowerCase())) : [];
+  const all = COMMANDS.concat(customCommands.map((c) => [c.name, "", "🧩 " + c.desc]));
+  const list = /^\/\S*$/.test(v) ? all.filter((c) => c[0].startsWith(v.toLowerCase())) : [];
   box.textContent = ""; box.style.display = list.length ? "flex" : "none";
   list.forEach((c) => {
     const b = el("button"); b.append(el("span", "c", c[0] + (c[1] ? " " + c[1] : "")), el("span", "d", c[2]));
@@ -597,7 +630,7 @@ function renderHeader() {
 // Aktiven Projektordner wechseln (Git, MCP, Dateibaum, Terminal ziehen mit).
 async function setFolder(p) {
   cfg.folder = p || ""; addProject(p); await window.mythos.setCfg(cfg);
-  renderHeader(); refreshGit(); configureMcp();
+  renderHeader(); refreshGit(); configureMcp(); loadCustomCommands();
   if (treeOpen()) { expanded.clear(); renderTree(); }
   if (!termBusy) { termCwd = cfg.folder || termCwd; renderTermPrompt(); }
 }
@@ -678,6 +711,8 @@ async function renderTree() {
   await level("", 0, box);
 }
 let edFile = null, edOrig = "";
+// Offen = per openEditor auf "flex" gesetzt (vor dem ersten Öffnen ist der Inline-Stil leer).
+const editorOpen = () => $("editor").style.display === "flex";
 async function openEditor(rel) {
   const r = await window.mythos.files.read(cfg.folder, rel);
   edFile = rel; $("edpath").textContent = rel; $("editor").style.display = "flex";
@@ -792,7 +827,7 @@ async function login() {
 }
 function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
-  renderHeader(); refreshGit(); configureMcp(); renderModels();
+  renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands();
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }
@@ -818,9 +853,9 @@ $("inp").onkeydown = (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 };
 document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && $("editor").style.display !== "none") { e.preventDefault(); saveEditor(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && editorOpen()) { e.preventDefault(); saveEditor(); return; }
   if (e.key !== "Escape") return;
-  if ($("editor").style.display !== "none") return closeEditor();
+  if (editorOpen()) return closeEditor();
   if ($("slash").style.display !== "none") { $("slash").style.display = "none"; return; }
   if (typeof vm !== "undefined" && vm.on) return voiceStop();
   if (isBusy(chat)) stop(chat); else cancelEdit();
@@ -1056,9 +1091,10 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       if (!m) { s.result = text || "(fertig, ohne Bericht)"; break; }
       let t; try { t = JSON.parse(m[1]); } catch (e) { hist.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
       s.phase = toolLabel(t); update();
-      addTo(c, "tool", tag + toolLabel(t));
+      if (t.name !== "todo") addTo(c, "tool", tag + toolLabel(t));
       let r;
-      if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
+      if (t.name === "todo") r = updateTodos(s, c, t, "Agent " + (s.i + 1));
+      else if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         r = await window.mythos.tool(t, run.folder, s.id);
         if (t.name === "run") addTo(c, "out", r.result.slice(-3000), { cmd: tag + t.cmd });
@@ -1075,3 +1111,117 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
 }
 function setMulti(on) { cfg.multi = !!on; window.mythos.setCfg(cfg); $("multi").checked = !!on; }
 $("multi").onchange = () => setMulti($("multi").checked);
+
+// ---------- Aufgabenliste (todo-Werkzeug) ----------
+const todoEls = new WeakMap();
+function renderTodo(d, it) {
+  d.textContent = "";
+  const done = it.items.filter((x) => x.done).length;
+  d.appendChild(el("div", "th", "📋 Aufgabenliste " + (it.agent ? "(" + it.agent + ") " : "") + "– " + done + "/" + it.items.length + " erledigt"));
+  const bar = el("div", "tbar"); const fill = el("div", "tfill"); fill.style.width = Math.round((done / Math.max(1, it.items.length)) * 100) + "%"; bar.appendChild(fill); d.appendChild(bar);
+  it.items.forEach((x) => { const row = el("div", "ti" + (x.done ? " done" : "")); row.append(el("span", "tb", x.done ? "☑" : "☐"), el("span", "tt", x.text)); d.appendChild(row); });
+}
+function normTodos(t) {
+  const items = Array.isArray(t && t.items) ? t.items : [];
+  return items.slice(0, 40).map((x) => (typeof x === "string" ? { text: x, done: false } : { text: String((x && x.text) || "").slice(0, 200), done: !!(x && x.done) })).filter((x) => x.text);
+}
+/** Aktualisiert die Liste im Chat (eine Karte pro Aufgabe/Agent, wird live aktualisiert). */
+function updateTodos(holder, c, t, agent) {
+  const items = normTodos(t);
+  if (!items.length) return { result: 'FEHLER: "items" fehlt – sende die komplette Liste: {"name":"todo","items":[{"text":"…","done":false}]}' };
+  const it = holder.todoItem && c.view.includes(holder.todoItem) ? holder.todoItem : null;
+  if (it) {
+    it.items = items;
+    const d = todoEls.get(it); if (d && d.isConnected) renderTodo(d, it);
+  } else {
+    addTo(c, "todo", "", { items, agent: agent || "" });
+    holder.todoItem = c.view[c.view.length - 1];
+  }
+  saveChat(c);
+  return { result: "Aufgabenliste aktualisiert (" + items.filter((x) => x.done).length + "/" + items.length + " erledigt)." };
+}
+
+// ---------- Eigene Befehle ----------
+let customCommands = [];
+async function loadCustomCommands() {
+  try { customCommands = await window.mythos.commands.list(cfg.folder || null); } catch (e) { customCommands = []; }
+}
+const fillCustom = (cmd, args) => (cmd.body.includes("$ARGUMENTS") ? cmd.body.split("$ARGUMENTS").join(args || "") : cmd.body + (args ? "\n\n" + args : ""));
+
+// ---------- Code-Review, Pull Request, Export, Statistik ----------
+async function codeReview(arg) {
+  if (needFolder()) return;
+  await refreshGit();
+  if (!gitInfo) return note("Der Projektordner ist kein Git-Repository – für ein Review brauche ich Git-Änderungen.");
+  const diff = (await window.mythos.git.diff(cfg.folder)).trim();
+  if (!diff) return note("🔍 Keine Änderungen gegenüber dem letzten Commit – nichts zu prüfen.");
+  if (isBusy(chat)) return note("Dieser Chat arbeitet gerade – starte das Review in einem neuen Chat (Strg+N).");
+  pushUser(chat, "🔍 /review" + (arg ? " " + arg : "") + " – Code-Review der aktuellen Änderungen",
+    prompts.review + (arg ? "\n\nBesonders beachten: " + arg : "") + "\n\n```diff\n" + diff.slice(0, 60000) + "\n```", { q: "/review" });
+  runAgent(chat, { fresh: false });
+}
+async function pullRequest(arg) {
+  if (needFolder()) return;
+  await refreshGit();
+  if (!gitInfo) return note("Der Projektordner ist kein Git-Repository.");
+  if (!confirm("Branch zu GitHub pushen und einen Pull Request erstellen?" + (/^(main|master)$/.test(gitInfo.branch) ? "\n\nDu bist auf „" + gitInfo.branch + "“ – dafür lege ich einen neuen Branch an." : ""))) return note("Pull Request abgebrochen.");
+  const n = flash("⏳ Pushe und erstelle den Pull Request …");
+  const r = await window.mythos.git.pr(cfg.folder, arg ? arg.replace(/\s+/g, "-") : "");
+  n.remove();
+  note((r.ok ? "🔀 Pull Request" + (r.branch ? " für Branch „" + r.branch + "“" : "") + "\n" : "⚠ Pull Request fehlgeschlagen\n") + (r.out || "") + (r.url ? "\n" + r.url : ""));
+  refreshGit();
+}
+async function exportChat() {
+  if (!chat || !chat.view.length) return note("Dieser Chat ist noch leer.");
+  const msgs = chat.view.map((v) =>
+    v.cls === "u" ? { role: "user", text: v.text }
+    : v.cls === "a" ? { role: "assistant", text: v.text }
+    : v.cls === "sum" ? { role: "assistant", text: "**📋 Zusammenfassung**\n\n" + v.text }
+    : v.cls === "tool" ? { role: "tool", text: v.text }
+    : v.cls === "diff" ? { role: "tool", text: "✎ " + v.path + " (+" + v.d.added + " −" + v.d.removed + ")" }
+    : v.cls === "todo" ? { role: "tool", text: "📋 Aufgabenliste\n\n" + v.items.map((x) => "- [" + (x.done ? "x" : " ") + "] " + x.text).join("\n") }
+    : null).filter(Boolean);
+  const file = await window.mythos.exportChat(chat.title, msgs);
+  if (file) note("📄 Chat gespeichert: " + file);
+}
+async function projectStatsNote() {
+  if (needFolder()) return;
+  const n = flash("⏳ Zähle Dateien …");
+  let md = await window.mythos.stats(cfg.folder);
+  n.remove();
+  await refreshGit();
+  if (gitInfo) md += "\n**Git:** Branch `" + gitInfo.branch + "` · " + (gitInfo.changed ? gitInfo.changed + " geänderte Dateien" : "alles committet ✓");
+  add("a", md);
+}
+
+// ---------- Terminal-Ausgabe an Mythos ----------
+function termToMythos() {
+  const out = $("termout").textContent.trim();
+  if (!out) return note("⌨ Im Terminal steht noch nichts.");
+  attach.push({ name: "Terminal-Ausgabe.txt", content: out.slice(-6000) });
+  renderFiles();
+  if (!$("inp").value.trim()) $("inp").value = "Was bedeutet diese Terminal-Ausgabe, und wie behebe ich das Problem?";
+  grow(); $("inp").focus();
+}
+
+// ---------- Tastenkürzel ----------
+const SHORTCUTS = [
+  ["Strg+N", "Neuer Chat"], ["Strg+K", "Chats durchsuchen"], ["Strg+L", "Zum Eingabefeld"],
+  ["Strg+B", "Dateibaum"], ["Strg+J", "Terminal"], ["Strg+Shift+M", "Sprachmodus"],
+  ["Strg+Shift+E", "Chat exportieren"], ["Esc", "Stoppen / Abbrechen"], ["Tab", "Befehl vervollständigen"],
+];
+document.addEventListener("keydown", (e) => {
+  if (!(e.ctrlKey || e.metaKey) || $("app").style.display === "none" || editorOpen()) return;
+  const k = e.key.toLowerCase(), act = {
+    n: !e.shiftKey && (() => newChat()),
+    k: !e.shiftKey && (() => { $("csearch").focus(); $("csearch").select(); }),
+    l: !e.shiftKey && (() => $("inp").focus()),
+    b: !e.shiftKey && (() => toggleTree()),
+    j: !e.shiftKey && (() => toggleTerm()),
+    m: e.shiftKey && (() => (vm.on ? voiceStop() : voiceStart())),
+    e: e.shiftKey && (() => exportChat()),
+  }[k];
+  if (!act) return;
+  e.preventDefault(); act();
+});
+$("termsend").onclick = termToMythos;

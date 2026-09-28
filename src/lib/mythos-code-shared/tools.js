@@ -12,6 +12,7 @@ const TOOL_PROMPT = [
   '<tool>{"name":"ls","path":"."}</tool>  Ordner auflisten',
   '<tool>{"name":"websearch","query":"..."}</tool>  Im Internet suchen (z. B. Doku, Fehlermeldungen)',
   '<tool>{"name":"fetch","url":"https://..."}</tool>  Webseite als Text lesen',
+  '<tool>{"name":"todo","items":[{"text":"Schritt","done":false}]}</tool>  Aufgabenliste anlegen/aktualisieren (bei größeren Aufgaben zuerst planen, dann Punkte abhaken; immer die komplette Liste senden)',
   "Nach jedem Werkzeug bekommst du das Ergebnis. Suche erst, statt Dateien blind zu lesen. Ändere bestehende Dateien mit edit statt write.",
   "Arbeite Schritt für Schritt, bis die Aufgabe erledigt ist, dann antworte normal ohne <tool> (Markdown erlaubt).",
 ].join("\n");
@@ -39,9 +40,15 @@ const memoryPrompt = (mem) => mem
   ? "\n\nProjekt-Gedächtnis (" + MEMORY_FILE + " im Projektordner – halte dich daran, ergänze es bei wichtigen neuen Erkenntnissen per edit):\n" + mem
   : "";
 const goalPrompt = (goal) => goal
-  ? "\n\nZIEL (/goal): " + goal + "\nDer Nutzer ist nicht am Rechner. Arbeite komplett selbstständig, ohne Rückfragen, bis das Ziel vollständig erreicht und überprüft ist. Erst dann schreibe in deiner letzten Antwort eine eigene Zeile: ZIEL ERREICHT"
+  ? "\n\nZIEL (/goal): " + goal +
+    "\nDer Auftraggeber ist NICHT am Rechner und liest erst viel später mit, was hier im Chat passiert ist – frage ihn nichts, er kann nicht antworten. Behandle jede Entscheidung, jede Rückfrage und jedes Hindernis als etwas, das du selbst lösen musst:" +
+    "\n- Gib bei Fehlern NIEMALS auf. Ein fehlgeschlagener Befehl, eine fehlende Abhängigkeit, ein kaputter Build sind Aufgaben, keine Endstationen: lies die Fehlermeldung genau, versuche eine andere Vorgehensweise, installiere Fehlendes selbst (z. B. per npm/pip/winget), nutze bei Bedarf websearch/fetch um die Lösung nachzuschlagen, und probiere es erneut. Erst wenn du wirklich mehrere grundverschiedene Ansätze erfolglos versucht hast, notierst du das Problem knapp und machst mit dem Rest der Aufgabe weiter." +
+    "\n- Triff sinnvolle Annahmen statt zu fragen, und schreib kurz dazu, welche Annahme du getroffen hast." +
+    "\n- Teile deinen Fortschritt normal im Chat mit (was du tust und warum), aber warte nicht auf eine Antwort." +
+    "\n- Das ist eine große, langlaufende Aufgabe: Plane für 1 bis 5 Stunden durchgehende Arbeit in vielen kleinen Schritten, nicht für ein paar Minuten. Höre nicht zu früh auf – arbeite lieber zu gründlich als zu knapp." +
+    "\nArbeite komplett selbstständig weiter, bis das Ziel vollständig erreicht und überprüft ist. Erst dann schreibe in deiner letzten Antwort eine eigene Zeile: ZIEL ERREICHT"
   : "";
-const GOAL_NUDGE = "Das Ziel ist noch nicht als erreicht gemeldet. Arbeite selbstständig weiter, ohne Rückfragen. Wenn es wirklich vollständig erledigt und geprüft ist, schreibe ZIEL ERREICHT.";
+const GOAL_NUDGE = "Das Ziel ist noch nicht als erreicht gemeldet. Der Auftraggeber ist nicht da – gib bei Problemen nicht auf, sondern versuche einen anderen Weg, nutze websearch/fetch für Lösungen und arbeite selbstständig weiter, ohne Rückfragen. Wenn es wirklich vollständig erledigt und geprüft ist, schreibe ZIEL ERREICHT.";
 const SUMMARY_PROMPT = "Fasse jetzt kurz auf Deutsch zusammen, OHNE Werkzeuge:\n**Geändert:** welche Dateien und was\n**Geklappt:** was funktioniert (und wie geprüft)\n**Offen:** was noch fehlt oder beachtet werden muss\nMaximal 12 Zeilen.";
 
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "out", "coverage", ".cache", "vendor", "__pycache__", ".venv", "venv", "target"]);
@@ -242,6 +249,84 @@ async function webTool(t) {
   } catch (e) { return { result: "FEHLER: " + (e.name === "AbortError" ? "Zeitüberschreitung" : e.message) }; }
 }
 const isWebTool = (t) => t.name === "fetch" || t.name === "websearch";
+
+// ---------- Aufgabenliste (todo) ----------
+/** Werkzeug-Eingabe prüfen → saubere Liste [{ text, done }]. */
+function normalizeTodos(t) {
+  const items = Array.isArray(t && t.items) ? t.items : [];
+  return items.slice(0, 40).map((x) => (typeof x === "string" ? { text: x, done: false } : { text: String((x && x.text) || "").slice(0, 200), done: !!(x && x.done) })).filter((x) => x.text);
+}
+const todoSummary = (items) => "Aufgabenliste aktualisiert (" + items.filter((x) => x.done).length + "/" + items.length + " erledigt).";
+
+// ---------- Eigene Befehle: .mythos/commands/<name>.md ----------
+// Erste Zeile = Beschreibung (optional mit "# "), Rest = Anweisung an Mythos. $ARGUMENTS wird ersetzt.
+function loadCommands(dirs) {
+  const out = new Map();
+  for (const dir of dirs) {
+    let names = [];
+    try { names = fs.readdirSync(dir).filter((f) => /\.md$/i.test(f)); } catch { continue; }
+    for (const f of names) {
+      const text = readText(path.join(dir, f));
+      if (!text || !text.trim()) continue;
+      const name = f.replace(/\.md$/i, "").toLowerCase().replace(/[^a-z0-9äöüß_-]/g, "-");
+      const lines = text.replace(/\r\n/g, "\n").split("\n");
+      const desc = lines[0].replace(/^#+\s*/, "").trim().slice(0, 100);
+      out.set(name, { name: "/" + name, desc: desc || "Eigener Befehl", body: text.trim(), file: path.join(dir, f) });
+    }
+  }
+  return [...out.values()];
+}
+const fillCommand = (cmd, args) => (cmd.body.includes("$ARGUMENTS") ? cmd.body.split("$ARGUMENTS").join(args || "") : cmd.body + (args ? "\n\n" + args : ""));
+const COMMAND_TEMPLATE = "# Tests schreiben für eine Datei\nSchreibe gründliche Tests für $ARGUMENTS.\nNutze das Test-Framework, das im Projekt schon verwendet wird, und führe die Tests am Ende aus.\n";
+
+// ---------- Code-Review ----------
+const REVIEW_PROMPT = "Führe ein gründliches Code-Review der folgenden Änderungen durch. ÄNDERE KEINE DATEIEN – nur lesen und bewerten.\n" +
+  "Gliedere die Antwort so:\n**🐞 Fehler** (echte Bugs, mit Datei:Zeile)\n**⚠️ Risiken** (Sicherheit, Randfälle, Performance)\n**💡 Verbesserungen** (Lesbarkeit, Vereinfachung)\n**✅ Gut gelöst**\n" +
+  "Wenn eine Kategorie leer ist, schreib „nichts gefunden“. Sei konkret, keine allgemeinen Floskeln.";
+
+// ---------- Projektstatistik ----------
+const LANG = { js: "JavaScript", mjs: "JavaScript", cjs: "JavaScript", jsx: "JavaScript (JSX)", ts: "TypeScript", tsx: "TypeScript (TSX)", py: "Python", java: "Java", kt: "Kotlin", cs: "C#", cpp: "C++", cc: "C++", c: "C", h: "C/C++ Header", go: "Go", rs: "Rust", rb: "Ruby", php: "PHP", swift: "Swift", html: "HTML", css: "CSS", scss: "SCSS", vue: "Vue", svelte: "Svelte", json: "JSON", md: "Markdown", yml: "YAML", yaml: "YAML", sql: "SQL", sh: "Shell", ps1: "PowerShell", bat: "Batch", lua: "Lua", dart: "Dart", xml: "XML", toml: "TOML" };
+function projectStats(root) {
+  const byLang = new Map(), big = [];
+  let files = 0, lines = 0, bytes = 0, skipped = 0;
+  const walk = (dir) => {
+    let entries; try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (files > 30000) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full); continue; }
+      const ext = path.extname(e.name).slice(1).toLowerCase(), lang = LANG[ext];
+      if (!lang) { skipped++; continue; }
+      let st; try { st = fs.statSync(full); } catch { continue; }
+      if (st.size > 2e6) { skipped++; continue; }
+      const text = readText(full); if (text == null) continue;
+      const n = text ? text.split("\n").length : 0;
+      files++; lines += n; bytes += st.size;
+      const l = byLang.get(lang) || { files: 0, lines: 0 }; l.files++; l.lines += n; byLang.set(lang, l);
+      big.push({ file: path.relative(root, full).split(path.sep).join("/"), lines: n });
+    }
+  };
+  walk(root);
+  big.sort((a, b) => b.lines - a.lines);
+  const langs = [...byLang.entries()].sort((a, b) => b[1].lines - a[1].lines);
+  const fmt = (n) => n.toLocaleString("de-DE");
+  let md = "### 📊 Projektstatistik: " + path.basename(root) + "\n\n";
+  md += "**" + fmt(files) + " Code-Dateien · " + fmt(lines) + " Zeilen · " + (bytes / 1024 / 1024).toFixed(1) + " MB**" + (skipped ? " (" + fmt(skipped) + " andere Dateien übersprungen)" : "") + "\n\n";
+  if (langs.length) {
+    md += "| Sprache | Dateien | Zeilen | Anteil |\n|---|---:|---:|---:|\n";
+    md += langs.slice(0, 12).map(([name, v]) => "| " + name + " | " + fmt(v.files) + " | " + fmt(v.lines) + " | " + Math.round((v.lines / Math.max(1, lines)) * 100) + " % |").join("\n") + "\n\n";
+  }
+  if (big.length) md += "**Größte Dateien:**\n" + big.slice(0, 5).map((b) => "- `" + b.file + "` – " + fmt(b.lines) + " Zeilen").join("\n") + "\n";
+  return md;
+}
+
+// ---------- Chat als Markdown ----------
+function chatToMarkdown(title, messages) {
+  const date = new Date().toLocaleString("de-DE");
+  let md = "# " + (title || "Mythos-Chat") + "\n\n_Exportiert aus Mythos Code am " + date + "_\n\n---\n\n";
+  for (const m of messages) md += (m.role === "user" ? "## 🧑 Du\n\n" : m.role === "tool" ? "#### ⚙ " : "## ✦ Mythos\n\n") + String(m.text || "").trim() + "\n\n";
+  return md;
+}
 
 function readMemory(root) { const t = readText(path.join(root, MEMORY_FILE)); return t ? t.slice(0, 8000) : ""; }
 function addMemory(root, text) {

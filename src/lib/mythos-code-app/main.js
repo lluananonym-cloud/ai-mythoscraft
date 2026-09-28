@@ -108,7 +108,7 @@ function mcpPrompt() {
     tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n");
 }
 ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + mcpPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
-ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
+ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, review: REVIEW_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
 
 // Laufende Prozesse je Kennung – mehrere Aufgaben (und das Terminal) laufen parallel.
 const children = new Map();
@@ -326,3 +326,56 @@ ipcMain.handle("git:commit", async (_e, cwd, msg) => {
   return git(["commit", "-m", msg], cwd);
 });
 ipcMain.handle("git:push", (_e, cwd) => git(["push"], cwd));
+
+// ---------- Eigene Befehle (.mythos/commands/*.md im Projekt + commands/ im App-Datenordner) ----------
+const commandDirs = (cwd) => [path.join(app.getPath("userData"), "commands"), cwd ? path.join(cwd, ".mythos", "commands") : null].filter(Boolean);
+ipcMain.handle("commands:list", (_e, cwd) => loadCommands(commandDirs(cwd)).map((c) => ({ name: c.name, desc: c.desc, body: c.body })));
+ipcMain.handle("commands:create", (_e, cwd, name) => {
+  const safe = String(name || "mein-befehl").toLowerCase().replace(/[^a-z0-9äöüß_-]/g, "-").replace(/^-+|-+$/g, "") || "mein-befehl";
+  const dir = cwd ? path.join(cwd, ".mythos", "commands") : path.join(app.getPath("userData"), "commands");
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, safe + ".md");
+  if (!fs.existsSync(file)) fs.writeFileSync(file, COMMAND_TEMPLATE);
+  shell.openPath(file);
+  return { name: "/" + safe, file };
+});
+
+// ---------- Projektstatistik ----------
+ipcMain.handle("project:stats", (_e, cwd) => (cwd ? projectStats(cwd) : "Kein Projektordner gewählt."));
+
+// ---------- Chat als Markdown exportieren ----------
+ipcMain.handle("chats:export", async (_e, title, messages) => {
+  const name = String(title || "Mythos-Chat").replace(/[\/:*?"<>|]+/g, " ").trim().slice(0, 60) || "Mythos-Chat";
+  const r = await dialog.showSaveDialog(w, { defaultPath: path.join(app.getPath("documents"), name + ".md"), filters: [{ name: "Markdown", extensions: ["md"] }] });
+  if (r.canceled || !r.filePath) return null;
+  fs.writeFileSync(r.filePath, chatToMarkdown(title, messages));
+  return r.filePath;
+});
+
+// ---------- Pull Request: Branch pushen, per GitHub-CLI (gh) oder im Browser öffnen ----------
+ipcMain.handle("git:pr", async (_e, cwd, newBranch) => {
+  const head = await git(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
+  if (!head.ok) return { ok: false, out: "Der Projektordner ist kein Git-Repository." };
+  const dirty = await git(["status", "--porcelain"], cwd);
+  if (dirty.out.trim()) return { ok: false, out: "Es gibt noch nicht committete Änderungen – erst /commit, dann /pr." };
+  const origin = await git(["remote", "get-url", "origin"], cwd);
+  if (!origin.ok || !origin.out.trim()) return { ok: false, out: "Kein Remote „origin“ eingerichtet – verbinde das Projekt zuerst mit GitHub (git remote add origin <url>)." };
+  let branch = head.out.trim();
+  // Von main/master aus einen eigenen Branch anlegen, sonst gäbe es nichts zu vergleichen.
+  if (/^(main|master)$/.test(branch)) {
+    branch = newBranch || "mythos/" + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+    const co = await git(["checkout", "-b", branch], cwd);
+    if (!co.ok) return { ok: false, out: co.out };
+  }
+  const push = await git(["push", "-u", "origin", branch], cwd);
+  if (!push.ok) return { ok: false, out: push.out };
+  const gh = await new Promise((res) => execFile("gh", ["pr", "create", "--fill"], { cwd, timeout: 120000, windowsHide: true },
+    (err, so, se) => res({ ok: !err, out: ((so || "") + (se || "")).trim(), missing: !!err && err.code === "ENOENT" })));
+  if (gh.ok) return { ok: true, branch, out: gh.out, url: (gh.out.match(/https:\/\/\S+/) || [])[0] };
+  const remote = await git(["remote", "get-url", "origin"], cwd);
+  const m = remote.out.trim().match(/github\.com[:/](.+?)(?:\.git)?$/);
+  if (!m) return { ok: false, out: gh.out || "Kein GitHub-Remote (origin) gefunden." };
+  const url = "https://github.com/" + m[1] + "/compare/" + branch.split("/").map(encodeURIComponent).join("/") + "?expand=1";
+  shell.openExternal(url);
+  return { ok: true, branch, url, out: gh.missing ? "GitHub-CLI (gh) ist nicht installiert – die PR-Seite ist im Browser geöffnet." : (gh.out ? gh.out + "\n" : "") + "PR-Seite im Browser geöffnet." };
+});
