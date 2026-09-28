@@ -1,4 +1,4 @@
-// NVIDIA-API über den Server: Der Schlüssel liegt nur als Secret (NVIDIA_API_KEY) auf Supabase,
+// NVIDIA-API über den Server: Die Schlüssel liegen nur als Secrets (NVIDIA_API_KEY, optional NVIDIA_IMAGE_API_KEY) auf Supabase,
 // nie im Browser. Nur angemeldete Nutzer dürfen die Funktion aufrufen.
 // POST { kind: "chat" | "tts" | "image", model?, messages?, input?, prompt? }
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
@@ -15,8 +15,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
 
-  const key = Deno.env.get("NVIDIA_API_KEY") || Deno.env.get("NV_API_KEY");
-  if (!key) return json({ error: "NVIDIA_API_KEY ist auf dem Server nicht gesetzt." }, 500);
+  // Eigener Schlüssel für Bilder möglich (NVIDIA_IMAGE_API_KEY), sonst der allgemeine.
+  const mainKey = Deno.env.get("NVIDIA_API_KEY") || Deno.env.get("NV_API_KEY");
+  const imageKey = Deno.env.get("NVIDIA_IMAGE_API_KEY") || mainKey;
 
   // Nur angemeldete Nutzer
   const auth = req.headers.get("Authorization");
@@ -28,6 +29,8 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   const kind = body?.kind;
+  const key = kind === "image" ? imageKey : mainKey;
+  if (!key) return json({ error: kind === "image" ? "NVIDIA_IMAGE_API_KEY ist auf dem Server nicht gesetzt." : "NVIDIA_API_KEY ist auf dem Server nicht gesetzt." }, 500);
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${key}` };
 
   try {
