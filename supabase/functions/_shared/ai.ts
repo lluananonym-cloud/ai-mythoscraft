@@ -1,7 +1,10 @@
 // Shared AI helper: Lovable AI Gateway with automatic Google Gemini fallback.
 // Wenn die Lovable-Credits leer sind (402), Rate-Limit (429) oder ein 5xx kommt,
 // wird automatisch direkt auf die Google Generative Language API umgeschaltet
-// (Primary-Key + Backup-Key).
+// (Primary-Key + Backup-Key). Die Schlüssel kommen entweder als Server-Secret,
+// oder – falls in diesem Projekt keine Secrets-Verwaltung verfügbar ist – als per
+// /apikeyadmin gespeicherter Wert in der Tabelle app_secrets (siehe nvidia/index.ts).
+import { createClient } from "npm:@supabase/supabase-js@2.103.3";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const GOOGLE_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -10,11 +13,20 @@ const enc = new TextEncoder();
 const sse = (obj: unknown) => enc.encode(`data: ${JSON.stringify(obj)}\n\n`);
 const sseDone = () => enc.encode("data: [DONE]\n\n");
 
-export function googleKeys(): string[] {
-  return [
-    Deno.env.get("GOOGLE_AI_API_KEY"),
-    Deno.env.get("GOOGLE_AI_API_KEY_BACKUP"),
-  ].filter((k): k is string => !!k && k.length > 5);
+export async function googleKeys(): Promise<string[]> {
+  const fromEnv = [Deno.env.get("GOOGLE_AI_API_KEY"), Deno.env.get("GOOGLE_AI_API_KEY_BACKUP")];
+  if (fromEnv.every((k) => k && k.length > 5)) return fromEnv as string[];
+  try {
+    const url = Deno.env.get("SUPABASE_URL"), sr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (url && sr) {
+      const admin = createClient(url, sr);
+      const { data } = await admin.from("app_secrets").select("name, value").in("name", ["GOOGLE_AI_API_KEY", "GOOGLE_AI_API_KEY_BACKUP"]);
+      const stored: Record<string, string> = {}; for (const r of data ?? []) stored[r.name] = r.value;
+      fromEnv[0] = fromEnv[0] || stored.GOOGLE_AI_API_KEY;
+      fromEnv[1] = fromEnv[1] || stored.GOOGLE_AI_API_KEY_BACKUP;
+    }
+  } catch (e) { console.warn("[ai] app_secrets lookup failed", e instanceof Error ? e.message : String(e)); }
+  return fromEnv.filter((k): k is string => !!k && k.length > 5);
 }
 
 /** Lovable-Modell-ID -> Google-Modellkette (erstes verfügbares gewinnt) */
@@ -162,7 +174,7 @@ export async function aiChat(
   }
 
   // ---- Google Fallback ----
-  const keys = googleKeys();
+  const keys = await googleKeys();
   const chain = geminiChain(body.model);
   const payload = toGeminiBody(body);
   let lastStatus = 503;

@@ -26,6 +26,12 @@ function diffBox(it) {
   it.d.lines.forEach(([op, l]) => pre.appendChild(el("span", op === "+" ? "ln add" : op === "-" ? "ln del" : op === "@" ? "ln gap" : "ln", (op === "@" ? "" : op + " ") + l)));
   d.append(s, pre); return d;
 }
+// Sichtbare Gedanken (wie bei base44): eingeklappt, Wort für Wort nachlesbar.
+function thinkBox(think) {
+  const d = el("details", "think"); const sm = el("summary", "", "💭 Gedanken");
+  const b = el("div", "body"); b.style.whiteSpace = "pre-wrap"; b.textContent = think;
+  d.append(sm, b); return d;
+}
 function draw(it, i) {
   let d;
   if (it.cls === "sum") {
@@ -33,13 +39,13 @@ function draw(it, i) {
     d = el("details", "sum glass"); const sm = el("summary");
     const first = (it.text.split("\n").find((l) => l.trim()) || "Zusammenfassung").replace(/[#*_`>]/g, "").trim().slice(0, 90);
     sm.append(el("span", "sumhead", "📋 Zusammenfassung"), el("span", "sumline", first));
-    const b = el("div", "body"); md(b, it.text);
+    const b = el("div", "body"); if (it.think) b.appendChild(thinkBox(it.think)); md(b, it.text);
     const sp = el("button", "speak", "🔊"); sp.title = "Vorlesen";
     sp.onclick = (e) => { e.preventDefault(); const S = window.MythosVoice.speaker; S.setVoice(cfg.voice || window.MythosVoice.VOICES[0].id); S.prepare(); S.speak(it.text); };
     sm.appendChild(sp); d.append(sm, b);
   } else if (it.cls === "a") {
     d = el("div", "m a"); const img = el("img"); img.src = "icon.png";
-    const b = el("div", "body"); md(b, it.text);
+    const b = el("div", "body"); if (it.think) b.appendChild(thinkBox(it.think)); md(b, it.text);
     const sp = el("button", "speak", "🔊"); sp.title = "Vorlesen";
     sp.onclick = () => { const S = window.MythosVoice.speaker; S.setVoice(cfg.voice || window.MythosVoice.VOICES[0].id); S.prepare(); S.speak(it.text); };
     d.append(img, b, sp);
@@ -89,6 +95,18 @@ function paintRun(run) {
   if (chat !== run.chat) return;
   const col = $("col"), e = run.els, stick = nearBottom();
   const vis = visibleText(run.stream).trim();
+  // Sichtbare Gedanken: live Wort für Wort, aufgeklappt solange noch keine Antwort da ist.
+  if (run.thinking) {
+    if (!e.think || !e.think.isConnected) {
+      e.think = el("details", "think"); e.thinkSum = el("summary");
+      e.thinkBody = el("div", "body"); e.thinkBody.style.whiteSpace = "pre-wrap";
+      e.think.append(e.thinkSum, e.thinkBody);
+    }
+    e.think.open = !vis;
+    e.thinkSum.textContent = vis ? "💭 Gedanken" : "💭 Denkt nach…";
+    if (e.thinkBody.textContent !== run.thinking) { e.thinkBody.textContent = run.thinking; e.thinkBody.scrollTop = 1e9; }
+    col.appendChild(e.think);
+  } else if (e.think) { e.think.remove(); e.think = null; }
   if (vis) {
     if (!e.stream || !e.stream.isConnected) { e.stream = el("div", "m a streaming"); const img = el("img"); img.src = "icon.png"; e.body = el("div", "body"); e.stream.append(img, e.body); e.drawn = null; }
     if (e.drawn !== vis) { e.body.textContent = ""; md(e.body, vis); e.drawn = vis; }
@@ -133,7 +151,7 @@ function compact(h, level) {
   return older.map((m) => ({ role: m.role, content: shorten(m.content, oldMax) }))
     .concat(h.slice(cut).map((m) => withImages(m, shorten(m.content, recentMax))));
 }
-async function once(run, messages, system, onText) {
+async function once(run, messages, system, onText, onThink) {
   const c = run.ctl = new AbortController(); const to = setTimeout(() => c.abort(), 170000);
   const tok = run.chat.tokens = run.chat.tokens || { in: 0, out: 0 };
   tok.in += estTokens(system, messages);
@@ -142,26 +160,30 @@ async function once(run, messages, system, onText) {
       headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model: run.model, max_tokens: 8000, system: system, messages: messages, stream: true }) });
     if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
-    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "", outTok = 0;
+    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "", think = "", outTok = 0;
     for (;;) { const x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true }); let i;
       while ((i = buf.indexOf("\n")) !== -1) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
         if (!l.startsWith("data:")) continue; let p; try { p = JSON.parse(l.slice(5)); } catch (e) { continue; }
         if (p.type === "error") { const e = new Error((p.error && p.error.message) || "Überlastet"); e.status = 529; throw e; }
         if (p.usage && p.usage.output_tokens) outTok = p.usage.output_tokens;
+        // Sichtbare Gedanken: kommen als eigener Block VOR der Antwort.
+        if (p.delta && p.delta.type === "thinking_delta" && p.delta.thinking) { think += p.delta.thinking; if (onThink) onThink(think); }
         if (p.delta && p.delta.text) { out += p.delta.text; if (onText) onText(out); } } }
     if (!out.trim()) throw new Error("Leere Antwort");
     tok.out += outTok || Math.ceil(out.length / 4);
-    return out;
+    return { text: out, think };
   } finally { clearTimeout(to); }
 }
-async function call(run, h, system, onText) {
+async function call(run, h, system, onText, onThink) {
   for (let a = 0; a < 6; a++) {
     if (run.stopped) throw new Error("Gestoppt");
-    try { return await once(run, compact(h, Math.min(2, Math.floor(a / 2))), system, onText); }
+    try { return await once(run, compact(h, Math.min(2, Math.floor(a / 2))), system, onText, onThink); }
     catch (e) {
       if (run.stopped) throw e;
       if (e.status === 401) throw new Error("Anmeldung abgelaufen – bitte abmelden und neu anmelden.");
       if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
+      // Konfigurationsproblem (Guthaben leer, kein Ausweich-Schlüssel) statt normaler Überlastung -> nicht sinnlos wiederholen.
+      if (/nicht konfiguriert/i.test(e.message)) throw e;
       const wait = Math.min(8000, 1500 * (a + 1));
       for (let w = 0; w < wait && !run.stopped; w += 250) await new Promise((r) => setTimeout(r, 250));
     }
@@ -169,7 +191,7 @@ async function call(run, h, system, onText) {
   throw new Error("Mythos ist gerade nicht erreichbar – bitte gleich nochmal versuchen.");
 }
 // Einzelne Anfrage außerhalb einer Aufgabe (z. B. Commit-Nachricht).
-const quickCall = (content, system) => call({ stopped: false, ctl: null, model: cfg.model || "mythos-code", chat: chat }, [{ role: "user", content: content }], system);
+const quickCall = async (content, system) => (await call({ stopped: false, ctl: null, model: cfg.model || "mythos-code", chat: chat }, [{ role: "user", content: content }], system)).text;
 async function usage() { try { const j = await (await post("cli-auth", { action: "usage", api_key: cfg.key })).json();
   $("usage").textContent = j.limit == null ? "Usage " + j.used + " · ∞ Pro" : "Usage " + j.used + " / " + j.limit; } catch (e) {} }
 function renderTokens() {
@@ -275,19 +297,20 @@ async function runAgent(c, opts) {
   let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null;
   const ask = async () => {
     const sys = await systemPrompt(run);
-    run.asking = true;
-    try { return await call(run, c.history, sys, (full) => { run.stream = full; schedulePaint(run); }); }
-    finally { run.stream = ""; run.asking = false; paintRun(run); }
+    run.asking = true; run.thinking = "";
+    try { return await call(run, c.history, sys, (full) => { run.stream = full; schedulePaint(run); }, (t) => { run.thinking = t; schedulePaint(run); }); }
+    finally { run.stream = ""; run.thinking = ""; run.asking = false; paintRun(run); }
   };
   try {
     // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.
     if (opts && opts.fresh && cfg.multi && await multiAgentPhase(run, c)) changed = true;
     for (; steps < max && !run.stopped; steps++) {
-      const out = await ask();
+      const res = await ask();
       if (run.stopped) break;
+      const out = res.text, think = res.think;
       c.history.push({ role: "assistant", content: out });
       const m = out.match(/<tool>([\s\S]*?)<\/tool>/); const text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
-      if (text) addTo(c, "a", text);
+      if (text) addTo(c, "a", text, think ? { think } : undefined);
       if (!m) {
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
@@ -337,9 +360,10 @@ async function runAgent(c, opts) {
     // Nach /goal: kurze Zusammenfassung, was passiert ist.
     if (goal && !run.stopped) {
       c.history.push({ role: "user", content: prompts.summary });
-      summary = (await ask()).replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+      const sres = await ask();
+      summary = sres.text.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
       c.history.push({ role: "assistant", content: summary });
-      addTo(c, "sum", summary);
+      addTo(c, "sum", summary, sres.think ? { think: sres.think } : undefined);
     }
   } catch (e) { if (!run.stopped) addTo(c, "a", "⚠ " + e.message); }
   runs.delete(c.id); clearRunEls(run);
@@ -1108,7 +1132,7 @@ async function multiAgentPhase(run, c) {
   const task = c.history[c.history.length - 1].content;
   run.phase = "plant Teilaufgaben";
   const top = run.folder ? (await window.mythos.files.list(run.folder, "")).map((f) => (f.dir ? f.name + "/" : f.name)).slice(0, 80).join(", ") : "";
-  const plan = parsePlan(await call(run, [{ role: "user", content: PLAN_PROMPT + (top ? "\n\nProjektordner enthält: " + top : "") + "\n\nAUFGABE:\n" + task }], await systemPrompt(run)));
+  const plan = parsePlan((await call(run, [{ role: "user", content: PLAN_PROMPT + (top ? "\n\nProjektordner enthält: " + top : "") + "\n\nAUFGABE:\n" + task }], await systemPrompt(run))).text);
   run.phase = "";
   if (run.stopped || plan.length < 2) { if (!run.stopped) noteTo(c, "🧩 Die Aufgabe ist überschaubar – ein Agent reicht."); return false; }
   const subs = plan.slice(0, 4).map((s, i) => ({
@@ -1142,7 +1166,7 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
   try {
     for (let step = 0; step < 25 && !run.stopped; step++) {
       s.phase = "denkt …"; update();
-      const out = await call(s, hist, sys);
+      const out = (await call(s, hist, sys)).text;
       if (run.stopped) break;
       hist.push({ role: "assistant", content: out });
       const m = out.match(/<tool>([\s\S]*?)<\/tool>/), text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();

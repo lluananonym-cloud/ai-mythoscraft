@@ -157,10 +157,13 @@ Deno.serve(async (req) => {
     const b: any = { model: a.model, messages: [...systemMsgs, ...a.msgs], stream: streamFlag };
     if (!a.model.startsWith("openai/")) b.max_tokens = max_tokens;
     if (typeof temperature === "number") b.temperature = temperature;
+    // Sichtbare Gedanken: bei unterstützten Modellen kurz mitdenken lassen und live mitschicken.
+    if (a.model.startsWith("openai/")) b.reasoning_effort = "low";
     return b;
   };
 
   let lastStatus = 503;
+  let lastBody = "";
   let usedModel = primary;
 
   /** Nächster erfolgreicher Upstream-Response ab Versuch `from`, oder null. */
@@ -175,9 +178,10 @@ Deno.serve(async (req) => {
         ]);
         if (r.ok) { usedModel = attempts[i].model; return { resp: r, index: i }; }
         lastStatus = r.status;
-        console.error("upstream failed", attempts[i].model, r.status, (await r.text().catch(() => "")).slice(0, 300));
+        lastBody = await r.text().catch(() => "");
+        console.error("upstream failed", attempts[i].model, r.status, lastBody.slice(0, 300));
       } catch (e) {
-        lastStatus = 504;
+        lastStatus = 504; lastBody = "";
         console.error("upstream exception", attempts[i].model, e instanceof Error ? e.message : String(e));
       }
     }
@@ -192,8 +196,13 @@ Deno.serve(async (req) => {
     await supabase.from("api_keys").update({ total_requests: Number(keyRow.total_requests) + 1, last_used_at: new Date().toISOString() }).eq("id", keyRow.id);
   };
 
+  // "AI unavailable" kommt von aiChat(), wenn sowohl Lovable (z. B. Guthaben leer) als auch
+  // der Google-Ausweichweg (kein Schlüssel gesetzt) fehlschlagen – das ist ein Konfigurationsproblem,
+  // kein normales Überlasten, und bekommt deshalb eine eigene, hilfreiche Meldung.
   const failureError = () => lastStatus === 429
     ? { type: "rate_limit_error", message: "Mythos ist gerade stark ausgelastet – bitte kurz warten.", status: 429 }
+    : /AI unavailable/i.test(lastBody)
+    ? { type: "api_error", message: "Mythos ist gerade nicht erreichbar – die KI-Anbindung ist im Projekt nicht konfiguriert (Lovable-Guthaben leer und kein Ausweich-Schlüssel gesetzt). Admin: Guthaben aufladen oder im Website-Chat /apikeyadmin AIza… setzen.", status: 503 }
     : { type: "overloaded_error", message: "Mythos ist gerade überlastet – bitte gleich nochmal versuchen.", status: 529 };
 
   if (!stream) {
@@ -234,10 +243,18 @@ Deno.serve(async (req) => {
 
       let emitted = 0;
       let blockOpen = false;
+      let thinkOpen = false;
+      // Gedanken (falls das Modell welche liefert) als eigener Block VOR dem Text, live Wort für Wort.
+      const emitThink = (text: string) => {
+        if (blockOpen) return; // Text hat schon begonnen – keine Gedanken mehr mischen.
+        if (!thinkOpen) { send("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } }); thinkOpen = true; }
+        send("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: text } });
+      };
       const emit = (text: string) => {
-        if (!blockOpen) { send("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }); blockOpen = true; }
+        if (thinkOpen && !blockOpen) send("content_block_stop", { type: "content_block_stop", index: 0 });
+        if (!blockOpen) { send("content_block_start", { type: "content_block_start", index: thinkOpen ? 1 : 0, content_block: { type: "text", text: "" } }); blockOpen = true; }
         emitted += text.length;
-        send("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } });
+        send("content_block_delta", { type: "content_block_delta", index: thinkOpen ? 1 : 0, delta: { type: "text_delta", text } });
       };
 
       for (let from = 0; from < attempts.length && emitted === 0;) {
@@ -260,8 +277,12 @@ Deno.serve(async (req) => {
               const json = line.slice(6).trim();
               if (json === "[DONE]") continue;
               try {
-                const c = JSON.parse(json).choices?.[0]?.delta?.content;
-                if (c) emit(c);
+                const d = JSON.parse(json).choices?.[0]?.delta;
+                const think = typeof d?.reasoning === "string" ? d.reasoning
+                  : typeof d?.reasoning_content === "string" ? d.reasoning_content
+                  : Array.isArray(d?.reasoning_details) ? d.reasoning_details.map((x: any) => x?.text || x?.summary || "").join("") : "";
+                if (think) emitThink(think);
+                if (d?.content) emit(d.content);
               } catch { buf = line + "\n" + buf; break; }
             }
           }
@@ -270,6 +291,7 @@ Deno.serve(async (req) => {
 
       clearInterval(ping);
       if (emitted === 0) {
+        if (thinkOpen) send("content_block_stop", { type: "content_block_stop", index: 0 });
         await logUsage(lastStatus);
         const f = failureError();
         send("error", { type: "error", error: { type: f.type, message: f.message } });
@@ -277,7 +299,7 @@ Deno.serve(async (req) => {
         return;
       }
       await logUsage(200, undefined, Math.ceil(emitted / 4));
-      send("content_block_stop", { type: "content_block_stop", index: 0 });
+      send("content_block_stop", { type: "content_block_stop", index: thinkOpen ? 1 : 0 });
       send("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: Math.ceil(emitted / 4) } });
       send("message_stop", { type: "message_stop" });
       controller.close();

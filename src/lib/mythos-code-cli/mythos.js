@@ -132,6 +132,20 @@ function streamPrinter() {
   };
 }
 
+// Sichtbare Gedanken (wie bei base44): laufen gedimmt Wort für Wort, bevor die eigentliche Antwort beginnt.
+function thinkPrinter() {
+  let printed = 0, started = false, ended = false;
+  return {
+    push(full) {
+      if (ended) return;
+      if (!started) { stopTick(); process.stdout.write(C.d + "💭 "); started = true; }
+      if (full.length <= printed) return;
+      process.stdout.write(full.slice(printed)); printed = full.length;
+    },
+    end() { if (ended) return; ended = true; if (started) process.stdout.write(C.x + "\n"); startTick(); },
+  };
+}
+
 // ---------- Modell ----------
 // Verlauf kürzen, damit lange Aufgaben nicht an zu großem Kontext scheitern. level 0 = mild, 2 = stark.
 const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\n…[gekürzt]…\n" + s.slice(s.length - Math.floor(max * 0.3));
@@ -147,7 +161,7 @@ function compact(history, level) {
 }
 
 let tokens = { in: 0, out: 0 };
-async function once(messages, onText) {
+async function once(messages, onText, onThink) {
   const c = ctl = new AbortController(); const to = setTimeout(() => c.abort(), 170000);
   const system = SYSTEM();
   tokens.in += estimateTokens(system, messages);
@@ -158,7 +172,7 @@ async function once(messages, onText) {
       body: JSON.stringify({ model: cfg.model || "mythos-code", max_tokens: 8000, system, messages, stream: true }),
     });
     if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j?.error?.message || ("HTTP " + r.status)); e.status = r.status; throw e; }
-    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "", think = "";
     while (true) {
       const { done, value } = await reader.read(); if (done) break;
       buf += dec.decode(value, { stream: true });
@@ -167,6 +181,8 @@ async function once(messages, onText) {
         if (!line.startsWith("data:")) continue;
         let p; try { p = JSON.parse(line.slice(5)); } catch { continue; }
         if (p.type === "error") { const e = new Error(p.error?.message || "Überlastet"); e.status = 529; throw e; }
+        // Sichtbare Gedanken: kommen als eigener Block VOR der Antwort.
+        if (p.delta?.type === "thinking_delta" && p.delta.thinking) { think += p.delta.thinking; if (onThink) onThink(think); }
         if (p.delta?.text) { out += p.delta.text; if (onText) onText(out); }
       }
     }
@@ -176,14 +192,16 @@ async function once(messages, onText) {
   } finally { clearTimeout(to); }
 }
 
-async function call(history, onText) {
+async function call(history, onText, onThink) {
   for (let a = 0; a < 6; a++) {
     if (stopped) throw new Error("Gestoppt");
-    try { return await once(compact(history, Math.min(2, Math.floor(a / 2))), onText); }
+    try { return await once(compact(history, Math.min(2, Math.floor(a / 2))), onText, onThink); }
     catch (e) {
       if (stopped) throw e;
       if (e.status === 401) throw new Error("Anmeldung ungültig – bitte neu anmelden: mythos login");
       if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
+      // Konfigurationsproblem (Guthaben leer, kein Ausweich-Schlüssel) statt normaler Überlastung -> nicht sinnlos wiederholen.
+      if (/nicht konfiguriert/i.test(e.message)) throw e;
       await new Promise((r) => setTimeout(r, Math.min(8000, 1500 * (a + 1))));
     }
   }
@@ -265,8 +283,12 @@ async function turnInner(history) {
   let nudges = 0;
   for (let i = 0; i < max && !stopped; i++) {
     const pr = streamPrinter();
+    let think = null;
     activity = "denkt nach…";
-    const out = await call(history, (full) => { activity = streamActivity(full); pr.push(full); });
+    const out = await call(history,
+      (full) => { if (think) think.end(); activity = streamActivity(full); pr.push(full); },
+      (t) => { if (!think) think = thinkPrinter(); think.push(t); });
+    if (think) think.end();
     pr.end(); activity = "";
     if (stopped) break;
     history.push({ role: "assistant", content: out });
@@ -290,7 +312,11 @@ async function summarize(history) {
   history.push({ role: "user", content: SUMMARY_PROMPT });
   say(C.m + C.b + "📋 Zusammenfassung" + C.x);
   const pr = streamPrinter();
-  const out = await call(history, (full) => pr.push(full));
+  let think = null;
+  const out = await call(history,
+    (full) => { if (think) think.end(); pr.push(full); },
+    (t) => { if (!think) think = thinkPrinter(); think.push(t); });
+  if (think) think.end();
   pr.end();
   history.push({ role: "assistant", content: out });
   return out;

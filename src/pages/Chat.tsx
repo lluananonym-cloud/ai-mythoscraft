@@ -55,6 +55,7 @@ const SLASH_COMMANDS = [
   { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
   { cmd: "/codeprogrammadmin", args: "",        icon: Shield,    desc: "Admin: App-ZIP für den Setup-Build erzeugen", admin: true },
   { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
+  { cmd: "/apikeyadmin", args: "[2] <AIza…>", icon: Shield, desc: "Admin: gratis Google-AI-Ausweichschlüssel speichern (wenn Lovable-Credits leer sind)", admin: true },
   { cmd: "/nvidiakeyadmin", args: "[bild] <nvapi-…>", icon: Shield, desc: "Admin: NVIDIA-Schlüssel sicher auf dem Server speichern", admin: true },
   { cmd: "/exeupdateadmin", args: "<drive-link> [version]", icon: Shield, desc: "Admin: Update-EXE für Mythos Code veröffentlichen", admin: true },
 ];
@@ -62,7 +63,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[] };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
 /** Status eines Teil-Agenten im Multi-Agent-Modus (vom agent-Endpunkt gestreamt). */
 type AgentStatus = { i: number; title: string; status: "läuft" | "fertig" | "fehler"; phase?: string };
 
@@ -172,6 +173,7 @@ const Chat = () => {
         attachments: m.metadata?.attachments,
         ext: m.metadata?.ext,
         agents: m.metadata?.agents,
+        thinking: m.metadata?.thinking,
       })) as Msg[];
       setMessages(enriched);
     }
@@ -245,6 +247,20 @@ const Chat = () => {
       downloadBlob(await buildCliZip(window.location.origin), `${CLI_PKG}.zip`);
       localStorage.setItem("mythos_cli_built", CLI_VERSION);
       localReply(ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/apikeyadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const parts = text.replace(/^\/apikeyadmin\b/i, "").trim().split(/\s+/).filter(Boolean);
+      const which = /^(2|zweit|backup)$/i.test(parts[0] ?? "") ? "google2" : "google";
+      const value = which === "google2" ? parts[1] : parts[0];
+      // Den Schlüssel nie im Chat anzeigen – nur maskiert.
+      const reply = (content: string) => setMessages(prev => [...prev, { role: "user", content: `/apikeyadmin ${which === "google2" ? "2 " : ""}${value ? "AIza••••" : ""}` }, { role: "assistant", content }]);
+      if (!value) { reply("So geht's:\n```\n/apikeyadmin AIza…      (Google-AI-Ausweichschlüssel, gratis)\n/apikeyadmin 2 AIza…    (zweiter, falls der erste ausgeschöpft ist)\n```\nGratis-Schlüssel: aistudio.google.com → „Get API key“ → „Create API key“.\nDer Schlüssel wird nur geschützt auf dem Server gespeichert und nie wieder angezeigt."); return; }
+      const { data, error } = await supabase.functions.invoke("nvidia", { body: { kind: "setkey", which, value } });
+      if (error || data?.error) { toast.error("Speichern fehlgeschlagen: " + (data?.error || error?.message)); reply("✗ " + (data?.error || error?.message)); return; }
+      reply(`✓ Google-AI-Ausweichschlüssel${which === "google2" ? " #2" : ""} sicher auf dem Server gespeichert. Wird automatisch genutzt, wenn Lovable-Credits leer sind.`);
       return;
     }
     if (/^\/nvidiakeyadmin\b/i.test(text)) {
@@ -522,6 +538,7 @@ const Chat = () => {
       let imageData: { url: string; prompt: string } | undefined;
       let musicData: FunkPattern | undefined;
       let agentsData: AgentStatus[] | undefined;
+      let thinking = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -579,7 +596,20 @@ const Chat = () => {
               });
               continue;
             }
-            const c = p.choices?.[0]?.delta?.content;
+            // Gedanken des Modells (je nach Anbieter unterschiedlich benannt) live mitschreiben.
+            const d = p.choices?.[0]?.delta;
+            const r = typeof d?.reasoning === "string" ? d.reasoning
+              : typeof d?.reasoning_content === "string" ? d.reasoning_content
+              : Array.isArray(d?.reasoning_details) ? d.reasoning_details.map((x: any) => x?.text || x?.summary || "").join("") : "";
+            if (r) {
+              thinking += r;
+              setMessages(prev => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], role: "assistant", thinking };
+                return next;
+              });
+            }
+            const c = d?.content;
             if (c) {
               full += c;
               setMessages(prev => {
@@ -597,7 +627,7 @@ const Chat = () => {
           conversation_id: convId,
           role: "assistant",
           content: full,
-          metadata: { image: imageData, music: musicData, agents: agentsData },
+          metadata: { image: imageData, music: musicData, agents: agentsData, thinking: thinking || undefined },
         });
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
@@ -1024,6 +1054,14 @@ const Chat = () => {
                                   </div>
                                 ))}
                               </div>
+                            )}
+                            {m.thinking && (
+                              <details className="not-prose mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                                <summary className="cursor-pointer select-none text-muted-foreground">
+                                  {m.content ? "💭 Gedanken" : <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Denkt nach…</span>}
+                                </summary>
+                                <div className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed text-muted-foreground">{m.thinking}</div>
+                              </details>
                             )}
                             {m.search && m.content && (
                               <div className="not-prose mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">

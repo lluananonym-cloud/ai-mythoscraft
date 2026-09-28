@@ -28,12 +28,16 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   // Admin: Schlüssel speichern (für Projekte ohne Secrets-Verwaltung). Wird nie zurückgegeben.
+  // which: "main"|"image" (NVIDIA, beginnt mit nvapi-) oder "google"|"google2" (Google AI Studio, gratis, beginnt mit AIza).
   if (kind === "setkey") {
     const { data: isAdmin } = await admin.rpc("has_role", { _user_id: claims.claims.sub, _role: "admin" });
     if (!isAdmin) return json({ error: "Nur für Admins." }, 403);
-    const name = body.which === "image" ? "NVIDIA_IMAGE_API_KEY" : "NVIDIA_API_KEY";
+    const isGoogle = body.which === "google" || body.which === "google2";
+    const name = isGoogle ? (body.which === "google2" ? "GOOGLE_AI_API_KEY_BACKUP" : "GOOGLE_AI_API_KEY")
+      : body.which === "image" ? "NVIDIA_IMAGE_API_KEY" : "NVIDIA_API_KEY";
     const value = typeof body.value === "string" ? body.value.trim() : "";
-    if (!/^nvapi-[\w-]{20,200}$/.test(value)) return json({ error: "Das sieht nicht nach einem NVIDIA-Schlüssel aus (beginnt mit nvapi-)." }, 400);
+    const looksRight = isGoogle ? /^AIza[\w-]{20,80}$/.test(value) : /^nvapi-[\w-]{20,200}$/.test(value);
+    if (!looksRight) return json({ error: isGoogle ? "Das sieht nicht nach einem Google-AI-Schlüssel aus (beginnt mit AIza)." : "Das sieht nicht nach einem NVIDIA-Schlüssel aus (beginnt mit nvapi-)." }, 400);
     const { error } = await admin.from("app_secrets").upsert({ name, value, updated_at: new Date().toISOString() });
     if (error) return json({ error: "Speichern fehlgeschlagen – ist die Migration app_secrets angewendet? (" + error.message + ")" }, 500);
     return json({ ok: true, name });
