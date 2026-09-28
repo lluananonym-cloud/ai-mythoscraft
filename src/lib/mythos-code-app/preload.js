@@ -17,6 +17,6 @@ contextBridge.exposeInMainWorld("mythos", {
   mcp: { configure: inv("mcp:configure"), status: inv("mcp:status"), restart: inv("mcp:restart"), onChange: on("mcp-changed") },
   openConfig: inv("config:open"),
   preview: inv("preview:open"),
-  files: { list: inv("files:list"), read: inv("files:read"), save: inv("files:save"), reveal: inv("files:reveal") },
+  files: { list: inv("files:list"), read: inv("files:read"), save: inv("files:save"), reveal: inv("files:reveal"), find: inv("files:find") },
   term: { run: inv("term:run"), kill: inv("term:kill"), cd: inv("term:cd"), onOutput: on("term-output") },
 });

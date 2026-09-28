@@ -172,6 +172,13 @@ body.light #btnVoice{background:rgba(0,0,0,.05)}
 .todo .th{font-weight:600;color:#7dd3fc;margin-bottom:4px}.todo .tbar{height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin-bottom:6px;overflow:hidden}.todo .tfill{height:100%;background:linear-gradient(90deg,#0ea5e9,#8b5cf6);transition:width .3s}
 .todo .ti{display:flex;gap:8px;align-items:flex-start}.todo .tb{width:16px;flex-shrink:0}.todo .ti.done .tt{color:var(--muted);text-decoration:line-through}
 body.light .todo .th{color:#0369a1}body.light .todo .tbar{background:rgba(0,0,0,.08)}
+/* Runde 2 */
+#btnImprove{background:rgba(255,255,255,.06)}#btnImprove:hover{background:rgba(255,255,255,.12)}#btnImprove:disabled{opacity:.4}
+#improvebar{justify-content:flex-end;display:none}#improvebar.show{display:flex}
+#schedchip{color:#fcd34d}
+.t.done{display:inline-flex;align-items:center;gap:8px}.t.done .regen{color:var(--muted);font-size:13px;padding:0 2px;opacity:0}.t.done:hover .regen{opacity:1}.t.done .regen:hover{color:var(--fg)}
+body.busy .t.done .regen{display:none}
+body.light #btnImprove{background:rgba(0,0,0,.05)}
 /* Helles Design */
 body.light{--bg:#f6f6f7;--fg:#141414;--muted:#6b6b6b;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.16);--panel:#ffffff}
 body.light .blob{opacity:.12}
@@ -222,6 +229,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     <button class="chip" id="btnFolder" title="Arbeitsordner wählen">📁 <span id="folder">Ordner wählen</span></button>
     <button class="chip mono" id="git" style="display:none">⎇ <span id="gitb"></span></button>
     <button class="chip" id="mcp" style="display:none">🔌</button>
+    <button class="chip" id="schedchip" style="display:none" title="Geplante Aufgaben">⏰</button>
     <button class="chip" id="wakechip" style="display:none" title="Mikrofon hört auf „Hey Mythos“ – klicken zum Ausschalten">👂 Hey Mythos</button>
     <span class="sp"></span>
     <button class="chip icon" id="btnPreview" title="Live-Vorschau (/vorschau)">👁</button>
@@ -272,9 +280,11 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
       <button class="x" id="vclose" title="Sprachmodus beenden">✕</button>
     </div>
     <div class="slash glass" id="slash" style="display:none"></div>
+    <div class="under bar" id="improvebar"><button class="chip" id="btnImproveUndo" style="display:none" title="Deinen ursprünglichen Text wiederherstellen">↩ Original wiederherstellen</button></div>
     <div class="under bar" id="editbar" style="display:none">✎ Du bearbeitest eine Nachricht – beim Senden geht der Chat ab dort neu weiter. <button class="chip" id="btnEditCancel">Abbrechen</button></div>
     <div class="composer">
       <button class="round" id="btnUp" title="Dateien oder Bilder anhängen (auch per Drag & Drop oder Strg+V)">📎</button>
+      <button class="round" id="btnImprove" title="✨ Aufgabe präziser formulieren lassen (/besser)">✨</button>
       <button class="round" id="btnVoice" title="Sprachmodus – mit Mythos sprechen (/sprache)">🎙</button>
       <textarea id="inp" rows="1" placeholder="Was soll Mythos bauen?  ( / = Befehle )"></textarea>
       <button class="round" id="btnSend" title="Senden">↑</button>

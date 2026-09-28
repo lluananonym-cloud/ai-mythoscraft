@@ -379,3 +379,25 @@ ipcMain.handle("git:pr", async (_e, cwd, newBranch) => {
   shell.openExternal(url);
   return { ok: true, branch, url, out: gh.missing ? "GitHub-CLI (gh) ist nicht installiert – die PR-Seite ist im Browser geöffnet." : (gh.out ? gh.out + "\n" : "") + "PR-Seite im Browser geöffnet." };
 });
+
+// ---------- @-Erwähnungen: Dateien im Projekt finden ----------
+ipcMain.handle("files:find", (_e, cwd, query) => {
+  if (!cwd) return [];
+  const q = String(query || "").toLowerCase().split("\\").join("/");
+  const hits = []; let seen = 0;
+  const walk = (dir) => {
+    let entries; try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (hits.length >= 40 || seen > 8000) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full); continue; }
+      seen++;
+      const rel = path.relative(cwd, full).split(path.sep).join("/");
+      if (!q || rel.toLowerCase().includes(q)) hits.push(rel);
+    }
+  };
+  walk(cwd);
+  // Treffer im Dateinamen zuerst, dann kürzere Pfade.
+  const score = (r) => (path.basename(r).toLowerCase().startsWith(q) ? 0 : path.basename(r).toLowerCase().includes(q) ? 1 : 2) * 1000 + r.length;
+  return hits.sort((a, b) => score(a) - score(b)).slice(0, 12);
+});

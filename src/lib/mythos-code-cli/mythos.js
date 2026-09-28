@@ -363,10 +363,23 @@ const HELP = [
   ["/pr [branch]", "Branch pushen und Pull Request erstellen"],
   ["/stats", "Projektstatistik: Dateien, Zeilen, Sprachen"],
   ["/export [datei]", "Chat als Markdown-Datei speichern"],
+  ["/kompakt", "Langen Chat zusammenfassen und Tokens sparen"],
+  ["@pfad/datei", "Datei in der Nachricht erwähnen – ihr Inhalt geht mit"],
   ["/befehle", "Eigene Befehle (.mythos/commands/*.md) anzeigen"],
   ["/exit", "Beenden"],
 ];
 
+/** @pfad in der Eingabe → Dateien im Projekt, die es gibt (max. 8, je 60.000 Zeichen). */
+function mentionedFiles(text) {
+  const paths = [...new Set([...text.matchAll(/(?:^|\s)@([^\s@]+)/g)].map((m) => m[1].replace(/[.,;:!?)]+$/, "")))].slice(0, 8);
+  const out = [];
+  for (const p of paths) {
+    const full = path.resolve(ROOT, p);
+    if (path.relative(ROOT, full).startsWith("..")) continue;
+    try { if (fs.statSync(full).isFile()) { const c = readText(full); if (c != null && !c.includes("\u0000")) out.push({ name: p, content: c.slice(0, 60000) }); } } catch { /* gibt es nicht */ }
+  }
+  return out;
+}
 const COMMAND_DIRS = [path.join(os.homedir(), ".mythos", "commands"), path.join(ROOT, ".mythos", "commands")];
 const mdLines = (md) => { const st = { code: false }; return md.split("\n").map((l) => mdLine(l, st)).join("\n"); };
 async function pullRequest(name) {
@@ -436,6 +449,23 @@ async function command(q, history) {
     return turn(history, REVIEW_PROMPT + (arg ? "\n\nBesonders beachten: " + arg : "") + "\n\n" + st.out + "\n```diff\n" + diff.slice(0, 60000) + "\n```");
   }
   if (cmd === "/pr") return pullRequest(arg);
+  if (cmd === "/kompakt") {
+    if (history.length < 4) return console.log("🗜 Der Chat ist noch kurz – Komprimieren lohnt sich erst später.\n");
+    const before = Math.ceil(history.reduce((a, m) => a + String(m.content).length, 0) / 4);
+    if (before < 1500) return console.log("🗜 Der Verlauf hat erst ≈ " + fmtTokens(before) + " Tokens – Komprimieren lohnt sich ab etwa 1,5k.\n");
+    const transcript = history.map((m) => (m.role === "user" ? "NUTZER/WERKZEUG: " : "MYTHOS: ") + String(m.content).slice(0, 3000)).join("\n\n").slice(-60000);
+    process.stdout.write(C.d + "🗜 Fasse den Chat zusammen…" + C.x);
+    stopped = false;
+    let sum = "";
+    try {
+      sum = (await call([{ role: "user", content: "Fasse den bisherigen Verlauf dieses Coding-Chats so zusammen, dass ein Agent nahtlos weiterarbeiten kann: **Ziel**, **Stand**, **Wichtige Dateien & Entscheidungen**, **Offene Punkte**. Maximal 25 Zeilen, ohne Werkzeuge.\n\nVERLAUF:\n" + transcript }]))
+        .replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    } catch (e) { clearLine(); return console.log(C.r + "⚠ " + e.message + C.x + "\n"); }
+    clearLine();
+    history.length = 0;
+    history.push({ role: "user", content: "Zusammenfassung des bisherigen Chats (komprimiert):\n\n" + sum }, { role: "assistant", content: "Verstanden – ich arbeite auf Basis dieser Zusammenfassung weiter." });
+    return console.log(mdLines(sum) + "\n" + C.g + "🗜 Komprimiert: ≈ " + fmtTokens(before) + " → ≈ " + fmtTokens(Math.ceil(sum.length / 4)) + " Tokens" + C.x + "\n");
+  }
   if (cmd === "/stats") { const b = gitBranch(); return console.log(mdLines(projectStats(ROOT) + (b ? "\n**Git:** Branch `" + b + "`" : "")) + "\n"); }
   if (cmd === "/export") {
     const file = path.resolve(ROOT, arg || "mythos-chat-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".md");
@@ -469,7 +499,9 @@ async function main() {
     if (q.startsWith("/")) { await command(q, history); continue; }
     const { text, images } = extractImages(q);
     if (images.length) console.log(C.d + "🖼 " + images.length + " Bild(er) angehängt" + C.x);
-    await turn(history, text, images);
+    const files = mentionedFiles(text);
+    if (files.length) console.log(C.d + "📎 " + files.map((f) => f.name).join(", ") + C.x);
+    await turn(history, text + files.map((f) => "\n\n### " + f.name + "\n```\n" + f.content + "\n```").join(""), images);
   }
   rl.close();
 }

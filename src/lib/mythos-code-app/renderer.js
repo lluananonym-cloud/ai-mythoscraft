@@ -52,6 +52,10 @@ function draw(it, i) {
   else if (it.cls === "agents") { d = el("div", "agents"); renderAgents(d, it); agentEls.set(it, d); }
   else if (it.cls === "todo") { d = el("div", "todo"); renderTodo(d, it); todoEls.set(it, d); }
   else if (it.cls === "out") { d = el("details", "out"); d.append(el("summary", "", "▸ Ausgabe von " + (it.cmd || "Befehl")), el("pre", "", it.text)); }
+  else if (it.cls === "done") {
+    d = el("div", "t done", it.text);
+    const rg = el("button", "regen", "↻"); rg.title = "Antwort neu generieren"; rg.onclick = () => regenerate(i); d.appendChild(rg);
+  }
   else d = el("div", "t " + it.cls, it.text);
   $("col").appendChild(d); scrollDown(); return d;
 }
@@ -203,9 +207,11 @@ function pushUser(c, display, content, extra) {
   const images = (extra.att || []).filter((a) => a.image).map((a) => a.image);
   c.history.push(images.length ? { role: "user", content: content, images: images } : { role: "user", content: content });
 }
-function send() {
+async function send() {
   const q = $("inp").value.trim(); if (!q && !attach.length) return;
   $("inp").value = ""; grow(); renderSlash();
+  $("btnImproveUndo").style.display = "none"; $("improvebar").classList.remove("show"); improveUndo = "";
+  if (!q.startsWith("/")) attach = attach.concat(await resolveMentions(q));
   const item = { q: q || "Schau dir die angehängten Dateien an.", att: attach };
   attach = []; renderFiles();
   if (isBusy(chat)) { (chat.queue = chat.queue || []).push(item); renderQueue(); return; }
@@ -338,6 +344,7 @@ async function runAgent(c, opts) {
   window.mythos.notify("Mythos Code – " + c.title, title);
   if (cfg.notify && (goal || Date.now() - run.t0 > 60000)) window.mythos.push(cfg.notify, "Mythos Code – " + (run.folder ? base(run.folder) : c.title), title + (summary ? "\n\n" + summary.slice(0, 1500) : ""));
   if (typeof voiceReply === "function") voiceReply(c, run.lastText || (run.stopped ? "Gestoppt." : "Fertig."));
+  if (!run.stopped) playDone(finished);
   if (!run.stopped) processQueue(c); else if (c === chat) renderQueue();
 }
 
@@ -395,6 +402,12 @@ const COMMANDS = [
   ["/heymythos", "an|aus", "Im Hintergrund auf „Hey Mythos“ hören (lokal)"],
   ["/agenten", "an|aus", "Multi-Agent: große Aufgaben parallel von mehreren Agenten bearbeiten"],
   ["/stimme", "[name]", "Stimme für den Sprachmodus wählen"],
+  ["/besser", "[text]", "✨ Aufgabe von Mythos präziser formulieren lassen"],
+  ["/später", "<zeit> <aufgabe>", "Aufgabe planen: 22:30, morgen 8:00, 30m, 2h"],
+  ["/geplant", "[löschen <nr>]", "Geplante Aufgaben anzeigen oder löschen"],
+  ["/kompakt", "", "Langen Chat zusammenfassen und Tokens sparen"],
+  ["/nochmal", "", "Letzte Antwort neu generieren"],
+  ["/ton", "an|aus", "Ton, wenn eine Aufgabe fertig ist"],
   ["/review", "[schwerpunkt]", "Code-Review der Git-Änderungen (ändert nichts)"],
   ["/pr", "[branch-name]", "Branch pushen und Pull Request erstellen"],
   ["/stats", "", "Projektstatistik: Dateien, Zeilen, Sprachen"],
@@ -449,6 +462,24 @@ async function command(q) {
     if (!v) return note("Unbekannte Stimme. Verfügbar: " + vs.map((x) => x.label.split(" ")[0]).join(", "));
     cfg.voice = v.id; window.mythos.setCfg(cfg); $("vvoice").value = v.id; window.MythosVoice.speaker.setVoice(v.id);
     return note("🔊 Stimme: " + v.label);
+  }
+  if (cmd === "/besser") return improvePrompt(arg);
+  if (cmd === "/kompakt") return compactChat();
+  if (cmd === "/nochmal") { const k = chat.view.map((v) => v.cls).lastIndexOf("done"); return k < 0 ? note("Es gibt noch keine Antwort zum Neu-Generieren.") : regenerate(k); }
+  if (cmd === "/ton") { cfg.sound = !/^(aus|off)$/i.test(arg); window.mythos.setCfg(cfg); if (cfg.sound) playDone(true); return note(cfg.sound ? "🔔 Ton ist an." : "🔕 Ton ist aus."); }
+  if (cmd === "/später" || cmd === "/spaeter") {
+    const m = arg.match(/^(morgen\s+\d{1,2}[:.]\d{2}|\d{1,2}[:.]\d{2}|(?:\d+\s*h)?\s*(?:\d+\s*m(?:in)?)?\s*(?:\d+\s*s)?)\s+([\s\S]+)$/i);
+    const at = m && parseWhen(m[1]);
+    if (!m || !at || !m[2].trim()) return note("⏰ So geht's: /später 22:30 Tests laufen lassen · /später 30m Code aufräumen · /später morgen 8:00 Bericht schreiben\nDie App muss zu dem Zeitpunkt offen sein.");
+    if (needFolder()) return;
+    scheduled().push({ id: newId(), at, task: m[2].trim(), folder: cfg.folder }); scheduled().sort((a, b) => a.at - b.at);
+    window.mythos.setCfg(cfg); renderSched();
+    return note("⏰ Geplant für " + whenText(at) + ": " + m[2].trim() + "\nDie App muss dann offen sein (auch minimiert im Tray).");
+  }
+  if (cmd === "/geplant") {
+    const del = arg.match(/^(löschen|loeschen|entfernen)\s+(\d+)$/i);
+    if (del) { const k = +del[2] - 1; if (!scheduled()[k]) return note("Keine geplante Aufgabe Nr. " + del[2] + "."); const [x] = scheduled().splice(k, 1); window.mythos.setCfg(cfg); renderSched(); return note("⏰ Gelöscht: " + x.task); }
+    return note(scheduled().length ? "⏰ Geplante Aufgaben:\n" + scheduled().map((s, k) => (k + 1) + ". " + whenText(s.at) + " – " + s.task + " (" + base(s.folder || "?") + ")").join("\n") + "\n\nLöschen: /geplant löschen <nr>" : "⏰ Nichts geplant. Beispiel: /später 22:30 Tests laufen lassen");
   }
   if (cmd === "/review") return codeReview(arg);
   if (cmd === "/pr") return pullRequest(arg);
@@ -545,7 +576,8 @@ function renderSlash() {
   const v = $("inp").value, box = $("slash");
   const all = COMMANDS.concat(customCommands.map((c) => [c.name, "", "🧩 " + c.desc]));
   const list = /^\/\S*$/.test(v) ? all.filter((c) => c[0].startsWith(v.toLowerCase())) : [];
-  box.textContent = ""; box.style.display = list.length ? "flex" : "none";
+  box.textContent = ""; box.dataset.mode = list.length ? "slash" : ""; box.style.display = list.length ? "flex" : "none";
+  if (!list.length) renderMention();
   list.forEach((c) => {
     const b = el("button"); b.append(el("span", "c", c[0] + (c[1] ? " " + c[1] : "")), el("span", "d", c[2]));
     b.onclick = () => { $("inp").value = c[0] + (c[1] ? " " : ""); renderSlash(); grow(); $("inp").focus(); };
@@ -571,6 +603,7 @@ function setAutoTest(on) { cfg.autoTest = cfg.autoTest || {}; cfg.autoTest[cfg.f
 function renderEdit() { $("editbar").style.display = editing == null ? "none" : "flex"; }
 function startEdit(i) {
   if (isBusy(chat)) return; const it = chat.view[i]; if (!it) return;
+  if (chat.compactedAt && i < chat.compactedAt) return note("✎ Nachrichten vor dem Komprimieren lassen sich nicht mehr bearbeiten.");
   editing = i; $("inp").value = it.q != null ? it.q : it.text; attach = (it.att || []).slice(); renderFiles(); grow(); renderEdit(); $("inp").focus();
 }
 function cancelEdit() {
@@ -652,7 +685,10 @@ function chatRow(c, snippet) {
   const ed = el("button", "x", "✎"); ed.title = "Umbenennen"; ed.onclick = (e) => { e.stopPropagation(); renameChat(c, name); };
   const x = el("button", "x", running ? "■" : "✕"); x.title = running ? "Stoppen" : "Löschen";
   x.onclick = (e) => { e.stopPropagation(); running ? stop(runs.get(c.id).chat) : deleteChat(c); };
-  row.append(name, date, ed, x); row.onclick = () => openChat(c.id);
+  const isPinned = pinned().includes(c.id);
+  if (isPinned) name.textContent = "📌 " + name.textContent;
+  const pn = el("button", "x", isPinned ? "📍" : "📌"); pn.title = isPinned ? "Lösen" : "Anpinnen"; pn.onclick = (e) => { e.stopPropagation(); togglePin(c.id); };
+  row.append(name, date, pn, ed, x); row.onclick = () => openChat(c.id);
   if (snippet == null) return row;
   const wrap = el("div", "hit"); wrap.append(row, el("div", "snip", (c.folder ? "📁 " + base(c.folder) + " · " : "") + snippet));
   wrap.onclick = () => openChat(c.id); return wrap;
@@ -677,6 +713,7 @@ async function renderSide() {
   try { list = q ? await window.mythos.chats.search(q) : (await window.mythos.chats.list()).filter((c) => (c.folder || "") === (cfg.folder || "")); } catch (e) {}
   if (q !== searchQ.trim()) return; // inzwischen neue Suche
   const cl = $("clist"); cl.textContent = "";
+  if (!q) list.sort((a, b) => (pinned().includes(b.id) ? 1 : 0) - (pinned().includes(a.id) ? 1 : 0));
   list.forEach((c) => cl.appendChild(chatRow(runs.has(c.id) ? runs.get(c.id).chat : c, q ? c.snippet : null)));
   if (!list.length) cl.appendChild(el("div", "hint", q ? "Keine Treffer in deinen Chats" : "Noch keine gespeicherten Chats"));
 }
@@ -828,6 +865,7 @@ async function login() {
 function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
   renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands();
+  renderSched(); setTimeout(checkSchedule, 1500);
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }
@@ -863,6 +901,7 @@ document.addEventListener("keydown", (e) => {
 let searchTimer = 0;
 $("csearch").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { searchQ = $("csearch").value; renderSide(); }, 200); };
 $("git").onclick = () => command("/git");
+$("schedchip").onclick = () => command("/geplant");
 $("mcp").onclick = () => command("/mcp");
 $("tokens").onclick = () => command("/tokens");
 $("model").onchange = () => setModel($("model").value);
@@ -1225,3 +1264,155 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault(); act();
 });
 $("termsend").onclick = termToMythos;
+
+// ---------- @-Erwähnungen: Dateien aus dem Projekt mitschicken ----------
+let mentionReq = 0;
+async function renderMention() {
+  const box = $("slash"), inp = $("inp");
+  const before = inp.value.slice(0, inp.selectionStart == null ? inp.value.length : inp.selectionStart);
+  const m = before.match(/(^|\s)@([^\s@]*)$/);
+  if (!m || !cfg.folder) { if (box.dataset.mode === "mention") { box.style.display = "none"; box.dataset.mode = ""; } return; }
+  const my = ++mentionReq;
+  const files = await window.mythos.files.find(cfg.folder, m[2]);
+  if (my !== mentionReq) return;
+  box.textContent = ""; box.dataset.mode = "mention";
+  box.style.display = files.length ? "flex" : "none";
+  files.forEach((f) => {
+    const b = el("button"); b.append(el("span", "c", "@" + f), el("span", "d", "Datei mitschicken"));
+    b.onclick = () => {
+      const start = before.length - m[2].length - 1;
+      inp.value = inp.value.slice(0, start) + "@" + f + " " + inp.value.slice(before.length);
+      box.style.display = "none"; box.dataset.mode = ""; grow(); inp.focus();
+    };
+    box.appendChild(b);
+  });
+}
+/** Alle @pfad in der Nachricht, die es im Projekt gibt, als Anhang lesen. */
+async function resolveMentions(q) {
+  if (!cfg.folder) return [];
+  const paths = [...new Set([...q.matchAll(/(?:^|\s)@([^\s@]+)/g)].map((m) => m[1].replace(/[.,;:!?)]+$/, "")))].slice(0, 8);
+  const out = [];
+  for (const p of paths) {
+    const r = await window.mythos.files.read(cfg.folder, p).catch(() => null);
+    if (r && r.text != null) out.push({ name: p, content: r.text.slice(0, 60000) });
+  }
+  return out;
+}
+
+// ---------- ✨ Prompt verbessern ----------
+const IMPROVE_PROMPT = "Formuliere die folgende Aufgabe für einen autonomen Coding-Agenten präziser: klares Ziel, nötiger Kontext, konkrete Schritte oder Akzeptanzkriterien, was NICHT geändert werden soll (falls sinnvoll). " +
+  "Behalte Sprache und Absicht bei, erfinde keine Anforderungen dazu, halte es kompakt. Antworte NUR mit dem verbesserten Text, ohne Einleitung und ohne Codeblock.\n\nAUFGABE:\n";
+async function improvePrompt(text) {
+  const inp = $("inp"), orig = (text || inp.value).trim();
+  if (!orig) return note("✨ Schreib erst eine Aufgabe ins Eingabefeld, dann verbessere ich sie.");
+  const n = flash("✨ Mythos verbessert deine Aufgabe …");
+  $("btnImprove").disabled = true;
+  try {
+    const better = (await quickCall(IMPROVE_PROMPT + orig, "Du verbesserst Aufgaben-Beschreibungen für einen Coding-Agenten.")).replace(/<tool>[\s\S]*?<\/tool>/g, "").replace(/^```\w*\n?|```$/g, "").trim();
+    if (better) { improveUndo = orig; inp.value = better; grow(); inp.focus(); $("btnImproveUndo").style.display = ""; $("improvebar").classList.add("show"); }
+  } catch (e) { note("⚠ " + e.message); } finally { n.remove(); $("btnImprove").disabled = false; }
+}
+let improveUndo = "";
+$("btnImprove").onclick = () => improvePrompt();
+$("btnImproveUndo").onclick = () => { if (improveUndo) { $("inp").value = improveUndo; grow(); } improveUndo = ""; $("btnImproveUndo").style.display = "none"; $("improvebar").classList.remove("show"); $("inp").focus(); };
+
+// ---------- ↻ Antwort neu generieren ----------
+function regenerate(i) {
+  if (isBusy(chat)) return;
+  const lastDone = chat.view.map((v) => v.cls).lastIndexOf("done");
+  if (i !== lastDone) return note("↻ Neu generieren geht nur für die letzte Antwort.");
+  let j = -1; for (let k = i; k >= 0; k--) if (chat.view[k].cls === "u" && chat.view[k].h != null) { j = k; break; }
+  if (j < 0 || (chat.compactedAt && j < chat.compactedAt)) return note("↻ Dazu finde ich keine passende Frage mehr.");
+  chat.history.length = chat.view[j].h + 1;
+  chat.view.length = j + 1;
+  renderChat(); saveChat(chat);
+  runAgent(chat, { fresh: false });
+}
+
+// ---------- 🔔 Fertig-Ton ----------
+function playDone(ok) {
+  if (cfg.sound === false) return;
+  try {
+    const ctx = new AudioContext(), t = ctx.currentTime;
+    (ok ? [660, 880] : [520, 390]).forEach((f, k) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, t + k * 0.14); g.gain.exponentialRampToValueAtTime(0.12, t + k * 0.14 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + k * 0.14 + 0.35);
+      o.start(t + k * 0.14); o.stop(t + k * 0.14 + 0.4);
+    });
+    setTimeout(() => ctx.close().catch(() => {}), 1200);
+  } catch (e) { /* ohne Ton */ }
+}
+
+// ---------- 📌 Chats anpinnen ----------
+const pinned = () => (cfg.pinned = cfg.pinned || []);
+function togglePin(id) {
+  const p = pinned(), k = p.indexOf(id);
+  if (k >= 0) p.splice(k, 1); else p.unshift(id);
+  window.mythos.setCfg(cfg); renderSide();
+}
+
+// ---------- ⏰ Geplante Aufgaben ----------
+/** "22:30", "30m", "2h", "1h30m", "90s", "morgen 8:00" → Zeitpunkt (ms) oder null. */
+function parseWhen(s) {
+  s = String(s || "").trim().toLowerCase();
+  let m = s.match(/^(morgen\s+)?(\d{1,2})[:.](\d{2})$/);
+  if (m) {
+    const d = new Date(); d.setHours(+m[2], +m[3], 0, 0);
+    if (m[1]) d.setDate(d.getDate() + 1); else if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return +m[2] < 24 && +m[3] < 60 ? d.getTime() : null;
+  }
+  m = s.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m(?:in)?)?\s*(?:(\d+)\s*s)?$/);
+  if (m && (m[1] || m[2] || m[3])) return Date.now() + ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000;
+  return null;
+}
+const scheduled = () => (cfg.scheduled = cfg.scheduled || []);
+const whenText = (ms) => new Date(ms).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+function renderSched() {
+  const n = scheduled().length, chip = $("schedchip");
+  chip.style.display = n ? "" : "none";
+  chip.textContent = "⏰ " + n;
+  chip.title = scheduled().map((s) => whenText(s.at) + " – " + s.task).join("\n");
+}
+function makeChat(folder) {
+  return { id: newId(), title: "Neuer Chat", folder: folder || "", created: Date.now(), updated: Date.now(), history: [], view: [] };
+}
+function checkSchedule() {
+  const due = scheduled().filter((s) => s.at <= Date.now());
+  if (!due.length || !cfg.key) return;
+  cfg.scheduled = scheduled().filter((s) => s.at > Date.now());
+  window.mythos.setCfg(cfg); renderSched();
+  due.forEach((s) => {
+    const c = makeChat(s.folder);
+    pushUser(c, "⏰ " + s.task, s.task, { q: s.task });
+    noteTo(c, "⏰ Geplante Aufgabe gestartet (geplant für " + whenText(s.at) + ").");
+    runAgent(c, { fresh: true });
+  });
+  renderSide();
+}
+setInterval(checkSchedule, 20000);
+
+// ---------- 🗜 Chat komprimieren ----------
+const COMPACT_PROMPT = "Fasse den bisherigen Verlauf dieses Coding-Chats so zusammen, dass ein Agent nahtlos weiterarbeiten kann: " +
+  "**Ziel**, **Stand** (was ist erledigt), **Wichtige Dateien & Entscheidungen**, **Offene Punkte**. Maximal 25 Zeilen, ohne Werkzeuge.\n\nVERLAUF:\n";
+async function compactChat() {
+  if (isBusy(chat)) return note("Dieser Chat arbeitet gerade – erst danach komprimieren.");
+  if (chat.history.length < 4) return note("🗜 Der Chat ist noch kurz – Komprimieren lohnt sich erst später.");
+  const transcript = chat.history.map((m) => (m.role === "user" ? "NUTZER/WERKZEUG: " : "MYTHOS: ") + String(m.content).slice(0, 3000)).join("\n\n").slice(-60000);
+  const before = Math.ceil(chat.history.reduce((a, m) => a + String(m.content).length, 0) / 4);
+  if (before < 1500) return note("🗜 Der Verlauf hat erst ≈ " + fmtTok(before) + " Tokens – Komprimieren lohnt sich ab etwa 1,5k.");
+  const n = flash("🗜 Fasse den Chat zusammen …");
+  try {
+    const sum = (await quickCall(COMPACT_PROMPT + transcript, "Du fasst Coding-Chats präzise zusammen.")).replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    if (!sum) throw new Error("Leere Zusammenfassung");
+    chat.history = [
+      { role: "user", content: "Zusammenfassung des bisherigen Chats (komprimiert):\n\n" + sum },
+      { role: "assistant", content: "Verstanden – ich arbeite auf Basis dieser Zusammenfassung weiter." },
+    ];
+    const after = Math.ceil((sum.length + 120) / 4);
+    note("🗜 Chat komprimiert: ≈ " + fmtTok(before) + " → ≈ " + fmtTok(after) + " Tokens Verlauf. Ältere Nachrichten bleiben sichtbar, Mythos arbeitet aber mit der Zusammenfassung weiter.");
+    add("sum", sum);
+    chat.compactedAt = chat.view.length;
+    saveChat(chat);
+  } catch (e) { note("⚠ " + e.message); } finally { n.remove(); }
+}
