@@ -100,7 +100,8 @@ function paintRun(run) {
     col.appendChild(e.out);
   } else if (e.out) e.out.remove();
   if (!e.live || !e.live.isConnected) e.live = el("div", "t live");
-  e.live.textContent = "⏳ Mythos arbeitet… " + fmt(Date.now() - run.t0) + (run.phase ? " · " + run.phase : "");
+  const act = run.phase || (run.out == null && run.asking ? streamActivity(run.stream) : "");
+  e.live.textContent = "⏳ Mythos arbeitet… " + fmt(Date.now() - run.t0) + (act ? " · " + act : "");
   col.appendChild(e.live);
   if (stick) scrollDown();
 }
@@ -182,6 +183,18 @@ function visibleText(full) {
   for (let n = 5; n > 0; n--) if (full.endsWith("<tool>".slice(0, n))) return full.slice(0, -n);
   return full;
 }
+// Live-Status aus der Antwort, z. B. „✍ schreibt src/main.js · 12 KB“ (wie streamActivity in tools.js).
+function streamActivity(full) {
+  if (!full) return "denkt nach…";
+  const k = full.lastIndexOf("<tool>");
+  if (k < 0 || full.indexOf("</tool>", k) >= 0) return "";
+  const t = full.slice(k + 6), kb = (t.length / 1024).toFixed(1).replace(".", ",") + " KB";
+  const f = (key) => { const m = t.match(new RegExp('"' + key + '"\\s*:\\s*"([^"\\\\]{0,120})')); return m ? m[1] : ""; };
+  const name = f("name"), path = f("path");
+  if (name === "write" || name === "edit") return "✍ " + (name === "write" ? "schreibt " : "ändert ") + (path || "eine Datei") + " · " + kb;
+  if (name === "run") return "⚙ bereitet Befehl vor: " + f("cmd").slice(0, 60);
+  return "🔧 bereitet " + (name || "Werkzeug") + " vor…";
+}
 
 // ---------- Senden, Warteschlange & Stoppen ----------
 function setBusyUI() {
@@ -262,8 +275,9 @@ async function runAgent(c, opts) {
   let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null;
   const ask = async () => {
     const sys = await systemPrompt(run);
+    run.asking = true;
     try { return await call(run, c.history, sys, (full) => { run.stream = full; schedulePaint(run); }); }
-    finally { run.stream = ""; paintRun(run); }
+    finally { run.stream = ""; run.asking = false; paintRun(run); }
   };
   try {
     // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.

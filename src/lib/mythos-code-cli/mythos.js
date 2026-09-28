@@ -64,9 +64,15 @@ async function login() {
 const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
 
 // Live-Timer: läuft während der ganzen Aufgabe, pausiert für Ausgaben und Rückfragen.
-let T0 = 0, tick = null;
+let T0 = 0, tick = null, activity = "";
 const clearLine = () => process.stdout.write("\r\x1b[K");
-const startTick = () => { if (tick || !working) return; tick = setInterval(() => process.stdout.write("\r" + C.d + "⏳ Mythos arbeitet… " + fmt(Date.now() - T0) + "  (Strg+C = stoppen)" + C.x + "   "), 250); };
+// Zeigt live, was Mythos gerade tut (z. B. „✍ schreibt src/main.js · 12 KB“) – auf Terminalbreite gekürzt.
+const tickLine = () => {
+  const s = "⏳ Mythos arbeitet… " + fmt(Date.now() - T0) + (activity ? " · " + activity : "") + "  (Strg+C = stoppen)";
+  const w = (process.stdout.columns || 100) - 2;
+  return s.length > w ? s.slice(0, w - 1) + "…" : s;
+};
+const startTick = () => { if (tick || !working) return; tick = setInterval(() => process.stdout.write("\r\x1b[K" + C.d + tickLine() + C.x), 250); };
 const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } clearLine(); };
 const say = (s) => { const was = !!tick; stopTick(); console.log(s); if (was) startTick(); };
 
@@ -259,8 +265,9 @@ async function turnInner(history) {
   let nudges = 0;
   for (let i = 0; i < max && !stopped; i++) {
     const pr = streamPrinter();
-    const out = await call(history, (full) => pr.push(full));
-    pr.end();
+    activity = "denkt nach…";
+    const out = await call(history, (full) => { activity = streamActivity(full); pr.push(full); });
+    pr.end(); activity = "";
     if (stopped) break;
     history.push({ role: "assistant", content: out });
     const m = out.match(/<tool>([\s\S]*?)<\/tool>/);
@@ -424,6 +431,7 @@ async function command(q, history) {
     if (/^(stop|aus|ende|beenden)$/i.test(arg)) { goal = ""; return console.log("🎯 Ziel beendet.\n"); }
     if (!autoYes) { autoYes = true; console.log(C.d + "Vollzugriff für /goal eingeschaltet – Mythos fragt nicht mehr nach." + C.x); }
     goal = arg;
+    console.log(C.m + C.b + "🎯 Ziel angenommen: " + C.x + arg + C.d + "\n   Mythos plant jetzt und arbeitet selbstständig – der Fortschritt erscheint hier. Stoppen: Strg+C" + C.x);
     return turn(history, "Neues Ziel: " + arg + "\nArbeite jetzt komplett selbstständig daran, bis es erreicht und geprüft ist.");
   }
   if (cmd === "/weiter") {

@@ -44,10 +44,24 @@ const goalPrompt = (goal) => goal
     "\nDer Auftraggeber ist NICHT am Rechner und liest erst viel später mit, was hier im Chat passiert ist – frage ihn nichts, er kann nicht antworten. Behandle jede Entscheidung, jede Rückfrage und jedes Hindernis als etwas, das du selbst lösen musst:" +
     "\n- Gib bei Fehlern NIEMALS auf. Ein fehlgeschlagener Befehl, eine fehlende Abhängigkeit, ein kaputter Build sind Aufgaben, keine Endstationen: lies die Fehlermeldung genau, versuche eine andere Vorgehensweise, installiere Fehlendes selbst (z. B. per npm/pip/winget), nutze bei Bedarf websearch/fetch um die Lösung nachzuschlagen, und probiere es erneut. Erst wenn du wirklich mehrere grundverschiedene Ansätze erfolglos versucht hast, notierst du das Problem knapp und machst mit dem Rest der Aufgabe weiter." +
     "\n- Triff sinnvolle Annahmen statt zu fragen, und schreib kurz dazu, welche Annahme du getroffen hast." +
-    "\n- Teile deinen Fortschritt normal im Chat mit (was du tust und warum), aber warte nicht auf eine Antwort." +
+    "\n- Beginne SOFORT mit einer kurzen Bestätigung und deinem Plan (2–6 Stichpunkte) als normalen Text, BEVOR du das erste Werkzeug nutzt – so sieht der Auftraggeber direkt, dass du das Ziel verstanden hast." +
+    "\n- Teile deinen Fortschritt normal im Chat mit (was du tust und warum), aber warte nicht auf eine Antwort. Schreibe vor jedem größeren Schritt einen kurzen Satz dazu." +
+    "\n- Baue große Projekte in vielen kleinen Dateien (je höchstens ca. 300 Zeilen) statt in einer riesigen Datei auf einmal." +
     "\n- Das ist eine große, langlaufende Aufgabe: Plane für 1 bis 5 Stunden durchgehende Arbeit in vielen kleinen Schritten, nicht für ein paar Minuten. Höre nicht zu früh auf – arbeite lieber zu gründlich als zu knapp." +
     "\nArbeite komplett selbstständig weiter, bis das Ziel vollständig erreicht und überprüft ist. Erst dann schreibe in deiner letzten Antwort eine eigene Zeile: ZIEL ERREICHT"
   : "";
+/** Kurzer Live-Status aus der gerade gestreamten Antwort, z. B. „✍ schreibt src/main.js · 12 KB“. */
+function streamActivity(full) {
+  if (!full) return "denkt nach…";
+  const k = full.lastIndexOf("<tool>");
+  if (k < 0 || full.indexOf("</tool>", k) >= 0) return "schreibt Antwort…";
+  const t = full.slice(k + 6), kb = (t.length / 1024).toFixed(1).replace(".", ",") + " KB";
+  const f = (key) => { const m = t.match(new RegExp('"' + key + '"\\s*:\\s*"([^"\\\\]{0,120})')); return m ? m[1] : ""; };
+  const name = f("name"), path = f("path");
+  if (name === "write" || name === "edit") return "✍ " + (name === "write" ? "schreibt " : "ändert ") + (path || "eine Datei") + " · " + kb;
+  if (name === "run") return "⚙ bereitet Befehl vor: " + f("cmd").slice(0, 60);
+  return "🔧 bereitet " + (name || "Werkzeug") + " vor…";
+}
 const GOAL_NUDGE = "Das Ziel ist noch nicht als erreicht gemeldet. Der Auftraggeber ist nicht da – gib bei Problemen nicht auf, sondern versuche einen anderen Weg, nutze websearch/fetch für Lösungen und arbeite selbstständig weiter, ohne Rückfragen. Wenn es wirklich vollständig erledigt und geprüft ist, schreibe ZIEL ERREICHT.";
 const SUMMARY_PROMPT = "Fasse jetzt kurz auf Deutsch zusammen, OHNE Werkzeuge:\n**Geändert:** welche Dateien und was\n**Geklappt:** was funktioniert (und wie geprüft)\n**Offen:** was noch fehlt oder beachtet werden muss\nMaximal 12 Zeilen.";
 
