@@ -176,7 +176,7 @@ async function once(run, messages, system, onText, onThink) {
   } finally { clearTimeout(to); }
 }
 async function call(run, h, system, onText, onThink) {
-  for (let a = 0; a < 6; a++) {
+  for (let a = 0; a < 25; a++) {
     if (run.stopped) throw new Error("Gestoppt");
     try { return await once(run, compact(h, Math.min(2, Math.floor(a / 2))), system, onText, onThink); }
     catch (e) {
@@ -185,7 +185,8 @@ async function call(run, h, system, onText, onThink) {
       if (/Daily limit/i.test(e.message)) throw new Error("Tageslimit erreicht – mit Pro unbegrenzt.");
       // Konfigurationsproblem (Guthaben leer, kein Ausweich-Schlüssel) statt normaler Überlastung -> nicht sinnlos wiederholen.
       if (/nicht konfiguriert/i.test(e.message)) throw e;
-      const wait = Math.min(8000, 1500 * (a + 1));
+      const wait = Math.min(30000, 1500 * (a + 1));
+      if (a >= 2 && run.chat) { run.phase = "Verbindung weg – neuer Versuch " + (a + 1) + "/25"; schedulePaint && schedulePaint(run); }
       for (let w = 0; w < wait && !run.stopped; w += 250) await new Promise((r) => setTimeout(r, 250));
     }
   }
@@ -250,7 +251,11 @@ async function send() {
   if (!q.startsWith("/")) attach = attach.concat(await resolveMentions(q));
   const item = { q: q || "Schau dir die angehängten Dateien an.", att: attach };
   attach = []; renderFiles();
-  if (isBusy(chat)) { (chat.queue = chat.queue || []).push(item); renderQueue(); return; }
+  if (isBusy(chat)) {
+    const r = runOf(chat);
+    if (r && !r.stopped && !q.startsWith("/")) { (r.inject = r.inject || []).push(item); addTo(chat, "u", "💬 " + item.q + "  (wird bei nächster Gelegenheit berücksichtigt)"); return; }
+    (chat.queue = chat.queue || []).push(item); renderQueue(); return;
+  }
   submit(chat, item.q, item.att);
 }
 function submit(c, q, att, opts) {
@@ -294,8 +299,13 @@ async function runAgent(c, opts) {
   if (c === chat) setBusyUI();
   renderSide(); saveChat(c);
   run.git = run.folder ? await window.mythos.git.info(run.folder).catch(() => null) : null;
-  const goal = c.goal || "", max = goal ? 4000 : 40, autoTest = autoTestOn(run.folder);
-  let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null;
+  const goal = c.goal || "", max = goal ? 4000 : 400, autoTest = autoTestOn(run.folder);
+  let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null, verified = false, toolFails = 0;
+  const openTodos = () => { const it = run.todoItem; return it && it.items ? it.items.filter((x) => !x.done) : []; };
+  const takeInject = () => { const inj = run.inject || []; run.inject = [];
+    inj.forEach((it) => { const files = (it.att || []).filter((f) => !f.image);
+      c.history.push({ role: "user", content: "ZWISCHENNACHRICHT DES NUTZERS (hat Vorrang, passe deinen Plan sofort an):\n" + it.q + (files.length ? "\n\n" + files.map((f) => "### " + f.name + "\n" + f.content).join("\n\n") : "") }); });
+    return inj.length; };
   const ask = async () => {
     const sys = await systemPrompt(run);
     run.asking = true; run.thinking = "";
@@ -305,14 +315,32 @@ async function runAgent(c, opts) {
   try {
     // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.
     if (opts && opts.fresh && cfg.multi && await multiAgentPhase(run, c)) changed = true;
+    if (opts && opts.fresh) c.history.push({ role: "user", content: "ARBEITSWEISE: Lege bei mehrstufigen Aufgaben zuerst mit dem todo-Werkzeug einen Plan an. Untersuche das Projekt (ls/search/read), bevor du änderst. Ändere gezielt. Wenn ein Befehl oder Werkzeug fehlschlägt: Ursache lesen, anderen Weg probieren – nie aufgeben. Prüfe am Ende selbst (Build/Tests/Datei erneut lesen). Höre erst auf, wenn ALLES erledigt ist." });
     for (; steps < max && !run.stopped; steps++) {
-      const res = await ask();
+      takeInject();
+      let res;
+      try { res = await ask(); }
+      catch (e) {
+        if (run.stopped) break;
+        if (/Anmeldung|Tageslimit|nicht konfiguriert/.test(e.message)) throw e;
+        // Nicht aufgeben: kurz warten, Verlauf straffen und neu ansetzen.
+        noteTo(c, "⚠ " + e.message + " – Mythos setzt in 20 s neu an (Stopp mit Esc).");
+        for (let w = 0; w < 20000 && !run.stopped; w += 250) await new Promise((r) => setTimeout(r, 250));
+        if (++toolFails > 6) throw e; continue;
+      }
+      toolFails = 0;
       if (run.stopped) break;
       const out = res.text, think = res.think;
       c.history.push({ role: "assistant", content: out });
       const m = out.match(/<tool>([\s\S]*?)<\/tool>/); const text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
       if (text) addTo(c, "a", text, think ? { think } : undefined);
       if (!m) {
+        if (takeInject()) continue;
+        // Offene Punkte in der Aufgabenliste -> nicht mittendrin aufhören.
+        const open = openTodos();
+        if (open.length && nudges < 8) { nudges++; c.history.push({ role: "user", content: "Es sind noch " + open.length + " Punkte offen: " + open.map((x) => x.text).join("; ") + ". Mach direkt weiter mit dem nächsten Werkzeug. Wenn etwas unmöglich ist, markiere es erledigt und erkläre warum." }); saveChat(c); continue; }
+        // Selbstprüfung nach Änderungen (gegen oberflächliche Arbeit).
+        if (changed && !verified && !autoTest) { verified = true; c.history.push({ role: "user", content: "Prüfe deine Änderungen jetzt kritisch: lies die geänderten Dateien noch einmal, führe – falls vorhanden – Build/Lint/Tests aus und behebe jeden Fehler. Antworte erst danach mit einer kurzen Zusammenfassung ohne Werkzeug." }); saveChat(c); continue; }
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
           if (++nudges > 40) { noteTo(c, "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an. Mit /weiter geht es weiter."); break; }
@@ -341,7 +369,7 @@ async function runAgent(c, opts) {
         finished = true; reached = !!goal; break;
       }
       nudges = 0;
-      let t; try { t = JSON.parse(m[1]); } catch (e) { c.history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+      let t; try { t = JSON.parse(m[1]); } catch (e) { c.history.push({ role: "user", content: "Tool-JSON ungültig (" + e.message + "). Sende den Block erneut als gültiges JSON; Zeilenumbrüche in Strings als \\n escapen." }); continue; }
       if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
       let r;
       if (t.name === "todo") r = updateTodos(run, c, t);
@@ -349,12 +377,15 @@ async function runAgent(c, opts) {
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         if (t.name === "run") run.out = "";
-        try { r = await window.mythos.tool(t, run.folder, run.id); } finally { run.out = null; paintRun(run); }
+        try { r = await window.mythos.tool(t, run.folder, run.id); }
+        catch (e) { r = { result: "FEHLER beim Ausführen: " + e.message + " – probiere einen anderen Weg." }; }
+        finally { run.out = null; paintRun(run); }
         (r.hooks || []).filter((h) => h.out || h.code).forEach((h) => noteTo(c, "🪝 " + h.event + ": " + h.command + " → Exit " + h.code + (h.out ? "\n" + h.out.slice(0, 600) : "")));
         if (t.name === "run") addTo(c, "out", r.result.slice(-4000), { cmd: t.cmd });
         if (r.diff && r.diff.lines.length) { addTo(c, "diff", "", { path: t.path, d: r.diff }); changed = true; }
       }
-      c.history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + r.result });
+      const failed = /^(FEHLER|Exit: [1-9])|\nExit: [1-9]/.test(String(r.result || ""));
+      c.history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + r.result + (failed ? "\n\n(Das ist fehlgeschlagen. Analysiere die Ursache und versuche es anders – nicht aufgeben.)" : "") });
       saveChat(c);
     }
     if (!finished && !run.stopped && steps >= max) noteTo(c, "Schrittlimit (" + max + ") erreicht – mit /weiter macht Mythos weiter.");
