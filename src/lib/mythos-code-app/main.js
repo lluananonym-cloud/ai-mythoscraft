@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker, session, desktopCapturer, safeStorage } = require("electron");
-const fs = require("fs"); const path = require("path"); const { exec, execFile, spawn } = require("child_process");
+const fs = require("fs"); const path = require("path"); const http = require("http"); const crypto = require("crypto"); const { exec, execFile, spawn } = require("child_process");
 const { McpManager } = require("./mcp.js");
 // Sprachmodus: mehrere Threads für die lokale Spracherkennung, falls keine Grafikkarte (WebGPU) nutzbar ist.
 app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
@@ -60,6 +60,40 @@ app.whenReady().then(() => {
 });
 app.on("before-quit", () => { quitting = true; });
 app.on("window-all-closed", () => app.quit());
+
+// ---------- Browser-Plugin: sichere lokale Brücke (nur dieser PC) ----------
+const browserBridge = { server: null, port: 0, token: "", code: "", paired: false, lastSeen: 0, tasks: [], events: [], stopped: false };
+const bridgeJson = (res, status, body) => { const origin = String(res.req.headers.origin || ""); res.writeHead(status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": origin.startsWith("chrome-extension://") ? origin : "null", "Access-Control-Allow-Headers": "content-type,x-mythos-token", "Vary": "Origin" }); res.end(JSON.stringify(body)); };
+const readBody = (req) => new Promise((resolve) => { let s = ""; req.on("data", (d) => { s += d; if (s.length > 100000) req.destroy(); }); req.on("end", () => { try { resolve(s ? JSON.parse(s) : {}); } catch { resolve({}); } }); });
+function bridgeState() { return { running: !!browserBridge.server, port: browserBridge.port, code: browserBridge.code, paired: browserBridge.paired, connected: browserBridge.paired && Date.now() - browserBridge.lastSeen < 7000 }; }
+function bridgeEvent(ev) { const item = { id: crypto.randomUUID(), at: Date.now(), ...ev }; browserBridge.events.push(item); browserBridge.events = browserBridge.events.slice(-200); send("browser-event", item); }
+async function startBrowserBridge() {
+  if (browserBridge.server) return bridgeState();
+  browserBridge.token = crypto.randomBytes(32).toString("hex"); browserBridge.code = String(crypto.randomInt(100000, 1000000));
+  browserBridge.server = http.createServer(async (req, res) => {
+    if (req.method === "OPTIONS") { const origin = String(req.headers.origin || ""); res.writeHead(204, { "Access-Control-Allow-Origin": origin.startsWith("chrome-extension://") ? origin : "null", "Access-Control-Allow-Headers": "content-type,x-mythos-token", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Vary": "Origin" }); return res.end(); }
+    const url = new URL(req.url, "http://127.0.0.1"); const body = await readBody(req);
+    if (url.pathname === "/pair" && req.method === "POST") {
+      if (String(body.code || "") !== browserBridge.code) return bridgeJson(res, 403, { error: "Kopplungscode falsch" });
+      browserBridge.paired = true; browserBridge.lastSeen = Date.now(); bridgeEvent({ kind: "status", text: "Browser-Plugin verbunden" });
+      return bridgeJson(res, 200, { token: browserBridge.token, name: "Mythos Code" });
+    }
+    if (!browserBridge.paired || req.headers["x-mythos-token"] !== browserBridge.token) return bridgeJson(res, 401, { error: "Nicht gekoppelt" });
+    browserBridge.lastSeen = Date.now();
+    if (url.pathname === "/status") return bridgeJson(res, 200, { ok: true, stopped: browserBridge.stopped });
+    if (url.pathname === "/tasks") { const tasks = browserBridge.tasks.splice(0); return bridgeJson(res, 200, { tasks }); }
+    if (url.pathname === "/events" && req.method === "POST") { bridgeEvent(body); return bridgeJson(res, 200, { ok: true }); }
+    if (url.pathname === "/stop" && req.method === "POST") { browserBridge.stopped = true; bridgeEvent({ kind: "status", text: "Browser-Aufgabe gestoppt" }); return bridgeJson(res, 200, { ok: true }); }
+    return bridgeJson(res, 404, { error: "Unbekannter Pfad" });
+  });
+  await new Promise((resolve, reject) => { browserBridge.server.once("error", reject); browserBridge.server.listen(47831, "127.0.0.1", resolve); });
+  browserBridge.port = browserBridge.server.address().port; return bridgeState();
+}
+ipcMain.handle("browser:start", () => startBrowserBridge());
+ipcMain.handle("browser:state", () => bridgeState());
+ipcMain.handle("browser:pair-reset", async () => { browserBridge.paired = false; browserBridge.token = crypto.randomBytes(32).toString("hex"); browserBridge.code = String(crypto.randomInt(100000, 1000000)); browserBridge.tasks = []; return startBrowserBridge(); });
+ipcMain.handle("browser:task", async (_e, task) => { await startBrowserBridge(); if (!browserBridge.paired) return { ok: false, error: "Browser-Plugin ist nicht gekoppelt" }; const item = { id: crypto.randomUUID(), task: String(task || "").slice(0, 1500), at: Date.now() }; browserBridge.stopped = false; browserBridge.tasks.push(item); bridgeEvent({ kind: "task", text: item.task, taskId: item.id }); return { ok: true, id: item.id }; });
+ipcMain.handle("browser:stop", () => { browserBridge.stopped = true; bridgeEvent({ kind: "status", text: "Stopp angefordert" }); return true; });
 // AFK: Solange Mythos arbeitet, geht der PC nicht in den Energiesparmodus.
 ipcMain.handle("working", (_e, on) => {
   working = !!on;
@@ -130,7 +164,11 @@ function mcpPrompt() {
   return '\n\nMCP-Werkzeuge (externe Server) – Aufruf: <tool>{"name":"mcp","server":"...","tool":"...","args":{...}}</tool>\n' +
     tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n");
 }
-ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + mcpPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
+function browserPrompt() {
+  if (!bridgeState().connected) return "";
+  return '\n\nBrowser-Plugin – Aufruf: <tool>{"name":"browser","task":"konkrete Browser-Aufgabe"}</tool>. Nutze es, wenn die Aufgabe echte Webseiten bedienen oder lesen soll. Logins, Passwörter, Zahlungen und Captchas übernimmt immer der Nutzer.';
+}
+ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + mcpPrompt() + browserPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
 ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, review: REVIEW_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
 
 // Laufende Prozesse je Kennung – mehrere Aufgaben (und das Terminal) laufen parallel.
@@ -198,6 +236,7 @@ ipcMain.handle("tool", async (_e, t, cwd, runId) => {
     r = { result: (x.text + (x.code ? "\nExit: " + x.code : "")).slice(-8000) || "(keine Ausgabe)", code: x.code };
   } else if (isWebTool(t)) r = await webTool(t);
   else if (t.name === "mcp") { const x = await mcp.call(t.server, t.tool, t.args || {}); r = { result: String(x.output).slice(0, 20000) }; }
+  else if (t.name === "browser") { const queued = await (async () => { const st = bridgeState(); if (!st.connected) return { ok: false, error: "Browser-Plugin nicht verbunden" }; const item = { id: crypto.randomUUID(), task: String(t.task || "").slice(0, 1500), at: Date.now() }; browserBridge.stopped = false; browserBridge.tasks.push(item); bridgeEvent({ kind: "task", text: item.task, taskId: item.id }); return { ok: true, id: item.id }; })(); r = { result: queued.ok ? "Browser-Aufgabe an das Plugin übergeben. Live-Fortschritt erscheint in Mythos Code." : "FEHLER: " + queued.error }; }
   else r = fileTool(t, root);
   const post = await runHooks("PostToolUse", { tool_name: toolName, tool_input: t, tool_output: r.result.slice(0, 4000) }, cwd);
   const notes = post.filter((h) => h.out || h.code).map((h) => "[Hook „" + h.command + "“ → Exit " + h.code + "]\n" + h.out);

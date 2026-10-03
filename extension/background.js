@@ -7,6 +7,7 @@ const ANON =
 
 const CHAT_TTL = 60_000; // Verlauf 1 Minute nach Schließen behalten
 const runs = new Map(); // tabId -> { task, cancel }
+const APP = "http://127.0.0.1:47831";
 
 /* ---------- Speicher ---------- */
 const get = async (k, d) => (await chrome.storage.local.get(k))[k] ?? d;
@@ -65,7 +66,31 @@ const broadcast = (ev) => { try { chrome.runtime.sendMessage({ mythos: "event", 
 async function emit(tabId, line) {
   await pushLine(tabId, line);
   broadcast({ tabId, line });
+  appRequest("/events", "POST", { kind: line.kind === "act" ? "action" : line.kind, text: line.text, tabId }).catch(() => {});
 }
+
+async function appLink() { return await get("mythosCode", null); }
+async function appRequest(path, method = "GET", body) {
+  const link = await appLink(); if (!link?.token) throw new Error("Nicht mit Mythos Code gekoppelt");
+  const r = await fetch(APP + path, { method, headers: { "Content-Type": "application/json", "X-Mythos-Token": link.token }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  if (!r.ok) { if (r.status === 401) await chrome.storage.local.remove("mythosCode"); throw new Error((await r.json().catch(() => ({}))).error || `Mythos Code ${r.status}`); }
+  return r.json();
+}
+async function pairApp(code) {
+  const r = await fetch(APP + "/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: String(code || "").trim() }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.token) throw new Error(j.error || "Mythos Code ist nicht erreichbar");
+  await set({ mythosCode: { token: j.token, pairedAt: Date.now() } }); await pollApp(); return { ok: true };
+}
+async function pollApp() {
+  const link = await appLink(); if (!link?.token) return { connected: false };
+  try {
+    await appRequest("/status"); const { tasks = [] } = await appRequest("/tasks");
+    for (const item of tasks) { const tab = await activeTab(); if (!tab?.id) { await appRequest("/events", "POST", { kind: "error", text: "Kein aktiver Browser-Tab", taskId: item.id }); continue; } runTask(tab.id, item.task, item.id); }
+    return { connected: true };
+  } catch { return { connected: false }; }
+}
+chrome.alarms.create("mythos-code-poll", { periodInMinutes: 0.1 });
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === "mythos-code-poll") pollApp(); });
 
 /* ---------- KI-Gehirn ---------- */
 async function brain(task, history, page, memory) {
@@ -97,7 +122,7 @@ async function runAction(tabId, action) {
 }
 
 /* ---------- Aufgabe komplett abarbeiten ---------- */
-async function runTask(tabId, task) {
+async function runTask(tabId, task, taskId) {
   if (runs.has(tabId)) {
     await emit(tabId, { kind: "err", text: "In diesem Tab läuft bereits eine Aufgabe." });
     return;
@@ -106,6 +131,7 @@ async function runTask(tabId, task) {
   runs.set(tabId, state);
   await emit(tabId, { kind: "you", text: task });
   broadcast({ tabId, busy: true });
+  if (taskId) appRequest("/events", "POST", { kind: "status", text: "Browser-Aufgabe gestartet", taskId }).catch(() => {});
 
   const memory = await loadMemory();
   let history = [];
@@ -133,8 +159,10 @@ async function runTask(tabId, task) {
       history = history.slice(-10);
     }
     await addMemory({ task, result: lastSay.slice(0, 400), url: page?.url || "", at: Date.now() });
+    if (taskId) await appRequest("/events", "POST", { kind: "done", text: lastSay || "Browser-Aufgabe abgeschlossen", taskId }).catch(() => {});
   } catch (e) {
     await emit(tabId, { kind: "err", text: String(e?.message || e) });
+    if (taskId) await appRequest("/events", "POST", { kind: "error", text: String(e?.message || e), taskId }).catch(() => {});
   } finally {
     runs.delete(tabId);
     broadcast({ tabId, busy: false, done: true });
@@ -148,6 +176,9 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     if (!m) return respond(null);
 
     if (m === "installed") return respond({ ok: true, version: chrome.runtime.getManifest().version });
+    if (m === "app-pair") { try { return respond(await pairApp(msg.code)); } catch (e) { return respond({ ok: false, error: String(e?.message || e) }); } }
+    if (m === "app-state") { const link = await appLink(); const state = link ? await pollApp() : { connected: false }; return respond({ paired: !!link, ...state }); }
+    if (m === "app-unpair") { await chrome.storage.local.remove("mythosCode"); return respond({ ok: true }); }
 
     if (m === "state") {
       const tab = sender.tab || (await activeTab());

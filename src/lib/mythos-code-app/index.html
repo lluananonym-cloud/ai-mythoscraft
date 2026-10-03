@@ -135,7 +135,7 @@ header{flex-wrap:wrap}
 .chip.icon{padding:7px 10px;font-size:13px}
 select.chip{appearance:none;cursor:pointer;outline:0;font:inherit;font-size:12px;color:#d4d4d4}
 select.chip option{background:#171717;color:#fafafa}
-#tokens,#mcp{color:#c4b5fd}
+#tokens,#mcp,#plugins{color:#c4b5fd}
 .item.running .name{color:#c4b5fd}
 /* Seitenpanels */
 .phead{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
@@ -170,6 +170,11 @@ body.term-open #term{display:flex}
 .agents{align-self:stretch;border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;background:rgba(124,58,237,.06)}
 .agents .ah{font-weight:600;color:#c4b5fd;margin-bottom:2px}.agents .ag{display:flex;gap:8px;align-items:center}.agents .ag .st{width:18px;text-align:center}.agents .ag .ti{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agents .ag .ph{color:var(--muted);font-family:"JetBrains Mono",Consolas,monospace;font-size:11.5px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.light .agents{background:rgba(124,58,237,.05)}body.light .agents .ah{color:#6d28d9}
+.activity{align-self:stretch;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025);overflow:hidden}
+.activity summary{display:flex;align-items:center;gap:8px;padding:10px 12px}.activity .spin{width:8px;height:8px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}.activity.done .spin{border:0;background:#22c55e}.activity .elapsed{margin-left:auto;color:var(--muted)}
+.activity .steps{border-top:1px solid var(--line);padding:8px 12px;max-height:250px;overflow:auto;display:flex;flex-direction:column;gap:6px}.activity .step{display:grid;grid-template-columns:16px 1fr auto;gap:7px;font-size:12px;color:#cfcfcf}.activity .step time{color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:10px}.activity .safe{padding:7px 12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.connect-modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);padding:24px}.connect-modal.open{display:flex}.connect-box{width:min(720px,100%);max-height:85vh;overflow:auto;border-radius:18px;padding:18px}.connect-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.connect-head h2{margin:0;font-size:24px}.connect-head button{margin-left:auto}.conn{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0}.conn-top{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:50%;background:#737373}.dot.ok{background:#22c55e}.dot.bad{background:#ef4444}.conn .meta{color:var(--muted);font-size:11px;margin-top:5px}.conn-actions{display:flex;gap:6px;margin-top:10px}.paircode{font-family:"JetBrains Mono",monospace;letter-spacing:.28em;font-size:24px;margin:10px 0;color:#fff}
 .a .speak{opacity:0;color:var(--muted);font-size:13px;padding:2px 4px;align-self:flex-start}.a:hover .speak{opacity:1}.a .speak:hover{color:var(--fg)}
 body.light #btnVoice{background:rgba(0,0,0,.05)}
 /* Aufgabenliste */
@@ -234,6 +239,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
     <button class="chip" id="btnFolder" title="Arbeitsordner wählen">📁 <span id="folder">Ordner wählen</span></button>
     <button class="chip mono" id="git" style="display:none">⎇ <span id="gitb"></span></button>
     <button class="chip" id="mcp" style="display:none">🔌</button>
+    <button class="chip" id="plugins" title="MCP & Plugins">◫ Verbindungen</button>
     <button class="chip" id="schedchip" style="display:none" title="Geplante Aufgaben">⏰</button>
     <button class="chip" id="wakechip" style="display:none" title="Mikrofon hört auf „Hey Mythos“ – klicken zum Ausschalten">👂 Hey Mythos</button>
     <span class="sp"></span>
@@ -314,6 +320,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
   </aside>
   </div>
 </div>
+<div id="connections" class="connect-modal"><div class="connect-box glass"><div class="connect-head"><span>◫</span><h2 class="serif">Verbindungen</h2><button id="connClose" class="chip">Schließen</button></div><div id="connBody"></div></div></div>
 <div id="editor">
   <div class="edbox glass">
     <div class="phead"><span id="edpath" class="mono"></span><span class="sp"></span>
