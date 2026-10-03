@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Mythos AI — Browser Control",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Lass Mythos AI deinen Browser steuern: Seiten öffnen, klicken, tippen, lesen — per Chat.",
-  "permissions": ["activeTab", "tabs", "scripting", "storage"],
+  "permissions": ["activeTab", "tabs", "scripting", "storage", "alarms"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
