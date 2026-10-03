@@ -1,6 +1,6 @@
 const CFG = { site: "__SITE__", fn: "__FN__" };
 const $ = (id) => document.getElementById(id);
-let cfg = {}, chat = null, attach = [], editing = null, gitInfo = null, searchQ = "", mcpStatus = [];
+let cfg = {}, chat = null, attach = [], editing = null, gitInfo = null, searchQ = "", mcpStatus = [], browserStatus = { running: false, paired: false, connected: false };
 let remotePair = null, remoteTimer = null; // Fernsteuerung vom Handy (siehe /handy)
 let prompts = { nudge: "", summary: "", memoryFile: "MYTHOS.md", models: [] };
 // Laufende Aufgaben je Chat – mehrere Chats können gleichzeitig arbeiten.
@@ -27,12 +27,13 @@ function diffBox(it) {
   it.d.lines.forEach(([op, l]) => pre.appendChild(el("span", op === "+" ? "ln add" : op === "-" ? "ln del" : op === "@" ? "ln gap" : "ln", (op === "@" ? "" : op + " ") + l)));
   d.append(s, pre); return d;
 }
-// Sichtbare Gedanken (wie bei base44): eingeklappt, Wort für Wort nachlesbar.
+// Sichere Arbeitszusammenfassung statt privater interner Gedankengänge.
 function thinkBox(think) {
-  const d = el("details", "think"); const sm = el("summary", "", "💭 Gedanken");
+  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitszusammenfassung");
   const b = el("div", "body"); b.style.whiteSpace = "pre-wrap"; b.textContent = think;
   d.append(sm, b); return d;
 }
+function activityPush(run, icon, text) { if (!run || !text) return; const last = run.activity && run.activity[run.activity.length - 1]; if (last && last.text === text) return; (run.activity = run.activity || []).push({ icon, text, at: Date.now() }); run.activity = run.activity.slice(-80); schedulePaint(run); }
 function draw(it, i) {
   let d;
   if (it.cls === "sum") {
@@ -96,18 +97,10 @@ function paintRun(run) {
   if (chat !== run.chat) return;
   const col = $("col"), e = run.els, stick = nearBottom();
   const vis = visibleText(run.stream).trim();
-  // Sichtbare Gedanken: live Wort für Wort, aufgeklappt solange noch keine Antwort da ist.
-  if (run.thinking) {
-    if (!e.think || !e.think.isConnected) {
-      e.think = el("details", "think"); e.thinkSum = el("summary");
-      e.thinkBody = el("div", "body"); e.thinkBody.style.whiteSpace = "pre-wrap";
-      e.think.append(e.thinkSum, e.thinkBody);
-    }
-    e.think.open = !vis;
-    e.thinkSum.textContent = vis ? "💭 Gedanken" : "💭 Denkt nach…";
-    if (e.thinkBody.textContent !== run.thinking) { e.thinkBody.textContent = run.thinking; e.thinkBody.scrollTop = 1e9; }
-    col.appendChild(e.think);
-  } else if (e.think) { e.think.remove(); e.think = null; }
+  if (!e.activity || !e.activity.isConnected) { e.activity = el("details", "activity"); e.activity.open = true; e.actSum = el("summary"); e.actSpin = el("span", "spin"); e.actTitle = el("span", "", "Mythos arbeitet"); e.actTime = el("span", "elapsed mono"); e.actSteps = el("div", "steps"); e.actSafe = el("div", "safe", "Live-Aktivitäten zeigen sichere Arbeitsschritte, keine privaten internen Gedanken."); e.actSum.append(e.actSpin, e.actTitle, e.actTime); e.activity.append(e.actSum, e.actSteps, e.actSafe); }
+  e.actTime.textContent = fmt(Date.now() - run.t0); e.actTitle.textContent = run.phase || "Mythos arbeitet";
+  const acts = run.activity || []; if (e.activityCount !== acts.length) { e.actSteps.textContent = ""; acts.forEach((a) => { const row = el("div", "step"); row.append(el("span", "", a.icon || "•"), el("span", "", a.text), el("time", "", fmt(a.at - run.t0))); e.actSteps.appendChild(row); }); e.actSteps.scrollTop = e.actSteps.scrollHeight; e.activityCount = acts.length; }
+  col.appendChild(e.activity);
   if (vis) {
     if (!e.stream || !e.stream.isConnected) { e.stream = el("div", "m a streaming"); const img = el("img"); img.src = "icon.png"; e.body = el("div", "body"); e.stream.append(img, e.body); e.drawn = null; }
     if (e.drawn !== vis) { e.body.textContent = ""; md(e.body, vis); e.drawn = vis; }
@@ -292,9 +285,10 @@ const autoTestOn = (folder) => !!(folder && cfg.autoTest && cfg.autoTest[folder]
 
 async function runAgent(c, opts) {
   if (runs.has(c.id)) return;
-  const run = { id: "run-" + c.id + "-" + Date.now(), chat: c, stopped: false, ctl: null, t0: Date.now(), stream: "", out: null, els: {}, phase: "",
+  const run = { id: "run-" + c.id + "-" + Date.now(), chat: c, stopped: false, ctl: null, t0: Date.now(), stream: "", out: null, els: {}, phase: "", activity: [],
     folder: c.folder || cfg.folder || "", model: cfg.model || "mythos-code" };
   runs.set(c.id, run); c.unfinished = true; c.folder = run.folder;
+  activityPush(run, "◎", "Aufgabe verstanden und Arbeitskontext vorbereitet");
   window.mythos.working(true);
   if (c === chat) setBusyUI();
   renderSide(); saveChat(c);
@@ -308,9 +302,9 @@ async function runAgent(c, opts) {
     return inj.length; };
   const ask = async () => {
     const sys = await systemPrompt(run);
-    run.asking = true; run.thinking = "";
-    try { return await call(run, c.history, sys, (full) => { run.stream = full; schedulePaint(run); }, (t) => { run.thinking = t; schedulePaint(run); }); }
-    finally { run.stream = ""; run.thinking = ""; run.asking = false; paintRun(run); }
+    run.asking = true; activityPush(run, "◇", run.phase || "Nächsten Arbeitsschritt bestimmen");
+    try { return await call(run, c.history, sys, (full) => { run.stream = full; schedulePaint(run); }); }
+    finally { run.stream = ""; run.asking = false; paintRun(run); }
   };
   try {
     // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.
@@ -371,6 +365,7 @@ async function runAgent(c, opts) {
       nudges = 0;
       let t; try { t = JSON.parse(m[1]); } catch (e) { c.history.push({ role: "user", content: "Tool-JSON ungültig (" + e.message + "). Sende den Block erneut als gültiges JSON; Zeilenumbrüche in Strings als \\n escapen." }); continue; }
       if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
+      activityPush(run, t.name === "run" ? "⌘" : t.name === "mcp" ? "🔌" : t.name === "browser" ? "◎" : (t.name === "edit" || t.name === "write") ? "✎" : "•", toolLabel(t));
       let r;
       if (t.name === "todo") r = updateTodos(run, c, t);
       else if ((r = await safetyGate(c, t))) { /* Sicherheitsnetz */ }
@@ -398,7 +393,8 @@ async function runAgent(c, opts) {
       addTo(c, "sum", summary, sres.think ? { think: sres.think } : undefined);
     }
   } catch (e) { if (!run.stopped) addTo(c, "a", "⚠ " + e.message); }
-  runs.delete(c.id); clearRunEls(run);
+  if (run.els.activity) { run.els.activity.classList.add("done"); run.els.actTitle.textContent = run.stopped ? "Arbeit gestoppt" : "Arbeit abgeschlossen"; run.els.actTime.textContent = fmt(Date.now() - run.t0); run.els.activity.open = false; }
+  runs.delete(c.id); Object.values(run.els).forEach((x) => { if (x && x !== run.els.activity && x.remove) x.remove(); });
   const took = fmt(Date.now() - run.t0); c.lastTook = took;
   if (run.stopped && c.history[c.history.length - 1].role === "user") c.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
   if (reached) { noteTo(c, "🎯 Ziel erreicht: " + goal); c.goal = ""; if (c === chat) renderGoal(); }
@@ -460,6 +456,15 @@ function renderMcp() {
   b.textContent = "🔌 " + ok + "/" + mcpStatus.length + (bad ? " ⚠" : "");
   b.title = mcpStatus.map((s) => s.name + ": " + s.status + (s.error ? " (" + s.error + ")" : "") + " · " + s.tools.length + " Werkzeuge").join("\n");
 }
+async function refreshBrowser() { browserStatus = await window.mythos.browser.start().catch(() => ({ running: false, paired: false, connected: false })); renderConnections(); }
+function renderConnections() {
+  const box = $("connBody"); if (!box) return; box.textContent = "";
+  const title = el("div", "hint", "MCP-SERVER"); box.appendChild(title);
+  if (!mcpStatus.length) box.appendChild(el("div", "conn", "Keine MCP-Server eingerichtet."));
+  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.error || s.status)); const acts = el("div", "conn-actions"), retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); c.append(acts); box.append(c); });
+  box.appendChild(el("div", "hint", "PLUGINS")); const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (browserStatus.connected ? "ok" : browserStatus.paired ? "" : "bad")); top.append(dot, el("strong", "", "Mythos Browser Control"), el("span", "chip", browserStatus.connected ? "verbunden" : browserStatus.paired ? "wartet" : "nicht gekoppelt")); c.append(top, el("div", "meta", "Steuert den sichtbaren Browser. Login, Passwort, Zahlung und Captcha bleiben immer bei dir.")); if (!browserStatus.paired) c.append(el("div", "paircode", browserStatus.code || "------"), el("div", "meta", "Diesen Code im Browser-Plugin unter „Mit Mythos Code koppeln“ eingeben.")); const actions = el("div", "conn-actions"), reset = el("button", "chip", browserStatus.paired ? "Neu koppeln" : "Neuen Code"); reset.onclick = async () => { browserStatus = await window.mythos.browser.reset(); renderConnections(); }; actions.append(reset); c.append(actions); box.append(c);
+}
+function openConnections() { $("connections").classList.add("open"); refreshBrowser(); }
 function mcpReport() {
   if (!mcpStatus.length) return "🔌 Keine MCP-Server eingerichtet.\n/mcp bearbeiten – Server für dieses Projekt (.mcp.json)\n/mcp global – Server für alle Projekte";
   return "🔌 MCP-Server:\n" + mcpStatus.map((s) => (s.status === "connected" ? "✓ " : s.status === "error" ? "⚠ " : "⏳ ") + s.name + " (" + s.scope + ") – " +
@@ -503,6 +508,8 @@ const COMMANDS = [
   ["/commit", "[nachricht]", "Alles committen – ohne Nachricht schreibt Mythos sie"],
   ["/push", "", "git push"],
   ["/mcp", "[neu|bearbeiten|global]", "MCP-Server anzeigen und einrichten"],
+  ["/plugins", "", "MCP- und Browser-Verbindungen verwalten"],
+  ["/browser", "<aufgabe>", "Aufgabe an das gekoppelte Browser-Plugin senden"],
   ["/hooks", "[bearbeiten|global]", "Hooks anzeigen und einrichten"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
   ["/koppeln", "[aus]", "Mit der Mythos-Handy-App koppeln, um diesen Chat von unterwegs fernzusteuern"],
@@ -664,6 +671,8 @@ async function command(q) {
     if (/^global/i.test(arg)) { const f = await window.mythos.openConfig("mcp-global", cfg.folder); return note("🔌 Geöffnet: " + f + "\nNach dem Speichern: /mcp neu"); }
     return note(mcpReport());
   }
+  if (cmd === "/plugins") return openConnections();
+  if (cmd === "/browser") { if (!arg) return openConnections(); const r = await window.mythos.browser.task(arg); return note(r.ok ? "◎ Browser-Aufgabe gestartet: " + arg : "⚠ " + r.error); }
   if (cmd === "/hooks") {
     if (/^bearbeiten/i.test(arg)) { if (needFolder()) return; const f = await window.mythos.openConfig("hooks-project", cfg.folder); return note("🪝 Geöffnet: " + f); }
     if (/^global/i.test(arg)) { const f = await window.mythos.openConfig("hooks-global", cfg.folder); return note("🪝 Geöffnet: " + f); }
@@ -1012,6 +1021,7 @@ window.mythos.onOutput((p) => {
 });
 window.mythos.term.onOutput((p) => { if (p.id === "term") termWrite(stripAnsi(p.chunk)); });
 window.mythos.mcp.onChange((s) => { mcpStatus = s; renderMcp(); });
+window.mythos.browser.onEvent((ev) => { const r = runOf(chat); if (r) activityPush(r, ev.kind === "error" ? "⚠" : ev.kind === "action" ? "↗" : "◎", ev.text || "Browser-Aktivität"); else note("◎ Browser: " + (ev.text || ev.kind)); refreshBrowser(); });
 $("btnLogin").onclick = login;
 $("btnSend").onclick = () => (isBusy(chat) ? stop(chat) : send());
 $("inp").oninput = () => { grow(); renderSlash(); };
@@ -1032,6 +1042,7 @@ $("csearch").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeo
 $("git").onclick = () => command("/git");
 $("schedchip").onclick = () => command("/geplant");
 $("mcp").onclick = () => command("/mcp");
+$("plugins").onclick = openConnections; $("connClose").onclick = () => $("connections").classList.remove("open"); $("connections").onclick = (e) => { if (e.target === $("connections")) $("connections").classList.remove("open"); };
 $("tokens").onclick = () => command("/tokens");
 $("model").onchange = () => setModel($("model").value);
 $("btnTheme").onclick = () => setTheme(cfg.theme === "light" ? "dark" : "light");
