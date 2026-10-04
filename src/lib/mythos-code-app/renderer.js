@@ -67,6 +67,14 @@ function draw(it, i) {
   else d = el("div", "t " + it.cls, it.text);
   $("col").appendChild(d); scrollDown(); return d;
 }
+/* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
+const AD_MD = "**📣 Werbung** · ![at](https://ai-mythos.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
+function adDue(tier) {
+  const today = new Date().toDateString();
+  if (tier === "admin") { if (localStorage.getItem("mythos_ad_admin") === today) return false; localStorage.setItem("mythos_ad_admin", today); return true; }
+  const every = tier === "free" ? 4 : (tier === "light" || tier === "plus") ? 10 : 0; if (!every) return false;
+  const n = (+localStorage.getItem("mythos_ad_n") || 0) + 1; localStorage.setItem("mythos_ad_n", String(n)); return n % every === 0;
+}
 function addTo(c, cls, text, extra) {
   c.view.push(Object.assign({ cls: cls, text: text }, extra || {}));
   if ((cls === "a" || cls === "sum") && runs.has(c.id)) runs.get(c.id).lastText = text;
@@ -188,6 +196,7 @@ async function call(run, h, system, onText, onThink) {
 // Einzelne Anfrage außerhalb einer Aufgabe (z. B. Commit-Nachricht).
 const quickCall = async (content, system) => (await call({ stopped: false, ctl: null, model: cfg.model || "mythos-code", chat: chat }, [{ role: "user", content: content }], system)).text;
 async function usage() { try { const j = await (await post("cli-auth", { action: "usage", api_key: cfg.key })).json();
+  window.__adTier = j.admin ? "admin" : (j.tier || "free");
   $("usage").textContent = j.limit == null ? "Usage " + j.used + " · ∞ Pro" : "Usage " + j.used + " / " + j.limit; } catch (e) {} }
 function renderTokens() {
   const t = (chat && chat.tokens) || { in: 0, out: 0 };
@@ -399,6 +408,7 @@ async function runAgent(c, opts) {
   if (run.stopped && c.history[c.history.length - 1].role === "user") c.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
   if (reached) { noteTo(c, "🎯 Ziel erreicht: " + goal); c.goal = ""; if (c === chat) renderGoal(); }
   addTo(c, "done", run.stopped ? "■ Gestoppt nach " + took : "✓ Mythos hat " + took + " gearbeitet");
+  if (!run.stopped && adDue(window.__adTier || "free")) addTo(c, "a", AD_MD);
   c.unfinished = !finished;
   window.mythos.working(runs.size > 0);
   if (c === chat) { setBusyUI(); renderTokens(); }

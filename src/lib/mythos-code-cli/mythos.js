@@ -74,6 +74,16 @@ const tickLine = () => {
 };
 const startTick = () => { if (tick || !working) return; tick = setInterval(() => process.stdout.write("\r\x1b[K" + C.d + tickLine() + C.x), 250); };
 const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } clearLine(); };
+let adN = 0, adTier = null, adAdminDay = "";
+async function maybeAd() {
+  try {
+    if (adTier == null) { const j = await (await fetch(API.replace(/\/v1-messages.*$/, "") + "/cli-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "usage", api_key: cfg.key }) })).json(); adTier = j.admin ? "admin" : (j.tier || "free"); }
+    let due = false; const today = new Date().toDateString();
+    if (adTier === "admin") { due = adAdminDay !== today; adAdminDay = today; }
+    else { const every = adTier === "free" ? 4 : adTier === "light" ? 10 : 0; due = every > 0 && (++adN % every === 0); }
+    if (due) console.log("\x1b[2m📣 Werbung\x1b[0m  \x1b[1m@at\x1b[0m – dein Feed voller Vibes: https://at-feed-vibes.lovable.app/\n\x1b[2m   Buche deine eigene Werbung: __SITE__/werbung\x1b[0m\n");
+  } catch {}
+}
 const say = (s) => { const was = !!tick; stopTick(); console.log(s); if (was) startTick(); };
 
 // ---------- Stoppen mit Strg+C ----------
@@ -337,6 +347,7 @@ async function turn(history, input, images) {
   const took = fmt(Date.now() - T0);
   console.log((stopped ? C.r + "■ Gestoppt nach " + took : C.g + "✓ Mythos hat " + took + " gearbeitet") + C.x +
     C.d + "  · ≈ " + fmtTokens(tokens.in + tokens.out - tok0) + " Tokens (Sitzung ≈ " + fmtTokens(tokens.in + tokens.out) + ")" + C.x + "\n");
+  if (!stopped && status !== "error") await maybeAd();
   if (status === "reached") { console.log(C.g + "🎯 Ziel erreicht: " + wasGoal + C.x + "\n"); goal = ""; }
   // Handy-Benachrichtigung bei /goal oder längeren Aufgaben.
   if (cfg.notify && (wasGoal || Date.now() - T0 > 60000)) {
