@@ -29,7 +29,7 @@ function diffBox(it) {
 }
 // Sichere Arbeitszusammenfassung statt privater interner Gedankengänge.
 function thinkBox(think) {
-  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitszusammenfassung");
+  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitsprotokoll");
   const b = el("div", "body"); b.style.whiteSpace = "pre-wrap"; b.textContent = think;
   d.append(sm, b); return d;
 }
