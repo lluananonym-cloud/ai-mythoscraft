@@ -68,7 +68,6 @@ function draw(it, i) {
   $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
-const AD_SITE = (typeof cfg !== "undefined" && cfg.site) || "https://ai-mythos.lovable.app";
 const AD_MD = "**📣 Werbung** · ![at](https://ai-mythos.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
 function adDue(tier) {
   const today = new Date().toDateString();

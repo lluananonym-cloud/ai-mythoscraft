@@ -77,7 +77,7 @@ const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } clearLi
 let adN = 0, adTier = null, adAdminDay = "";
 async function maybeAd() {
   try {
-    if (adTier == null) { const j = await (await fetch("__API__".replace(/\/v1-messages.*$/, "") + "/cli-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "usage", api_key: cfg.key }) })).json(); adTier = j.admin ? "admin" : (j.tier || "free"); }
+    if (adTier == null) { const j = await (await fetch(API.replace(/\/v1-messages.*$/, "") + "/cli-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "usage", api_key: cfg.key }) })).json(); adTier = j.admin ? "admin" : (j.tier || "free"); }
     let due = false; const today = new Date().toDateString();
     if (adTier === "admin") { due = adAdminDay !== today; adAdminDay = today; }
     else { const every = adTier === "free" ? 4 : adTier === "light" ? 10 : 0; due = every > 0 && (++adN % every === 0); }
