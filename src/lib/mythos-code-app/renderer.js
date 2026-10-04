@@ -29,7 +29,7 @@ function diffBox(it) {
 }
 // Sichere Arbeitszusammenfassung statt privater interner Gedankengänge.
 function thinkBox(think) {
-  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitszusammenfassung");
+  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitsprotokoll");
   const b = el("div", "body"); b.style.whiteSpace = "pre-wrap"; b.textContent = think;
   d.append(sm, b); return d;
 }
@@ -161,7 +161,7 @@ async function once(run, messages, system, onText, onThink) {
         if (p.type === "error") { const e = new Error((p.error && p.error.message) || "Überlastet"); e.status = 529; throw e; }
         if (p.usage && p.usage.output_tokens) outTok = p.usage.output_tokens;
         // Sichtbare Gedanken: kommen als eigener Block VOR der Antwort.
-        if (p.delta && p.delta.type === "thinking_delta" && p.delta.thinking) { think += p.delta.thinking; if (onThink) onThink(think); }
+        
         if (p.delta && p.delta.text) { out += p.delta.text; if (onText) onText(out); } } }
     if (!out.trim()) throw new Error("Leere Antwort");
     tok.out += outTok || Math.ceil(out.length / 4);
@@ -327,7 +327,7 @@ async function runAgent(c, opts) {
       const out = res.text, think = res.think;
       c.history.push({ role: "assistant", content: out });
       const m = out.match(/<tool>([\s\S]*?)<\/tool>/); const text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
-      if (text) addTo(c, "a", text, think ? { think } : undefined);
+      if (text) addTo(c, "a", text);
       if (!m) {
         if (takeInject()) continue;
         // Offene Punkte in der Aufgabenliste -> nicht mittendrin aufhören.
@@ -390,7 +390,7 @@ async function runAgent(c, opts) {
       const sres = await ask();
       summary = sres.text.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
       c.history.push({ role: "assistant", content: summary });
-      addTo(c, "sum", summary, sres.think ? { think: sres.think } : undefined);
+      addTo(c, "sum", summary, run.activity && run.activity.length ? { think: run.activity.map((a) => (a.icon || "•") + " " + a.text).join("\n") } : undefined);
     }
   } catch (e) { if (!run.stopped) addTo(c, "a", "⚠ " + e.message); }
   if (run.els.activity) { run.els.activity.classList.add("done"); run.els.actTitle.textContent = run.stopped ? "Arbeit gestoppt" : "Arbeit abgeschlossen"; run.els.actTime.textContent = fmt(Date.now() - run.t0); run.els.activity.open = false; }

@@ -62,11 +62,12 @@ app.on("before-quit", () => { quitting = true; });
 app.on("window-all-closed", () => app.quit());
 
 // ---------- Browser-Plugin: sichere lokale Brücke (nur dieser PC) ----------
-const browserBridge = { server: null, port: 0, token: "", code: "", paired: false, lastSeen: 0, tasks: [], events: [], stopped: false };
+const browserBridge = { server: null, port: 0, token: "", code: "", paired: false, lastSeen: 0, tasks: [], events: [], stopped: false, pending: new Map() };
+const tokenOk = (t) => { const a = Buffer.from(String(t || "")), b = Buffer.from(browserBridge.token); return a.length === b.length && crypto.timingSafeEqual(a, b); };
 const bridgeJson = (res, status, body) => { const origin = String(res.req.headers.origin || ""); res.writeHead(status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": origin.startsWith("chrome-extension://") ? origin : "null", "Access-Control-Allow-Headers": "content-type,x-mythos-token", "Vary": "Origin" }); res.end(JSON.stringify(body)); };
 const readBody = (req) => new Promise((resolve) => { let s = ""; req.on("data", (d) => { s += d; if (s.length > 100000) req.destroy(); }); req.on("end", () => { try { resolve(s ? JSON.parse(s) : {}); } catch { resolve({}); } }); });
 function bridgeState() { return { running: !!browserBridge.server, port: browserBridge.port, code: browserBridge.code, paired: browserBridge.paired, connected: browserBridge.paired && Date.now() - browserBridge.lastSeen < 7000 }; }
-function bridgeEvent(ev) { const item = { id: crypto.randomUUID(), at: Date.now(), ...ev }; browserBridge.events.push(item); browserBridge.events = browserBridge.events.slice(-200); send("browser-event", item); }
+function bridgeEvent(ev) { const item = { id: crypto.randomUUID(), at: Date.now(), ...ev }; browserBridge.events.push(item); browserBridge.events = browserBridge.events.slice(-200); send("browser-event", item); if (item.taskId && (item.kind === "done" || item.kind === "error")) { const w = browserBridge.pending.get(item.taskId); if (w) { browserBridge.pending.delete(item.taskId); w(item); } } }
 async function startBrowserBridge() {
   if (browserBridge.server) return bridgeState();
   browserBridge.token = crypto.randomBytes(32).toString("hex"); browserBridge.code = String(crypto.randomInt(100000, 1000000));
@@ -78,7 +79,7 @@ async function startBrowserBridge() {
       browserBridge.paired = true; browserBridge.lastSeen = Date.now(); bridgeEvent({ kind: "status", text: "Browser-Plugin verbunden" });
       return bridgeJson(res, 200, { token: browserBridge.token, name: "Mythos Code" });
     }
-    if (!browserBridge.paired || req.headers["x-mythos-token"] !== browserBridge.token) return bridgeJson(res, 401, { error: "Nicht gekoppelt" });
+    if (!browserBridge.paired || !tokenOk(req.headers["x-mythos-token"])) return bridgeJson(res, 401, { error: "Nicht gekoppelt" });
     browserBridge.lastSeen = Date.now();
     if (url.pathname === "/status") return bridgeJson(res, 200, { ok: true, stopped: browserBridge.stopped });
     if (url.pathname === "/tasks") { const tasks = browserBridge.tasks.splice(0); return bridgeJson(res, 200, { tasks }); }
@@ -236,7 +237,7 @@ ipcMain.handle("tool", async (_e, t, cwd, runId) => {
     r = { result: (x.text + (x.code ? "\nExit: " + x.code : "")).slice(-8000) || "(keine Ausgabe)", code: x.code };
   } else if (isWebTool(t)) r = await webTool(t);
   else if (t.name === "mcp") { const x = await mcp.call(t.server, t.tool, t.args || {}); r = { result: String(x.output).slice(0, 20000) }; }
-  else if (t.name === "browser") { const queued = await (async () => { const st = bridgeState(); if (!st.connected) return { ok: false, error: "Browser-Plugin nicht verbunden" }; const item = { id: crypto.randomUUID(), task: String(t.task || "").slice(0, 1500), at: Date.now() }; browserBridge.stopped = false; browserBridge.tasks.push(item); bridgeEvent({ kind: "task", text: item.task, taskId: item.id }); return { ok: true, id: item.id }; })(); r = { result: queued.ok ? "Browser-Aufgabe an das Plugin übergeben. Live-Fortschritt erscheint in Mythos Code." : "FEHLER: " + queued.error }; }
+  else if (t.name === "browser") { const st = bridgeState(); if (!st.connected) r = { result: "FEHLER: Browser-Plugin nicht verbunden" }; else { const item = { id: crypto.randomUUID(), task: String(t.task || "").slice(0, 1500), at: Date.now() }; browserBridge.stopped = false; const done = new Promise((res) => { browserBridge.pending.set(item.id, res); setTimeout(() => { if (browserBridge.pending.delete(item.id)) res({ kind: "error", text: "Zeitüberschreitung (5 Min)" }); }, 300000); }); browserBridge.tasks.push(item); bridgeEvent({ kind: "task", text: item.task, taskId: item.id }); const ev = await done; r = { result: (ev.kind === "done" ? "Browser-Ergebnis: " : "FEHLER: ") + String(ev.text || "").slice(0, 8000) }; } }
   else r = fileTool(t, root);
   const post = await runHooks("PostToolUse", { tool_name: toolName, tool_input: t, tool_output: r.result.slice(0, 4000) }, cwd);
   const notes = post.filter((h) => h.out || h.code).map((h) => "[Hook „" + h.command + "“ → Exit " + h.code + "]\n" + h.out);

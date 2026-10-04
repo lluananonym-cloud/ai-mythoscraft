@@ -148,6 +148,7 @@ async function runTask(tabId, task, taskId) {
       history.push({ role: "assistant", content: JSON.stringify({ say: out.say, actions: out.actions }) });
       if (out.done || !out.actions?.length) break;
 
+      if (taskId) { const st = await appRequest("/status").catch(() => null); if (st?.stopped) { state.cancel = true; break; } }
       for (const action of out.actions) {
         if (state.cancel) break;
         const res = await runAction(tabId, action);
