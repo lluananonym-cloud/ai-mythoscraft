@@ -73,9 +73,10 @@ Deno.serve(async (req) => {
         db.from("api_usage").select("*", { count: "exact", head: true }).eq("api_key_id", k.id)
           .gte("created_at", new Date(Date.now() - 864e5).toISOString()),
       ]);
-      const pro = !!roles?.some((r: any) => r.role === "admin") ||
+      const admin = !!roles?.some((r: any) => r.role === "admin");
+      const pro = admin ||
         (sub?.tier === "pro" && (!sub.expires_at || new Date(sub.expires_at) > new Date()));
-      return json({ used: count || 0, limit: pro ? null : k.daily_limit, tier: pro ? "pro" : (sub?.tier || "free") });
+      return json({ used: count || 0, limit: pro ? null : k.daily_limit, tier: pro ? "pro" : (sub?.tier || "free"), admin });
     }
 
     return json({ error: "Unbekannte Aktion" }, 400);

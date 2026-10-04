@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { adDue, AD_MARKDOWN } from "@/lib/mythosAds";
 import LogoOrb from "@/components/LogoOrb";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
@@ -502,7 +503,7 @@ const Chat = () => {
 
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
     try {
-      const historyForAI = messages.map(m => ({ role: m.role, content: m.content }));
+      const historyForAI = messages.filter(m => !(m as any).ad).map(m => ({ role: m.role, content: m.content }));
       const doFetch = () => fetch(fnUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
@@ -662,6 +663,7 @@ const Chat = () => {
         });
       }
       await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      if (full && adDue(isAdmin ? "admin" : sub.tier)) setMessages(prev => [...prev, { role: "assistant", content: AD_MARKDOWN(window.location.origin), ad: true } as any]);
 
       supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
       supabase.functions.invoke("suggest", {
