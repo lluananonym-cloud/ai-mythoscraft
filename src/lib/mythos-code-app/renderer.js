@@ -97,7 +97,7 @@ const add = (cls, text, extra) => addTo(chat, cls, text, extra);
 const noteTo = (c, text) => addTo(c, "note", text);
 const note = (text) => noteTo(chat, text);
 const flash = (text) => draw({ cls: "note", text: text }, -1); // nur anzeigen, nicht speichern
-function renderChat() {
+function renderChat() { follow = true;
   const col = $("col"); col.textContent = "";
   if (!chat.view.length && !isBusy(chat)) {
     const e = EMPTY.cloneNode(true);
@@ -258,7 +258,7 @@ function pushUser(c, display, content, extra) {
   const images = (extra.att || []).filter((a) => a.image).map((a) => a.image);
   c.history.push(images.length ? { role: "user", content: content, images: images } : { role: "user", content: content });
 }
-async function send() {
+async function send() { follow = true;
   const q = $("inp").value.trim(); if (!q && !attach.length) return;
   $("inp").value = ""; grow(); renderSlash();
   $("btnImproveUndo").style.display = "none"; $("improvebar").classList.remove("show"); improveUndo = "";
