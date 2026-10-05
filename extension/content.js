@@ -17,26 +17,40 @@
 
     cursorEl = document.createElement("div");
     cursorEl.setAttribute("data-mythos-cursor", "");
-    cursorEl.style.cssText = [
-      "position:fixed", "left:50%", "top:50%", "width:22px", "height:22px",
-      "z-index:2147483647", "pointer-events:none",
-      "transition:left .5s cubic-bezier(.22,.61,.36,1), top .5s cubic-bezier(.22,.61,.36,1)",
-      "filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))",
-    ].join(";");
+    cursorEl.style.cssText = "position:fixed;left:50%;top:50%;width:30px;height:30px;z-index:2147483647;pointer-events:none;" +
+      "transition:left .32s cubic-bezier(.22,.61,.36,1),top .32s cubic-bezier(.22,.61,.36,1);filter:drop-shadow(0 0 8px rgba(139,92,246,.75)) drop-shadow(0 2px 3px rgba(0,0,0,.5))";
     cursorEl.innerHTML =
-      '<svg viewBox="0 0 24 24" width="22" height="22" fill="#fff" stroke="#111" stroke-width="1.2">' +
-      '<path d="M4 2l7 18 2.2-6.6L20 11z"/></svg>' +
-      '<div data-ring style="position:absolute;left:-9px;top:-9px;width:40px;height:40px;border-radius:50%;' +
-      'border:2px solid #7c5cff;opacity:0;transform:scale(.4);transition:all .45s ease-out"></div>';
+      '<svg viewBox="0 0 30 30" width="30" height="30"><defs><linearGradient id="mxg" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs>' +
+      '<path d="M5 3l18 8.2-7.4 2.3L12.6 21z" fill="url(#mxg)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>' +
+      '<div data-tag style="position:absolute;left:24px;top:22px;padding:2px 8px;border-radius:999px;font:600 11px/1.6 system-ui,sans-serif;color:#fff;white-space:nowrap;' +
+      'background:linear-gradient(90deg,#22d3ee,#8b5cf6,#ec4899);box-shadow:0 2px 10px rgba(0,0,0,.35)">Mythos</div>' +
+      '<div data-ring style="position:absolute;left:-12px;top:-12px;width:40px;height:40px;border-radius:50%;' +
+      'border:2px solid #a78bfa;box-shadow:0 0 14px #8b5cf6;opacity:0;transform:scale(.4);transition:all .4s ease-out"></div>';
     document.documentElement.appendChild(cursorEl);
     return cursorEl;
+  }
+
+  /* Leuchtender Rahmen in Logo-Farben + Hinweis, solange Mythos AI Zugriff hat. */
+  function setFrame(on) {
+    let f = document.querySelector("[data-mythos-frame]");
+    if (!on) { f?.remove(); return; }
+    if (f) return;
+    f = document.createElement("div");
+    f.setAttribute("data-mythos-frame", "");
+    f.style.cssText = "position:fixed;inset:0;z-index:2147483646;pointer-events:none;border-radius:0;" +
+      "box-shadow:inset 0 0 0 3px #8b5cf6,inset 0 0 28px 6px rgba(139,92,246,.55),inset 0 0 60px 10px rgba(34,211,238,.25);animation:mythosGlow 2.4s ease-in-out infinite";
+    f.innerHTML = '<style>@keyframes mythosGlow{0%,100%{box-shadow:inset 0 0 0 3px #22d3ee,inset 0 0 28px 6px rgba(34,211,238,.5),inset 0 0 60px 10px rgba(139,92,246,.25)}50%{box-shadow:inset 0 0 0 3px #ec4899,inset 0 0 30px 8px rgba(236,72,153,.5),inset 0 0 64px 12px rgba(139,92,246,.35)}}</style>' +
+      '<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:999px;font:600 12px/1.4 system-ui,sans-serif;color:#fff;' +
+      'background:rgba(10,10,10,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);box-shadow:0 0 18px rgba(139,92,246,.6)">✦ Mythos AI hat Zugriff auf den Browser</div>';
+    document.documentElement.appendChild(f);
   }
 
   function moveCursor(x, y) {
     const el = ensureCursor();
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-    return new Promise((r) => setTimeout(r, 520));
+    return new Promise((r) => setTimeout(r, 330));
   }
 
   function ripple() {
@@ -104,8 +118,8 @@
   }
 
   async function pointAt(el) {
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
-    await new Promise((r) => setTimeout(r, 350));
+    const rr = el.getBoundingClientRect();
+    if (rr.top < 0 || rr.bottom > innerHeight) { el.scrollIntoView({ block: "center", behavior: "instant" }); await new Promise((r) => setTimeout(r, 60)); }
     const r = el.getBoundingClientRect();
     await moveCursor(r.left + r.width / 2, r.top + r.height / 2);
   }
@@ -121,7 +135,7 @@
     el.dispatchEvent(new PointerEvent("pointerup", { ...opts, pointerId: 1, isPrimary: true }));
     el.dispatchEvent(new MouseEvent("mouseup", opts));
     el.dispatchEvent(new MouseEvent("click", opts));
-    await new Promise((r2) => setTimeout(r2, 400));
+    await new Promise((r2) => setTimeout(r2, 150));
   }
 
   async function typeInto(el, text, enter) {
@@ -138,7 +152,7 @@
       if (setter) setter.call(el, acc);
       else el.textContent = acc;
       el.dispatchEvent(new Event("input", { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 25));
+      await new Promise((r) => setTimeout(r, 8));
     }
     el.dispatchEvent(new Event("change", { bubbles: true }));
     if (enter) {
@@ -147,7 +161,7 @@
       }
       el.form?.requestSubmit?.();
     }
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 150));
   }
 
   async function perform(action) {
@@ -166,7 +180,7 @@
       }
       case "scroll": {
         window.scrollBy({ top: action.amount ?? 700, behavior: "smooth" });
-        await new Promise((r) => setTimeout(r, 600));
+        await new Promise((r) => setTimeout(r, 350));
         return { ok: true, info: "gescrollt" };
       }
       case "wait": {
@@ -182,6 +196,7 @@
 
   chrome.runtime.onMessage.addListener((msg, _s, respond) => {
     if (msg?.mythos === "snapshot") { respond(snapshot()); return true; }
+    if (msg?.mythos === "frame") { setFrame(!!msg.on); if (!msg.on) document.querySelector("[data-mythos-cursor]")?.remove(), (cursorEl = null); respond({ ok: true }); return true; }
     if (msg?.mythos === "act") {
       perform(msg.action)
         .then((res) => respond({ ...res, page: snapshot() }))

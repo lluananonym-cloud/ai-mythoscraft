@@ -56,7 +56,7 @@ async function send(tabId, payload, tries = 3) {
       if (res !== undefined) return res;
     } catch { /* noch nicht bereit */ }
     await ensureInjected(tabId);
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 150));
   }
   return null;
 }
@@ -89,7 +89,9 @@ async function pollApp() {
     return { connected: true };
   } catch { return { connected: false }; }
 }
-chrome.alarms.create("mythos-code-poll", { periodInMinutes: 0.1 });
+chrome.alarms.create("mythos-code-poll", { periodInMinutes: 0.5 });
+let polling = false;
+setInterval(async () => { if (polling) return; polling = true; try { if ((await appLink())?.token) await pollApp(); } finally { polling = false; } }, 1500);
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === "mythos-code-poll") pollApp(); });
 
 /* ---------- KI-Gehirn ---------- */
@@ -103,12 +105,22 @@ async function brain(task, history, page, memory) {
   return await r.json();
 }
 
+function waitLoaded(tabId, max = 8000) {
+  return new Promise((resolve) => {
+    let done = false; const fin = () => { if (done) return; done = true; chrome.tabs.onUpdated.removeListener(l); setTimeout(resolve, 250); };
+    const l = (id, info) => { if (id === tabId && info.status === "complete") fin(); };
+    chrome.tabs.onUpdated.addListener(l); setTimeout(fin, max);
+  });
+}
+const frame = (tabId, on) => send(tabId, { mythos: "frame", on }, on ? 3 : 1).catch(() => {});
+chrome.tabs.onUpdated.addListener((id, info) => { if (info.status === "complete" && runs.has(id)) frame(id, true); });
+
 /* ---------- Eine Aktion ausführen ---------- */
 async function runAction(tabId, action) {
   if (action.type === "open") {
     const url = String(action.url || "").startsWith("http") ? action.url : `https://${action.url}`;
     await chrome.tabs.update(tabId, { url });
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitLoaded(tabId);
     await ensureInjected(tabId);
     const page = await send(tabId, { mythos: "snapshot" });
     return { ok: true, info: `geöffnet: ${url}`, page };
@@ -139,6 +151,7 @@ async function runTask(tabId, task, taskId) {
 
   try {
     await ensureInjected(tabId);
+    await frame(tabId, true);
     let page = await send(tabId, { mythos: "snapshot" });
 
     for (let step = 0; step < 14 && !state.cancel; step++) {
@@ -166,6 +179,7 @@ async function runTask(tabId, task, taskId) {
     if (taskId) await appRequest("/events", "POST", { kind: "error", text: String(e?.message || e), taskId }).catch(() => {});
   } finally {
     runs.delete(tabId);
+    frame(tabId, false);
     broadcast({ tabId, busy: false, done: true });
   }
 }

@@ -13,8 +13,17 @@ const el = (tag, cls, text) => { const d = document.createElement(tag); if (cls)
 const base = (p) => p.split(/[\\/]/).filter(Boolean).pop() || p;
 const openLink = (u) => window.mythos.open(u);
 const md = (box, text) => window.renderMarkdown(box, text, openLink);
-const nearBottom = () => { const l = $("log"); return l.scrollHeight - l.scrollTop - l.clientHeight < 160; };
-const scrollDown = () => { $("log").scrollTop = 1e9; };
+let follow = true;
+const nearBottom = () => follow;
+const atBottom = () => { const l = $("log"); return l.scrollHeight - l.scrollTop - l.clientHeight < 40; };
+document.addEventListener("DOMContentLoaded", () => {}, { once: true });
+setTimeout(() => { const l = $("log"); if (!l) return;
+  l.addEventListener("wheel", (e) => { if (e.deltaY < 0) follow = false; else if (atBottom()) follow = true; }, { passive: true });
+  l.addEventListener("touchmove", () => { follow = atBottom(); }, { passive: true });
+  l.addEventListener("scroll", () => { if (atBottom()) follow = true; }, { passive: true });
+  l.addEventListener("keydown", (e) => { if (e.key === "PageUp" || e.key === "ArrowUp" || e.key === "Home") follow = false; });
+}, 0);
+const scrollDown = (force) => { if (force) follow = true; if (follow) $("log").scrollTop = 1e9; };
 const stripAnsi = (s) => s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
 const isBusy = (c) => !!(c && runs.has(c.id));
 const runOf = (c) => (c ? runs.get(c.id) : null);
@@ -65,7 +74,7 @@ function draw(it, i) {
     const rg = el("button", "regen", "↻"); rg.title = "Antwort neu generieren"; rg.onclick = () => regenerate(i); d.appendChild(rg);
   }
   else d = el("div", "t " + it.cls, it.text);
-  $("col").appendChild(d); scrollDown(); return d;
+  const box = $("col").querySelector(":scope > .runbox"); if (box) $("col").insertBefore(d, box); else $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
 const AD_MD = "**📣 Werbung** · ![at](https://ai-mythos.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
@@ -88,7 +97,7 @@ const add = (cls, text, extra) => addTo(chat, cls, text, extra);
 const noteTo = (c, text) => addTo(c, "note", text);
 const note = (text) => noteTo(chat, text);
 const flash = (text) => draw({ cls: "note", text: text }, -1); // nur anzeigen, nicht speichern
-function renderChat() {
+function renderChat() { follow = true;
   const col = $("col"); col.textContent = "";
   if (!chat.view.length && !isBusy(chat)) {
     const e = EMPTY.cloneNode(true);
@@ -103,11 +112,14 @@ function renderChat() {
 // Laufende Aufgabe im Chat darstellen: gestreamte Antwort, Live-Ausgabe, Timer.
 function paintRun(run) {
   if (chat !== run.chat) return;
-  const col = $("col"), e = run.els, stick = nearBottom();
+  const root = $("col"), e = run.els, stick = nearBottom();
+  if (!e.box || !e.box.isConnected) { e.box = el("div", "runbox"); }
+  if (root.lastElementChild !== e.box) root.appendChild(e.box);
+  const col = { appendChild(x) { const kids = e.box.children; if (kids[col.i] !== x) e.box.insertBefore(x, kids[col.i] || null); col.i++; }, i: 0 };
   const vis = visibleText(run.stream).trim();
   if (!e.activity || !e.activity.isConnected) { e.activity = el("details", "activity"); e.activity.open = true; e.actSum = el("summary"); e.actSpin = el("span", "spin"); e.actTitle = el("span", "", "Mythos arbeitet"); e.actTime = el("span", "elapsed mono"); e.actSteps = el("div", "steps"); e.actSafe = el("div", "safe", "Live-Aktivitäten zeigen sichere Arbeitsschritte, keine privaten internen Gedanken."); e.actSum.append(e.actSpin, e.actTitle, e.actTime); e.activity.append(e.actSum, e.actSteps, e.actSafe); }
-  e.actTime.textContent = fmt(Date.now() - run.t0); e.actTitle.textContent = run.phase || "Mythos arbeitet";
-  const acts = run.activity || []; if (e.activityCount !== acts.length) { e.actSteps.textContent = ""; acts.forEach((a) => { const row = el("div", "step"); row.append(el("span", "", a.icon || "•"), el("span", "", a.text), el("time", "", fmt(a.at - run.t0))); e.actSteps.appendChild(row); }); e.actSteps.scrollTop = e.actSteps.scrollHeight; e.activityCount = acts.length; }
+  e.actTime.textContent = fmt(Date.now() - run.t0); const lastAct = (run.activity || [])[(run.activity || []).length - 1]; e.actTitle.textContent = run.phase || (lastAct ? lastAct.text : "Mythos arbeitet");
+  const acts = run.activity || []; if (e.activityCount !== acts.length) { e.actSteps.textContent = ""; acts.slice().reverse().forEach((a, k) => { const row = el("div", "step" + (k === 0 ? " now" : "")); row.append(el("span", "", a.icon || "•"), el("span", "", a.text), el("time", "", fmt(a.at - run.t0))); e.actSteps.appendChild(row); }); e.actSteps.scrollTop = 0; e.activityCount = acts.length; }
   col.appendChild(e.activity);
   if (vis) {
     if (!e.stream || !e.stream.isConnected) { e.stream = el("div", "m a streaming"); const img = el("img"); img.src = "icon.png"; e.body = el("div", "body"); e.stream.append(img, e.body); e.drawn = null; }
@@ -246,7 +258,7 @@ function pushUser(c, display, content, extra) {
   const images = (extra.att || []).filter((a) => a.image).map((a) => a.image);
   c.history.push(images.length ? { role: "user", content: content, images: images } : { role: "user", content: content });
 }
-async function send() {
+async function send() { follow = true;
   const q = $("inp").value.trim(); if (!q && !attach.length) return;
   $("inp").value = ""; grow(); renderSlash();
   $("btnImproveUndo").style.display = "none"; $("improvebar").classList.remove("show"); improveUndo = "";
@@ -403,7 +415,9 @@ async function runAgent(c, opts) {
     }
   } catch (e) { if (!run.stopped) addTo(c, "a", "⚠ " + e.message); }
   if (run.els.activity) { run.els.activity.classList.add("done"); run.els.actTitle.textContent = run.stopped ? "Arbeit gestoppt" : "Arbeit abgeschlossen"; run.els.actTime.textContent = fmt(Date.now() - run.t0); run.els.activity.open = false; }
+  if (run.els.activity && run.els.box && run.els.box.isConnected) run.els.box.parentNode.insertBefore(run.els.activity, run.els.box);
   runs.delete(c.id); Object.values(run.els).forEach((x) => { if (x && x !== run.els.activity && x.remove) x.remove(); });
+  if (finished && run.todoItem && run.todoItem.items) { run.todoItem.items.forEach((x) => x.done = true); const td = todoEls.get(run.todoItem); if (td && td.isConnected) renderTodo(td, run.todoItem); }
   const took = fmt(Date.now() - run.t0); c.lastTook = took;
   if (run.stopped && c.history[c.history.length - 1].role === "user") c.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
   if (reached) { noteTo(c, "🎯 Ziel erreicht: " + goal); c.goal = ""; if (c === chat) renderGoal(); }
@@ -1317,7 +1331,10 @@ function normTodos(t) {
 }
 /** Aktualisiert die Liste im Chat (eine Karte pro Aufgabe/Agent, wird live aktualisiert). */
 function updateTodos(holder, c, t, agent) {
-  const items = normTodos(t);
+  const prev = holder.todoItem && c.view.includes(holder.todoItem) ? holder.todoItem.items : null;
+  let items = normTodos(t);
+  if (prev && Array.isArray(t && t.done)) { items = prev.map((x, i) => ({ ...x, done: x.done || t.done.includes(i) || t.done.includes(i + 1) || t.done.includes(x.text) })); }
+  else if (prev && items.length && items.length < prev.length) { const m = new Map(items.map((x) => [x.text.toLowerCase(), x])); items = prev.map((x) => m.has(x.text.toLowerCase()) ? { ...x, done: m.get(x.text.toLowerCase()).done || x.done } : x).concat(items.filter((x) => !prev.some((p) => p.text.toLowerCase() === x.text.toLowerCase()))); }
   if (!items.length) return { result: 'FEHLER: "items" fehlt – sende die komplette Liste: {"name":"todo","items":[{"text":"…","done":false}]}' };
   const it = holder.todoItem && c.view.includes(holder.todoItem) ? holder.todoItem : null;
   if (it) {
