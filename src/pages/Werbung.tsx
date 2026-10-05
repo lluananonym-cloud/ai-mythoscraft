@@ -6,13 +6,13 @@ import { LogoMark } from "@/components/Logo";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 
-const STEPS = [
+const STEPS: { key: string; q: string; max: number; email?: boolean }[] = [
   { key: "produkt", q: "Hey! Ich bin Mythos AI. Wofür möchtest du Werbung machen? (Name deines Projekts, Servers, Produkts …)", max: 200 },
   { key: "link", q: "Super! Welcher Link soll in der Werbung stehen?", max: 300 },
   { key: "text", q: "Welcher kurze Werbetext soll angezeigt werden?", max: 500 },
   { key: "zeitraum", q: "Wie lange soll die Werbung laufen und hast du ein Budget im Kopf?", max: 300 },
   { key: "kontakt", q: "Zum Schluss: Unter welcher E-Mail-Adresse können wir dich erreichen?", max: 255, email: true },
-] as const;
+];
 
 type Msg = { role: "ai" | "user"; text: string };
 
