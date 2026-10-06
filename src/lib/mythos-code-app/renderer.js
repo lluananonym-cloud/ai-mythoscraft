@@ -323,7 +323,8 @@ async function runAgent(c, opts) {
   if (c === chat) setBusyUI();
   renderSide(); saveChat(c);
   run.git = run.folder ? await window.mythos.git.info(run.folder).catch(() => null) : null;
-  const goal = c.goal || "", max = goal ? 4000 : 400, autoTest = autoTestOn(run.folder);
+  // /goal hat kein Schrittlimit: es endet nur, wenn das Ziel erreicht ist oder der Nutzer stoppt.
+  const goal = c.goal || "", max = goal ? Infinity : 400, autoTest = autoTestOn(run.folder);
   let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null, verified = false, toolFails = 0;
   const openTodos = () => { const it = run.todoItem; return it && it.items ? it.items.filter((x) => !x.done) : []; };
   const takeInject = () => { const inj = run.inject || []; run.inject = [];
@@ -341,6 +342,7 @@ async function runAgent(c, opts) {
     if (opts && opts.fresh && cfg.multi && await multiAgentPhase(run, c)) changed = true;
     if (opts && opts.fresh) c.history.push({ role: "user", content: "ARBEITSWEISE: Lege bei mehrstufigen Aufgaben zuerst mit dem todo-Werkzeug einen Plan an. Untersuche das Projekt (ls/search/read), bevor du änderst. Ändere gezielt. Wenn ein Befehl oder Werkzeug fehlschlägt: Ursache lesen, anderen Weg probieren – nie aufgeben. Prüfe am Ende selbst (Build/Tests/Datei erneut lesen). Höre erst auf, wenn ALLES erledigt ist." });
     for (; steps < max && !run.stopped; steps++) {
+      if (goal) { c.goalStep = (c.goalStep || 0) + 1; if (c === chat) renderGoal(); await goalCompact(run, c); if (run.stopped) break; }
       takeInject();
       let res;
       try { res = await ask(); }
@@ -350,7 +352,7 @@ async function runAgent(c, opts) {
         // Nicht aufgeben: kurz warten, Verlauf straffen und neu ansetzen.
         noteTo(c, "⚠ " + e.message + " – Mythos setzt in 20 s neu an (Stopp mit Esc).");
         for (let w = 0; w < 20000 && !run.stopped; w += 250) await new Promise((r) => setTimeout(r, 250));
-        if (++toolFails > 6) throw e; continue;
+        if (++toolFails > 6 && !goal) throw e; continue;
       }
       toolFails = 0;
       if (run.stopped) break;
@@ -367,7 +369,7 @@ async function runAgent(c, opts) {
         if (changed && !verified && !autoTest) { verified = true; c.history.push({ role: "user", content: "Prüfe deine Änderungen jetzt kritisch: lies die geänderten Dateien noch einmal, führe – falls vorhanden – Build/Lint/Tests aus und behebe jeden Fehler. Antworte erst danach mit einer kurzen Zusammenfassung ohne Werkzeug." }); saveChat(c); continue; }
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
-          if (++nudges > 40) { noteTo(c, "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an. Mit /weiter geht es weiter."); break; }
+          if (++nudges % 40 === 0) noteTo(c, "🎯 Mythos hängt beim Ziel – versucht es weiter mit einem anderen Ansatz (Stopp mit Esc).");
           c.history.push({ role: "user", content: prompts.nudge }); saveChat(c); continue;
         }
         // Automatisch testen: nach Änderungen Tests laufen lassen, Fehler von Mythos reparieren lassen.
@@ -429,7 +431,8 @@ async function runAgent(c, opts) {
   if (finished && run.todoItem && run.todoItem.items) { run.todoItem.items.forEach((x) => x.done = true); const td = todoEls.get(run.todoItem); if (td && td.isConnected) renderTodo(td, run.todoItem); }
   const took = fmt(Date.now() - run.t0); c.lastTook = took;
   if (run.stopped && c.history[c.history.length - 1].role === "user") c.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
-  if (reached) { noteTo(c, "🎯 Ziel erreicht: " + goal); c.goal = ""; if (c === chat) renderGoal(); }
+  if (reached) { noteTo(c, "🎯 Ziel erreicht nach " + (c.goalStep || 1) + " Schritten: " + goal); c.goal = ""; c.goalStep = 0; }
+  if (c === chat) renderGoal();
   addTo(c, "done", run.stopped ? "■ Gestoppt nach " + took : "✓ Mythos hat " + took + " gearbeitet");
   if (!run.stopped && adDue(window.__adTier || "free")) pickAd().then((md) => { addTo(c, "a", md); saveChat(c); });
   c.unfinished = !finished;
@@ -449,14 +452,41 @@ async function runAgent(c, opts) {
 }
 
 // ---------- AFK: Weitermachen & Ziel ----------
-function renderResume() { $("resumebar").style.display = chat && !isBusy(chat) && chat.unfinished && chat.history.length ? "flex" : "none"; }
-function renderGoal() { $("goalbar").style.display = chat && chat.goal ? "flex" : "none"; $("goaltext").textContent = chat && chat.goal ? "Ziel: " + chat.goal : ""; }
+function renderResume() { $("resumebar").style.display = chat && !chat.goal && !isBusy(chat) && chat.unfinished && chat.history.length ? "flex" : "none"; renderGoal(); }
+function renderGoal() {
+  const on = !!(chat && chat.goal), busy = on && isBusy(chat);
+  $("goalbar").style.display = on ? "flex" : "none";
+  $("goaltext").textContent = on ? "Ziel: " + chat.goal : "";
+  $("goalstep").textContent = on && chat.goalStep ? (busy ? "⟳ " : "") + "Schritt " + chat.goalStep : "";
+  $("btnGoalStop").style.display = busy ? "" : "none";
+  $("btnGoalGo").style.display = on && !busy ? "" : "none";
+  $("btnGoalEnd").style.display = busy ? "none" : "";
+}
+/** /goal ohne Limit: langen Verlauf zwischendurch selbst zusammenfassen, damit Mythos endlos weiterarbeiten kann. */
+async function goalCompact(run, c) {
+  if (c.history.length < 120) return;
+  run.phase = "Verlauf zusammenfassen"; schedulePaint(run);
+  const tail = c.history.slice(-12); while (tail.length && tail[0].role !== "user") tail.shift();
+  const transcript = c.history.slice(0, c.history.length - tail.length)
+    .map((m) => (m.role === "user" ? "NUTZER/WERKZEUG: " : "MYTHOS: ") + String(m.content).slice(0, 2000)).join("\n\n").slice(-60000);
+  try {
+    const sum = (await call(run, [{ role: "user", content: COMPACT_PROMPT + transcript }], "Du fasst Coding-Chats präzise zusammen.")).text.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    if (!sum) return;
+    c.history = [
+      { role: "user", content: "ZIEL (/goal): " + c.goal + "\n\nZusammenfassung der bisherigen Arbeit (automatisch komprimiert):\n\n" + sum },
+      { role: "assistant", content: "Verstanden – ich arbeite auf Basis dieser Zusammenfassung am Ziel weiter." },
+    ].concat(tail);
+    c.compactedAt = c.view ? c.view.length : c.compactedAt;
+    noteTo(c, "🗜 Langer Verlauf automatisch zusammengefasst – Mythos arbeitet weiter am Ziel.");
+  } catch (e) { /* nicht schlimm: dann eben mit gekürztem Verlauf weiter */ }
+  finally { run.phase = ""; }
+}
 function continueChat() {
   if (isBusy(chat) || !chat.history.length) return;
   if (chat.history[chat.history.length - 1].role === "assistant") chat.history.push({ role: "user", content: "Mach bitte genau dort weiter, wo du aufgehört hast." });
   note("▶ Weitermachen"); runAgent(chat);
 }
-function endGoal() { if (!chat.goal) return; chat.goal = ""; renderGoal(); note("🎯 Ziel beendet."); saveChat(chat); }
+function endGoal() { if (!chat.goal) return; chat.goal = ""; chat.goalStep = 0; renderGoal(); note("🎯 Ziel beendet."); saveChat(chat); }
 
 // ---------- Git ----------
 async function refreshGit() {
@@ -526,7 +556,7 @@ const COMMANDS = [
   ["/befehle", "", "Eigene Befehle anzeigen (.mythos/commands)"],
   ["/befehl-neu", "<name>", "Eigenen Befehl anlegen"],
   ["/tasten", "", "Tastenkürzel anzeigen"],
-  ["/goal", "<ziel>", "Mythos arbeitet selbstständig, bis das Ziel erreicht ist – danach Zusammenfassung"],
+  ["/goal", "<ziel>", "Mythos arbeitet ohne Schrittlimit selbstständig, bis das Ziel erreicht ist (Stopp jederzeit) – danach Zusammenfassung"],
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
   ["/projekt", "", "Projektordner wählen"],
@@ -616,7 +646,7 @@ async function command(q) {
     if (/^(stop|aus|ende|beenden)$/i.test(arg)) return endGoal();
     if (!$("auto").checked) { if (!confirm("Mit /goal arbeitet Mythos ohne Nachfragen weiter.\nVollzugriff dafür einschalten?")) return; setAuto(true); }
     pushUser(chat, "🎯 /goal " + arg, "Neues Ziel: " + arg + "\nArbeite jetzt komplett selbstständig daran, bis es erreicht und geprüft ist.", { q: "/goal " + arg });
-    chat.goal = arg; renderGoal();
+    chat.goal = arg; chat.goalStep = 0; renderGoal();
     return runAgent(chat, { fresh: true });
   }
   if (cmd === "/sprache") return vm.on ? voiceStop() : voiceStart();
@@ -1099,6 +1129,7 @@ $("edtext").onkeydown = (e) => {
   t.value = t.value.slice(0, s) + "  " + t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = s + 2;
 };
 $("btnResume").onclick = continueChat; $("btnGoalEnd").onclick = endGoal;
+$("btnGoalStop").onclick = () => stop(chat); $("btnGoalGo").onclick = continueChat;
 $("auto").onchange = () => setAuto($("auto").checked);
 $("autotest").onchange = () => { if (!cfg.folder) { $("autotest").checked = false; return note("Wähle zuerst einen Projektordner."); } setAutoTest($("autotest").checked); };
 $("btnFolder").onclick = pickProject; $("btnAddProj").onclick = pickProject;
