@@ -1,0 +1,187 @@
+name: Build Desktop Apps
+
+# Baut die Mythos-Programme automatisch und legt sie als Release in diesem
+# (öffentlichen) Repo ab. Die Website (/downloads) verlinkt direkt darauf,
+# es muss also nichts mehr von Hand gebaut oder hochgeladen werden.
+#
+# - Mythos Code App: aus src/lib/mythos-code-app (Lovable) -> MythosCode-Setup.exe
+# - Mythos CLI:      aus src/lib/mythos-code-cli (Lovable)  -> mythos-code.tgz
+# - Mythos Browser:  aus dem privaten Repo mythos-browser (Secret APPS_REPO_TOKEN)
+#
+# Gebaut wird nur, wenn sich etwas geändert hat. Sofort bauen:
+# Actions > "Build Desktop Apps" > "Run workflow".
+
+on:
+  push:
+    branches: [neu, main]
+    paths:
+      - 'src/lib/mythos-code-app/**'
+      - 'src/lib/mythos-code-cli/**'
+      - 'src/lib/mythos-code-shared/**'
+      - 'src/lib/mythosCli.ts'
+      - 'public/icon.png'
+      - 'scripts/build-desktop.mjs'
+      - '.github/workflows/build-apps.yml'
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Auch ohne Änderungen neu bauen'
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [build-apps]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apps
+  cancel-in-progress: false
+
+env:
+  FORCE: ${{ inputs.force || 'false' }}
+
+jobs:
+  code-app:
+    name: Mythos Code App
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: code-latest
+      ASSET: MythosCode-Setup.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Quellordner zusammenbauen
+        id: src
+        run: |
+          node scripts/build-desktop.mjs build/desktop
+          echo "hash=$(cd build/desktop/app && find . -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen, ob ein neuer Build nötig ist
+        id: check
+        env:
+          VER: ${{ steps.src.outputs.app_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: bash .github/workflows/release-check.sh
+
+      - name: Setup-EXE bauen
+        if: steps.check.outputs.build == 'true'
+        working-directory: build/desktop/app
+        run: |
+          npm install --no-audit --no-fund
+          npm run dist
+
+      - name: Veröffentlichen
+        if: steps.check.outputs.build == 'true'
+        env:
+          TITLE: Mythos Code ${{ steps.src.outputs.app_version }}
+          VER: ${{ steps.src.outputs.app_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: |
+          mkdir -p out && cp build/desktop/app/dist/MythosCode-Setup.exe "out/$ASSET"
+          bash .github/workflows/release-publish.sh "out/$ASSET"
+
+  cli:
+    name: Mythos CLI
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: cli-latest
+      ASSET: mythos-code.tgz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Paket zusammenbauen
+        id: src
+        run: |
+          node scripts/build-desktop.mjs build/desktop
+          echo "hash=$(cd build/desktop/cli && find . -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen, ob ein neuer Build nötig ist
+        id: check
+        env:
+          VER: ${{ steps.src.outputs.cli_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: bash .github/workflows/release-check.sh
+
+      - name: Veröffentlichen
+        if: steps.check.outputs.build == 'true'
+        env:
+          TITLE: Mythos CLI ${{ steps.src.outputs.cli_version }}
+          VER: ${{ steps.src.outputs.cli_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: |
+          mkdir -p out
+          (cd build/desktop/cli && npm pack --pack-destination ../../../out >/dev/null)
+          mv out/*.tgz "out/$ASSET"
+          bash .github/workflows/release-publish.sh "out/$ASSET"
+
+
+  browser:
+    name: Mythos Browser
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: browser-latest
+      ASSET: MythosBrowser-Setup.exe
+      HAS_TOKEN: ${{ secrets.APPS_REPO_TOKEN != '' }}
+    steps:
+      - name: Zugriff prüfen
+        id: access
+        run: |
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::warning::Browser übersprungen: Secret APPS_REPO_TOKEN fehlt (privates Repo lluananonym-cloud/mythos-browser)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.access.outputs.skip != 'true'
+      - name: Quellcode holen
+        if: steps.access.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: lluananonym-cloud/mythos-browser
+          token: ${{ secrets.APPS_REPO_TOKEN }}
+          path: app
+      - name: Prüfen, ob ein neuer Build nötig ist
+        if: steps.access.outputs.skip != 'true'
+        id: check
+        run: |
+          echo "VER=$(node -p "require('./app/package.json').version")" >> "$GITHUB_ENV"
+          echo "HASH=$(git -C app rev-parse --short=16 HEAD)" >> "$GITHUB_ENV"
+      - name: Prüfen (Version)
+        if: steps.access.outputs.skip != 'true'
+        id: check2
+        run: bash .github/workflows/release-check.sh
+      - uses: actions/setup-node@v4
+        if: steps.check2.outputs.build == 'true'
+        with:
+          node-version: 20
+      - name: Installer bauen
+        if: steps.check2.outputs.build == 'true'
+        working-directory: app
+        run: |
+          npm install --no-audit --no-fund
+          npx electron-builder --win nsis --x64 --publish never
+      - name: Veröffentlichen
+        if: steps.check2.outputs.build == 'true'
+        env:
+          TITLE: Mythos Browser ${{ env.VER }}
+        run: |
+          EXE=$(ls app/dist/*.exe | grep -vi uninstall | head -1)
+          mkdir -p out && cp "$EXE" "out/$ASSET"
+          bash .github/workflows/release-publish.sh "out/$ASSET"

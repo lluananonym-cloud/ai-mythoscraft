@@ -351,12 +351,13 @@ const Chat = () => {
     }
     if (/^\/codeprogramm\b/i.test(text)) {
       if (!override) setInput("");
-      const { APP_DOWNLOAD_SETTING, APP_USER_GUIDE } = await import("@/lib/mythosCli");
-      const { data } = await supabase.from("app_settings").select("value").eq("key", APP_DOWNLOAD_SETTING).maybeSingle();
-      if (!data?.value) { localReply("Die Mythos Code App ist noch nicht verfügbar – schau bald wieder vorbei."); return; }
+      // Die Setup-EXE wird automatisch von GitHub Actions gebaut (build-apps.yml) und liegt immer aktuell im Release.
+      const { APP_USER_GUIDE } = await import("@/lib/mythosCli");
+      const { APPS, downloadUrl } = await import("@/lib/downloads");
+      const url = downloadUrl(APPS.find((x) => x.id === "code")!);
       const a = document.createElement("a");
-      a.href = data.value; a.target = "_blank"; a.rel = "noopener"; a.click();
-      localReply(APP_USER_GUIDE(data.value));
+      a.href = url; a.target = "_blank"; a.rel = "noopener"; a.click();
+      localReply(APP_USER_GUIDE(url));
       return;
     }
     if (/^\/code\s*$/i.test(text)) {

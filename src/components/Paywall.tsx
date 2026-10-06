@@ -19,7 +19,7 @@ const TIER_CARDS = [
     name: "Pro",
     price: TIER_LIMITS.pro.priceLabel,
     tag: "Beliebt",
-    features: ["Unbegrenzte Chats", "Live-Sprachchat", "Bilder · Musik · Video", "Priorität bei Updates"],
+    features: ["Unbegrenzte Chats", "Live-Sprachchat", "Bilder · Musik · Video", "Mythos Code App & CLI", "Priorität bei Updates"],
     accent: "from-fuchsia-500 to-rose-500",
     highlight: true,
   },

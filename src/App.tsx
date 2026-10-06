@@ -14,6 +14,7 @@ import Voice from "./pages/Voice";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
+import Downloads from "./pages/Downloads";
 import Redeem from "./pages/Redeem";
 import CliAuth from "./pages/CliAuth";
 import CodeControl from "./pages/CodeControl";
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/werbung" element={<Werbung />} />
             <Route path="/werbung/vorschau/:id" element={<RequireAuth><WerbungVorschau /></RequireAuth>} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/downloads" element={<Downloads />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
