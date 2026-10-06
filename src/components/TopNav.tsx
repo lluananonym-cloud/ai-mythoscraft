@@ -29,6 +29,7 @@ import {
   Ticket,
   Image as ImageIcon,
   Globe,
+  Download,
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
@@ -67,6 +68,11 @@ const TopNav = () => {
               <Users className="h-4 w-4 mr-1.5" />Community
             </Button>
           </Link>
+          <Link to="/downloads" onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
+              <Download className="h-4 w-4 mr-1.5" />Downloads
+            </Button>
+          </Link>
           {/* Entwickeln – dashboard */}
           <Link to="/dashboard" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
@@ -93,6 +99,9 @@ const TopNav = () => {
           <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="flex items-center">
             <MessageSquare className="h-4 w-4 mr-2" />Discord
           </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/downloads" className="flex items-center"><Download className="h-4 w-4 mr-2" />Desktop-Apps</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to="/docs" className="flex items-center"><BookOpen className="h-4 w-4 mr-2" />API Docs</Link>
