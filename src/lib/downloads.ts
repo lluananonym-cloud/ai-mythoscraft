@@ -14,6 +14,8 @@ export type AppDownload = {
   platform: string;
   /** true = für alle kostenlos, sonst nur mit Pro */
   free?: boolean;
+  /** Optionaler Installationsbefehl zum Kopieren (z. B. für die CLI) */
+  install?: string;
   screenshot?: string;
   highlights: string[];
 };
@@ -23,12 +25,12 @@ export const APPS: AppDownload[] = [
     id: "code",
     name: "Mythos Code",
     tagline: "KI-Coding-Agent für deinen PC",
-    description: "Ordner wählen, sagen was gebaut werden soll, fertig. Mythos liest, schreibt und testet deinen Code selbstständig.",
+    description: "Projekt wählen, sagen was gebaut werden soll, fertig. Mythos liest, schreibt und testet deinen Code selbstständig, auch per Sprache.",
     tag: "code-latest",
     asset: "MythosCode-Setup.exe",
     platform: "Windows",
     screenshot: "/screenshots/mythos-code.webp",
-    highlights: ["Arbeitet direkt in deinen Projekten", "Dateien per Klick anhängen", "Login mit deinem Mythos-Account"],
+    highlights: ["Projekte, Chats und Aufgabenlisten", "Live-Vorschau, Dateibaum und Terminal", "Sprachmodus: einfach mit Mythos reden"],
   },
   {
     id: "browser",
@@ -59,9 +61,10 @@ export const APPS: AppDownload[] = [
     tagline: "Mythos im Terminal",
     description: "Für alle, die lieber im Terminal arbeiten. Gleicher Agent wie in Mythos Code.",
     tag: "cli-latest",
-    asset: null,
-    platform: "Windows",
-    highlights: ["Login per Browser", "Gleiche Limits wie dein Plan"],
+    asset: "mythos-code.tgz",
+    platform: "Windows · macOS · Linux",
+    install: "npm install -g mythos-code",
+    highlights: ["Login per Browser", "Gleiche Limits wie dein Plan", "Braucht Node.js ab Version 18"],
   },
 ];
 

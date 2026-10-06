@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import UpgradeDialog from "@/components/UpgradeDialog";
 import { Button } from "@/components/ui/button";
-import { Download, Lock, Crown, Check, Monitor, Clock, TerminalSquare } from "lucide-react";
+import { Download, Lock, Crown, Check, Copy, Monitor, Clock, TerminalSquare } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { APPS, AppDownload, ReleaseInfo, downloadUrl, fetchReleases } from "@/lib/downloads";
@@ -53,6 +54,17 @@ const AppCard = ({ app, release, releasesLoaded, canDownload, onLocked }: {
           ))}
         </ul>
         <div className="mt-auto space-y-2">
+          {app.install && available && (canDownload || app.free) && (
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(app.install!).then(() => toast.success("Befehl kopiert")).catch(() => {})}
+              className="w-full flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2.5 font-mono text-xs text-left hover:border-primary/50 transition-colors"
+              title="Kopieren"
+            >
+              <span className="truncate">{app.install}</span>
+              <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </button>
+          )}
           {!available ? (
             <Button disabled variant="outline" className="w-full h-11">
               <Clock className="h-4 w-4 mr-2" />Bald verfügbar

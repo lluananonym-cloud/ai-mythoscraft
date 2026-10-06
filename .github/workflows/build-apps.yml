@@ -1,13 +1,27 @@
 name: Build Desktop Apps
 
-# Baut die Windows-Installer der Mythos-Programme automatisch und legt sie als
-# Release in diesem (öffentlichen) Repo ab. Die Website (/downloads) verlinkt
-# direkt auf diese Releases, es muss also nichts mehr von Hand gebaut werden.
+# Baut die Mythos-Programme automatisch und legt sie als Release in diesem
+# (öffentlichen) Repo ab. Die Website (/downloads) verlinkt direkt darauf,
+# es muss also nichts mehr von Hand gebaut oder hochgeladen werden.
 #
-# Läuft alle 3 Stunden und baut nur, wenn sich im Quell-Repo etwas geändert hat.
-# Sofort bauen: Actions > "Build Desktop Apps" > "Run workflow".
+# - Mythos Code App: aus src/lib/mythos-code-app (Lovable) -> MythosCode-Setup.exe
+# - Mythos CLI:      aus src/lib/mythos-code-cli (Lovable)  -> mythos-code.tgz
+# - Mythos Browser:  aus dem privaten Repo mythos-browser (Secret APPS_REPO_TOKEN)
+#
+# Gebaut wird nur, wenn sich etwas geändert hat. Sofort bauen:
+# Actions > "Build Desktop Apps" > "Run workflow".
 
 on:
+  push:
+    branches: [neu, main]
+    paths:
+      - 'src/lib/mythos-code-app/**'
+      - 'src/lib/mythos-code-cli/**'
+      - 'src/lib/mythos-code-shared/**'
+      - 'src/lib/mythosCli.ts'
+      - 'public/icon.png'
+      - 'scripts/build-desktop.mjs'
+      - '.github/workflows/build-apps.yml'
   schedule:
     - cron: '17 */3 * * *'
   workflow_dispatch:
@@ -18,120 +32,156 @@ on:
         default: false
   repository_dispatch:
     types: [build-apps]
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/build-apps.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-apps-${{ github.ref }}
+  group: build-apps
   cancel-in-progress: false
 
+env:
+  FORCE: ${{ inputs.force || 'false' }}
+
 jobs:
-  build:
-    name: ${{ matrix.name }}
+  code-app:
+    name: Mythos Code App
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: code
-            name: Mythos Code
-            repo: lluananonym-cloud/mythos-code
-            private: false
-            tag: code-latest
-            asset: MythosCode-Setup.exe
-            build: npm run dist
-          - id: browser
-            name: Mythos Browser
-            repo: lluananonym-cloud/mythos-browser
-            private: true
-            tag: browser-latest
-            asset: MythosBrowser-Setup.exe
-            build: npx electron-builder --win nsis --x64 --publish never
     defaults:
       run:
         shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: ${{ matrix.tag }}
-      ASSET: ${{ matrix.asset }}
+      TAG: code-latest
+      ASSET: MythosCode-Setup.exe
     steps:
-      # Private Quell-Repos brauchen einen Token mit Lesezugriff (Secret APPS_REPO_TOKEN).
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Quellordner zusammenbauen
+        id: src
+        run: |
+          node scripts/build-desktop.mjs build/desktop
+          echo "hash=$(cd build/desktop/app && find . -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen, ob ein neuer Build nötig ist
+        id: check
+        env:
+          VER: ${{ steps.src.outputs.app_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: bash .github/workflows/release-check.sh
+
+      - name: Setup-EXE bauen
+        if: steps.check.outputs.build == 'true'
+        working-directory: build/desktop/app
+        run: |
+          npm install --no-audit --no-fund
+          npm run dist
+
+      - name: Veröffentlichen
+        if: steps.check.outputs.build == 'true'
+        env:
+          TITLE: Mythos Code ${{ steps.src.outputs.app_version }}
+          VER: ${{ steps.src.outputs.app_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: |
+          mkdir -p out && cp build/desktop/app/dist/MythosCode-Setup.exe "out/$ASSET"
+          bash .github/workflows/release-publish.sh "out/$ASSET"
+
+  cli:
+    name: Mythos CLI
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: cli-latest
+      ASSET: mythos-code.tgz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Paket zusammenbauen
+        id: src
+        run: |
+          node scripts/build-desktop.mjs build/desktop
+          echo "hash=$(cd build/desktop/cli && find . -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen, ob ein neuer Build nötig ist
+        id: check
+        env:
+          VER: ${{ steps.src.outputs.cli_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: bash .github/workflows/release-check.sh
+
+      - name: Veröffentlichen
+        if: steps.check.outputs.build == 'true'
+        env:
+          TITLE: Mythos CLI ${{ steps.src.outputs.cli_version }}
+          VER: ${{ steps.src.outputs.cli_version }}
+          HASH: ${{ steps.src.outputs.hash }}
+        run: |
+          mkdir -p out
+          (cd build/desktop/cli && npm pack --pack-destination ../../../out >/dev/null)
+          mv out/*.tgz "out/$ASSET"
+          bash .github/workflows/release-publish.sh "out/$ASSET"
+
+
+  browser:
+    name: Mythos Browser
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: browser-latest
+      ASSET: MythosBrowser-Setup.exe
+      HAS_TOKEN: ${{ secrets.APPS_REPO_TOKEN != '' }}
+    steps:
       - name: Zugriff prüfen
         id: access
-        env:
-          HAS_TOKEN: ${{ secrets.APPS_REPO_TOKEN != '' }}
         run: |
-          if [ "${{ matrix.private }}" = "true" ] && [ "$HAS_TOKEN" != "true" ]; then
-            echo "::warning::${{ matrix.name }} übersprungen: Secret APPS_REPO_TOKEN fehlt (privates Repo ${{ matrix.repo }})."
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::warning::Browser übersprungen: Secret APPS_REPO_TOKEN fehlt (privates Repo lluananonym-cloud/mythos-browser)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-
+      - uses: actions/checkout@v4
+        if: steps.access.outputs.skip != 'true'
       - name: Quellcode holen
         if: steps.access.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
-          repository: ${{ matrix.repo }}
-          token: ${{ matrix.private && secrets.APPS_REPO_TOKEN || github.token }}
+          repository: lluananonym-cloud/mythos-browser
+          token: ${{ secrets.APPS_REPO_TOKEN }}
           path: app
-
       - name: Prüfen, ob ein neuer Build nötig ist
         if: steps.access.outputs.skip != 'true'
         id: check
         run: |
-          SHA=$(git -C app rev-parse HEAD)
-          VER=$(node -p "require('./app/package.json').version")
-          BODY=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body 2>/dev/null || true)
-          OLD_SHA=$(printf '%s' "$BODY" | sed -n 's/.*source-sha: \([0-9a-f]*\).*/\1/p' | head -1)
-          OLD_VER=$(printf '%s' "$BODY" | sed -n 's/.*version: \([0-9][0-9A-Za-z.+-]*\).*/\1/p' | head -1)
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          echo "Quelle: $VER ($SHA) · veröffentlicht: ${OLD_VER:-keine} (${OLD_SHA:-keine})"
-          if [ "$SHA" = "$OLD_SHA" ] && [ "${{ inputs.force }}" != "true" ]; then
-            echo "Keine Änderungen, nichts zu tun."
-            echo "build=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          # Nie eine ältere Version über eine neuere legen (z. B. wenn ein Installer von Hand hochgeladen wurde).
-          if [ -n "$OLD_VER" ] && node -e "
-            const p = (v) => v.split(/[.+-]/).slice(0, 3).map(Number);
-            const [a, b] = [p(process.argv[1]), p(process.argv[2])];
-            for (let i = 0; i < 3; i++) { if (a[i] !== b[i]) process.exit(a[i] < b[i] ? 0 : 1); }
-            process.exit(1);
-          " "$VER" "$OLD_VER"; then
-            echo "::warning::${{ matrix.name }}: Quelle hat Version $VER, veröffentlicht ist schon $OLD_VER. Version in package.json erhöhen, dann wird gebaut."
-            echo "build=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          echo "build=true" >> "$GITHUB_OUTPUT"
-
+          echo "VER=$(node -p "require('./app/package.json').version")" >> "$GITHUB_ENV"
+          echo "HASH=$(git -C app rev-parse --short=16 HEAD)" >> "$GITHUB_ENV"
+      - name: Prüfen (Version)
+        if: steps.access.outputs.skip != 'true'
+        id: check2
+        run: bash .github/workflows/release-check.sh
       - uses: actions/setup-node@v4
-        if: steps.check.outputs.build == 'true'
+        if: steps.check2.outputs.build == 'true'
         with:
           node-version: 20
-
       - name: Installer bauen
-        if: steps.check.outputs.build == 'true'
+        if: steps.check2.outputs.build == 'true'
         working-directory: app
         run: |
           npm install --no-audit --no-fund
-          ${{ matrix.build }}
-
-      - name: Installer veröffentlichen
-        if: steps.check.outputs.build == 'true'
+          npx electron-builder --win nsis --x64 --publish never
+      - name: Veröffentlichen
+        if: steps.check2.outputs.build == 'true'
+        env:
+          TITLE: Mythos Browser ${{ env.VER }}
         run: |
           EXE=$(ls app/dist/*.exe | grep -vi uninstall | head -1)
-          [ -n "$EXE" ] || { echo "::error::Kein .exe in app/dist gefunden"; exit 1; }
           mkdir -p out && cp "$EXE" "out/$ASSET"
-          NOTES="Automatischer Build von ${{ matrix.repo }}. Download über https://ai-mythos.lovable.app/downloads
-
-          <!-- version: ${{ steps.check.outputs.version }} -->
-          <!-- source-sha: ${{ steps.check.outputs.sha }} -->"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "${{ matrix.name }} (neueste Version)" --notes "$NOTES" --latest=false
-          gh release upload "$TAG" "out/$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "${{ matrix.name }} ${{ steps.check.outputs.version }}" --notes "$NOTES"
+          bash .github/workflows/release-publish.sh "out/$ASSET"
