@@ -9,6 +9,8 @@ import MythosBackground from "@/components/MythosBackground";
 import SplashScreen from "@/components/SplashScreen";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import Create from "./pages/Create";
 import Chat from "./pages/Chat";
 import Voice from "./pages/Voice";
 import Dashboard from "./pages/Dashboard";
@@ -52,6 +54,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/forgot-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/try" element={<Try />} />
             <Route path="/werbung" element={<Werbung />} />
@@ -59,6 +63,7 @@ const App = () => (
             <Route path="/docs" element={<Docs />} />
             <Route path="/downloads" element={<Downloads />} />
             <Route path="/app/*" element={<RequireAuth><Chat /></RequireAuth>} />
+            <Route path="/create" element={<RequireAuth><Create /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />

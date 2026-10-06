@@ -51,7 +51,7 @@ const TopNav = () => {
               <MessageSquare className="h-4 w-4 mr-1.5" />Chat
             </Button>
           </Link>
-          {/* Erstellen – placeholder route */}
+          {/* Erstellen */}
           <Link to="/create" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
               <Code2 className="h-4 w-4 mr-1.5" />Erstellen
