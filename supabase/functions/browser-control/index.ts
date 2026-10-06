@@ -26,7 +26,7 @@ Antworte AUSSCHLIESSLICH mit JSON (kein Markdown, keine Erklärung außerhalb):
 }
 
 Regeln:
-- Maximal 3 Aktionen pro Runde, danach bekommst du den neuen Seiten-Kontext.
+- Maximal 5 Aktionen pro Runde (kombiniere z.B. tippen + Enter + warten), danach bekommst du den neuen Seiten-Kontext.
 - Nutze "index" aus der Elementliste, wenn möglich; sonst "text".
 - Bei Logins, Passwörtern, Zahlungen oder Captchas: setze "done": true und bitte den Nutzer in "say", das selbst zu erledigen.
 - Wenn die Aufgabe erfüllt ist: "done": true und in "say" das Ergebnis (darf länger sein).

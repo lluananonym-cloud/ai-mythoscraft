@@ -78,6 +78,15 @@ function draw(it, i) {
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
 const AD_MD = "**📣 Werbung** · ![at](https://ai-mythos.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
+let adCache = null;
+async function pickAd() {
+  try { if (!adCache || Date.now() - adCache.at > 6e5) { const j = await (await post("ad-review", { action: "list" })).json(); adCache = { at: Date.now(), ads: j.ads || [] }; } } catch (e) { adCache = { at: Date.now(), ads: [] }; }
+  const pool = [{ house: true, weight: 3 }].concat(adCache.ads); let r = Math.random() * pool.reduce((s, a) => s + Math.max(1, a.weight), 0);
+  let ad = pool[0]; for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
+  if (ad.house) return AD_MD;
+  const s = (x) => String(x || "").replace(/[\[\]()<>*_`]/g, ""); const link = /^https?:\/\//.test(ad.link) ? ad.link : "https://" + ad.link;
+  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
+}
 function adDue(tier) {
   const today = new Date().toDateString();
   if (tier === "admin") { if (localStorage.getItem("mythos_ad_admin") === today) return false; localStorage.setItem("mythos_ad_admin", today); return true; }
@@ -422,7 +431,7 @@ async function runAgent(c, opts) {
   if (run.stopped && c.history[c.history.length - 1].role === "user") c.history.push({ role: "assistant", content: "(Vom Nutzer gestoppt.)" });
   if (reached) { noteTo(c, "🎯 Ziel erreicht: " + goal); c.goal = ""; if (c === chat) renderGoal(); }
   addTo(c, "done", run.stopped ? "■ Gestoppt nach " + took : "✓ Mythos hat " + took + " gearbeitet");
-  if (!run.stopped && adDue(window.__adTier || "free")) addTo(c, "a", AD_MD);
+  if (!run.stopped && adDue(window.__adTier || "free")) pickAd().then((md) => { addTo(c, "a", md); saveChat(c); });
   c.unfinished = !finished;
   window.mythos.working(runs.size > 0);
   if (c === chat) { setBusyUI(); renderTokens(); }

@@ -5,12 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { LogoMark } from "@/components/Logo";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const STEPS: { key: string; q: string; max: number; email?: boolean }[] = [
   { key: "produkt", q: "Hey! Ich bin Mythos AI. Wofür möchtest du Werbung machen? (Name deines Projekts, Servers, Produkts …)", max: 200 },
   { key: "link", q: "Super! Welcher Link soll in der Werbung stehen?", max: 300 },
   { key: "text", q: "Welcher kurze Werbetext soll angezeigt werden?", max: 500 },
-  { key: "zeitraum", q: "Wie lange soll die Werbung laufen und hast du ein Budget im Kopf?", max: 300 },
+  { key: "zeitraum", q: "Wie viel möchtest du monatlich ausgeben? Je höher das Budget, desto häufiger erscheint deine Werbung.", max: 300 },
   { key: "kontakt", q: "Zum Schluss: Unter welcher E-Mail-Adresse können wir dich erreichen?", max: 255, email: true },
 ];
 
@@ -36,13 +37,17 @@ export default function Werbung() {
     if (step + 1 < STEPS.length) { setStep(step + 1); setMsgs((m) => [...m, { role: "ai", text: STEPS[step + 1].q }]); return; }
     setState("sending");
     try {
+      const id = crypto.randomUUID();
+      const { error } = await supabase.from("ad_campaigns").insert({ id, product: next.produkt, link: next.link, ad_text: next.text, budget: next.zeitraum, contact: next.kontakt });
+      if (error) throw error;
+      const vorschau = `${window.location.origin}/werbung/vorschau/${id}`;
       const r = await fetch("https://formsubmit.co/ajax/lluan.anonym@gmail.com", {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ _subject: "Neue Chat-Werbung Anfrage (Mythos AI)", _template: "table", _replyto: next.kontakt, ...next }),
+        body: JSON.stringify({ _subject: "Neue Chat-Werbung Anfrage (Mythos AI)", _template: "table", _replyto: next.kontakt, ...next, vorschau_und_annehmen: vorschau }),
       });
       if (!r.ok) throw new Error();
       setState("done");
-      setMsgs((m) => [...m, { role: "ai", text: "Danke! Deine Anfrage ist raus. Wir melden uns per E-Mail bei dir, um deine Chat-Werbung zu buchen. 🚀" }]);
+      setMsgs((m) => [...m, { role: "ai", text: "Danke! Deine Anfrage ist raus. Wir melden uns per E-Mail bei dir, sobald deine Werbung geprüft ist. Bezahlt wird monatlich – die Details bekommst du per Mail. 🚀" }]);
     } catch {
       setState("ask");
       setMsgs((m) => [...m, { role: "ai", text: "Senden hat nicht geklappt. Schick deine E-Mail-Adresse bitte nochmal." }]);

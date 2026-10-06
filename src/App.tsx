@@ -27,6 +27,7 @@ import Twin from "./pages/Twin";
 import Games from "./pages/Games";
 import Try from "./pages/Try";
 import Werbung from "./pages/Werbung";
+import WerbungVorschau from "./pages/WerbungVorschau";
 import BrowserAgent from "./pages/BrowserAgent";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound.tsx";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/try" element={<Try />} />
             <Route path="/werbung" element={<Werbung />} />
+            <Route path="/werbung/vorschau/:id" element={<RequireAuth><WerbungVorschau /></RequireAuth>} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
