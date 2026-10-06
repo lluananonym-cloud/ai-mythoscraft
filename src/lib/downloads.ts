@@ -17,6 +17,12 @@ export type AppDownload = {
   /** Optionaler Installationsbefehl zum Kopieren (z. B. für die CLI) */
   install?: string;
   screenshot?: string;
+  /** "contain" für Hochformat-Screenshots (z. B. Erweiterungs-Popup) */
+  screenshotFit?: "cover" | "contain";
+  /** Datei liegt direkt auf der Website statt im GitHub-Release */
+  directUrl?: string;
+  /** Einmalige Installationsschritte, auf der Karte aufklappbar */
+  steps?: string[];
   highlights: string[];
 };
 
@@ -43,6 +49,26 @@ export const APPS: AppDownload[] = [
     free: true,
     screenshot: "/screenshots/mythos-browser.webp",
     highlights: ["Werbeblocker eingebaut", "Chrome-Erweiterungen", "Mythos Search als Standard"],
+  },
+  {
+    id: "extension",
+    name: "Mythos Browser Control",
+    tagline: "Mythos steuert deinen Chrome",
+    description: "Chrome-Erweiterung: Mythos öffnet Seiten, klickt, tippt und liest für dich, sichtbar im echten Browser. Aufgaben gibst du im Popup oder direkt im Mythos-Chat.",
+    tag: "",
+    asset: "mythos-browser.zip",
+    directUrl: "/mythos-browser.zip",
+    platform: "Chrome · Edge · Brave",
+    free: true,
+    screenshot: "/screenshots/mythos-extension.webp",
+    screenshotFit: "contain",
+    steps: [
+      "ZIP herunterladen und entpacken",
+      "chrome://extensions öffnen",
+      "Oben rechts den Entwicklermodus einschalten",
+      "„Entpackte Erweiterung laden“ klicken und den entpackten Ordner wählen",
+    ],
+    highlights: ["Klickt und tippt sichtbar für dich", "Arbeitet in mehreren Tabs gleichzeitig", "Koppelbar mit Mythos Code"],
   },
   {
     id: "notch",

@@ -141,7 +141,7 @@ const Landing = () => {
             {APPS.filter((a) => a.screenshot).map((a) => (
               <Link key={a.id} to="/downloads" className="glass-strong rounded-3xl overflow-hidden group transition-all hover:-translate-y-1 hover:border-primary/40">
                 <div className="aspect-[16/10] overflow-hidden border-b border-border/40 bg-gradient-cosmic/20 flex items-center justify-center">
-                  <img src={a.screenshot} alt={`${a.name} Screenshot`} loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform"
+                  <img src={a.screenshot} alt={`${a.name} Screenshot`} loading="lazy" className={a.screenshotFit === "contain" ? "h-[88%] w-auto rounded-lg shadow-xl translate-y-2" : "w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform"}
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                 </div>
                 <div className="p-5">
