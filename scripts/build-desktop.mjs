@@ -56,6 +56,8 @@ write(app, "package.json", JSON.stringify({
   build: {
     appId: "online.mythoscraft.mythoscode",
     productName: "Mythos Code",
+    // Kein electron-updater: ohne das sucht electron-builder ein Update-Ziel und bricht ab ("reading 'channel'").
+    publish: null,
     files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "voice.js", "tts-worker.js", "stt-worker.js", "renderer.js", "config.json", "icon.png"],
     win: { target: "nsis", icon: "icon.png" },
     nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup.exe" },
