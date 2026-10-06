@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaigns: {
+        Row: {
+          ad_text: string
+          ai_note: string | null
+          approved_at: string | null
+          budget: string
+          contact: string
+          created_at: string
+          id: string
+          link: string
+          product: string
+          status: string
+          weight: number
+        }
+        Insert: {
+          ad_text: string
+          ai_note?: string | null
+          approved_at?: string | null
+          budget: string
+          contact: string
+          created_at?: string
+          id?: string
+          link: string
+          product: string
+          status?: string
+          weight?: number
+        }
+        Update: {
+          ad_text?: string
+          ai_note?: string | null
+          approved_at?: string | null
+          budget?: string
+          contact?: string
+          created_at?: string
+          id?: string
+          link?: string
+          product?: string
+          status?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       agent_tasks: {
         Row: {
           created_at: string
@@ -1009,6 +1051,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      active_ads: {
+        Args: never
+        Returns: {
+          ad_text: string
+          id: string
+          link: string
+          product: string
+          weight: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
