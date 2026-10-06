@@ -32,7 +32,7 @@ import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import AgentBrowser from "@/components/AgentBrowser";
 import BrowserExtensionPanel from "@/components/BrowserExtensionPanel";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { isPuterModel, getPuterLabel } from "@/lib/puterAi";
 import ModelPicker from "@/components/ModelPicker";
 import { DEFAULT_MYTHOS_ID, isAllowed, mythosLabel } from "@/lib/mythosModels";
@@ -82,6 +82,12 @@ const SIDEBAR_KEY = "mythos.sidebar.collapsed";
 const Chat = () => {
   const { user, profile, isAdmin, signOut } = useAuth();
   const nav = useNavigate();
+  // Eine Route (/app/*) für alle Chats, damit die Seite beim Wechsel nicht neu startet.
+  const splat = useParams()["*"] || "";
+  const chatId = splat.match(/^c\/([^/]+)/)?.[1];
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Chat, der gerade beim Senden neu angelegt wurde – dessen URL-Wechsel darf die laufende Antwort nicht neu laden.
+  const createdIdRef = useRef<string | null>(null);
   const sub = useSubscription();
   const [paywall, setPaywall] = useState<{ open: boolean; reason?: string }>({ open: false });
   const [convs, setConvs] = useState<Conv[]>([]);
@@ -165,6 +171,10 @@ const Chat = () => {
   const loadMessages = async (id: string) => {
     setActiveId(id);
     setMobileSidebar(false);
+    setMessages([]);
+    const { data: conv } = await supabase.from("conversations").select("id,mode").eq("id", id).maybeSingle();
+    if (!conv) { toast.error("Chat nicht gefunden"); nav("/app", { replace: true }); return; }
+    setMode((conv as { mode: string }).mode);
     const { data } = await supabase.from("messages").select("*").eq("conversation_id", id).order("created_at");
     if (data) {
       const enriched = (data as any[]).map(m => ({
@@ -181,8 +191,24 @@ const Chat = () => {
       })) as Msg[];
       setMessages(enriched);
     }
-    const c = convs.find(c => c.id === id);
-    if (c) setMode(c.mode);
+  };
+
+  // Die URL bestimmt den offenen Chat: /app = neuer Chat, /app/c/<id> = genau dieser Chat.
+  useEffect(() => {
+    if (!user) return;
+    if (chatId) {
+      if (createdIdRef.current === chatId) { createdIdRef.current = null; return; }
+      loadMessages(chatId);
+    } else {
+      setActiveId(null);
+      setMessages([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, user]);
+
+  const openChat = (id: string) => {
+    setMobileSidebar(false);
+    if (id !== chatId) nav(`/app/c/${id}`);
   };
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
@@ -191,11 +217,12 @@ const Chat = () => {
     setActiveId(null);
     setMessages([]);
     setMobileSidebar(false);
+    if (chatId) nav("/app");
   };
 
   const deleteChat = async (id: string) => {
     await supabase.from("conversations").delete().eq("id", id);
-    if (activeId === id) { setActiveId(null); setMessages([]); }
+    if (activeId === id) { setActiveId(null); setMessages([]); nav("/app", { replace: true }); }
     loadConvs();
   };
 
@@ -383,6 +410,8 @@ const Chat = () => {
       if (error || !data) { toast.error("Chat konnte nicht erstellt werden"); setSending(false); return; }
       convId = data.id;
       setActiveId(convId);
+      createdIdRef.current = convId;
+      nav(`/app/c/${convId}`, { replace: true });
       loadConvs();
     }
 
@@ -702,6 +731,19 @@ const Chat = () => {
 
   useEffect(() => { sendRef.current = send; });
 
+  // Von der Startseite: /app?q=... schickt die Nachricht direkt in einem neuen Chat ab.
+  const startedFromHomeRef = useRef(false);
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q || startedFromHomeRef.current || !user || sub.loading || chatId) return;
+    startedFromHomeRef.current = true;
+    const m = searchParams.get("mode");
+    if (m && MODES.some(x => x.value === m)) setMode(m);
+    setSearchParams({}, { replace: true });
+    setTimeout(() => sendRef.current?.(q), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user, sub.loading, chatId]);
+
   useEffect(() => {
     if (!voiceMode || sending) return;
     const last = messages[messages.length - 1];
@@ -824,7 +866,7 @@ const Chat = () => {
               className={`group flex items-center gap-2 rounded-lg pl-3 pr-1 py-2 text-sm cursor-pointer transition-colors ${
                 activeId === c.id ? "bg-white/10 text-foreground" : "hover:bg-white/5 text-foreground/80"
               }`}
-              onClick={() => loadMessages(c.id)}
+              onClick={() => openChat(c.id)}
             >
               <span className="truncate flex-1">{c.title}</span>
               <button
