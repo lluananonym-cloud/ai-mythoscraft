@@ -5,8 +5,9 @@ import TopNav from "@/components/TopNav";
 import Logo from "@/components/Logo";
 import {
   Sparkles, Zap, Shield, Code2, Brain, MessageSquare, Server, Key, ArrowRight, Check, Crown,
-  Film, Music, AudioLines, Image as ImageIcon,
+  Film, Music, AudioLines, Image as ImageIcon, Download, Monitor,
 } from "lucide-react";
+import { APPS } from "@/lib/downloads";
 import { useAuth } from "@/hooks/useAuth";
 import UpgradeDialog from "@/components/UpgradeDialog";
 import { TIER_LIMITS } from "@/hooks/useSubscription";
@@ -126,6 +127,42 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* Desktop apps showcase (Pro) */}
+        <section className="container pb-24" id="desktop">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-5">
+              <Crown className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Exklusiv mit Pro</span>
+            </div>
+            <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">Mythos auch auf deinem PC</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Coding-Agent, Browser und Notch als Programme für Windows. Mit einem Klick herunterladen, immer in der neuesten Version.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {APPS.filter((a) => a.screenshot).map((a) => (
+              <Link key={a.id} to="/downloads" className="glass-strong rounded-3xl overflow-hidden group transition-all hover:-translate-y-1 hover:border-primary/40">
+                <div className="aspect-[16/10] overflow-hidden border-b border-border/40 bg-gradient-cosmic/20 flex items-center justify-center">
+                  <img src={a.screenshot} alt={`${a.name} Screenshot`} loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Monitor className="h-4 w-4 text-primary" />
+                    <span className="font-display font-bold">{a.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{a.tagline}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link to="/downloads">
+              <Button size="lg" className="bg-gradient-primary text-primary-foreground hover:opacity-90 glow-primary text-base px-8 h-12">
+                <Download className="h-5 w-5 mr-2" /> Zu den Downloads
+              </Button>
+            </Link>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section className="container pb-24" id="pricing">
           <div className="text-center mb-12">
@@ -138,7 +175,7 @@ const Landing = () => {
               { key:"light", name:"Light", icon: Zap, accent:"from-sky-400 to-indigo-500", tag:"Mitte",
                 features:[`${TIER_LIMITS.light.chatsPerDay} Chats / Tag`,"Bilder generieren","Alle Personas","Keine Werbung"] },
               { key:"pro",   name:"Pro",   icon: Crown, accent:"from-fuchsia-500 to-rose-500", tag:"Beliebt", highlight:true,
-                features:["Unbegrenzte Chats","Live-Sprachchat","Bilder · Musik · Video","Priorität bei Updates"] },
+                features:["Unbegrenzte Chats","Live-Sprachchat","Bilder · Musik · Video","Desktop-Apps: Code, Browser, Notch","Priorität bei Updates"] },
             ].map((p:any) => (
               <div key={p.key} className={`relative glass-strong rounded-3xl p-7 transition-all hover:-translate-y-1 ${p.highlight ? "border-primary/60 ring-1 ring-primary/30 glow-primary" : ""}`}>
                 {p.tag && (
@@ -191,6 +228,7 @@ const Landing = () => {
                   { name: "Video‑Generierung", free: false, light: false, pro: true },
                   { name: "Downloads/Modelle", free: false, light: true, pro: true },
                   { name: "Browser‑Rendering", free: true, light: true, pro: true },
+                  { name: "Desktop‑Apps (Code, Browser, Notch)", free: false, light: false, pro: true },
                 ].map((row, i) => (
                   <tr key={i} className="bg-transparent hover:bg-white/5 transition-colors">
                     <td className="px-4 py-2 font-medium text-foreground/80">{row.name}</td>

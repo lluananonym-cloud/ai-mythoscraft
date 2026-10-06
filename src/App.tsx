@@ -14,6 +14,7 @@ import Voice from "./pages/Voice";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Docs from "./pages/Docs";
+import Downloads from "./pages/Downloads";
 import Redeem from "./pages/Redeem";
 import Memories from "./pages/Memories";
 import Personas from "./pages/Personas";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/try" element={<Try />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/downloads" element={<Downloads />} />
             <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
