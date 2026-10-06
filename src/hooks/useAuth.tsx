@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { captureInviteRef, redeemPendingInvite } from "@/lib/invite";
 
 interface Profile {
   display_name: string | null;
@@ -47,11 +48,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, loadExtras]);
 
   useEffect(() => {
+    captureInviteRef();
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadExtras(s.user.id), 0);
+        setTimeout(() => { loadExtras(s.user.id); redeemPendingInvite(); }, 0);
       } else {
         setIsAdmin(false);
         setProfile(null);

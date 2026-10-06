@@ -29,6 +29,7 @@ const Auth = () => {
   const rawNext = params.get("next") || "";
   // Nur interne Pfade zulassen (kein Open Redirect).
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/app";
+  const invited = !!params.get("ref");
 
   useEffect(() => {
     if (user) nav(next);
@@ -78,7 +79,12 @@ const Auth = () => {
         </div>
       </div>
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md animate-fade-in">
-        <Tabs defaultValue="signin" className="w-full">
+        {invited && (
+          <div className="mb-5 rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-center">
+            🎁 Du wurdest eingeladen! Registriere dich und bekomme <b>7 Tage Light gratis</b>.
+          </div>
+        )}
+        <Tabs defaultValue={invited ? "signup" : "signin"} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary/50">
             <TabsTrigger value="signin">Login</TabsTrigger>
             <TabsTrigger value="signup">Registrieren</TabsTrigger>

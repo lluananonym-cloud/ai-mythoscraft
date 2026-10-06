@@ -6,6 +6,7 @@ import TopNav from "@/components/TopNav";
 import MinecraftSkin3D from "@/components/MinecraftSkin3D";
 import MinecraftAvatar from "@/components/MinecraftAvatar";
 import McLinkPanel from "@/components/McLinkPanel";
+import InvitePanel from "@/components/InvitePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,7 @@ import { PUTER_MODELS, DEFAULT_MODEL_ID } from "@/lib/puterAi";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon, ShieldCheck, MessageSquare } from "lucide-react";
+import { Plus, Key, Trash2, Copy, Check, BarChart3, Save, User as UserIcon, ShieldCheck, MessageSquare, Gift } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPersistentSessionEnabled, setPersistentSessionEnabled } from "@/lib/persistentSession";
 import { toast } from "sonner";
@@ -29,7 +30,8 @@ type ApiKey = {
 const Dashboard = () => {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "profile" ? "profile" : "keys";
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam === "profile" || tabParam === "invite" ? tabParam : "keys";
 
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [name, setName] = useState("");
@@ -114,11 +116,12 @@ const Dashboard = () => {
 
         <Tabs
           value={initialTab}
-          onValueChange={(v) => setSearchParams(v === "profile" ? { tab: "profile" } : {})}
+          onValueChange={(v) => setSearchParams(v === "keys" ? {} : { tab: v })}
         >
           <TabsList className="bg-secondary/50">
             <TabsTrigger value="keys"><Key className="h-3.5 w-3.5 mr-1.5" />API Keys</TabsTrigger>
             <TabsTrigger value="profile"><UserIcon className="h-3.5 w-3.5 mr-1.5" />Profil</TabsTrigger>
+            <TabsTrigger value="invite"><Gift className="h-3.5 w-3.5 mr-1.5" />Einladen</TabsTrigger>
           </TabsList>
 
           {/* ========== KEYS TAB ========== */}
@@ -384,6 +387,11 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* ========== INVITE TAB ========== */}
+          <TabsContent value="invite" className="mt-6">
+            <InvitePanel />
           </TabsContent>
         </Tabs>
       </main>
