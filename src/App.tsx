@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import RequireAuth from "@/components/RequireAuth";
 import MythosBackground from "@/components/MythosBackground";
 import SplashScreen from "@/components/SplashScreen";
-import Landing from "./pages/Landing";
+import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
 import Voice from "./pages/Voice";
@@ -50,7 +50,7 @@ const App = () => (
           <SplashScreen />
           <MythosBackground />
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<RequireAuth skipOnboarding><Onboarding /></RequireAuth>} />
             <Route path="/try" element={<Try />} />
@@ -58,7 +58,7 @@ const App = () => (
             <Route path="/werbung/vorschau/:id" element={<RequireAuth><WerbungVorschau /></RequireAuth>} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/downloads" element={<Downloads />} />
-            <Route path="/app" element={<RequireAuth><Chat /></RequireAuth>} />
+            <Route path="/app/*" element={<RequireAuth><Chat /></RequireAuth>} />
             <Route path="/voice" element={<RequireAuth><Voice /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
