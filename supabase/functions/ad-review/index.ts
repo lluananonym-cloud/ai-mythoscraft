@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       let weight = 3, note = "Standard-Häufigkeit";
       try {
         const out = await aiText({
-          model: "google/gemini-3-flash-preview",
+          model: "openai/gpt-6-astra", reasoning_effort: "low",
           messages: [
             { role: "system", content: "Du bewertest Werbebudgets für Chat-Werbung (monatliche Zahlung). Antworte NUR als JSON {\"weight\":1-10,\"note\":\"kurze Begründung\"}. 1 = sehr kleines Budget (selten), 10 = sehr großes Budget (sehr häufig). Unklare Angaben = 3." },
             { role: "user", content: `Produkt: ${ad.product}\nBudget/Laufzeit: ${ad.budget}` },
