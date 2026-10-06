@@ -2,6 +2,7 @@
 // schickt Aufgaben dorthin (laufen im gerade auf dem PC geöffneten Chat, wie normal eingetippt).
 // Braucht keine eigene Anmeldung – der Kopplungscode ist der Schlüssel, wie bei einer Smart-TV-App.
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import TopNav from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,12 @@ type Task = { id: string; prompt: string; status: "pending" | "running" | "done"
 
 const call = async (body: Record<string, unknown>) => {
   const { data, error } = await supabase.functions.invoke("remote", { body });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Bei Fehlern steht die eigentliche Meldung im Antwort-Body, nicht in error.message.
+    let msg = error.message;
+    try { const b = await (error as { context?: Response }).context?.json(); if (b?.error) msg = b.error; } catch { /* kein JSON */ }
+    throw new Error(msg);
+  }
   if (data?.error) throw new Error(data.error);
   return data;
 };
@@ -24,7 +30,9 @@ const CodeControl = () => {
   const [pair, setPair] = useState<Pair | null>(() => {
     try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
   });
-  const [code, setCode] = useState("");
+  // /koppeln 123456 im Web-Chat öffnet diese Seite mit ?code=123456
+  const [params] = useSearchParams();
+  const [code, setCode] = useState(() => (params.get("code") || "").replace(/\D/g, "").slice(0, 6));
   const [connecting, setConnecting] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);

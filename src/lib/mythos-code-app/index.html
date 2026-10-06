@@ -58,7 +58,23 @@ textarea::placeholder{color:#737373}
 .main2{flex:1;display:flex;min-height:0}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 aside{width:250px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
-#btnNew{justify-content:center;padding:9px;margin-bottom:6px}
+.nav{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;font-size:14px;color:#e5e5e5;text-align:left;cursor:pointer}
+.nav:hover{background:rgba(255,255,255,.05)}.nav .ic{width:20px;text-align:center;opacity:.85}
+.nav .plus{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.1);font-size:12px}
+#navProj button{margin-left:auto;color:var(--muted);font-size:15px;padding:0 4px}#navProj button:hover{color:var(--fg)}
+#plist{padding-left:22px}
+.search.big{display:block;width:calc(100% - 8px);font-size:14px;padding:9px 12px;margin-bottom:8px}
+.mpick{position:relative}#modelBtn b{font-weight:600}#modelBtn .eff{color:var(--muted)}#modelBtn .car{opacity:.6}
+#modelMenu{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:70;width:290px;flex-direction:column;gap:2px;padding:6px;border-radius:14px}
+#modelMenu .mm{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 10px;border-radius:10px;text-align:left}
+#modelMenu .mm.row{flex-direction:row;align-items:baseline;gap:8px;padding:6px 10px}
+#modelMenu .mm:hover{background:rgba(255,255,255,.06)}#modelMenu .mm.on{background:rgba(167,139,250,.14)}
+#modelMenu .mm .mt{font-size:13px;color:var(--fg)}#modelMenu .mm .md{font-size:11px;color:var(--muted)}
+#modelMenu .mmsec{font-size:11px;color:var(--muted);padding:10px 10px 4px;border-top:1px solid var(--line);margin-top:4px}
+.art{border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}.art .ah{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:12px;color:var(--muted)}
+.art .ah .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
+.art pre{margin:0;max-height:180px;overflow:auto;padding:10px;font-size:11.5px;background:rgba(0,0,0,.25)}.art img{display:block;max-width:100%;max-height:260px}
+.gimg img{max-width:min(520px,100%);border-radius:14px;border:1px solid var(--line);display:block;margin-top:6px}
 .sec{display:flex;align-items:center;justify-content:space-between;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 8px 4px}
 .sec button{font-size:15px;color:var(--muted);padding:0 4px}.sec button:hover{color:var(--fg)}
 .item{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:10px;font-size:13px;color:#d4d4d4;cursor:pointer}
@@ -200,7 +216,7 @@ body.light select.chip option{background:#fff;color:#141414}
 body.light .btn,body.light #btnSend{background:#141414;color:#fff}
 body.light #btnUp{background:rgba(0,0,0,.05)}
 body.light .composer{box-shadow:0 6px 24px rgba(0,0,0,.08)}
-body.light .item,body.light .trow,body.light #termout{color:#333}
+body.light .item,body.light .trow,body.light #termout,body.light .nav{color:#333}
 body.light .item:hover,body.light .trow:hover,body.light .hit:hover{background:rgba(0,0,0,.04)}
 body.light .item.on{background:rgba(0,0,0,.07)}
 body.light .t{color:#555;background:rgba(0,0,0,.03)}
@@ -236,17 +252,18 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
 <div id="app" class="screen" style="display:none">
   <header>
     <div class="brand"><img src="icon.png" alt=""><span class="serif">Mythos Code</span></div>
+    <div class="mpick"><button class="chip" id="modelBtn" title="Modell und Aufwand"></button><div id="modelMenu" class="glass"></div></div>
     <button class="chip" id="btnFolder" title="Arbeitsordner wählen">📁 <span id="folder">Ordner wählen</span></button>
     <button class="chip mono" id="git" style="display:none">⎇ <span id="gitb"></span></button>
     <button class="chip" id="mcp" style="display:none">🔌</button>
-    <button class="chip" id="plugins" title="MCP & Plugins">◫ Verbindungen</button>
+    <button class="chip" id="plugins" title="MCP & Plugins" style="display:none">◫ Verbindungen</button>
     <button class="chip" id="schedchip" style="display:none" title="Geplante Aufgaben">⏰</button>
     <button class="chip" id="wakechip" style="display:none" title="Mikrofon hört auf „Hey Mythos“ – klicken zum Ausschalten">👂 Hey Mythos</button>
     <span class="sp"></span>
     <button class="chip icon" id="btnPreview" title="Live-Vorschau (/vorschau)">👁</button>
     <button class="chip icon" id="btnTree" title="Dateibaum (/dateien)">🗂</button>
     <button class="chip icon" id="btnTerm" title="Terminal (/terminal)">⌨</button>
-    <select class="chip" id="model" title="Modell"></select>
+    <select class="chip" id="model" title="Modell" style="display:none"></select>
     <span class="chip mono" id="timer">⏱ 0s</span>
     <button class="chip mono" id="tokens" title="Geschätzte Tokens in diesem Chat">≈ 0 Tokens</button>
     <span class="chip" id="usage">Usage …</span>
@@ -255,12 +272,15 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
   </header>
   <div class="main2">
   <aside id="side">
-    <button class="chip" id="btnNew">＋ Neuer Chat</button>
-    <div class="sec">Projekte <button id="btnAddProj" title="Projekt hinzufügen">＋</button></div>
+    <input id="csearch" class="search big" placeholder="🔎  Suchen">
+    <button class="nav" id="btnNew"><span class="plus">＋</span>Neu</button>
+    <div class="nav" id="navProj"><span class="ic">🗀</span>Projekte<button id="btnAddProj" title="Projekt hinzufügen">＋</button></div>
     <div id="plist"></div>
+    <button class="nav" id="navArt"><span class="ic">◇</span>Artifacts</button>
+    <button class="nav" id="navRout"><span class="ic">◷</span>Routinen</button>
+    <button class="nav" id="navCust"><span class="ic">⚙</span>Anpassungen</button>
     <div id="asec" style="display:none"><div class="sec">Arbeitet gerade</div><div id="alist"></div></div>
     <div class="sec">Chats</div>
-    <input id="csearch" class="search" placeholder="🔎 Chats durchsuchen…">
     <div id="clist"></div>
   </aside>
   <div class="main">
@@ -320,7 +340,8 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
   </aside>
   </div>
 </div>
-<div id="connections" class="connect-modal"><div class="connect-box glass"><div class="connect-head"><span>◫</span><h2 class="serif">Verbindungen</h2><button id="connClose" class="chip">Schließen</button></div><div id="connBody"></div></div></div>
+<div id="artifacts" class="connect-modal"><div class="connect-box glass"><div class="connect-head"><span>◇</span><h2 class="serif">Artifacts</h2><button id="artClose" class="chip">Schließen</button></div><div id="artBody"></div></div></div>
+<div id="connections" class="connect-modal"><div class="connect-box glass"><div class="connect-head"><span>⚙</span><h2 class="serif">Anpassungen</h2><button id="connClose" class="chip">Schließen</button></div><div id="connBody"></div></div></div>
 <div id="editor">
   <div class="edbox glass">
     <div class="phead"><span id="edpath" class="mono"></span><span class="sp"></span>

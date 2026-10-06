@@ -68,6 +68,14 @@ function draw(it, i) {
   } else if (it.cls === "diff") d = diffBox(it);
   else if (it.cls === "agents") { d = el("div", "agents"); renderAgents(d, it); agentEls.set(it, d); }
   else if (it.cls === "todo") { d = el("div", "todo"); renderTodo(d, it); todoEls.set(it, d); }
+  else if (it.cls === "gimg") {
+    d = el("div", "m a gimg"); const ic = el("img"); ic.src = "icon.png";
+    const b = el("div", "body"); b.appendChild(el("div", "", "🎨 " + it.text));
+    const im = el("img"); im.src = it.src; im.alt = it.text; b.appendChild(im);
+    const sv = el("button", "chip", "💾 Speichern"); sv.style.marginTop = "8px";
+    sv.onclick = () => { const a = document.createElement("a"); a.href = it.src; a.download = "mythos-bild.jpg"; a.click(); };
+    b.appendChild(sv); d.append(ic, b);
+  }
   else if (it.cls === "out") { d = el("details", "out"); d.append(el("summary", "", "▸ Ausgabe von " + (it.cmd || "Befehl")), el("pre", "", it.text)); }
   else if (it.cls === "done") {
     d = el("div", "t done", it.text);
@@ -181,7 +189,7 @@ async function once(run, messages, system, onText, onThink) {
   try {
     const r = await fetch(CFG.fn + "/v1-messages", { method: "POST", signal: c.signal,
       headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: run.model, max_tokens: 8000, system: system, messages: messages, stream: true }) });
+      body: JSON.stringify({ model: run.model, effort: cfg.effort || "normal", max_tokens: EFFORT_TOKENS[cfg.effort] || 8000, system: system, messages: messages, stream: true }) });
     if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error((j.error && j.error.message) || ("HTTP " + r.status)); e.status = r.status; throw e; }
     const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", out = "", think = "", outTok = 0;
     for (;;) { const x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true }); let i;
@@ -520,11 +528,33 @@ function renderMcp() {
   b.title = mcpStatus.map((s) => s.name + ": " + s.status + (s.error ? " (" + s.error + ")" : "") + " · " + s.tools.length + " Werkzeuge").join("\n");
 }
 async function refreshBrowser() { browserStatus = await window.mythos.browser.start().catch(() => ({ running: false, paired: false, connected: false })); renderConnections(); }
+/** Formular „Connector hinzufügen“ – URL (Streamable HTTP) oder Befehl (z. B. npx …), wie bei Claude. */
+function mcpAddForm() {
+  const c = el("div", "conn"), f = el("div", "conn-actions");
+  c.appendChild(el("strong", "", "＋ Connector hinzufügen"));
+  c.appendChild(el("div", "meta", "MCP-Server-URL (https://…) oder ein Startbefehl wie „npx -y @modelcontextprotocol/server-github“. Gilt für alle Projekte."));
+  const name = el("input", "search"), target = el("input", "search"), auth = el("input", "search");
+  name.placeholder = "Name, z. B. GitHub"; target.placeholder = "https://…/mcp  oder  npx -y …"; auth.placeholder = "Authorization (optional), z. B. Bearer …"; auth.type = "password";
+  [name, target, auth].forEach((i) => { i.style.flex = "1"; i.style.margin = "0"; });
+  const add = el("button", "chip", "Hinzufügen");
+  add.onclick = async () => {
+    const t = target.value.trim(); if (!t) return target.focus();
+    let entry;
+    if (/^https?:\/\//i.test(t)) { entry = { type: "http", url: t }; if (auth.value.trim()) entry.headers = { Authorization: auth.value.trim() }; }
+    else { const parts = t.match(/(?:[^\s"]+|"[^"]*")+/g).map((x) => x.replace(/^"|"$/g, "")); entry = { command: parts[0], args: parts.slice(1) }; }
+    const n = name.value.trim() || (entry.url ? new URL(entry.url).hostname : entry.command);
+    if (!(await window.mythos.mcp.add(n, entry))) return note("⚠ Connector konnte nicht gespeichert werden.");
+    await configureMcp(); renderConnections(); note("🔌 Connector „" + n + "“ hinzugefügt – Mythos kann seine Werkzeuge jetzt benutzen.");
+  };
+  f.append(name, target); const f2 = el("div", "conn-actions"); f2.append(auth, add);
+  c.append(f, f2); return c;
+}
 function renderConnections() {
   const box = $("connBody"); if (!box) return; box.textContent = "";
   const title = el("div", "hint", "MCP-SERVER"); box.appendChild(title);
-  if (!mcpStatus.length) box.appendChild(el("div", "conn", "Keine MCP-Server eingerichtet."));
-  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.error || s.status)); const acts = el("div", "conn-actions"), retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); c.append(acts); box.append(c); });
+  if (!mcpStatus.length) box.appendChild(el("div", "conn", "Noch keine Connectoren."));
+  box.appendChild(mcpAddForm());
+  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.error || s.status)); const acts = el("div", "conn-actions"), retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); if (s.scope === "global") { const rm = el("button", "chip", "Entfernen"); rm.onclick = async () => { if (!confirm("Connector „" + s.name + "“ entfernen?")) return; await window.mythos.mcp.remove(s.name); await configureMcp(); renderConnections(); }; acts.append(rm); } c.append(acts); box.append(c); });
   box.appendChild(el("div", "hint", "PLUGINS")); const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (browserStatus.connected ? "ok" : browserStatus.paired ? "" : "bad")); top.append(dot, el("strong", "", "Mythos Browser Control"), el("span", "chip", browserStatus.connected ? "verbunden" : browserStatus.paired ? "wartet" : "nicht gekoppelt")); c.append(top, el("div", "meta", "Steuert den sichtbaren Browser. Login, Passwort, Zahlung und Captcha bleiben immer bei dir.")); if (!browserStatus.paired) c.append(el("div", "paircode", browserStatus.code || "------"), el("div", "meta", "Diesen Code im Browser-Plugin unter „Mit Mythos Code koppeln“ eingeben.")); const actions = el("div", "conn-actions"), reset = el("button", "chip", browserStatus.paired ? "Neu koppeln" : "Neuen Code"); reset.onclick = async () => { browserStatus = await window.mythos.browser.reset(); renderConnections(); }; actions.append(reset); c.append(actions); box.append(c);
 }
 function openConnections() { $("connections").classList.add("open"); refreshBrowser(); }
@@ -575,6 +605,7 @@ const COMMANDS = [
   ["/browser", "<aufgabe>", "Aufgabe an das gekoppelte Browser-Plugin senden"],
   ["/hooks", "[bearbeiten|global]", "Hooks anzeigen und einrichten"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
+  ["/bild", "<beschreibung>", "Bild generieren (wie /image auf der Website)"],
   ["/koppeln", "[aus]", "Mit der Mythos-Handy-App koppeln, um diesen Chat von unterwegs fernzusteuern"],
   ["/warteschlange", "[leeren]", "Warteschlange anzeigen oder leeren"],
   ["/suche", "<text>", "Alle Chats durchsuchen"],
@@ -632,6 +663,7 @@ async function remoteRunTask(task) {
 async function command(q) {
   const cmd = q.split(/\s+/)[0].toLowerCase(), arg = q.slice(cmd.length).trim();
   if (cmd !== "/goal" && cmd !== "/ziel" && editing != null) { editing = null; renderEdit(); }
+  if (cmd === "/bild" || cmd === "/image") return generateImage(arg);
   if (cmd === "/koppeln") {
     if (/^(aus|stop|trennen)$/i.test(arg)) { remoteStop(); note("📱 Kopplung getrennt."); return; }
     if (remotePair && remotePair.claimed) { note("📱 Handy ist schon gekoppelt" + (remotePair.device ? " (" + remotePair.device + ")" : "") + ". Mit **/koppeln aus** trennen."); return; }
@@ -786,15 +818,102 @@ function renderSlash() {
   });
 }
 
-// ---------- Einstellungen: Modell, Design, automatisch testen ----------
-function setModel(id) {
-  cfg.model = id; window.mythos.setCfg(cfg); $("model").value = id;
-  const m = prompts.models.find((x) => x.id === id); note("🧠 Modell: " + (m ? m.label : id) + " – gilt ab der nächsten Aufgabe.");
+// ---------- Artifacts: geänderte Dateien, Code-Blöcke und Bilder aus deinen Chats ----------
+async function openArtifacts() {
+  $("artifacts").classList.add("open");
+  const body = $("artBody"); body.textContent = ""; body.appendChild(el("div", "hint", "Lade …"));
+  let metas = []; try { metas = (await window.mythos.chats.list()).slice(0, 40); } catch (e) { /* leer */ }
+  const items = [];
+  for (const meta of metas) {
+    const c = runs.has(meta.id) ? runs.get(meta.id).chat : (chat && chat.id === meta.id ? chat : await window.mythos.chats.get(meta.id).catch(() => null));
+    if (!c || !c.view) continue;
+    for (const v of c.view) {
+      if (v.cls === "gimg") items.push({ kind: "img", chat: c, title: v.text, src: v.src });
+      else if (v.cls === "diff") items.push({ kind: "file", chat: c, title: v.path, sub: "+" + v.d.added + " −" + v.d.removed, text: v.d.lines.filter((l) => l[0] !== "-").map((l) => l[1]).join("\n") });
+      else if ((v.cls === "a" || v.cls === "sum") && v.text) {
+        const re = /```([\w+-]*)\n([\s\S]*?)```/g; let m;
+        while ((m = re.exec(v.text))) if (m[2].split("\n").length >= 3) items.push({ kind: "code", chat: c, title: m[1] || "Code", text: m[2].trimEnd() });
+      }
+    }
+    if (items.length > 150) break;
+  }
+  body.textContent = "";
+  if (!items.length) return body.appendChild(el("div", "hint", "Noch nichts erstellt. Geänderte Dateien, Code und Bilder aus deinen Chats landen automatisch hier."));
+  items.forEach((it) => {
+    const box = el("div", "art"), head = el("div", "ah");
+    head.append(el("span", "", it.kind === "img" ? "🖼" : it.kind === "file" ? "✎" : "⟨⟩"), el("span", "n", it.title), el("span", "", it.sub || (it.chat.title || "Chat")));
+    if (it.text) { const cp = el("button", "chip", "Kopieren"); cp.onclick = () => { navigator.clipboard.writeText(it.text); cp.textContent = "✓ Kopiert"; }; head.appendChild(cp); }
+    const go = el("button", "chip", "Zum Chat"); go.onclick = () => { $("artifacts").classList.remove("open"); openChat(it.chat.id); }; head.appendChild(go);
+    box.appendChild(head);
+    if (it.kind === "img") { const im = el("img"); im.src = it.src; box.appendChild(im); }
+    else box.appendChild(el("pre", "", it.text.slice(0, 4000)));
+    body.appendChild(box);
+  });
+}
+
+// ---------- /bild: Bild generieren (gleicher Dienst wie /image auf der Website) ----------
+async function generateImage(prompt) {
+  if (!prompt) return note("So geht's: /bild <beschreibung>\nBeispiel: /bild ein Logo für meine App, minimalistisch, violett");
+  const n = flash("🎨 Erstelle Bild: " + prompt + " …");
+  try {
+    const r = await (await post("image-gen", { prompt })).json();
+    if (!r.url) throw new Error(r.error || "kein Bild");
+    // Die App darf nur data:-Bilder anzeigen (Sicherheitsregel) -> Bild laden und umwandeln.
+    let src = r.url;
+    if (!/^data:/.test(src)) {
+      const blob = await (await fetch(src)).blob();
+      src = await readAs(blob, "readAsDataURL");
+      const small = await shrinkImage(blob.type || "image/png", String(src).split(",")[1]);
+      if (small) src = "data:" + small.media_type + ";base64," + small.data;
+    }
+    add("gimg", prompt, { src });
+    saveChat(chat);
+  } catch (e) { note("⚠ Bild fehlgeschlagen: " + e.message); }
+  finally { n.remove(); }
+}
+
+// ---------- Einstellungen: Modell + Aufwand (oben, wie bei Claude), Design, automatisch testen ----------
+const EFFORTS = [
+  { id: "low", label: "Schnell", desc: "kurze Antworten, wenig Nachdenken" },
+  { id: "normal", label: "Normal", desc: "ausgewogen" },
+  { id: "high", label: "Gründlich", desc: "denkt länger nach" },
+  { id: "max", label: "Maximal", desc: "größte Tiefe, am langsamsten" },
+];
+const EFFORT_TOKENS = { low: 4000, normal: 8000, high: 16000, max: 32000 };
+function setModel(id, quiet) {
+  cfg.model = id; window.mythos.setCfg(cfg); $("model").value = id; renderModelBtn();
+  const m = prompts.models.find((x) => x.id === id); if (!quiet) note("🧠 Modell: " + (m ? m.label : id) + " – gilt ab der nächsten Aufgabe.");
+}
+function setEffort(id) { cfg.effort = id; window.mythos.setCfg(cfg); renderModelBtn(); }
+function renderModelBtn() {
+  const m = prompts.models.find((x) => x.id === (cfg.model || "mythos-code")) || prompts.models[0];
+  const e = EFFORTS.find((x) => x.id === (cfg.effort || "normal"));
+  $("modelBtn").textContent = ""; $("modelBtn").append(el("b", "", m ? m.label : "Modell"), el("span", "eff", e.label), el("span", "car", "▾"));
+}
+function renderModelMenu() {
+  const box = $("modelMenu"); box.textContent = "";
+  prompts.models.forEach((m) => {
+    const b = el("button", "mm" + (m.id === (cfg.model || "mythos-code") ? " on" : ""));
+    b.append(el("span", "mt", m.label), el("span", "md", m.desc)); b.onclick = () => { setModel(m.id, true); renderModelMenu(); };
+    box.appendChild(b);
+  });
+  box.appendChild(el("div", "mmsec", "Aufwand"));
+  EFFORTS.forEach((e) => {
+    const b = el("button", "mm row" + (e.id === (cfg.effort || "normal") ? " on" : ""));
+    b.append(el("span", "mt", e.label), el("span", "md", e.desc)); b.onclick = () => { setEffort(e.id); renderModelMenu(); };
+    box.appendChild(b);
+  });
+}
+function toggleModelMenu(open) {
+  const box = $("modelMenu"), on = open ?? box.style.display !== "flex";
+  if (on) renderModelMenu();
+  box.style.display = on ? "flex" : "none";
 }
 function renderModels() {
   const s = $("model"); s.textContent = "";
   prompts.models.forEach((m) => { const o = el("option", "", m.label); o.value = m.id; o.title = m.desc; s.appendChild(o); });
   s.value = cfg.model || "mythos-code";
+  renderModelBtn();
 }
 function applyTheme() { document.body.classList.toggle("light", cfg.theme === "light"); $("btnTheme").textContent = cfg.theme === "light" ? "🌙" : "☀"; }
 function setTheme(t) { cfg.theme = t; window.mythos.setCfg(cfg); applyTheme(); }
@@ -1105,6 +1224,12 @@ $("csearch").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeo
 $("git").onclick = () => command("/git");
 $("schedchip").onclick = () => command("/geplant");
 $("mcp").onclick = () => command("/mcp");
+$("modelBtn").onclick = (e) => { e.stopPropagation(); toggleModelMenu(); };
+document.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest(".mpick")) $("modelMenu").style.display = "none"; });
+$("navProj").onclick = (e) => { if (e.target.id !== "btnAddProj") pickProject(); };
+$("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
+$("artClose").onclick = () => $("artifacts").classList.remove("open");
+$("artifacts").onclick = (e) => { if (e.target === $("artifacts")) $("artifacts").classList.remove("open"); };
 $("plugins").onclick = openConnections; $("connClose").onclick = () => $("connections").classList.remove("open"); $("connections").onclick = (e) => { if (e.target === $("connections")) $("connections").classList.remove("open"); };
 $("tokens").onclick = () => command("/tokens");
 $("model").onchange = () => setModel($("model").value);

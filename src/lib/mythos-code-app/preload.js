@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld("mythos", {
   safety: { check: inv("safety:check"), status: inv("safety:status"), project: inv("project:config") },
   tests: { detect: inv("tests:detect"), run: inv("tests:run") },
   hooks: { run: inv("hooks:run"), list: inv("hooks:list") },
-  mcp: { configure: inv("mcp:configure"), status: inv("mcp:status"), restart: inv("mcp:restart"), onChange: on("mcp-changed") },
+  mcp: { configure: inv("mcp:configure"), status: inv("mcp:status"), restart: inv("mcp:restart"), add: inv("mcp:add"), remove: inv("mcp:remove"), onChange: on("mcp-changed") },
   browser: { start: inv("browser:start"), state: inv("browser:state"), reset: inv("browser:pair-reset"), task: inv("browser:task"), stop: inv("browser:stop"), onEvent: on("browser-event") },
   openConfig: inv("config:open"),
   preview: inv("preview:open"),

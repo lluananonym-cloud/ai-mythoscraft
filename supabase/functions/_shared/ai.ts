@@ -32,7 +32,7 @@ export async function googleKeys(): Promise<string[]> {
 /** Lovable-Modell-ID -> Google-Modellkette (erstes verfügbares gewinnt) */
 export function geminiChain(model: string): string[] {
   const m = String(model || "").toLowerCase();
-  if (m.includes("image")) return ["gemini-3.1-flash-image"];
+  if (m.includes("image")) return ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview", "gemini-2.5-flash-image"];
   if (m.includes("lite") || m.includes("nano") || m.includes("luna")) {
     return ["gemini-3.1-flash-lite", "gemini-3.6-flash"];
   }
@@ -50,7 +50,27 @@ export function mapToGemini(model: string): string {
 
 type AnyMsg = { role: string; content: unknown };
 
-function partsFromContent(content: unknown): any[] {
+function b64(buf: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** Bild per https laden und als inlineData für Gemini liefern (z. B. Chat-Anhänge aus dem Storage). */
+async function inlineFromUrl(url: string): Promise<any | null> {
+  try {
+    if (!/^https:\/\//i.test(url)) return null;
+    const r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!r.ok) return null;
+    const mimeType = (r.headers.get("content-type") || "").split(";")[0].trim();
+    if (!/^image\/(png|jpeg|gif|webp)$/.test(mimeType)) return null;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length > 8_000_000) return null;
+    return { inlineData: { mimeType, data: b64(buf) } };
+  } catch { return null; }
+}
+
+async function partsFromContent(content: unknown): Promise<any[]> {
   if (typeof content === "string") return content ? [{ text: content }] : [];
   if (Array.isArray(content)) {
     const out: any[] = [];
@@ -61,6 +81,11 @@ function partsFromContent(content: unknown): any[] {
         const url: string = p.image_url.url;
         const m = url.match(/^data:([^;]+);base64,(.+)$/);
         if (m) out.push({ inlineData: { mimeType: m[1], data: m[2] } });
+        else {
+          // Vorher wurden https-Bilder hier stillschweigend verworfen -> Gemini "sah" keine Anhänge.
+          const part = await inlineFromUrl(url);
+          if (part) out.push(part);
+        }
       } else if (typeof p.text === "string" && p.text) out.push({ text: p.text });
     }
     return out;
@@ -69,18 +94,18 @@ function partsFromContent(content: unknown): any[] {
 }
 
 /** OpenAI-Chat-Body -> Google GenerateContent-Body */
-export function toGeminiBody(body: Record<string, any>) {
+export async function toGeminiBody(body: Record<string, any>) {
   const msgs: AnyMsg[] = Array.isArray(body.messages) ? body.messages : [];
   const systemTexts: string[] = [];
   const contents: any[] = [];
   for (const m of msgs) {
     if (m.role === "system" || m.role === "developer") {
-      const parts = partsFromContent(m.content);
+      const parts = await partsFromContent(m.content);
       systemTexts.push(parts.map((p) => p.text || "").join("\n"));
       continue;
     }
     if (m.role === "tool") continue;
-    const parts = partsFromContent(m.content);
+    const parts = await partsFromContent(m.content);
     if (parts.length === 0) continue;
     contents.push({ role: m.role === "assistant" ? "model" : "user", parts });
   }
@@ -88,6 +113,8 @@ export function toGeminiBody(body: Record<string, any>) {
   const maxOut = body.max_tokens ?? body.max_completion_tokens;
   if (maxOut) gen.maxOutputTokens = maxOut;
   if (body.temperature !== undefined) gen.temperature = body.temperature;
+  // Bildgenerierung: Gemini muss ausdrücklich Bilder zurückgeben dürfen.
+  if (Array.isArray(body.modalities) && body.modalities.includes("image")) gen.responseModalities = ["TEXT", "IMAGE"];
 
   const out: Record<string, unknown> = { contents };
   if (systemTexts.length) out.systemInstruction = { parts: [{ text: systemTexts.join("\n\n") }] };
@@ -176,7 +203,7 @@ export async function aiChat(
   // ---- Google Fallback ----
   const keys = await googleKeys();
   const chain = geminiChain(body.model);
-  const payload = toGeminiBody(body);
+  const payload = await toGeminiBody(body);
   let lastStatus = 503;
   let lastText = "no google key configured";
 
@@ -196,9 +223,17 @@ export async function aiChat(
           });
         }
         const j = await r.json();
-        const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text || "").join("");
+        const parts = j.candidates?.[0]?.content?.parts ?? [];
+        const text = parts.map((p: any) => p.text || "").join("");
+        // Erzeugte Bilder im gleichen Format wie der Lovable-Gateway zurückgeben (message.images).
+        const images = parts.filter((p: any) => p.inlineData?.data)
+          .map((p: any) => ({ type: "image_url", image_url: { url: `data:${p.inlineData.mimeType || "image/png"};base64,${p.inlineData.data}` } }));
+        if (body.modalities?.includes?.("image") && !images.length) {
+          lastStatus = 502; lastText = `${gModel}: kein Bild in der Antwort`;
+          continue;
+        }
         return new Response(
-          JSON.stringify({ choices: [{ message: { role: "assistant", content: text }, finish_reason: "stop" }] }),
+          JSON.stringify({ choices: [{ message: { role: "assistant", content: text, ...(images.length ? { images } : {}) }, finish_reason: "stop" }] }),
           { headers: { "Content-Type": "application/json" } },
         );
       } catch (e) {
