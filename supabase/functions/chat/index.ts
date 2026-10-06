@@ -1,4 +1,5 @@
 import { aiFetch } from "../_shared/ai.ts";
+import { generateImage } from "../_shared/image.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
 import { MYTHOS_CATALOG, MYTHOS_FILES } from "../_shared/catalog.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -11,46 +12,6 @@ const corsHeaders = {
 const enc = new TextEncoder();
 const sse = (obj: unknown) => enc.encode(`data: ${JSON.stringify(obj)}\n\n`);
 const sseDone = () => enc.encode("data: [DONE]\n\n");
-
-async function generateImage(prompt: string, apiKey: string): Promise<{ url: string | null; error?: string }> {
-  // Try a sequence of models; some prompts are refused by one but accepted by another
-  const models = [
-    "google/gemini-2.5-flash-image",
-    "google/gemini-3.1-flash-image-preview",
-  ];
-  let lastErr = "Unknown";
-  for (const model of models) {
-    try {
-      const r = await aiFetch("gateway", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [{
-            role: "user",
-            content: `Generate a high quality image: ${prompt}`,
-          }],
-          modalities: ["image", "text"],
-        }),
-      });
-      if (!r.ok) {
-        const txt = await r.text();
-        lastErr = `${model}: HTTP ${r.status} — ${txt.slice(0, 200)}`;
-        console.error("[image] gateway error", lastErr);
-        continue;
-      }
-      const j = await r.json();
-      const url = j.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (url) return { url };
-      lastErr = `${model}: no image in response. raw=${JSON.stringify(j).slice(0, 300)}`;
-      console.error("[image] empty response", lastErr);
-    } catch (e) {
-      lastErr = `${model}: exception ${e instanceof Error ? e.message : String(e)}`;
-      console.error("[image] exception", lastErr);
-    }
-  }
-  return { url: null, error: lastErr };
-}
 
 async function webResearch(query: string, apiKey: string): Promise<string> {
   // Use Lovable AI with google_search tool for grounded research

@@ -60,6 +60,7 @@ const SLASH_COMMANDS = [
   { cmd: "/offline",   args: "<frage>",         icon: WifiOff,   desc: "Offline-Chat im Browser (Qwen2.5-0.5B, ~500MB einmalig)" },
   { cmd: "/offline-summary", args: "<text>",    icon: FileText,  desc: "Offline-Zusammenfassung (DistilBART, ~250MB)" },
   { cmd: "/sentiment", args: "<text>",          icon: Smile,     desc: "Offline-Stimmungsanalyse (~65MB)" },
+  { cmd: "/koppeln",   args: "[code]",          icon: Code2,     desc: "Mit Mythos Code auf dem PC koppeln und ihn von hier steuern" },
   { cmd: "/codeprogramm", args: "",             icon: Download,  desc: "Mythos Code als Windows-App herunterladen" },
   { cmd: "/handyapp", args: "",                 icon: Download,  desc: "Mythos als iPhone-App herunterladen (Chat + Code-Fernsteuerung)" },
   { cmd: "/handyappadmin", args: "",            icon: Shield,    desc: "Admin: iOS-Projekt-ZIP für den GitHub-Build erzeugen", admin: true },
@@ -429,6 +430,13 @@ const Chat = () => {
       const { buildAppZip, APP_ADMIN_GUIDE, APP_PKG } = await import("@/lib/mythosCli");
       downloadBlob(await buildAppZip(window.location.origin), `${APP_PKG}.zip`);
       localReply(APP_ADMIN_GUIDE);
+      return;
+    }
+    if (/^\/koppeln\b/i.test(text)) {
+      if (!override) setInput("");
+      // Den Code zeigt die Mythos-Code-App auf dem PC nach /koppeln an – hier wird er eingegeben.
+      const code = text.replace(/^\/koppeln\b/i, "").replace(/\D/g, "").slice(0, 6);
+      nav(code ? `/code?code=${code}` : "/code");
       return;
     }
     if (/^\/codeprogramm\b/i.test(text)) {

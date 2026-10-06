@@ -271,6 +271,18 @@ ipcMain.handle("mcp:configure", (_e, cwd) => {
   return mcp.status();
 });
 ipcMain.handle("mcp:status", () => mcp.status());
+// Connector per Knopf hinzufügen/entfernen (Anpassungen) – landet in der globalen mcp.json.
+const MCP_GLOBAL = () => path.join(app.getPath("userData"), "mcp.json");
+ipcMain.handle("mcp:add", (_e, name, entry) => {
+  const n = String(name || "").trim().replace(/[^\w .-]/g, "").slice(0, 40);
+  if (!n || !entry || (!entry.url && !entry.command)) return false;
+  const j = readJsonFile(MCP_GLOBAL(), {}); j.mcpServers = j.mcpServers || {}; j.mcpServers[n] = entry;
+  fs.mkdirSync(path.dirname(MCP_GLOBAL()), { recursive: true }); fs.writeFileSync(MCP_GLOBAL(), JSON.stringify(j, null, 2)); return true;
+});
+ipcMain.handle("mcp:remove", (_e, name) => {
+  const j = readJsonFile(MCP_GLOBAL(), {}); if (!j.mcpServers || !j.mcpServers[name]) return false;
+  delete j.mcpServers[name]; fs.writeFileSync(MCP_GLOBAL(), JSON.stringify(j, null, 2)); return true;
+});
 ipcMain.handle("mcp:restart", (_e, name) => mcp.restart(name));
 // Konfigurationsdatei öffnen (bei Bedarf mit Vorlage anlegen).
 ipcMain.handle("config:open", (_e, which, cwd) => {

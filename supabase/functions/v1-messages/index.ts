@@ -128,6 +128,8 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return err("invalid_request_error", "Invalid JSON", 400); }
 
   const { model, messages = [], system, max_tokens = 1024, stream = false, temperature } = body;
+  // Aufwand aus der Code-App (wie bei Claude): low | normal | high | max
+  const effort = ["low", "normal", "high", "max"].includes(body.effort) ? body.effort as string : "";
   if (!Array.isArray(messages) || messages.length === 0) return err("invalid_request_error", "messages required", 400);
 
   // Identity lock ALWAYS comes first; the user's system prompt comes after but cannot override identity.
@@ -158,7 +160,7 @@ Deno.serve(async (req) => {
     if (!a.model.startsWith("openai/")) b.max_tokens = max_tokens;
     if (typeof temperature === "number") b.temperature = temperature;
     // Sichtbare Gedanken: bei unterstützten Modellen kurz mitdenken lassen und live mitschicken.
-    if (a.model.startsWith("openai/")) b.reasoning_effort = "low";
+    if (a.model.startsWith("openai/")) b.reasoning_effort = effort === "high" ? "medium" : effort === "max" ? "high" : "low";
     return b;
   };
 

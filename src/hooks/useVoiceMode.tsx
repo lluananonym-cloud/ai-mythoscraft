@@ -40,6 +40,8 @@ export function useVoiceMode(opts?: {
   const isSpeakingRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
   const startingRef = useRef(false);
+  // Fehlversuche in Folge (Live-Modus) – stoppt die Endlos-Neustarts, statt das Mikro flackern zu lassen.
+  const failRef = useRef(0);
 
   useEffect(() => {
     const Ctor = getRecognitionCtor();
@@ -59,6 +61,7 @@ export function useVoiceMode(opts?: {
         if (e.results[i].isFinal) finalText += t;
         else interimText += t;
       }
+      failRef.current = 0;
       setInterim(interimText);
       const trimmed = finalText.trim();
       if (!trimmed) return;
@@ -77,15 +80,25 @@ export function useVoiceMode(opts?: {
 
     rec.onend = () => {
       startingRef.current = false;
-      setStatus(s => (s === "listening" ? "idle" : s));
-      // Auto-restart only in LIVE mode (dictation = single shot)
+      // Auto-restart only in LIVE mode (dictation = single shot).
+      // Während des Neustarts bleibt der Status "listening" – sonst springt der Mikro-Knopf
+      // bei jeder kurzen Pause des Browsers zwischen An und Aus hin und her.
       if (modeRef.current === "live" && !isSpeakingRef.current) {
+        if (failRef.current >= 5) {
+          modeRef.current = null;
+          failRef.current = 0;
+          setStatus("idle");
+          console.error("[voice] Spracherkennung startet nicht – Live-Modus beendet");
+          return;
+        }
         if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
         restartTimerRef.current = window.setTimeout(() => {
           if (modeRef.current !== "live") return;
           try { rec.start(); } catch { /* already running */ }
-        }, 300);
+        }, 300 + failRef.current * 700);
+        return;
       }
+      setStatus(s => (s === "listening" ? "idle" : s));
     };
 
     rec.onerror = (e: any) => {
@@ -98,8 +111,10 @@ export function useVoiceMode(opts?: {
         console.error("[voice] microphone permission denied");
         return;
       }
-      // 'no-speech', 'aborted', 'audio-capture' etc. -> let onend re-arm
-      setStatus("idle");
+      // 'no-speech' ist normal (Stille) – andere Fehler zählen als Fehlversuch.
+      if (err !== "no-speech" && err !== "aborted") failRef.current++;
+      // Im Live-Modus übernimmt onend den Neustart, der Status bleibt stabil.
+      if (modeRef.current !== "live") setStatus("idle");
     };
 
     recognitionRef.current = rec;
@@ -129,6 +144,7 @@ export function useVoiceMode(opts?: {
   const startDictation = useCallback(() => {
     const rec = recognitionRef.current;
     if (!rec) return;
+    failRef.current = 0;
     modeRef.current = "dictate";
     speaker.stop();
     speaker.unlock();
@@ -139,6 +155,7 @@ export function useVoiceMode(opts?: {
   const startLive = useCallback(() => {
     const rec = recognitionRef.current;
     if (!rec) return;
+    failRef.current = 0;
     modeRef.current = "live";
     speaker.stop();
     speaker.unlock();
