@@ -12,6 +12,8 @@ export type AppDownload = {
   /** Dateiname im Release; null = erstes Asset nehmen */
   asset: string | null;
   platform: string;
+  /** true = für alle kostenlos, sonst nur mit Pro */
+  free?: boolean;
   screenshot?: string;
   highlights: string[];
 };
@@ -36,6 +38,7 @@ export const APPS: AppDownload[] = [
     tag: "browser-latest",
     asset: "MythosBrowser-Setup.exe",
     platform: "Windows",
+    free: true,
     screenshot: "/screenshots/mythos-browser.webp",
     highlights: ["Werbeblocker eingebaut", "Chrome-Erweiterungen", "Mythos Search als Standard"],
   },
@@ -47,6 +50,7 @@ export const APPS: AppDownload[] = [
     tag: "notch-latest",
     asset: "MythosNotch-Setup.exe",
     platform: "Windows",
+    free: true,
     highlights: ["Immer griffbereit", "Sprach- und Textchat", "Steuert auf Wunsch deinen PC"],
   },
   {

@@ -36,9 +36,14 @@ const AppCard = ({ app, release, releasesLoaded, canDownload, onLocked }: {
       <div className="p-6 flex flex-col flex-1">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="font-display text-xl font-bold">{app.name}</h3>
-          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground glass rounded-full px-2 py-0.5">
-            <Monitor className="h-3 w-3" />{app.platform}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[11px] rounded-full px-2 py-0.5 ${app.free ? "bg-emerald-500/15 text-emerald-400" : "bg-primary/15 text-primary"}`}>
+              {app.free ? "Kostenlos" : "Pro"}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground glass rounded-full px-2 py-0.5">
+              <Monitor className="h-3 w-3" />{app.platform}
+            </span>
+          </div>
         </div>
         <p className="text-sm text-primary mb-2">{app.tagline}</p>
         <p className="text-sm text-muted-foreground mb-4">{app.description}</p>
@@ -52,7 +57,7 @@ const AppCard = ({ app, release, releasesLoaded, canDownload, onLocked }: {
             <Button disabled variant="outline" className="w-full h-11">
               <Clock className="h-4 w-4 mr-2" />Bald verfügbar
             </Button>
-          ) : canDownload ? (
+          ) : canDownload || app.free ? (
             <Button asChild className="w-full h-11 bg-gradient-primary text-primary-foreground hover:opacity-90">
               <a href={href} download>
                 <Download className="h-4 w-4 mr-2" />Herunterladen
@@ -94,7 +99,7 @@ const Downloads = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-5">
             <Crown className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">Exklusiv für Pro</span>
+            <span className="text-xs font-medium text-muted-foreground">Browser &amp; Notch kostenlos · Code &amp; CLI mit Pro</span>
           </div>
           <h1 className="font-display text-4xl md:text-6xl font-bold mb-4">Mythos auf deinem PC</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">

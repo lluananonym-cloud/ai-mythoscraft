@@ -132,10 +132,10 @@ const Landing = () => {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-5">
               <Crown className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">Exklusiv mit Pro</span>
+              <span className="text-xs font-medium text-muted-foreground">Browser &amp; Notch kostenlos · Code mit Pro</span>
             </div>
             <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">Mythos auch auf deinem PC</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">Coding-Agent, Browser und Notch als Programme für Windows. Mit einem Klick herunterladen, immer in der neuesten Version.</p>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Browser und Notch gibt es für alle kostenlos, den Coding-Agent mit Pro. Mit einem Klick herunterladen, immer in der neuesten Version.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {APPS.filter((a) => a.screenshot).map((a) => (
@@ -175,7 +175,7 @@ const Landing = () => {
               { key:"light", name:"Light", icon: Zap, accent:"from-sky-400 to-indigo-500", tag:"Mitte",
                 features:[`${TIER_LIMITS.light.chatsPerDay} Chats / Tag`,"Bilder generieren","Alle Personas","Keine Werbung"] },
               { key:"pro",   name:"Pro",   icon: Crown, accent:"from-fuchsia-500 to-rose-500", tag:"Beliebt", highlight:true,
-                features:["Unbegrenzte Chats","Live-Sprachchat","Bilder · Musik · Video","Desktop-Apps: Code, Browser, Notch","Priorität bei Updates"] },
+                features:["Unbegrenzte Chats","Live-Sprachchat","Bilder · Musik · Video","Mythos Code App & CLI","Priorität bei Updates"] },
             ].map((p:any) => (
               <div key={p.key} className={`relative glass-strong rounded-3xl p-7 transition-all hover:-translate-y-1 ${p.highlight ? "border-primary/60 ring-1 ring-primary/30 glow-primary" : ""}`}>
                 {p.tag && (
@@ -228,7 +228,8 @@ const Landing = () => {
                   { name: "Video‑Generierung", free: false, light: false, pro: true },
                   { name: "Downloads/Modelle", free: false, light: true, pro: true },
                   { name: "Browser‑Rendering", free: true, light: true, pro: true },
-                  { name: "Desktop‑Apps (Code, Browser, Notch)", free: false, light: false, pro: true },
+                  { name: "Mythos Browser & Notch", free: true, light: true, pro: true },
+                  { name: "Mythos Code App & CLI", free: false, light: false, pro: true },
                 ].map((row, i) => (
                   <tr key={i} className="bg-transparent hover:bg-white/5 transition-colors">
                     <td className="px-4 py-2 font-medium text-foreground/80">{row.name}</td>
