@@ -81,6 +81,13 @@ async function maybeAd() {
     let due = false; const today = new Date().toDateString();
     if (adTier === "admin") { due = adAdminDay !== today; adAdminDay = today; }
     else { const every = adTier === "free" ? 4 : adTier === "light" ? 10 : 0; due = every > 0 && (++adN % every === 0); }
+    if (due) {
+      const fnBase = API.replace(/\/v1-messages.*$/, "");
+      let ads = []; try { ads = (await (await fetch(fnBase + "/ad-review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "list" }) })).json()).ads || []; } catch {}
+      const pool = [{ house: true, weight: 3 }].concat(ads); let r = Math.random() * pool.reduce((t, a) => t + Math.max(1, a.weight), 0); let ad = pool[0];
+      for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
+      if (!ad.house) { console.log("\x1b[2m📣 Werbung\x1b[0m  \x1b[1m" + ad.product + "\x1b[0m – " + ad.ad_text + ": " + ad.link + "\n\x1b[2m   Buche deine eigene Werbung: __SITE__/werbung\x1b[0m\n"); return; }
+    }
     if (due) console.log("\x1b[2m📣 Werbung\x1b[0m  \x1b[1m@at\x1b[0m – dein Feed voller Vibes: https://at-feed-vibes.lovable.app/\n\x1b[2m   Buche deine eigene Werbung: __SITE__/werbung\x1b[0m\n");
   } catch {}
 }
