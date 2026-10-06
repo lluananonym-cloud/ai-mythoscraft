@@ -22,6 +22,7 @@ import {
   Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
+  ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
@@ -38,8 +39,14 @@ import ModelPicker from "@/components/ModelPicker";
 import { DEFAULT_MYTHOS_ID, isAllowed, mythosLabel } from "@/lib/mythosModels";
 
 import { nvidiaChat, nvidiaLLM } from "@/lib/nvidiaApi";
+import CustomizeDialog from "@/components/chat/CustomizeDialog";
+import ArtifactsDialog from "@/components/chat/ArtifactsDialog";
+import ProjectsDialog from "@/components/chat/ProjectsDialog";
+import { getInstructions, getMcpServers, getProjects, projectOfChat, setProjects, type Project } from "@/lib/chatPrefs";
+import { callTool, collectTools } from "@/lib/mcpClient";
 
 const SLASH_COMMANDS = [
+  { cmd: "/goal",      args: "<ziel>",          icon: Target,    desc: "Ziel setzen – Mythos arbeitet selbstständig Schritt für Schritt, bis es erreicht ist" },
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
@@ -78,6 +85,36 @@ const MODES = [
 ];
 
 const SIDEBAR_KEY = "mythos.sidebar.collapsed";
+
+// /goal: so viele Arbeitsschritte darf Mythos höchstens machen, bevor es von selbst anhält.
+const GOAL_MAX_STEPS = 20;
+// Obergrenze für alle Antworten einer Runde (Schritte + Werkzeug-Aufrufe).
+const MAX_TURNS = 60;
+const GOAL_DONE = /\[ZIEL ERREICHT\]/i;
+const TOOL_CALL = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i;
+
+type ApiMsg = { role: string; content: any };
+type GoalState = { text: string; step: number; status: "läuft" | "erreicht" | "gestoppt" | "limit" };
+type StreamResult = { full: string; image?: { url: string; prompt: string }; music?: FunkPattern; agents?: AgentStatus[]; thinking: string; aborted: boolean };
+
+/** Nachricht aus dem Verlauf so umwandeln, wie das Modell sie bekommt. */
+const toApi = (m: Msg): ApiMsg =>
+  m.role === "tool"
+    ? { role: "user", content: `Ergebnis von Werkzeug ${m.metadata?.tool || ""}:\n${m.content}` }
+    : { role: m.role, content: m.content };
+
+function parseToolCall(text: string): { name: string; arguments: unknown } | null {
+  const m = text.match(TOOL_CALL);
+  if (!m) return null;
+  try {
+    const j = JSON.parse(m[1].replace(/^```(?:json)?|```$/g, "").trim());
+    return typeof j?.name === "string" ? { name: j.name, arguments: j.arguments ?? j.args ?? {} } : null;
+  } catch { return null; }
+}
+
+/** Technische Markierungen aus einer Antwort entfernen, bevor sie angezeigt wird. */
+const forDisplay = (text: string) =>
+  text.replace(/<tool_call>[\s\S]*?(<\/tool_call>|$)/gi, "").replace(GOAL_DONE, "").trimEnd();
 
 const Chat = () => {
   const { user, profile, isAdmin, signOut } = useAuth();
@@ -118,6 +155,15 @@ const Chat = () => {
   // Nachrichten, die während einer laufenden Antwort eingegeben wurden – werden danach der Reihe nach gesendet.
   const [queue, setQueue] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  // Seitenleiste wie bei Claude
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projects, setProjectsState] = useState<Project[]>(() => getProjects());
+  const [dialog, setDialog] = useState<null | "projects" | "artifacts" | "customize">(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  // /goal
+  const [goal, setGoal] = useState<GoalState | null>(null);
+  const stopRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -131,6 +177,11 @@ const Chat = () => {
 
   useEffect(() => { localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? "1" : "0"); }, [sidebarCollapsed]);
   useEffect(() => { localStorage.setItem("mythos.model", mythosId); }, [mythosId]);
+  useEffect(() => {
+    const sync = () => setProjectsState(getProjects());
+    window.addEventListener("mythos-prefs", sync);
+    return () => window.removeEventListener("mythos-prefs", sync);
+  }, []);
   // downgrade silently if the stored choice is not covered by the current plan
   useEffect(() => {
     if (!sub.loading && !isAllowed(mythosId, sub.tier)) setMythosId(DEFAULT_MYTHOS_ID);
@@ -198,8 +249,12 @@ const Chat = () => {
     if (!user) return;
     if (chatId) {
       if (createdIdRef.current === chatId) { createdIdRef.current = null; return; }
+      if (sending) stop();
+      setGoal(null);
       loadMessages(chatId);
     } else {
+      if (sending) stop();
+      setGoal(null);
       setActiveId(null);
       setMessages([]);
     }
@@ -394,6 +449,18 @@ const Chat = () => {
       setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content: USER_GUIDE }]);
       return;
     }
+    // /goal <ziel> — Mythos arbeitet selbstständig in mehreren Schritten, bis das Ziel erreicht ist.
+    let goalText: string | undefined;
+    const goalMatch = text.match(/^\/goal\b\s*([\s\S]*)$/i);
+    if (goalMatch) {
+      goalText = goalMatch[1].trim();
+      if (!goalText) {
+        if (!override) setInput("");
+        localReply("So geht's:\n```\n/goal <dein Ziel>\n```\nBeispiel: `/goal Schreib mir einen kompletten Businessplan für einen Minecraft-Server`\n\nMythos macht dann einen Plan und arbeitet Schritt für Schritt selbstständig weiter, bis das Ziel erreicht ist. Oben siehst du das Ziel, mit **Stopp** hältst du es jederzeit an.");
+        return;
+      }
+      text = `🎯 Ziel: ${goalText}`;
+    }
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
@@ -411,6 +478,8 @@ const Chat = () => {
       convId = data.id;
       setActiveId(convId);
       createdIdRef.current = convId;
+      // Im geöffneten Projekt angelegt -> gehört zu diesem Projekt.
+      if (projectId) setProjects(getProjects().map(p => p.id === projectId ? { ...p, chatIds: [convId!, ...p.chatIds] } : p));
       nav(`/app/c/${convId}`, { replace: true });
       loadConvs();
     }
@@ -528,25 +597,52 @@ const Chat = () => {
     });
     setAttachments([]);
 
+    if (goalText) setGoal({ text: goalText, step: 1, status: "läuft" });
+    const history: ApiMsg[] = messages.filter(m => !(m as any).ad).map(toApi);
+    history.push({ role: "user", content: userContentForAI });
+    try {
+      await runAgent(convId!, history, text, goalText);
+    } catch (e) {
+      console.error(e);
+      toast.error("Verbindungsfehler");
+    } finally {
+      abortRef.current = null;
+      setSending(false);
+    }
+  };
+
+  /** Ein Modell-Aufruf mit Streaming in die letzte (leere) Assistent-Nachricht. null = fehlgeschlagen. */
+  const streamOnce = async (apiMessages: ApiMsg[], convId: string): Promise<StreamResult | null> => {
     const chosenModel = (profile as any)?.ai_model as string | undefined;
     const modelForCall = isPuterModel(chosenModel) ? chosenModel : undefined;
-
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const setLast = (patch: Partial<Msg>) => setMessages(prev => {
+      const next = [...prev];
+      next[next.length - 1] = { ...next[next.length - 1], role: "assistant", ...patch };
+      return next;
+    });
+    const doFetch = () => fetch(fnUrl, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      body: JSON.stringify({
+        conversationId: convId,
+        userId: user?.id,
+        personaId: personaId !== "none" ? personaId : undefined,
+        model: modelForCall,
+        mythos: mythosId,
+        messages: apiMessages,
+        mode,
+      }),
+    });
+
+    let full = "", thinking = "";
+    let imageData: { url: string; prompt: string } | undefined;
+    let musicData: FunkPattern | undefined;
+    let agentsData: AgentStatus[] | undefined;
     try {
-      const historyForAI = messages.filter(m => !(m as any).ad).map(m => ({ role: m.role, content: m.content }));
-      const doFetch = () => fetch(fnUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({
-          conversationId: convId,
-          userId: user?.id,
-          personaId: personaId !== "none" ? personaId : undefined,
-          model: modelForCall,
-          mythos: mythosId,
-          messages: [...historyForAI, { role: "user", content: userContentForAI }],
-          mode,
-        }),
-      });
       // Auto-retry on 429 with backoff (1s, 3s) — fixes "zu viele Anfragen"
       let resp = await doFetch();
       for (let attempt = 0; resp.status === 429 && attempt < 2; attempt++) {
@@ -564,43 +660,23 @@ const Chat = () => {
           try {
             // Über den Server – der NVIDIA-Schlüssel ist nie im Browser.
             const asText = (c: unknown) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p: { text?: string }) => p.text || "").join("\n") : "";
-            const content = await nvidiaChat([...historyForAI, { role: "user", content: userContentForAI }].map(m => ({ role: m.role, content: asText(m.content) })));
-            // replace the placeholder assistant message with the actual content
-            setMessages(prev => {
-              const updated = [...prev];
-              const lastIdx = updated.length - 1;
-              updated[lastIdx] = { role: "assistant", content } as any;
-              return updated;
-            });
-            await supabase.from("messages").insert({
-              conversation_id: convId,
-              role: "assistant",
-              content,
-            });
-            await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-            setSending(false);
-            loadConvs();
-            return;
+            const content = await nvidiaChat(apiMessages.map(m => ({ role: m.role, content: asText(m.content) })));
+            setLast({ content });
+            return { full: content, thinking: "", aborted: false };
           } catch (e) {
             console.error("Fallback error:", e);
-            toast.error(`NVIDIA fallback failed: ${e?.message || "unknown"}`);
+            toast.error(`NVIDIA fallback failed: ${(e as Error)?.message || "unknown"}`);
           }
         } else {
           toast.error("Fehler beim Senden");
         }
         setMessages(prev => prev.slice(0, -1));
-        setSending(false);
-        return;
+        return null;
       }
-
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
-      let buf = "", full = "";
-      let imageData: { url: string; prompt: string } | undefined;
-      let musicData: FunkPattern | undefined;
-      let agentsData: AgentStatus[] | undefined;
-      let thinking = "";
+      let buf = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -623,91 +699,140 @@ const Chat = () => {
               });
               continue;
             }
-            if (p.agents) {
-              agentsData = p.agents;
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], agents: p.agents };
-                return next;
-              });
-              continue;
-            }
-            if (p.search) {
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], search: p.search };
-                return next;
-              });
-              continue;
-            }
-            if (p.image) {
-              imageData = p.image;
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], image: p.image };
-                return next;
-              });
-              continue;
-            }
-            if (p.music) {
-              musicData = p.music;
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], music: p.music };
-                return next;
-              });
-              continue;
-            }
+            if (p.agents) { agentsData = p.agents; setLast({ agents: p.agents }); continue; }
+            if (p.search) { setLast({ search: p.search }); continue; }
+            if (p.image) { imageData = p.image; setLast({ image: p.image }); continue; }
+            if (p.music) { musicData = p.music; setLast({ music: p.music }); continue; }
             // Gedanken des Modells (je nach Anbieter unterschiedlich benannt) live mitschreiben.
             const d = p.choices?.[0]?.delta;
             const r = typeof d?.reasoning === "string" ? d.reasoning
               : typeof d?.reasoning_content === "string" ? d.reasoning_content
               : Array.isArray(d?.reasoning_details) ? d.reasoning_details.map((x: any) => x?.text || x?.summary || "").join("") : "";
-            if (r) {
-              thinking += r;
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], role: "assistant", thinking };
-                return next;
-              });
-            }
+            if (r) { thinking += r; setLast({ thinking }); }
             const c = d?.content;
-            if (c) {
-              full += c;
-              setMessages(prev => {
-                const next = [...prev];
-                next[next.length - 1] = { ...next[next.length - 1], role: "assistant", content: full };
-                return next;
-              });
-            }
+            if (c) { full += c; setLast({ content: full }); }
           } catch { buf = line + "\n" + buf; break; }
         }
       }
+      return { full, image: imageData, music: musicData, agents: agentsData, thinking, aborted: false };
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") {
+        // Gestoppt: was schon da ist, bleibt stehen.
+        if (!full && !imageData) { setMessages(prev => prev.slice(0, -1)); return null; }
+        return { full, image: imageData, music: musicData, agents: agentsData, thinking, aborted: true };
+      }
+      setMessages(prev => prev.slice(0, -1));
+      throw e;
+    }
+  };
 
-      if (full || imageData || musicData) {
+  /** Zusätzliche Hinweise fürs Modell: eigene Anweisungen, Projekt, Werkzeuge und /goal. */
+  const buildHints = (
+    tools: Awaited<ReturnType<typeof collectTools>>,
+    goalNow: { text: string; step: number } | null,
+    convId: string,
+  ) => {
+    const parts: string[] = [];
+    const own = getInstructions();
+    if (own) parts.push(`## Anweisungen des Nutzers\n${own}`);
+    const proj = projectOfChat(convId);
+    if (proj?.instructions) parts.push(`## Projekt „${proj.name}"\n${proj.instructions}`);
+    if (tools.length) {
+      parts.push(
+        "## Werkzeuge (Connectoren)\n" +
+        "Du kannst diese Werkzeuge selbst benutzen, wenn sie helfen. Für einen Aufruf schreibst du genau einen Block:\n" +
+        '<tool_call>{"name": "werkzeug_name", "arguments": { ... }}</tool_call>\n' +
+        "und hörst danach sofort auf zu schreiben. Du bekommst dann das Ergebnis und machst weiter. Höchstens ein Aufruf pro Antwort. " +
+        "Erfinde keine Ergebnisse.\n\n" +
+        tools.map(t => `- ${t.key}: ${(t.tool.description || "").slice(0, 300)}\n  Parameter: ${JSON.stringify(t.tool.inputSchema ?? {}).slice(0, 600)}`).join("\n"),
+      );
+    }
+    if (goalNow) {
+      parts.push(
+        `## /goal-Modus – Schritt ${goalNow.step} von höchstens ${GOAL_MAX_STEPS}\n` +
+        `Ziel: ${goalNow.text}\n\n` +
+        "Du arbeitest selbstständig wie ein Agent, bis das Ziel vollständig erreicht ist. Regeln:\n" +
+        (goalNow.step === 1 ? "- Beginne mit einem kurzen Plan als Checkliste (- [ ] …) und erledige dann direkt den ersten Punkt.\n" : "- Mach mit dem nächsten offenen Punkt deines Plans weiter. Wiederhole nichts, was schon erledigt ist.\n") +
+        "- Jede Antwort ist ein echter Arbeitsschritt mit konkretem Ergebnis (Text, Code, Recherche, Werkzeug-Aufruf), nicht nur Ankündigungen.\n" +
+        "- Frag nicht nach Erlaubnis und warte nicht auf den Nutzer. Triff sinnvolle Annahmen und nenne sie kurz.\n" +
+        "- Ist noch etwas offen, beende die Antwort mit einer Zeile „Als Nächstes: …\".\n" +
+        "- Erst wenn das Ziel komplett erreicht ist: kurze Zusammenfassung des Ergebnisses und als allerletzte Zeile genau [ZIEL ERREICHT]",
+      );
+    }
+    return parts.join("\n\n");
+  };
+
+  /** Arbeitet so lange weiter, wie Werkzeug-Aufrufe oder ein /goal es verlangen. */
+  const runAgent = async (convId: string, history: ApiMsg[], userText: string, goalText?: string) => {
+    stopRef.current = false;
+    const servers = getMcpServers().filter(s => s.enabled);
+    const tools = servers.length ? await collectTools(servers) : [];
+    let step = 1;
+    let final = "";
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
+      const hints = buildHints(tools, goalText ? { text: goalText, step } : null, convId);
+      // Hinweise als eigene System-Nachricht direkt vor der letzten Nutzer-Nachricht – so bleiben Slash-Befehle unverändert.
+      const apiMessages = hints && !/^\//.test(userText)
+        ? [...history.slice(0, -1), { role: "system", content: hints }, history[history.length - 1]]
+        : history;
+      const res = await streamOnce(apiMessages, convId);
+      if (!res) { if (goalText) setGoal(g => g && { ...g, status: "gestoppt" }); break; }
+      if (res.full || res.image || res.music) {
         await supabase.from("messages").insert({
-          conversation_id: convId,
-          role: "assistant",
-          content: full,
-          metadata: { image: imageData, music: musicData, agents: agentsData, thinking: thinking || undefined },
+          conversation_id: convId, role: "assistant", content: res.full,
+          metadata: { image: res.image, music: res.music, agents: res.agents, thinking: res.thinking || undefined, goal: goalText ? step : undefined },
         });
       }
-      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-      if (full && adDue(isAdmin ? "admin" : sub.tier)) { const o = window.location.origin; pickAd(o).then(ad => setMessages(prev => [...prev, { role: "assistant", content: adMarkdown(ad, o), ad: true } as any])); }
+      history.push({ role: "assistant", content: res.full });
+      final = res.full;
+      if (res.aborted || stopRef.current) { if (goalText) setGoal(g => g && { ...g, status: "gestoppt" }); break; }
 
-      supabase.functions.invoke("extract-memory", { body: { text } }).catch(() => {});
-      supabase.functions.invoke("suggest", {
-        body: { messages: [...historyForAI, { role: "user", content: text }, { role: "assistant", content: full }] },
-      }).then(({ data }) => {
-        if (data?.items?.length) setSuggestions(data.items);
-      }).catch(() => {});
-    } catch (e) {
-      console.error(e);
-      toast.error("Verbindungsfehler");
-      setMessages(prev => prev.slice(0, -1));
-    } finally {
-      setSending(false);
+      const call = tools.length ? parseToolCall(res.full) : null;
+      if (call) {
+        const entry = tools.find(t => t.key === call.name);
+        let result: string;
+        try {
+          result = entry ? await callTool(entry.server, entry.tool.name, call.arguments) : `FEHLER: Werkzeug „${call.name}" gibt es nicht.`;
+        } catch (e) { result = "FEHLER: " + ((e as Error)?.message || "unbekannt"); }
+        result = result.slice(0, 12000) || "(leer)";
+        const meta = { tool: call.name, args: call.arguments as any };
+        setMessages(prev => [...prev, { role: "tool", content: result, metadata: meta }, { role: "assistant", content: "" }]);
+        await supabase.from("messages").insert({ conversation_id: convId, role: "tool", content: result, metadata: meta });
+        history.push({ role: "user", content: `Ergebnis von Werkzeug ${call.name}:\n${result}` });
+        if (stopRef.current) { setMessages(prev => prev.slice(0, -1)); break; }
+        continue;
+      }
+
+      if (goalText) {
+        if (GOAL_DONE.test(res.full)) { setGoal(g => g && { ...g, status: "erreicht" }); toast.success("🎯 Ziel erreicht"); break; }
+        if (step >= GOAL_MAX_STEPS) { setGoal(g => g && { ...g, status: "limit" }); break; }
+        step++;
+        setGoal(g => g && { ...g, step });
+        const cont = `Weiter mit Schritt ${step}.`;
+        const meta = { auto: true, step };
+        setMessages(prev => [...prev, { role: "user", content: cont, metadata: meta }, { role: "assistant", content: "" }]);
+        await supabase.from("messages").insert({ conversation_id: convId, role: "user", content: cont, metadata: meta });
+        history.push({ role: "user", content: cont });
+        continue;
+      }
+      break;
     }
+    await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+    loadConvs();
+    if (!final) return;
+    if (adDue(isAdmin ? "admin" : sub.tier)) { const o = window.location.origin; pickAd(o).then(ad => setMessages(prev => [...prev, { role: "assistant", content: adMarkdown(ad, o), ad: true } as any])); }
+    supabase.functions.invoke("extract-memory", { body: { text: userText } }).catch(() => {});
+    supabase.functions.invoke("suggest", {
+      body: { messages: [...history.slice(-6).map(m => ({ role: m.role, content: typeof m.content === "string" ? m.content : userText })), { role: "assistant", content: final }] },
+    }).then(({ data }) => {
+      if (data?.items?.length && !goalText) setSuggestions(data.items);
+    }).catch(() => {});
+  };
+
+  const stop = () => {
+    stopRef.current = true;
+    abortRef.current?.abort();
+    setQueue([]);
   };
 
   useEffect(() => { if (input) setSuggestions([]); }, [input]);
@@ -799,68 +924,97 @@ const Chat = () => {
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Account";
 
+  const activeProject = projects.find(p => p.id === projectId) || null;
+  const sidebarConvs = activeProject ? filteredConvs.filter(c => activeProject.chatIds.includes(c.id)) : filteredConvs;
+
+  const NavItem = ({ icon: Icon, label, onClick, badge, active }: { icon: typeof Plus; label: string; onClick: () => void; badge?: string; active?: boolean }) => (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-[15px] text-left transition-colors ${active ? "bg-white/10" : "hover:bg-white/5"} text-foreground/90`}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0 text-foreground/80" />
+      <span className="truncate">{label}</span>
+      {badge && <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-foreground/70">{badge}</span>}
+    </button>
+  );
+
   const SidebarContentBlock = (
     <div className="flex flex-col h-full min-h-0">
-      {/* Header row */}
-      <div className="flex items-center justify-between gap-1 px-2 pt-2 pb-3">
-        <Link to="/" className="flex items-center gap-2 px-1 rounded-lg hover:bg-white/5 py-1" aria-label="Startseite">
-          <Logo size="sm" />
-        </Link>
-        <div className="flex items-center gap-1">
+      {/* Kopfzeile wie bei Claude: einklappen, zurück/vor, Chat/Code */}
+      <div className="flex items-center gap-0.5 px-2 pt-2 pb-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setSidebarCollapsed(true)} aria-label="Seitenleiste einklappen">
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Seitenleiste einklappen</TooltipContent>
+        </Tooltip>
+        <Link to="/" className="md:hidden flex items-center px-1" aria-label="Startseite"><Logo size="sm" /></Link>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => nav(-1)} aria-label="Zurück"><ArrowLeft className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => nav(1)} aria-label="Vor"><ArrowRight className="h-4 w-4 opacity-60" /></Button>
+        <div className="ml-auto flex items-center rounded-xl bg-white/5 p-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setSidebarCollapsed(true)}>
-                <PanelLeftClose className="h-4 w-4" />
-              </Button>
+              <span className="flex h-7 w-8 items-center justify-center rounded-lg bg-white/10"><MessageSquare className="h-4 w-4" /></span>
             </TooltipTrigger>
-            <TooltipContent side="right">Sidebar einklappen</TooltipContent>
+            <TooltipContent side="bottom">Chat</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={newChat} aria-label="Neuer Chat">
-                <Plus className="h-4 w-4" />
-              </Button>
+              <button onClick={() => nav("/code")} className="flex h-7 w-8 items-center justify-center rounded-lg text-foreground/60 hover:text-foreground" aria-label="Code">
+                <Code2 className="h-4 w-4" />
+              </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Neuer Chat</TooltipContent>
+            <TooltipContent side="bottom">Mythos Code</TooltipContent>
           </Tooltip>
         </div>
       </div>
 
-      {/* New chat CTA */}
-      <div className="px-2">
-        <button
-          onClick={newChat}
-          className="w-full flex items-center gap-2 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2.5 text-sm text-left transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Neuer Chat</span>
+      {/* Suchen */}
+      <div className="px-2 pb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            ref={searchRef}
+            value={convSearch}
+            onChange={(e) => setConvSearch(e.target.value)}
+            placeholder="Suchen"
+            className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-9 pr-2 py-2 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:border-white/25"
+          />
+        </div>
+      </div>
+
+      {/* Hauptmenü */}
+      <div className="px-2 space-y-0.5">
+        <button onClick={() => { setProjectId(null); newChat(); }} className="w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-[15px] text-left hover:bg-white/5">
+          <span className="flex h-[22px] w-[22px] -ml-0.5 items-center justify-center rounded-full bg-white/10"><Plus className="h-3.5 w-3.5" /></span>
+          <span>Neu</span>
         </button>
+        <NavItem icon={FolderOpen} label="Projekte" onClick={() => setDialog("projects")} active={!!activeProject} />
+        <NavItem icon={Shapes} label="Artifacts" onClick={() => setDialog("artifacts")} />
+        <NavItem icon={Clock} label="Routinen" onClick={() => nav("/agents")} />
+        <NavItem icon={Briefcase} label="Anpassungen" onClick={() => setDialog("customize")} />
       </div>
 
-      {/* Search */}
-      {convs.length > 4 && (
-        <div className="px-2 pt-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              value={convSearch}
-              onChange={(e) => setConvSearch(e.target.value)}
-              placeholder="Chats suchen…"
-              className="w-full bg-white/5 border border-white/5 rounded-lg pl-8 pr-2 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:border-white/20"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Conversation list */}
-      <ScrollArea className="flex-1 mt-2 px-2">
+      {/* Chats */}
+      <div className="px-4 pt-5 pb-1 flex items-center gap-1 text-[13px] text-muted-foreground">
+        {activeProject ? (
+          <>
+            <button onClick={() => setProjectId(null)} className="hover:text-foreground">Chats</button>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="truncate text-foreground/80">{activeProject.name}</span>
+          </>
+        ) : <span>Chats</span>}
+      </div>
+      <ScrollArea className="flex-1 px-2">
         <div className="space-y-0.5 pb-2">
-          {filteredConvs.length === 0 && (
+          {sidebarConvs.length === 0 && (
             <p className="text-xs text-muted-foreground p-3 text-center">
-              {convSearch ? "Keine Treffer" : "Noch keine Chats"}
+              {convSearch ? "Keine Treffer" : activeProject ? "Noch keine Chats in diesem Projekt – klick auf „Neu“." : "Noch keine Chats"}
             </p>
           )}
-          {filteredConvs.map(c => (
+          {sidebarConvs.map(c => (
             <div
               key={c.id}
               className={`group flex items-center gap-2 rounded-lg pl-3 pr-1 py-2 text-sm cursor-pointer transition-colors ${
@@ -1075,6 +1229,33 @@ const Chat = () => {
             )}
           </header>
 
+          {goal && (
+            <div className="shrink-0 border-b border-violet-400/15 bg-violet-500/[0.06] animate-fade-in">
+              <div className="max-w-3xl mx-auto flex items-center gap-2 px-3 sm:px-6 py-2 text-sm">
+                <Target className="h-4 w-4 text-violet-300 shrink-0" />
+                <span className="truncate flex-1"><span className="text-muted-foreground">Ziel: </span>{goal.text}</span>
+                <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1.5">
+                  {goal.status === "läuft" && <><Loader2 className="h-3 w-3 animate-spin" /> Schritt {goal.step}</>}
+                  {goal.status === "erreicht" && <span className="text-emerald-400">✓ Erreicht nach {goal.step} {goal.step === 1 ? "Schritt" : "Schritten"}</span>}
+                  {goal.status === "gestoppt" && "Gestoppt"}
+                  {goal.status === "limit" && `Pause nach ${GOAL_MAX_STEPS} Schritten`}
+                </span>
+                {goal.status === "läuft" ? (
+                  <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs border-white/15" onClick={stop}>
+                    <Square className="h-3 w-3 mr-1 fill-current" /> Stopp
+                  </Button>
+                ) : (
+                  <>
+                    {(goal.status === "gestoppt" || goal.status === "limit") && !sending && (
+                      <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs border-white/15" onClick={() => send(`/goal ${goal.text}`)}>Weitermachen</Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setGoal(null)} aria-label="Ziel ausblenden"><XIcon className="h-3.5 w-3.5" /></Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
             {messages.length === 0 ? (
@@ -1089,7 +1270,7 @@ const Chat = () => {
                     { icon: HelpCircle, label: "Wie verbinde ich mich mit dem Server?" },
                     { icon: Film,       label: "/video epische Drohnenaufnahme über einer Burg" },
                     { icon: ImageIcon,  label: "/image ein epischer Drache über mythoscraft" },
-                    { icon: Music,      label: "/music chill lofi hip hop beat" },
+                    { icon: Target,     label: "/goal Erstelle mir einen kompletten Lernplan für die Matheprüfung" },
                   ].map(({ icon: Icon, label }) => (
                     <button
                       key={label}
@@ -1106,7 +1287,21 @@ const Chat = () => {
               <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 space-y-6">
                 {messages.map((m, i) => (
                   <div key={i} className="animate-fade-in">
-                    {m.role === "user" ? (
+                    {m.role === "user" && m.metadata?.auto ? (
+                      <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="flex items-center gap-1.5"><Target className="h-3 w-3 text-violet-300" /> Schritt {m.metadata.step}</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+                    ) : m.role === "tool" ? (
+                      <details className="ml-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                        <summary className="cursor-pointer select-none text-muted-foreground flex items-center gap-1.5">
+                          <Wrench className="h-3 w-3 text-violet-300" /> Werkzeug benutzt: <span className="font-mono text-foreground/80">{m.metadata?.tool}</span>
+                        </summary>
+                        {m.metadata?.args && <pre className="mt-2 whitespace-pre-wrap break-all text-muted-foreground">{JSON.stringify(m.metadata.args, null, 2)}</pre>}
+                        <div className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap break-words text-foreground/80">{m.content}</div>
+                      </details>
+                    ) : m.role === "user" ? (
                       <div className="flex justify-end">
                         <div className="max-w-[85%] rounded-3xl px-4 py-2.5 bg-white/10 text-foreground">
                           <p className="text-[15px] whitespace-pre-wrap break-words leading-relaxed">{m.content}</p>
@@ -1145,7 +1340,14 @@ const Chat = () => {
                               </div>
                             )}
                             {m.content ? (
-                              <MarkdownMessage content={m.content} />
+                              <>
+                                <MarkdownMessage content={forDisplay(m.content)} />
+                                {GOAL_DONE.test(m.content) && (
+                                  <div className="not-prose mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-300">
+                                    <Target className="h-3 w-3" /> Ziel erreicht
+                                  </div>
+                                )}
+                              </>
                             ) : !m.image && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1186,9 +1388,9 @@ const Chat = () => {
                               />
                             )}
                           </div>
-                          {m.content && !sending && (
+                          {forDisplay(m.content) && !sending && (
                             <div className="flex items-center gap-0.5 mt-2 -ml-1.5 opacity-40 hover:opacity-100 transition-opacity">
-                              <button onClick={() => copyMessage(m.content)} title="Kopieren" className="p-1.5 rounded-md hover:bg-white/5">
+                              <button onClick={() => copyMessage(forDisplay(m.content))} title="Kopieren" className="p-1.5 rounded-md hover:bg-white/5">
                                 <Copy className="h-3.5 w-3.5" />
                               </button>
                               {voice.supported && (
@@ -1403,6 +1605,21 @@ const Chat = () => {
                       <TooltipContent side="top">Live-Sprachchat</TooltipContent>
                     </Tooltip>
                   )}
+                  {sending && !input.trim() ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={stop}
+                          size="icon"
+                          className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                          aria-label="Stopp"
+                        >
+                          <Square className="h-3.5 w-3.5 fill-current" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Stopp</TooltipContent>
+                    </Tooltip>
+                  ) : (
                   <Button
                     onClick={submitOrQueue}
                     disabled={!input.trim() && !sending}
@@ -1410,8 +1627,9 @@ const Chat = () => {
                     className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30"
                     aria-label={sending ? "In die Warteschlange" : "Senden"}
                   >
-                    {sending && !input.trim() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <Send className="h-4 w-4" />
                   </Button>
+                  )}
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground text-center mt-2 hidden sm:block">
@@ -1421,6 +1639,13 @@ const Chat = () => {
           </div>
         </main>
 
+        <ProjectsDialog
+          open={dialog === "projects"}
+          onOpenChange={(o) => setDialog(o ? "projects" : null)}
+          onOpenProject={(id) => { setProjectId(id); newChat(); }}
+        />
+        <ArtifactsDialog open={dialog === "artifacts"} onOpenChange={(o) => setDialog(o ? "artifacts" : null)} onOpenChat={openChat} />
+        <CustomizeDialog open={dialog === "customize"} onOpenChange={(o) => setDialog(o ? "customize" : null)} />
         <Paywall open={paywall.open} onOpenChange={(o) => setPaywall({ open: o })} reason={paywall.reason} />
       </div>
     </TooltipProvider>

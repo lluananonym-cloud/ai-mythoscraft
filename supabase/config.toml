@@ -63,3 +63,6 @@ verify_jwt = false
 
 [functions.remote]
 verify_jwt = false
+
+[functions.mcp-proxy]
+verify_jwt = false
