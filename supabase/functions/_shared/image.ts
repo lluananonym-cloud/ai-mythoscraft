@@ -1,5 +1,8 @@
 // Gemeinsame Bildgenerierung für Chat (/image), image-gen (Video, Code-App /bild).
-// Reihenfolge: Lovable-Gateway (mit Google-Fallback aus ai.ts) -> NVIDIA -> Pollinations (gratis, ohne Schlüssel).
+// Reihenfolge: Lovable-Gateway (mit Google-Fallback aus ai.ts) -> NVIDIA -> Pollinations (gratis).
+// Sind die Lovable-Credits aufgebraucht (402), springt die Kette sofort weiter, statt jedes
+// Lovable-Modell einzeln durchzuprobieren. Pollinations läuft ohne Schlüssel; mit dem optionalen
+// Secret POLLINATIONS_API_KEY (kostenlos auf enter.pollinations.ai) gibt es höhere Limits.
 // Daten-URLs werden in den öffentlichen Bucket "chat-uploads" hochgeladen, damit Chats keine
 // riesigen base64-Strings speichern und Bilder überall angezeigt werden können.
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
@@ -39,7 +42,13 @@ async function viaGateway(prompt: string, lovableKey: string | undefined, errors
         headers: { Authorization: `Bearer ${lovableKey ?? ""}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model, messages: [{ role: "user", content: `Generate a high quality image: ${prompt}` }], modalities: ["image", "text"] }),
       });
-      if (!r.ok) { errors.push(`${model}: HTTP ${r.status} ${(await r.text()).slice(0, 160)}`); continue; }
+      if (!r.ok) {
+        const info = (await r.text()).slice(0, 160);
+        errors.push(`${model}: HTTP ${r.status} ${info}`);
+        // Credits leer / kein Google-Schlüssel: das zweite Modell scheitert genauso -> direkt zum Backup.
+        if (r.status === 402 || r.status === 429 || /no google key|quota|credits/i.test(info)) break;
+        continue;
+      }
       const j = await r.json();
       const url = j.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (url) return url;
@@ -71,21 +80,54 @@ async function viaNvidia(prompt: string, errors: string[]): Promise<string | nul
   } catch (e) { errors.push(`nvidia: ${e instanceof Error ? e.message : String(e)}`); return null; }
 }
 
-async function viaPollinations(prompt: string, errors: string[]): Promise<string | null> {
+async function pollinationsKey(): Promise<string> {
+  const env = Deno.env.get("POLLINATIONS_API_KEY");
+  if (env) return env;
   try {
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 1e6)}`;
-    const r = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-    const mime = (r.headers.get("content-type") || "").split(";")[0];
-    if (!r.ok || !mime.startsWith("image/")) { errors.push(`pollinations: HTTP ${r.status}`); return null; }
-    const bytes = new Uint8Array(await r.arrayBuffer());
-    return (await storeBytes(bytes, mime)) ?? url;
-  } catch (e) { errors.push(`pollinations: ${e instanceof Error ? e.message : String(e)}`); return null; }
+    const { data } = await admin()!.from("app_secrets").select("value").eq("name", "POLLINATIONS_API_KEY").maybeSingle();
+    return (data as { value?: string } | null)?.value ?? "";
+  } catch { return ""; }
 }
 
+async function viaPollinations(prompt: string, errors: string[]): Promise<string | null> {
+  const p = encodeURIComponent(prompt.slice(0, 800));
+  const seed = Math.floor(Math.random() * 1e6);
+  const key = await pollinationsKey();
+  // Mit Schlüssel die neue API, sonst (und als zweiter Versuch) der freie Endpunkt ohne Anmeldung.
+  const tries: { url: string; headers?: Record<string, string> }[] = [];
+  if (key) tries.push({ url: `https://gen.pollinations.ai/image/${p}?model=flux&width=1024&height=1024&nologo=true&seed=${seed}`, headers: { Authorization: `Bearer ${key}` } });
+  tries.push({ url: `https://image.pollinations.ai/prompt/${p}?model=flux&width=1024&height=1024&nologo=true&private=true&referrer=mythoscraft&seed=${seed}` });
+  for (const t of tries) {
+    try {
+      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(70_000) });
+      const mime = (r.headers.get("content-type") || "").split(";")[0];
+      if (!r.ok || !mime.startsWith("image/")) { errors.push(`pollinations: HTTP ${r.status}`); continue; }
+      const bytes = new Uint8Array(await r.arrayBuffer());
+      return (await storeBytes(bytes, mime)) ?? (t.headers ? null : t.url);
+    } catch (e) { errors.push(`pollinations: ${e instanceof Error ? e.message : String(e)}`); }
+  }
+  return null;
+}
+
+export type ImageProvider = "nano-banana" | "nvidia" | "pollinations";
+export const PROVIDER_LABEL: Record<ImageProvider, string> = {
+  "nano-banana": "Nano Banana",
+  nvidia: "Qwen-Image (NVIDIA)",
+  pollinations: "Flux (Pollinations)",
+};
+
 /** Erzeugt ein Bild und liefert eine anzeigbare URL (möglichst https aus dem Storage). */
-export async function generateImage(prompt: string, lovableKey?: string): Promise<{ url: string | null; error?: string }> {
+export async function generateImage(prompt: string, lovableKey?: string): Promise<{ url: string | null; provider?: ImageProvider; error?: string }> {
   const errors: string[] = [];
-  const url = (await viaGateway(prompt, lovableKey, errors)) ?? (await viaNvidia(prompt, errors)) ?? (await viaPollinations(prompt, errors));
-  if (!url) { console.error("[image] all providers failed", errors.join(" | ")); return { url: null, error: errors.join(" | ") }; }
-  return { url: await storeDataUrl(url) };
+  const chain: [ImageProvider, () => Promise<string | null>][] = [
+    ["nano-banana", () => viaGateway(prompt, lovableKey, errors)],
+    ["nvidia", () => viaNvidia(prompt, errors)],
+    ["pollinations", () => viaPollinations(prompt, errors)],
+  ];
+  for (const [provider, run] of chain) {
+    const url = await run();
+    if (url) return { url: await storeDataUrl(url), provider };
+  }
+  console.error("[image] all providers failed", errors.join(" | "));
+  return { url: null, error: errors.join(" | ") };
 }
