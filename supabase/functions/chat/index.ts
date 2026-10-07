@@ -1,5 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
-import { generateImage } from "../_shared/image.ts";
+import { generateImage, PROVIDER_LABEL } from "../_shared/image.ts";
+import { isImageRequest, resolveImagePrompt } from "../_shared/imageIntent.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
 import { MYTHOS_CATALOG, MYTHOS_FILES } from "../_shared/catalog.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -175,22 +176,29 @@ Deno.serve(async (req) => {
       return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
-    // /image <prompt>
+    // /image <prompt> – oder automatisch erkannt ("generiere mir das als Bild").
+    // Bezüge wie "das" werden mit dem Chatverlauf zu einem vollständigen Prompt aufgelöst.
     const imgMatch = lastText.match(/^\/image\s+(.+)$/i);
-    if (imgMatch) {
-      const prompt = imgMatch[1].trim();
+    const hasImageAttachment = Array.isArray(lastTextRaw) && lastTextRaw.some((p: any) => p?.type === "image_url");
+    const autoImage = !imgMatch && !hasImageAttachment && isImageRequest(lastText);
+    if (imgMatch || autoImage) {
+      const request = imgMatch ? imgMatch[1].trim() : lastText;
+      // Kurze oder bezügliche /image-Befehle ("/image das") ebenfalls über den Verlauf auflösen.
+      const needsContext = autoImage || request.split(/\s+/).length <= 3;
       const stream = new ReadableStream({
         async start(c) {
-          c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}` }));
-          const { url, error } = await generateImage(prompt, LOVABLE_API_KEY);
+          c.enqueue(sse({ imagePending: { prompt: request } }));
+          const prompt = needsContext ? await resolveImagePrompt(request, messages, LOVABLE_API_KEY) : request;
+          c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}`, imagePending: { prompt } }));
+          const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY);
           if (url) {
             c.enqueue(sse({ image: { url, prompt } }));
-            c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit Nano Banana — ${prompt}*` } }] }));
+            c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit ${PROVIDER_LABEL[provider ?? "nano-banana"]} — ${prompt}*` } }] }));
           } else {
             const hint = error?.includes("safety") || error?.includes("blocked") || error?.includes("SAFETY")
               ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch es mit einer detaillierteren, neutraleren Beschreibung."
-              : "Versuch eine längere/detailliertere Beschreibung (z.B. \"ein bärtiger Mann in einer Kneipe, fotorealistisch\" statt nur \"günther\").";
-            c.enqueue(sse({ choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen.\n\n${hint}` } }] }));
+              : "Alle Bild-Anbieter sind gerade nicht erreichbar. Versuch es in einer Minute nochmal.";
+            c.enqueue(sse({ imageFailed: true, choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen.\n\n${hint}` } }] }));
             console.error("[/image] failed:", error);
           }
           c.enqueue(sseDone()); c.close();
@@ -382,7 +390,7 @@ Wenn unklar: ehrlich sagen + auf Discord oder /helpop verweisen.${memoryBlock}`;
 
 Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
 - \`/identity <name>\` — wechselt deine Persona in diesem Chat
-- \`/image <beschreibung>\` — generiert ein Bild
+- \`/image <beschreibung>\` — generiert ein Bild. Der User kann auch einfach schreiben „generiere mir das als Bild“, das wird automatisch erkannt und aus dem Verlauf aufgelöst.
 - \`/music <stil/vibe>\` — komponiert einen Funk-Groove
 - \`/research <thema>\` — Deep Research mit Web-Suche
 

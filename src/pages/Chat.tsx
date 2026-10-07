@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import ImageGeneration from "@/components/chat/ImageGeneration";
+import { isImageRequest } from "@/lib/imageIntent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import MinecraftAvatar from "@/components/MinecraftAvatar";
@@ -75,7 +77,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; imagePending?: { prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
 /** Status eines Teil-Agenten im Multi-Agent-Modus (vom agent-Endpunkt gestreamt). */
 type AgentStatus = { i: number; title: string; status: "läuft" | "fertig" | "fehler"; phase?: string };
 
@@ -287,12 +289,7 @@ const Chat = () => {
     if (!text || sending) return;
     // Auto-detect generation commands
     const lowerText = text.toLowerCase();
-    if (lowerText.includes("generiere mir ein bild von")) {
-      const match = lowerText.match(/generiere mir ein bild von (.+)/i);
-      if (match && match[1]) {
-        text = `/image ${match[1].trim()}`;
-      }
-    } else if (lowerText.includes("generiere mir ein video von")) {
+    if (lowerText.includes("generiere mir ein video von")) {
       const match = lowerText.match(/generiere mir ein video von (.+)/i);
       if (match && match[1]) {
         text = `/video ${match[1].trim()}`;
@@ -302,21 +299,10 @@ const Chat = () => {
       if (match && match[1]) {
         text = `/music ${match[1].trim()}`;
       }
-    } else if (/generiere (mir )?(das|dies) als bild/i.test(lowerText) || /mach (das|dies) als bild/i.test(lowerText) || /erstelle (das|dies) als bild/i.test(lowerText)) {
-      // Find context from previous messages
-      let prompt = "";
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (msg.content && !msg.content.startsWith("/")) {
-          prompt = msg.content.replace(/^([🤖👤]|AI-Song|AI-Video|🎬|🎵).*/g, "").trim().slice(0, 250);
-          if (prompt) break;
-        }
-      }
-      if (!prompt) {
-        prompt = text.replace(/generiere|mir|das|dies|als|bild|mach|erstelle/gi, "").trim() || "Ein schönes Bild";
-      }
-      text = `/image ${prompt}`;
     }
+    // Bild-Wünsche in normaler Sprache ("generiere mir das als Bild") erkennt der Server selbst
+    // und löst "das" über den Chatverlauf auf. Hier nur für Paywall und Routing.
+    const wantsImage = /^\/image\b/i.test(text) || (!attachments.length && isImageRequest(text));
     const localReply = (content: string) => setMessages(prev => [...prev, { role: "user", content: text }, { role: "assistant", content }]);
     const downloadBlob = (blob: Blob, name: string) => {
       const a = document.createElement("a");
@@ -470,7 +456,7 @@ const Chat = () => {
       text = `🎯 Ziel: ${goalText}`;
     }
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
-    if (/^\/image\b/i.test(text) && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
+    if (wantsImage && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
     if (/^\/music\b/i.test(text) && !sub.canGenerateMusic) { setPaywall({ open: true, reason: "Musik generieren ist eine Pro-Funktion." }); return; }
     if (/^\/agent\b/i.test(text) && !sub.isPro) { setPaywall({ open: true, reason: "Der Browser-Agent ist eine Pro-Funktion." }); return; }
     if (/^\/browser\b/i.test(text) && !sub.isPro) { setPaywall({ open: true, reason: "Browser-Steuerung ist eine Pro-Funktion." }); return; }
@@ -623,7 +609,12 @@ const Chat = () => {
   const streamOnce = async (apiMessages: ApiMsg[], convId: string): Promise<StreamResult | null> => {
     const chosenModel = (profile as any)?.ai_model as string | undefined;
     const modelForCall = isPuterModel(chosenModel) ? chosenModel : undefined;
-    const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" ? "agent" : "chat"}`;
+    // Bild-Wünsche laufen immer über die Chat-Funktion (dort sitzen Erkennung und Backup-Kette).
+    const lastUser = [...apiMessages].reverse().find(m => m.role === "user");
+    const lastUserText = typeof lastUser?.content === "string" ? lastUser.content
+      : Array.isArray(lastUser?.content) ? (lastUser!.content as { type?: string; text?: string }[]).find(p => p.type === "text")?.text ?? "" : "";
+    const toChat = /^\/image\b/i.test(lastUserText) || isImageRequest(lastUserText);
+    const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" && !toChat ? "agent" : "chat"}`;
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const setLast = (patch: Partial<Msg>) => setMessages(prev => {
@@ -698,6 +689,8 @@ const Chat = () => {
           if (json === "[DONE]") break;
           try {
             const p = JSON.parse(json);
+            if (p.imagePending) { setLast({ imagePending: p.imagePending }); continue; }
+            if (p.imageFailed) setLast({ imagePending: undefined });
             if (p.tool) {
               setMessages(prev => {
                 const next = [...prev];
@@ -709,7 +702,7 @@ const Chat = () => {
             }
             if (p.agents) { agentsData = p.agents; setLast({ agents: p.agents }); continue; }
             if (p.search) { setLast({ search: p.search }); continue; }
-            if (p.image) { imageData = p.image; setLast({ image: p.image }); continue; }
+            if (p.image) { imageData = p.image; setLast({ image: p.image, imagePending: undefined }); continue; }
             if (p.music) { musicData = p.music; setLast({ music: p.music }); continue; }
             // Gedanken des Modells (je nach Anbieter unterschiedlich benannt) live mitschreiben.
             const d = p.choices?.[0]?.delta;
@@ -1356,7 +1349,7 @@ const Chat = () => {
                                   </div>
                                 )}
                               </>
-                            ) : !m.image && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
+                            ) : !m.image && !m.imagePending && !m.music && !m.song && !m.video && !m.agent && !m.ext ? (
                               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 {m.search ? (
@@ -1369,14 +1362,7 @@ const Chat = () => {
                                 )}
                               </div>
                             ) : null}
-                            {m.image && (
-                              <img
-                                src={m.image.url}
-                                alt={m.image.prompt}
-                                className="mt-2 rounded-2xl border border-white/10 max-w-full h-auto"
-                                loading="lazy"
-                              />
-                            )}
+                            {(m.image || m.imagePending) && <ImageGeneration image={m.image} pending={m.imagePending} />}
                             {m.music && <FunkPlayer pattern={m.music} />}
                             {m.song && <SongPlayer request={m.song} />}
                             {m.video && <VideoPlayer request={m.video} />}
