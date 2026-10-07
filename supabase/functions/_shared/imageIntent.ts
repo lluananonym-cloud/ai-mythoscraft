@@ -22,6 +22,19 @@ export function isImageRequest(text: string): boolean {
   return STRONG.some((r) => r.test(t));
 }
 
+// Unklare Fälle wie "generiere das als Fußball Trikot": Generier-Verb mit Bezug, aber ohne das Wort "Bild".
+// Die entscheidet die KI mit dem Verlauf; ohne KI zählt "<verb> das als <etwas>" als Bild.
+const SOFT_VERB = /\b(generier\w*|erzeug\w*|zeichne\w*|male|malen|render\w*|visualisier\w*|illustrier\w*|kreier\w*|generate|draw|paint|visuali[sz]e|illustrate)\b/i;
+const REF_AS = /\b(generier|erstell|erzeug|mach|zeichne|male|render|kreier|design)\w*\s+(mir\s+|uns\s+|bitte\s+)*(das|es|dies|dieses|ihn|sie|den|die)\b[^.?!\n]{0,12}?\b(als|wie|im|in)\b/i;
+const TEXTY = /\b(text|liste|tabelle|gedicht|song|lied|lyrics|email|e-mail|mail|brief|zusammenfassung|antwort|plan|code|skript|script|programm|app|website|webseite|pdf|datei|excel|json|csv|story|geschichte|aufsatz|essay|übersetzung|prompt|musik|video|beat|witz|rezept|quiz|frage)\b/i;
+
+export function maybeImageRequest(text: string): boolean {
+  const t = (text || "").trim();
+  if (!t || t.startsWith("/") || t.startsWith("🎯") || t.length > 400) return false;
+  if (NOT.test(t) || TEXTY.test(t)) return false;
+  return SOFT_VERB.test(t) || REF_AS.test(t);
+}
+
 type Msg = { role: string; content: unknown };
 const textOf = (c: unknown): string =>
   typeof c === "string" ? c : Array.isArray(c) ? c.map((p: any) => (p?.type === "text" ? p.text : "")).join(" ") : "";
@@ -38,15 +51,52 @@ function heuristicPrompt(last: string, history: Msg[]): string {
   return (prev || last).slice(0, 500);
 }
 
-/** Baut aus dem Verlauf einen eigenständigen Bild-Prompt. Fällt ohne KI auf eine Heuristik zurück. */
-export async function resolveImagePrompt(request: string, messages: Msg[], lovableKey?: string): Promise<string> {
-  // Verlauf ohne die aktuelle Nachricht, nur Text, gekürzt.
+function transcriptOf(messages: Msg[]): { history: Msg[]; transcript: string } {
   const all = messages.filter((m) => m.role === "user" || m.role === "assistant");
   const history = all.slice(0, -1).slice(-12);
   const transcript = history
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${textOf(m.content).replace(/\s+/g, " ").slice(0, 600)}`)
     .filter((l) => !/:\s*$/.test(l))
     .join("\n");
+  return { history, transcript };
+}
+
+/**
+ * Für unklare Fälle: Will der Nutzer ein Bild? Wenn ja, gleich mit fertigem Prompt.
+ * null = kein Bild-Wunsch.
+ */
+export async function classifyImageRequest(request: string, messages: Msg[], lovableKey?: string): Promise<string | null> {
+  const { history, transcript } = transcriptOf(messages);
+  try {
+    const out = await aiText({
+      model: "google/gemini-2.5-flash",
+      temperature: 0,
+      max_tokens: 300,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Decide if the user's last message asks to generate a picture/visual (image, photo, drawing, design mockup, jersey, logo, poster, etc.). " +
+            "Requests for text, code, lists, music or video are NOT images. " +
+            "If it is an image request, answer with ONLY the image prompt in English (one to three vivid sentences), resolving references like 'das', 'es', 'it', 'that' from the conversation and keeping every detail. " +
+            "If it is not an image request, answer exactly: NO",
+        },
+        { role: "user", content: `Conversation:\n${transcript || "(empty)"}\n\nLast message: ${request}` },
+      ],
+    }, lovableKey);
+    const p = out.trim().replace(/^["'`]+|["'`]+$/g, "").replace(/^(prompt|image prompt)\s*:\s*/i, "");
+    if (/^no\.?$/i.test(p)) return null;
+    if (p.length >= 8) return p.slice(0, 1500);
+  } catch (e) {
+    console.warn("[imageIntent] classify failed", e instanceof Error ? e.message : String(e));
+  }
+  // KI nicht erreichbar: nur das eindeutige Muster "<verb> das als <etwas>" zählt.
+  return REF_AS.test(request) ? heuristicPrompt(request, history) : null;
+}
+
+/** Baut aus dem Verlauf einen eigenständigen Bild-Prompt. Fällt ohne KI auf eine Heuristik zurück. */
+export async function resolveImagePrompt(request: string, messages: Msg[], lovableKey?: string): Promise<string> {
+  const { history, transcript } = transcriptOf(messages);
   try {
     const out = await aiText({
       model: "google/gemini-2.5-flash",

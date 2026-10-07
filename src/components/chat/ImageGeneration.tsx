@@ -21,25 +21,47 @@ const STARS = Array.from({ length: 14 }, (_, i) => ({
   left: `${(i * 37) % 100}%`, top: `${(i * 53 + 11) % 100}%`, delay: `${(i * 0.37) % 2.4}s`, size: 3 + (i % 3) * 2,
 }));
 
+export type GeneratedImage = { url: string; prompt: string; fallback?: boolean; reasons?: string[] };
+
+/** Direkter Pollinations-Link: lädt der Browser selbst, wenn alle Server-Anbieter ausgefallen sind. */
+export function browserImageUrl(prompt: string): string {
+  const seed = Math.floor(Math.random() * 1e6);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?model=flux&width=1024&height=1024&nologo=true&referrer=mythoscraft&seed=${seed}`;
+}
+
 type Props = {
-  /** Gesetzt, solange das Bild noch erzeugt wird. */
+  /** Gesetzt, solange der Server das Bild noch erzeugt. */
   pending?: { prompt: string };
-  image?: { url: string; prompt: string };
+  image?: GeneratedImage;
 };
 
 export default function ImageGeneration({ pending, image }: Props) {
   const [playing, setPlaying] = useState(false);
   const [open, setOpen] = useState(false);
-  // Wird das Bild fertig, während gespielt wird: Spiel läuft weiter, ein Banner bietet das Bild an.
-  const readyWhilePlaying = playing && !!image;
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  // Bild vorladen: die Animation bleibt stehen, bis es wirklich da ist (Browser-Backup kann dauern).
+  useEffect(() => {
+    if (!image?.url) return;
+    setStatus("loading");
+    const img = new Image();
+    let alive = true;
+    img.onload = () => alive && setStatus("ready");
+    img.onerror = () => alive && setStatus("error");
+    img.src = image.url;
+    return () => { alive = false; };
+  }, [image?.url]);
+
+  const busy = !!pending || (!!image && status === "loading");
+  const ready = !!image && status === "ready";
 
   return (
     <div className="not-prose mt-2 w-full max-w-md">
       <style>{STYLE}</style>
-      {playing && (pending || image) ? (
+      {playing && (busy || ready) ? (
         <div className="relative">
           <PaintCatcher onExit={() => setPlaying(false)} />
-          {readyWhilePlaying && (
+          {ready && (
             <button
               onClick={() => setPlaying(false)}
               className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg"
@@ -49,23 +71,32 @@ export default function ImageGeneration({ pending, image }: Props) {
             </button>
           )}
         </div>
-      ) : image ? (
-        <RevealImage image={image} onOpen={() => setOpen(true)} />
-      ) : pending ? (
-        <PendingCard prompt={pending.prompt} onPlay={() => setPlaying(true)} />
+      ) : ready ? (
+        <RevealImage image={image!} onOpen={() => setOpen(true)} />
+      ) : busy ? (
+        <PendingCard prompt={pending?.prompt ?? image!.prompt} onPlay={() => setPlaying(true)} />
+      ) : image && status === "error" ? (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+          ❌ Bild-Generierung fehlgeschlagen. Alle Anbieter sind gerade nicht erreichbar, versuch es gleich nochmal.
+          {!!image.reasons?.length && (
+            <ul className="mt-2 list-disc pl-5 text-xs text-red-200/70">
+              {image.reasons.map((r) => <li key={r}>{r}</li>)}
+            </ul>
+          )}
+        </div>
       ) : null}
-      {image && (
+      {ready && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-4xl border-white/10 bg-black/90 p-2">
-            <DialogTitle className="sr-only">{image.prompt}</DialogTitle>
-            <img src={image.url} alt={image.prompt} className="max-h-[80vh] w-full rounded-lg object-contain" />
+            <DialogTitle className="sr-only">{image!.prompt}</DialogTitle>
+            <img src={image!.url} alt={image!.prompt} className="max-h-[80vh] w-full rounded-lg object-contain" />
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-1 text-xs text-muted-foreground">
-              <span className="line-clamp-2 flex-1">{image.prompt}</span>
+              <span className="line-clamp-2 flex-1">{image!.prompt}</span>
               <div className="flex gap-1">
-                <a href={image.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10">
+                <a href={image!.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10">
                   <ExternalLink className="h-3.5 w-3.5" /> Öffnen
                 </a>
-                <button onClick={() => download(image.url)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10">
+                <button onClick={() => download(image!.url)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10">
                   <Download className="h-3.5 w-3.5" /> Speichern
                 </button>
               </div>

@@ -1,5 +1,5 @@
 // Gemeinsame Bildgenerierung für Chat (/image), image-gen (Video, Code-App /bild).
-// Reihenfolge: Lovable-Gateway (mit Google-Fallback aus ai.ts) -> NVIDIA -> Pollinations (gratis).
+// Reihenfolge: Lovable-Gateway (mit Google-Fallback aus ai.ts) -> NVIDIA -> Pollinations (gratis) -> AI Horde (gratis, anonym).
 // Sind die Lovable-Credits aufgebraucht (402), springt die Kette sofort weiter, statt jedes
 // Lovable-Modell einzeln durchzuprobieren. Pollinations läuft ohne Schlüssel; mit dem optionalen
 // Secret POLLINATIONS_API_KEY (kostenlos auf enter.pollinations.ai) gibt es höhere Limits.
@@ -67,7 +67,7 @@ async function viaNvidia(prompt: string, errors: string[]): Promise<string | nul
       key = s.NVIDIA_IMAGE_API_KEY || s.NVIDIA_API_KEY || "";
     } catch { /* Tabelle fehlt -> kein NVIDIA */ }
   }
-  if (!key) return null;
+  if (!key) { errors.push("nvidia: kein Schlüssel hinterlegt"); return null; }
   try {
     const r = await fetch("https://integrate.api.nvidia.com/v1/images/generations", {
       method: "POST",
@@ -99,7 +99,7 @@ async function viaPollinations(prompt: string, errors: string[]): Promise<string
   tries.push({ url: `https://image.pollinations.ai/prompt/${p}?model=flux&width=1024&height=1024&nologo=true&private=true&referrer=mythoscraft&seed=${seed}` });
   for (const t of tries) {
     try {
-      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(70_000) });
+      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(35_000) });
       const mime = (r.headers.get("content-type") || "").split(";")[0];
       if (!r.ok || !mime.startsWith("image/")) { errors.push(`pollinations: HTTP ${r.status}`); continue; }
       const bytes = new Uint8Array(await r.arrayBuffer());
@@ -109,22 +109,73 @@ async function viaPollinations(prompt: string, errors: string[]): Promise<string
   return null;
 }
 
-export type ImageProvider = "nano-banana" | "nvidia" | "pollinations";
+// AI Horde: freies, community-betriebenes Netz. Anonym (Schlüssel 0000000000) ohne Anmeldung,
+// dafür manchmal langsam. Optional mit eigenem Schlüssel (AI_HORDE_API_KEY) schneller.
+async function viaHorde(prompt: string, errors: string[], deadline: number): Promise<string | null> {
+  const key = Deno.env.get("AI_HORDE_API_KEY") || "0000000000";
+  const H = { "Content-Type": "application/json", apikey: key, "Client-Agent": "mythoscraft:1.0:mythoscraft.online" };
+  try {
+    const r = await fetch("https://aihorde.net/api/v2/generate/async", {
+      method: "POST", headers: H, signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify({ prompt: prompt.slice(0, 900), params: { width: 512, height: 512, steps: 20, n: 1 }, nsfw: false, censor_nsfw: true, r2: true, shared: true }),
+    });
+    if (!r.ok) { errors.push(`horde: HTTP ${r.status} ${(await r.text()).slice(0, 120)}`); return null; }
+    const { id } = await r.json();
+    if (!id) { errors.push("horde: keine Auftrags-ID"); return null; }
+    while (Date.now() < deadline) {
+      await new Promise((res) => setTimeout(res, 3000));
+      const c = await fetch(`https://aihorde.net/api/v2/generate/check/${id}`, { headers: H, signal: AbortSignal.timeout(10_000) }).then((x) => x.json()).catch(() => null);
+      if (c?.faulted) { errors.push("horde: Auftrag fehlgeschlagen"); return null; }
+      if (!c?.done) continue;
+      const st = await fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { headers: H, signal: AbortSignal.timeout(15_000) }).then((x) => x.json());
+      const img = st?.generations?.[0]?.img as string | undefined;
+      if (!img) { errors.push("horde: kein Bild"); return null; }
+      if (!/^https?:/i.test(img)) return `data:image/webp;base64,${img}`;
+      // Horde-Links laufen ab -> ins eigene Storage kopieren.
+      const g = await fetch(img, { signal: AbortSignal.timeout(20_000) });
+      const mime = (g.headers.get("content-type") || "image/webp").split(";")[0];
+      return (await storeBytes(new Uint8Array(await g.arrayBuffer()), mime)) ?? img;
+    }
+    fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { method: "DELETE", headers: H }).catch(() => {});
+    errors.push("horde: zu langsam (Warteschlange)");
+  } catch (e) { errors.push(`horde: ${e instanceof Error ? e.message : String(e)}`); }
+  return null;
+}
+
+export type ImageProvider = "nano-banana" | "nvidia" | "pollinations" | "horde";
 export const PROVIDER_LABEL: Record<ImageProvider, string> = {
   "nano-banana": "Nano Banana",
   nvidia: "Qwen-Image (NVIDIA)",
   pollinations: "Flux (Pollinations)",
+  horde: "Stable Diffusion (AI Horde)",
 };
+
+/** Kurze Gründe pro Anbieter (eine Zeile je Anbieter) für die Fehlermeldung im Chat. */
+export function explainErrors(error: string | undefined): string[] {
+  const seen = new Map<string, string>();
+  for (const raw of (error || "").split(" | ")) {
+    const m = raw.match(/^([^:]+):\s*(.*)$/);
+    if (!m) continue;
+    const name = /gemini|google/i.test(m[1]) ? "Lovable/Google" : m[1][0].toUpperCase() + m[1].slice(1);
+    const why = m[2].replace(/\{"error":"?|"?\}$/g, "").replace(/AI unavailable:\s*/i, "").replace(/no google key configured/i, "Credits leer und kein GOOGLE_AI_API_KEY").slice(0, 110);
+    seen.set(name, why);
+  }
+  return [...seen].map(([k, v]) => `${k}: ${v}`);
+}
 
 /** Erzeugt ein Bild und liefert eine anzeigbare URL (möglichst https aus dem Storage). */
 export async function generateImage(prompt: string, lovableKey?: string): Promise<{ url: string | null; provider?: ImageProvider; error?: string }> {
   const errors: string[] = [];
+  // Edge Functions dürfen nicht ewig laufen: AI Horde bekommt nur die restliche Zeit.
+  const deadline = Date.now() + 130_000;
   const chain: [ImageProvider, () => Promise<string | null>][] = [
     ["nano-banana", () => viaGateway(prompt, lovableKey, errors)],
     ["nvidia", () => viaNvidia(prompt, errors)],
     ["pollinations", () => viaPollinations(prompt, errors)],
+    ["horde", () => viaHorde(prompt, errors, deadline)],
   ];
   for (const [provider, run] of chain) {
+    if (Date.now() > deadline - 10_000) { errors.push(`${provider}: keine Zeit mehr`); break; }
     const url = await run();
     if (url) return { url: await storeDataUrl(url), provider };
   }

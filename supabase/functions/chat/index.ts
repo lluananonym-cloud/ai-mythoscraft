@@ -1,6 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
-import { generateImage, PROVIDER_LABEL } from "../_shared/image.ts";
-import { isImageRequest, resolveImagePrompt } from "../_shared/imageIntent.ts";
+import { explainErrors, generateImage, PROVIDER_LABEL } from "../_shared/image.ts";
+import { classifyImageRequest, isImageRequest, maybeImageRequest, resolveImagePrompt } from "../_shared/imageIntent.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
 import { MYTHOS_CATALOG, MYTHOS_FILES } from "../_shared/catalog.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode, clientImageFallback } = await req.json();
     const resolved = resolveMythos(mythos);
     const ALLOWED_MODELS = new Set([
       "openai/gpt-5.5-pro",
@@ -181,27 +181,43 @@ Deno.serve(async (req) => {
     const imgMatch = lastText.match(/^\/image\s+(.+)$/i);
     const hasImageAttachment = Array.isArray(lastTextRaw) && lastTextRaw.some((p: any) => p?.type === "image_url");
     const autoImage = !imgMatch && !hasImageAttachment && isImageRequest(lastText);
-    if (imgMatch || autoImage) {
+    // Unklar ("generiere das als Fußball Trikot"): die KI entscheidet mit dem Verlauf und liefert gleich den Prompt.
+    const classified = !imgMatch && !autoImage && !hasImageAttachment && maybeImageRequest(lastText)
+      ? await classifyImageRequest(lastText, messages, LOVABLE_API_KEY)
+      : null;
+    if (imgMatch || autoImage || classified) {
       const request = imgMatch ? imgMatch[1].trim() : lastText;
       // Kurze oder bezügliche /image-Befehle ("/image das") ebenfalls über den Verlauf auflösen.
-      const needsContext = autoImage || request.split(/\s+/).length <= 3;
+      const needsContext = !classified && (autoImage || request.split(/\s+/).length <= 3);
       const stream = new ReadableStream({
         async start(c) {
-          c.enqueue(sse({ imagePending: { prompt: request } }));
-          const prompt = needsContext ? await resolveImagePrompt(request, messages, LOVABLE_API_KEY) : request;
-          c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}`, imagePending: { prompt } }));
-          const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY);
-          if (url) {
-            c.enqueue(sse({ image: { url, prompt } }));
-            c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit ${PROVIDER_LABEL[provider ?? "nano-banana"]} — ${prompt}*` } }] }));
-          } else {
-            const hint = error?.includes("safety") || error?.includes("blocked") || error?.includes("SAFETY")
-              ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch es mit einer detaillierteren, neutraleren Beschreibung."
-              : "Alle Bild-Anbieter sind gerade nicht erreichbar. Versuch es in einer Minute nochmal.";
-            c.enqueue(sse({ imageFailed: true, choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen.\n\n${hint}` } }] }));
-            console.error("[/image] failed:", error);
+          // Kommentarzeilen halten die Verbindung offen, während langsame Backups rechnen.
+          const ping = setInterval(() => { try { c.enqueue(enc.encode(": ping\n\n")); } catch { /* zu */ } }, 10_000);
+          try {
+            c.enqueue(sse({ imagePending: { prompt: classified ?? request } }));
+            const prompt = classified ?? (needsContext ? await resolveImagePrompt(request, messages, LOVABLE_API_KEY) : request);
+            c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}`, imagePending: { prompt } }));
+            const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY);
+            if (url) {
+              c.enqueue(sse({ image: { url, prompt } }));
+              c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit ${PROVIDER_LABEL[provider ?? "nano-banana"]} — ${prompt}*` } }] }));
+            } else {
+              console.error("[/image] failed:", error);
+              const reasons = explainErrors(error);
+              if (clientImageFallback) {
+                // Die Web-App versucht es dann direkt aus dem Browser (andere IP, eigenes Limit).
+                c.enqueue(sse({ imageFailed: { prompt, reasons } }));
+              } else {
+                const hint = /safety|blocked/i.test(error || "")
+                  ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch eine neutralere Beschreibung."
+                  : "Alle Bild-Anbieter sind gerade nicht erreichbar.";
+                c.enqueue(sse({ imageFailed: { prompt, reasons }, choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen. ${hint}\n\n${reasons.map((r) => `- ${r}`).join("\n")}` } }] }));
+              }
+            }
+          } finally {
+            clearInterval(ping);
+            c.enqueue(sseDone()); c.close();
           }
-          c.enqueue(sseDone()); c.close();
         },
       });
       return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
