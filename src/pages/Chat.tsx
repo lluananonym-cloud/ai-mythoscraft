@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import ImageGeneration from "@/components/chat/ImageGeneration";
+import ImageGeneration, { browserImageUrl, type GeneratedImage } from "@/components/chat/ImageGeneration";
 import { isImageRequest } from "@/lib/imageIntent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -77,7 +77,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: { url: string; prompt: string }; imagePending?: { prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: GeneratedImage; imagePending?: { prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
 /** Status eines Teil-Agenten im Multi-Agent-Modus (vom agent-Endpunkt gestreamt). */
 type AgentStatus = { i: number; title: string; status: "läuft" | "fertig" | "fehler"; phase?: string };
 
@@ -98,7 +98,7 @@ const TOOL_CALL = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i;
 
 type ApiMsg = { role: string; content: any };
 type GoalState = { text: string; step: number; status: "läuft" | "erreicht" | "gestoppt" | "limit" };
-type StreamResult = { full: string; image?: { url: string; prompt: string }; music?: FunkPattern; agents?: AgentStatus[]; thinking: string; aborted: boolean };
+type StreamResult = { full: string; image?: GeneratedImage; music?: FunkPattern; agents?: AgentStatus[]; thinking: string; aborted: boolean };
 
 /** Nachricht aus dem Verlauf so umwandeln, wie das Modell sie bekommt. */
 const toApi = (m: Msg): ApiMsg =>
@@ -633,12 +633,13 @@ const Chat = () => {
         model: modelForCall,
         mythos: mythosId,
         messages: apiMessages,
+        clientImageFallback: true,
         mode,
       }),
     });
 
     let full = "", thinking = "";
-    let imageData: { url: string; prompt: string } | undefined;
+    let imageData: GeneratedImage | undefined;
     let musicData: FunkPattern | undefined;
     let agentsData: AgentStatus[] | undefined;
     try {
@@ -690,7 +691,13 @@ const Chat = () => {
           try {
             const p = JSON.parse(json);
             if (p.imagePending) { setLast({ imagePending: p.imagePending }); continue; }
-            if (p.imageFailed) setLast({ imagePending: undefined });
+            if (p.imageFailed) {
+              // Server-Kette erschöpft: direkt aus dem Browser bei Pollinations versuchen (eigene IP, eigenes Limit).
+              const { prompt, reasons } = p.imageFailed as { prompt: string; reasons?: string[] };
+              imageData = { url: browserImageUrl(prompt), prompt, fallback: true, reasons };
+              setLast({ image: imageData, imagePending: undefined });
+              continue;
+            }
             if (p.tool) {
               setMessages(prev => {
                 const next = [...prev];
