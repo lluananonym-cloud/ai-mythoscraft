@@ -19,7 +19,7 @@ const SplashScreen = () => {
 
   // Initial splash on cold start.
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 900);
+    const t = setTimeout(() => setVisible(false), 250);
     return () => clearTimeout(t);
   }, []);
 
@@ -40,7 +40,9 @@ const SplashScreen = () => {
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", hide);
     window.addEventListener("pageshow", show);
-    window.addEventListener("blur", hide);
+    // Klick in eine eingebettete App (iframe) lässt das Fenster ebenfalls "blur" melden: dann nicht schwärzen.
+    const onBlur = () => setTimeout(() => { if (!(document.activeElement instanceof HTMLIFrameElement)) hide(); }, 0);
+    window.addEventListener("blur", onBlur);
     window.addEventListener("focus", show);
     // Chromium freeze/resume
     document.addEventListener("freeze", hide as any);
@@ -50,7 +52,7 @@ const SplashScreen = () => {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pagehide", hide);
       window.removeEventListener("pageshow", show);
-      window.removeEventListener("blur", hide);
+      window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", show);
       document.removeEventListener("freeze", hide as any);
       document.removeEventListener("resume", show as any);

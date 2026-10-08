@@ -167,6 +167,8 @@ function googleSseToOpenAi(src: ReadableStream<Uint8Array>): ReadableStream<Uint
   });
 }
 
+let gatewayEmptyUntil = 0;
+
 function shouldFallback(status: number) {
   return status === 402 || status === 429 || status === 401 || status === 403 || status >= 500;
 }
@@ -182,7 +184,8 @@ export async function aiChat(
   const streaming = body.stream === true;
   const key = lovableKey ?? Deno.env.get("LOVABLE_API_KEY");
 
-  if (key) {
+  const skippedGateway = !!key && Date.now() <= gatewayEmptyUntil;
+  if (key && !skippedGateway) {
     try {
       const r = await fetch(GATEWAY, {
         method: "POST",
@@ -192,6 +195,8 @@ export async function aiChat(
       if (r.ok) return r;
       const info = await r.text().catch(() => "");
       console.warn("[ai] gateway failed", r.status, info.slice(0, 200));
+      // Guthaben leer: ein paar Minuten direkt zu Google, statt jedes Mal erst am Gateway abzuprallen.
+      if (r.status === 402) gatewayEmptyUntil = Date.now() + 5 * 60_000;
       if (!shouldFallback(r.status)) {
         return new Response(info, { status: r.status, headers: { "Content-Type": "application/json" } });
       }
@@ -243,6 +248,9 @@ export async function aiChat(
     }
   }
 
+
+  // Google hat auch nicht geklappt: Gateway doch wieder versuchen (vielleicht wurde Guthaben nachgeladen).
+  if (skippedGateway) { gatewayEmptyUntil = 0; return aiChat(body, lovableKey); }
 
   return new Response(JSON.stringify({ error: `AI unavailable: ${lastText}` }), {
     status: lastStatus,

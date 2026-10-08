@@ -37,7 +37,7 @@ export default function FotoApp() {
           { type: "text", text: "Baue diese Skizze als App." + (hint.trim() ? " Zusatz: " + hint.trim() : "") },
           { type: "image_url", image_url: { url: photo } },
         ],
-      }], "google/gemini-3.1-pro-preview");
+      }], "google/gemini-3.6-flash");
       const html = extractHtml(text);
       if (!html) throw new Error("Die KI hat keine App geliefert. Versuch es mit einem deutlicheren Foto.");
       const title = html.match(/<title>([^<]{1,60})<\/title>/i)?.[1]?.trim() || "Foto-App";
