@@ -532,7 +532,7 @@ const Chat = () => {
       const userMsg: Msg = { role: "user", content: text };
       const aiMsg: Msg = {
         role: "assistant",
-        content: `🎵 **Song wird erzeugt:** _${prompt}_\n\nEchter Track mit Gesang, ${Math.round(song.duration! / 6) / 10} Minuten. Er spielt schon, während er noch entsteht.`,
+        content: `🎵 **Song wird erzeugt:** _${prompt}_\n\nEchter Track mit Gesang, ${Math.round(song.duration! / 6) / 10} Minuten.`,
         song,
       };
       setMessages(prev => [...prev, userMsg, aiMsg]);

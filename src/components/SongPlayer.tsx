@@ -83,21 +83,48 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
   // false = kein Musik-Schlüssel hinterlegt, dann alter Browser-Synth.
   const generateReal = async (): Promise<boolean> => {
     const { data: { session } } = await supabase.auth.getSession();
+    // Ohne Streaming (Lyria) liefert der Server erst am Ende: Fortschritt bis 90 % schätzen.
+    const steps = ["Text wird geschrieben…", "Melodie entsteht…", "Gesang wird aufgenommen…", "Song wird gemischt…"];
+    const t0 = Date.now();
+    const tick = setInterval(() => {
+      const sec = (Date.now() - t0) / 1000;
+      setProgress(Math.min(90, Math.round(5 + 85 * (1 - Math.exp(-sec / 30)))));
+      setProgressMsg(steps[Math.min(steps.length - 1, Math.floor(sec / 12))]);
+    }, 500);
+    try {
+      return await requestReal(session?.access_token, () => clearInterval(tick));
+    } finally {
+      clearInterval(tick);
+    }
+  };
+
+  const requestReal = async (token: string | undefined, stopEstimate: () => void): Promise<boolean> => {
     const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/music-gen`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ prompt: request.prompt, duration: seconds, mode: "stream" }),
     });
     if ((r.headers.get("Content-Type") || "").includes("json")) {
       const j = await r.json().catch(() => ({}));
-      if (j?.error === "no_music_key") return false;
-      throw new Error(j?.error || `Fehler ${r.status}`);
+      if (j?.error === "no_music_key") { console.warn("[song] kein Musikmodell erreichbar", j.details); return false; }
+      if (!j?.audio) throw new Error(j?.error || `Fehler ${r.status}`);
+      const bin = atob(j.audio);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: j.mime || "audio/mpeg" }));
+      setAudioUrl(url);
+      setFileUrl(url);
+      setProgress(100);
+      setStatus("ready");
+      setTimeout(() => audioRef.current?.play().catch(() => {}), 50);
+      return true;
     }
     if (!r.ok || !r.body) throw new Error(`Fehler ${r.status}`);
+    stopEstimate();
     const total = Number(r.headers.get("X-Song-Seconds")) || seconds;
     setStatus("generating");
     setProgressMsg("Song entsteht…");
@@ -231,7 +258,7 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
 
       {status === "idle" && (
         <p className="text-xs text-muted-foreground">
-          Klick „Generieren" für einen echten Song mit Gesang ({Math.round(seconds / 6) / 10} Minuten). Er spielt schon, während er entsteht.
+          Klick „Generieren" für einen echten Song mit Gesang ({Math.round(seconds / 6) / 10} Minuten).
         </p>
       )}
 
