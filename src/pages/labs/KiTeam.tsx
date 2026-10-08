@@ -13,7 +13,7 @@ import { APP_RULES, askAI, extractHtml, extractJson, listMyApps, saveMyApp, type
 // Gleiche Idee wie der Multi-Agent-Modus der Coding-App (src/lib/mythos-code-app/renderer.js):
 // mehrere Agenten mit eigener Rolle, deren Fortschritt live sichtbar ist.
 type Role = "designer" | "coder" | "tester";
-const ROLES: Record<Role, { name: string; emoji: string; color: string }> = {
+const ROLES: Record<Role, { name: string; job: string; emoji: string; color: string }> = {
   designer: { name: "Dana", job: "Designerin", emoji: "🎨", color: "from-pink-500/30 to-rose-500/20" },
   coder: { name: "Kai", job: "Programmierer", emoji: "💻", color: "from-sky-500/30 to-indigo-500/20" },
   tester: { name: "Tom", job: "Tester", emoji: "🧪", color: "from-emerald-500/30 to-teal-500/20" },
