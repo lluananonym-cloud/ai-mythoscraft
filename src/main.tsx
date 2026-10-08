@@ -37,7 +37,18 @@ if (isPreviewHost || isInIframe) {
 } else if ("serviceWorker" in navigator) {
   // Lazy-load the virtual PWA register module only in production-like contexts.
   import("virtual:pwa-register")
-    .then(({ registerSW }) => registerSW({ immediate: true }))
+    .then(({ registerSW }) => registerSW({
+      immediate: true,
+      // Handy-Apps (vom Homescreen) laden die Seite kaum neu und blieben so auf alten Ständen hängen.
+      // Darum regelmäßig und beim Zurückkehren in die App nach einer neuen Version fragen;
+      // "autoUpdate" lädt dann automatisch neu.
+      onRegisteredSW(_url, reg) {
+        if (!reg) return;
+        const check = () => { if (navigator.onLine) reg.update().catch(() => {}); };
+        setInterval(check, 60_000);
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+      },
+    }))
     .catch(() => {});
 }
 
