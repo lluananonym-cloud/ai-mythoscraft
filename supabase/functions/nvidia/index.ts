@@ -32,6 +32,13 @@ Deno.serve(async (req) => {
   if (kind === "setkey") {
     const { data: isAdmin } = await admin.rpc("has_role", { _user_id: claims.claims.sub, _role: "admin" });
     if (!isAdmin) return json({ error: "Nur für Admins." }, 403);
+    if (body.which === "elevenlabs") {
+      const v = typeof body.value === "string" ? body.value.trim() : "";
+      if (!/^[\w-]{20,200}$/.test(v)) return json({ error: "Das sieht nicht nach einem ElevenLabs-Schlüssel aus (meist sk_…)." }, 400);
+      const { error } = await admin.from("app_secrets").upsert({ name: "ELEVENLABS_API_KEY", value: v, updated_at: new Date().toISOString() });
+      if (error) return json({ error: "Speichern fehlgeschlagen – ist die Migration app_secrets angewendet? (" + error.message + ")" }, 500);
+      return json({ ok: true, name: "ELEVENLABS_API_KEY" });
+    }
     const isGoogle = body.which === "google" || body.which === "google2";
     const name = isGoogle ? (body.which === "google2" ? "GOOGLE_AI_API_KEY_BACKUP" : "GOOGLE_AI_API_KEY")
       : body.which === "image" ? "NVIDIA_IMAGE_API_KEY" : "NVIDIA_API_KEY";
