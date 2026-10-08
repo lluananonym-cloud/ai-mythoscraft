@@ -68,7 +68,7 @@ export default function KiTeam() {
     set("tester", "fertig");
     if (!issues.length || review?.ok) return html;
     set("coder", "arbeitet");
-    const fixed = extractHtml(await askAI(CODER, [{ role: "user", content: `Behebe diese Probleme vom Tester:\n${issues.map((i) => "- " + i).join("\n")}\n\nAktueller Code:\n${html}` }], "openai/gpt-5.4"));
+    const fixed = extractHtml(await askAI(CODER, [{ role: "user", content: `Behebe diese Probleme vom Tester:\n${issues.map((i) => "- " + i).join("\n")}\n\nAktueller Code:\n${html}` }], "google/gemini-3.6-flash"));
     stopped();
     set("coder", "fertig");
     if (!fixed) return html;
@@ -92,7 +92,7 @@ export default function KiTeam() {
       const design = await askAI(DESIGNER, [{ role: "user", content: task }], "google/gemini-3.6-flash");
       stopped();
       add({ role: "designer", text: design }); set("designer", "fertig"); set("coder", "arbeitet");
-      let html = extractHtml(await askAI(CODER, [{ role: "user", content: `Projekt: ${task}\n\nPlan von Dana:\n${design}` }], "openai/gpt-5.4"));
+      let html = extractHtml(await askAI(CODER, [{ role: "user", content: `Projekt: ${task}\n\nPlan von Dana:\n${design}` }], "google/gemini-3.6-flash"));
       stopped();
       if (!html) throw new Error("Kai hat keinen Code geliefert. Bitte nochmal versuchen.");
       add({ role: "coder", text: "Hier ist die erste Version! Tom, schaust du drüber?", html }); set("coder", "fertig");
@@ -114,7 +114,7 @@ export default function KiTeam() {
     add({ role: "user", text: wish });
     try {
       set("coder", "arbeitet");
-      let html = extractHtml(await askAI(CODER, [{ role: "user", content: `Änderungswunsch: ${wish}\n\nAktueller Code:\n${app.html}` }], "openai/gpt-5.4"));
+      let html = extractHtml(await askAI(CODER, [{ role: "user", content: `Änderungswunsch: ${wish}\n\nAktueller Code:\n${app.html}` }], "google/gemini-3.6-flash"));
       stopped();
       if (!html) throw new Error("Kai hat keinen Code geliefert.");
       add({ role: "coder", text: "Ist eingebaut!", html }); set("coder", "fertig");

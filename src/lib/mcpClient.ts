@@ -93,11 +93,19 @@ export async function callTool(server: McpServer, name: string, args: unknown): 
 }
 
 /** Alle Werkzeuge aller eingeschalteten Connectoren, Name = "server__tool". */
+// Werkzeuglisten kurz merken: sonst fragt jede Chat-Nachricht erst alle Server ab, bevor die KI antwortet.
+const toolCache = new Map<string, { at: number; tools: McpTool[] }>();
+const TOOL_TTL = 5 * 60_000;
+const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+  Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error("Zeitüberschreitung")), ms))]);
+
 export async function collectTools(servers: McpServer[]) {
   const out: { key: string; server: McpServer; tool: McpTool }[] = [];
   await Promise.all(servers.filter(s => s.enabled).map(async server => {
     try {
-      const tools = await listTools(server);
+      const hit = toolCache.get(server.url);
+      const tools = hit && Date.now() - hit.at < TOOL_TTL ? hit.tools : await withTimeout(listTools(server), 4000);
+      toolCache.set(server.url, { at: hit && hit.tools === tools ? hit.at : Date.now(), tools });
       const prefix = server.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "mcp";
       for (const tool of tools) out.push({ key: `${prefix}__${tool.name}`, server, tool });
     } catch { /* Server nicht erreichbar – einfach weglassen */ }

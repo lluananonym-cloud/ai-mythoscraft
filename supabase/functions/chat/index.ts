@@ -348,32 +348,36 @@ Deno.serve(async (req) => {
     }
 
     // ============== NORMAL CHAT ==============
+    // Gespräch, Persona und Erinnerungen gleichzeitig laden statt nacheinander (spart Wartezeit vor der Antwort).
     let identityOverride: string | null = null;
     let convUserId: string | null = clientUserId || null;
-    if (conversationId) {
-      const { data: conv } = await supabase.from("conversations").select("identity_override,user_id").eq("id", conversationId).maybeSingle();
-      identityOverride = conv?.identity_override ?? null;
-      if (conv?.user_id) convUserId = conv.user_id;
-    }
+    const loadMemories = (uid: string) => supabase.from("user_memories").select("content,category").eq("user_id", uid).order("created_at", { ascending: false }).limit(40);
+    const wantMemory = resolved.memory !== false;
+    const [convRes, personaRes, memRes] = await Promise.all([
+      conversationId ? supabase.from("conversations").select("identity_override,user_id").eq("id", conversationId).maybeSingle() : Promise.resolve({ data: null }),
+      personaId ? supabase.from("ai_personas").select("name,system_prompt,is_public,user_id,use_count").eq("id", personaId).maybeSingle() : Promise.resolve({ data: null }),
+      wantMemory && clientUserId ? loadMemories(clientUserId) : Promise.resolve({ data: null }),
+    ]);
+    const conv = convRes.data as { identity_override: string | null; user_id: string } | null;
+    identityOverride = conv?.identity_override ?? null;
+    if (conv?.user_id) convUserId = conv.user_id;
 
     // Load persona if requested
     let personaPrompt: string | null = null;
     let personaName: string | null = null;
-    if (personaId) {
-      const { data: p } = await supabase.from("ai_personas").select("name,system_prompt,is_public,user_id").eq("id", personaId).maybeSingle();
-      if (p && (p.is_public || p.user_id === convUserId)) {
-        personaPrompt = p.system_prompt;
-        personaName = p.name;
-        // bump use_count async (non-blocking, ignore errors)
-        const cur = await supabase.from("ai_personas").select("use_count").eq("id", personaId).maybeSingle();
-        await supabase.from("ai_personas").update({ use_count: (cur.data?.use_count ?? 0) + 1 }).eq("id", personaId);
-      }
+    const p = personaRes.data as { name: string; system_prompt: string; is_public: boolean; user_id: string; use_count: number | null } | null;
+    if (p && (p.is_public || p.user_id === convUserId)) {
+      personaPrompt = p.system_prompt;
+      personaName = p.name;
+      // Zähler im Hintergrund erhöhen, die Antwort wartet nicht darauf.
+      supabase.from("ai_personas").update({ use_count: (p.use_count ?? 0) + 1 }).eq("id", personaId).then(() => {}, () => {});
     }
 
     // Load user memories
     let memoryBlock = "";
-    if (convUserId && resolved.memory !== false) {
-      const { data: mems } = await supabase.from("user_memories").select("content,category").eq("user_id", convUserId).order("created_at", { ascending: false }).limit(40);
+    if (convUserId && wantMemory) {
+      // Meist schon oben mitgeladen; nur wenn der Chat jemand anderem gehört, neu laden.
+      const { data: mems } = convUserId === clientUserId ? memRes : await loadMemories(convUserId);
       if (mems && mems.length > 0) {
         memoryBlock = `\n\n## Was du über den User weißt (aus früheren Chats)\n${mems.map((m: any) => `- (${m.category}) ${m.content}`).join("\n")}\n\nNutze dieses Wissen natürlich in deinen Antworten — beziehe dich nicht ständig drauf, sondern wirke einfach so als kenntest du den User.`;
       }

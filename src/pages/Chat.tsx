@@ -586,10 +586,11 @@ const Chat = () => {
 
     const userMsg: Msg = { role: "user", content: displayContent };
     setMessages(prev => [...prev, userMsg, { role: "assistant", content: "" }]);
-    await supabase.from("messages").insert({
+    // Nicht auf das Speichern warten: die KI-Anfrage startet sofort (spart eine Server-Runde).
+    supabase.from("messages").insert({
       conversation_id: convId, role: "user", content: displayContent,
       metadata: attachments.length ? { attachments } : null,
-    });
+    }).then(({ error }) => { if (error) console.warn("Nachricht nicht gespeichert", error.message); });
     setAttachments([]);
 
     if (goalText) setGoal({ text: goalText, step: 1, status: "läuft" });
