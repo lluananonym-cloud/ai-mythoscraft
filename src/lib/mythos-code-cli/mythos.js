@@ -252,6 +252,19 @@ function runLive(cmd) {
   });
 }
 
+// Mythos Cloud: Backend + KI-Gateway für die gebaute App verbinden und mythos-cloud.js anlegen.
+async function cloudConnect(t) {
+  try {
+    const r = await fetch(FN + "/app-cloud", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "connect", api_key: cfg.key, name: String(t.app || path.basename(ROOT)) }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.client_js) return "FEHLER: Mythos Cloud: " + (j.error || "HTTP " + r.status);
+    const res = fileTool({ name: "write", path: (t.path = t.path || j.file), content: j.client_js }, ROOT);
+    say(C.g + "   ☁ Mythos Cloud verbunden (" + j.app + ")" + C.x);
+    return res.result + "\n\n" + j.guide;
+  } catch (e) { return "FEHLER: Mythos Cloud nicht erreichbar: " + e.message; }
+}
+
 async function runTool(t) {
   if (t.name === "todo") {
     const items = normalizeTodos(t);
@@ -265,6 +278,7 @@ async function runTool(t) {
     : t.name === "write" ? "write " + t.path + " (" + String(t.content || "").length + " Zeichen)"
     : t.name === "websearch" ? "websearch " + t.query
     : t.name === "fetch" ? "fetch " + t.url
+    : t.name === "cloud" ? "cloud verbinden: " + (t.app || "App")
     : t.name + " " + (t.path || "");
   say(C.y + "⚙  " + label + C.x);
   // Sicherheitsnetz: gefährliche Befehle fragen immer nach (auch mit --yes) und werden bei /goal blockiert.
@@ -277,13 +291,14 @@ async function runTool(t) {
     startTick();
     if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt (Sicherheitsnetz). Finde einen sichereren Weg.";
   }
-  if ((t.name === "run" || t.name === "write" || t.name === "edit") && !autoYes && !why) {
+  if ((t.name === "run" || t.name === "write" || t.name === "edit" || t.name === "cloud") && !autoYes && !why) {
     stopTick();
     const a = (await ask(C.d + "   Erlauben? [j/N/a=immer] " + C.x)).trim().toLowerCase();
     startTick();
     if (a === "a") autoYes = true; else if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt.";
   }
   if (t.name === "run") return runLive(t.cmd);
+  if (t.name === "cloud") return cloudConnect(t);
   if (isWebTool(t)) {
     const r = await webTool(t);
     say(C.d + "   " + r.result.split("\n").filter(Boolean).slice(0, 3).join(" · ").slice(0, 160) + C.x);
