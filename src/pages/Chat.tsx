@@ -32,7 +32,7 @@ import Paywall from "@/components/Paywall";
 import { toast } from "sonner";
 import { useVoiceMode } from "@/hooks/useVoiceMode";
 import FunkPlayer, { type FunkPattern } from "@/components/FunkPlayer";
-import SongPlayer, { type SongRequest } from "@/components/SongPlayer";
+import SongPlayer, { type SongRequest, songSeconds } from "@/components/SongPlayer";
 import VideoPlayer, { type VideoRequest } from "@/components/VideoPlayer";
 import AgentBrowser from "@/components/AgentBrowser";
 import BrowserExtensionPanel from "@/components/BrowserExtensionPanel";
@@ -72,6 +72,7 @@ const SLASH_COMMANDS = [
   { cmd: "/codeprogrammadminupload", args: "<drive-link>", icon: Shield, desc: "Admin: Setup-EXE-Link veröffentlichen", admin: true },
   { cmd: "/apikeyadmin", args: "[2] <AIza…>", icon: Shield, desc: "Admin: gratis Google-AI-Ausweichschlüssel speichern (wenn Lovable-Credits leer sind)", admin: true },
   { cmd: "/nvidiakeyadmin", args: "[bild] <nvapi-…>", icon: Shield, desc: "Admin: NVIDIA-Schlüssel sicher auf dem Server speichern", admin: true },
+  { cmd: "/musikkeyadmin", args: "<sk_…>", icon: Shield, desc: "Admin: ElevenLabs-Schlüssel für echte Songs mit Gesang speichern", admin: true },
   { cmd: "/exeupdateadmin", args: "<drive-link> [version]", icon: Shield, desc: "Admin: Update-EXE für Mythos Code veröffentlichen", admin: true },
 ];
 
@@ -337,6 +338,17 @@ const Chat = () => {
       reply(`✓ Google-AI-Ausweichschlüssel${which === "google2" ? " #2" : ""} sicher auf dem Server gespeichert. Wird automatisch genutzt, wenn Lovable-Credits leer sind.`);
       return;
     }
+    if (/^\/musikkeyadmin\b/i.test(text)) {
+      if (!override) setInput("");
+      if (!isAdmin) { toast.error("Nur für Admins."); return; }
+      const value = text.replace(/^\/musikkeyadmin\b/i, "").trim().split(/\s+/).filter(Boolean)[0];
+      const reply = (content: string) => setMessages(prev => [...prev, { role: "user", content: `/musikkeyadmin ${value ? "sk_••••" : ""}` }, { role: "assistant", content }]);
+      if (!value) { reply("So geht's:\n```\n/musikkeyadmin sk_…\n```\nSchlüssel: elevenlabs.io → Developers → API Keys → „Create API Key“ (Musik braucht einen bezahlten Plan).\nDer Schlüssel wird nur geschützt auf dem Server gespeichert und nie wieder angezeigt."); return; }
+      const { data, error } = await supabase.functions.invoke("nvidia", { body: { kind: "setkey", which: "elevenlabs", value } });
+      if (error || data?.error) { toast.error("Speichern fehlgeschlagen: " + (data?.error || error?.message)); reply("✗ " + (data?.error || error?.message)); return; }
+      reply("✓ ElevenLabs-Schlüssel gespeichert. Songs mit /music werden ab jetzt echte Tracks mit Gesang (1–3 Minuten).");
+      return;
+    }
     if (/^\/nvidiakeyadmin\b/i.test(text)) {
       if (!override) setInput("");
       if (!isAdmin) { toast.error("Nur für Admins."); return; }
@@ -516,11 +528,11 @@ const Chat = () => {
     const musicMatch = text.match(/^\/music\s+(.+)$/i);
     if (musicMatch) {
       const prompt = musicMatch[1].trim();
-      const song: SongRequest = { prompt, title: prompt.slice(0, 60), duration: 10 };
+      const song: SongRequest = { prompt, title: prompt.slice(0, 60), duration: songSeconds(prompt), createdAt: Date.now() };
       const userMsg: Msg = { role: "user", content: text };
       const aiMsg: Msg = {
         role: "assistant",
-        content: `🎵 **AI-Song wird vorbereitet:** _${prompt}_\n\nKlick unten auf „Generieren". Der erste Song lädt das Modell (~300MB einmalig), dann läuft alles offline im Browser — kostenlos.`,
+        content: `🎵 **Song wird erzeugt:** _${prompt}_\n\nEchter Track mit Gesang, ${Math.round(song.duration! / 6) / 10} Minuten.`,
         song,
       };
       setMessages(prev => [...prev, userMsg, aiMsg]);
