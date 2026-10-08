@@ -69,3 +69,6 @@ verify_jwt = false
 
 [functions.app-cloud]
 verify_jwt = false
+
+[functions.labs]
+verify_jwt = false

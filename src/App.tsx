@@ -39,6 +39,13 @@ import Datenschutz from "./pages/Datenschutz";
 import Nutzungsbedingungen from "./pages/Nutzungsbedingungen";
 import Cookie from "./pages/Cookie";
 import KIRegeln from "./pages/KIRegeln";
+import Entdecken from "./pages/labs/Entdecken";
+import Arena from "./pages/labs/Arena";
+import Welt from "./pages/labs/Welt";
+import FotoApp from "./pages/labs/FotoApp";
+import KiTeam from "./pages/labs/KiTeam";
+import Rueckblick from "./pages/labs/Rueckblick";
+import Marktplatz from "./pages/labs/Marktplatz";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +86,13 @@ const App = () => (
             <Route path="/twin" element={<RequireAuth><Twin /></RequireAuth>} />
             <Route path="/games" element={<RequireAuth><Games /></RequireAuth>} />
             <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
+            <Route path="/entdecken" element={<RequireAuth><Entdecken /></RequireAuth>} />
+            <Route path="/arena" element={<RequireAuth><Arena /></RequireAuth>} />
+            <Route path="/welt" element={<RequireAuth><Welt /></RequireAuth>} />
+            <Route path="/foto-app" element={<RequireAuth><FotoApp /></RequireAuth>} />
+            <Route path="/ki-team" element={<RequireAuth><KiTeam /></RequireAuth>} />
+            <Route path="/rueckblick" element={<RequireAuth><Rueckblick /></RequireAuth>} />
+            <Route path="/marktplatz" element={<RequireAuth><Marktplatz /></RequireAuth>} />
             <Route path="/impressum" element={<Impressum />} />
             <Route path="/datenschutz" element={<Datenschutz />} />
             <Route path="/nutzungsbedingungen" element={<Nutzungsbedingungen />} />
