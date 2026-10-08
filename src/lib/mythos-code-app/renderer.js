@@ -316,9 +316,20 @@ function toolLabel(t) {
   if (t.name === "fetch") return "🌐 fetch " + t.url;
   if (t.name === "mcp") return "🔌 " + t.server + " / " + t.tool;
   if (t.name === "todo") return "📋 Aufgabenliste";
+  if (t.name === "cloud") return "☁ Mythos Cloud verbinden: " + (t.app || "App");
   return "⚙ " + t.name + " " + (t.path || "");
 }
-const needsConfirm = (t) => ["run", "write", "edit", "mcp"].includes(t.name);
+const needsConfirm = (t) => ["run", "write", "edit", "mcp", "cloud"].includes(t.name);
+// Mythos Cloud: Backend + KI-Gateway für die gebaute App verbinden, dann mythos-cloud.js ins Projekt schreiben.
+async function runTool(t, folder, id) {
+  if (t.name !== "cloud") return window.mythos.tool(t, folder, id);
+  if (!cfg.key) return { result: "FEHLER: Nicht angemeldet – Mythos Cloud braucht ein Mythos-Konto." };
+  const r = await post("app-cloud", { action: "connect", api_key: cfg.key, name: String(t.app || base(folder || "") || "Meine App") });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.client_js) return { result: "FEHLER: Mythos Cloud: " + (j.error || "HTTP " + r.status) };
+  const w = await window.mythos.tool({ name: "write", path: (t.path = t.path || j.file), content: j.client_js }, folder, id);
+  return { ...w, result: w.result + "\n\n" + j.guide };
+}
 const autoTestOn = (folder) => !!(folder && cfg.autoTest && cfg.autoTest[folder]);
 
 async function runAgent(c, opts) {
@@ -412,7 +423,7 @@ async function runAgent(c, opts) {
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         if (t.name === "run") run.out = "";
-        try { r = await window.mythos.tool(t, run.folder, run.id); }
+        try { r = await runTool(t, run.folder, run.id); }
         catch (e) { r = { result: "FEHLER beim Ausführen: " + e.message + " – probiere einen anderen Weg." }; }
         finally { run.out = null; paintRun(run); }
         (r.hooks || []).filter((h) => h.out || h.code).forEach((h) => noteTo(c, "🪝 " + h.event + ": " + h.command + " → Exit " + h.code + (h.out ? "\n" + h.out.slice(0, 600) : "")));
@@ -1465,7 +1476,7 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       else if ((r = await safetyGate(c, t, "Agent " + (s.i + 1)))) { /* Sicherheitsnetz */ }
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
-        r = await window.mythos.tool(t, run.folder, s.id);
+        r = await runTool(t, run.folder, s.id);
         if (t.name === "run") addTo(c, "out", r.result.slice(-3000), { cmd: tag + t.cmd });
         if (r.diff && r.diff.lines.length) { addTo(c, "diff", "", { path: tag + t.path, d: r.diff }); s.changed = true; }
       }

@@ -66,3 +66,6 @@ verify_jwt = false
 
 [functions.mcp-proxy]
 verify_jwt = false
+
+[functions.app-cloud]
+verify_jwt = false

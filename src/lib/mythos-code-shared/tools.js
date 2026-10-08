@@ -12,6 +12,7 @@ const TOOL_PROMPT = [
   '<tool>{"name":"ls","path":"."}</tool>  Ordner auflisten',
   '<tool>{"name":"websearch","query":"..."}</tool>  Im Internet suchen (z. B. Doku, Fehlermeldungen)',
   '<tool>{"name":"fetch","url":"https://..."}</tool>  Webseite als Text lesen',
+  '<tool>{"name":"cloud","app":"Name der App"}</tool>  Mythos Cloud verbinden: eigenes Backend (Datenbank) + KI-Gateway (Chat, Streaming, Bilder) für die App, die du baust. Nutze das IMMER, sobald die App Daten speichern oder KI nutzen soll – statt Supabase/Firebase/OpenAI-Keys o. Ä. Legt mythos-cloud.js im Projekt an und erklärt die Nutzung.',
   '<tool>{"name":"todo","items":[{"text":"Schritt","done":false}]}</tool>  Aufgabenliste anlegen/aktualisieren (bei größeren Aufgaben zuerst planen, dann Punkte abhaken; immer die komplette Liste senden)',
   "Nach jedem Werkzeug bekommst du das Ergebnis. Suche erst, statt Dateien blind zu lesen. Ändere bestehende Dateien mit edit statt write.",
   "Arbeite Schritt für Schritt, bis die Aufgabe erledigt ist, dann antworte normal ohne <tool> (Markdown erlaubt).",
