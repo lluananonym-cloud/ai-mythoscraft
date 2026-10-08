@@ -30,6 +30,7 @@ import {
   Image as ImageIcon,
   Globe,
   Download,
+  Compass,
 } from "lucide-react";
 
 const DISCORD_URL = "https://discord.gg/MewpPph3aw";
@@ -68,6 +69,12 @@ const TopNav = () => {
               <Users className="h-4 w-4 mr-1.5" />Community
             </Button>
           </Link>
+          {/* Auf mittleren Bildschirmen steckt "Entdecken" im Mehr-Menü, damit die Leiste nicht überläuft */}
+          <Link to="/entdecken" onClick={() => setOpen(false)} className="md:hidden xl:block">
+            <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
+              <Compass className="h-4 w-4 mr-1.5" />Entdecken
+            </Button>
+          </Link>
           <Link to="/downloads" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
               <Download className="h-4 w-4 mr-1.5" />Downloads
@@ -100,6 +107,11 @@ const TopNav = () => {
             <MessageSquare className="h-4 w-4 mr-2" />Discord
           </a>
         </DropdownMenuItem>
+        {user && (
+          <DropdownMenuItem asChild className="hidden md:flex xl:hidden">
+            <Link to="/entdecken" className="flex items-center"><Compass className="h-4 w-4 mr-2" />Entdecken</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link to="/downloads" className="flex items-center"><Download className="h-4 w-4 mr-2" />Desktop-Apps</Link>
         </DropdownMenuItem>

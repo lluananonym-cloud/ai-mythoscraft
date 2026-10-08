@@ -255,3 +255,10 @@ input, textarea, select, [contenteditable="true"] {
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .px-safe { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .h-screen-dvh { height: 100dvh; }
+
+/* Mythos Labs: Tagesrückblick-Video und Welt-Modus */
+@keyframes kenburns { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.14) translate(-2%, -2%); } }
+@keyframes labs-progress { from { width: 0; } to { width: 100%; } }
+@keyframes world-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.animate-kenburns { animation: kenburns 3.5s ease-out forwards; }
+.animate-labs-progress { animation: labs-progress 3.5s linear forwards; }

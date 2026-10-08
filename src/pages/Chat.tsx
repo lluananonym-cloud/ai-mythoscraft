@@ -25,6 +25,7 @@ import {
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
   ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
+  Globe2, Compass,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
@@ -949,7 +950,7 @@ const Chat = () => {
   const SidebarContentBlock = (
     <div className="flex flex-col h-full min-h-0">
       {/* Kopfzeile wie bei Claude: einklappen, zurück/vor, Chat/Code */}
-      <div className="flex items-center gap-0.5 px-2 pt-2 pb-2">
+      <div className="flex items-center gap-0.5 pl-2 pr-10 md:pr-2 pt-2 pb-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setSidebarCollapsed(true)} aria-label="Seitenleiste einklappen">
@@ -1003,6 +1004,8 @@ const Chat = () => {
         <NavItem icon={Shapes} label="Artifacts" onClick={() => setDialog("artifacts")} />
         <NavItem icon={Clock} label="Routinen" onClick={() => nav("/agents")} />
         <NavItem icon={Briefcase} label="Anpassungen" onClick={() => setDialog("customize")} />
+        <NavItem icon={Globe2} label="Welt-Modus" onClick={() => nav("/welt")} />
+        <NavItem icon={Compass} label="Entdecken" onClick={() => nav("/entdecken")} badge="Neu" />
       </div>
 
       {/* Chats */}
