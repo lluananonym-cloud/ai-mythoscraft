@@ -75,3 +75,6 @@ verify_jwt = false
 
 [functions.paypal]
 verify_jwt = false
+
+[functions.mcc]
+verify_jwt = false
