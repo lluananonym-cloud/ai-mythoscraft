@@ -85,7 +85,7 @@ function draw(it, i) {
   const box = $("col").querySelector(":scope > .runbox"); if (box) $("col").insertBefore(d, box); else $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
-const AD_MD = "**📣 Werbung** · ![at](https://ai-mythos.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
+const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai.lovable.app/werbung)_";
 let adCache = null;
 async function pickAd() {
   try { if (!adCache || Date.now() - adCache.at > 6e5) { const j = await (await post("ad-review", { action: "list" })).json(); adCache = { at: Date.now(), ads: j.ads || [] }; } } catch (e) { adCache = { at: Date.now(), ads: [] }; }
@@ -93,7 +93,7 @@ async function pickAd() {
   let ad = pool[0]; for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
   if (ad.house) return AD_MD;
   const s = (x) => String(x || "").replace(/[\[\]()<>*_`]/g, ""); const link = /^https?:\/\//.test(ad.link) ? ad.link : "https://" + ad.link;
-  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://ai-mythos.lovable.app/werbung)_";
+  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai.lovable.app/werbung)_";
 }
 function adDue(tier) {
   const today = new Date().toDateString();
@@ -535,7 +535,7 @@ async function gitCommit(msg) {
 // ---------- MCP ----------
 async function configureMcp() { mcpStatus = await window.mythos.mcp.configure(cfg.folder || null).catch(() => []); renderMcp(); }
 function renderMcp() {
-  const b = $("mcp"), ok = mcpStatus.filter((s) => s.status === "connected").length, bad = mcpStatus.filter((s) => s.status === "error").length;
+  const b = $("mcp"), ok = mcpStatus.filter((s) => s.status === "connected").length, bad = mcpStatus.filter((s) => s.status === "error" || s.status === "auth").length;
   b.style.display = mcpStatus.length ? "" : "none";
   b.textContent = "🔌 " + ok + "/" + mcpStatus.length + (bad ? " ⚠" : "");
   b.title = mcpStatus.map((s) => s.name + ": " + s.status + (s.error ? " (" + s.error + ")" : "") + " · " + s.tools.length + " Werkzeuge").join("\n");
@@ -562,18 +562,40 @@ function mcpAddForm() {
   f.append(name, target); const f2 = el("div", "conn-actions"); f2.append(auth, add);
   c.append(f, f2); return c;
 }
+/** Bekannte Connectoren (Anmeldung per OAuth im Browser), wie im Web-Chat. */
+const MCP_PRESETS = [{ name: "Higgsfield", url: "https://mcp.higgsfield.ai/mcp", hint: "Bilder & Videos" }];
+async function mcpLogin(name, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Browser offen …"; }
+  note("🔑 Anmeldung für „" + name + "“ im Browser geöffnet …");
+  const r = await window.mythos.mcp.login(name).catch((e) => ({ ok: false, error: e.message }));
+  await configureMcp(); renderConnections();
+  note(r.ok ? "🔌 „" + name + "“ verbunden." : "⚠ " + name + ": " + (r.error || "Anmeldung fehlgeschlagen"));
+}
+async function mcpAddPreset(p, btn) {
+  const have = mcpStatus.find((s) => s.url === p.url);
+  if (!have) { if (!(await window.mythos.mcp.add(p.name, { type: "http", url: p.url }))) return note("⚠ Connector konnte nicht gespeichert werden."); await configureMcp(); }
+  const s = mcpStatus.find((x) => x.url === p.url) || { name: p.name };
+  if (s.status === "connected") return note("🔌 „" + s.name + "“ ist schon verbunden.");
+  return mcpLogin(s.name, btn);
+}
 function renderConnections() {
   const box = $("connBody"); if (!box) return; box.textContent = "";
   const title = el("div", "hint", "MCP-SERVER"); box.appendChild(title);
   if (!mcpStatus.length) box.appendChild(el("div", "conn", "Noch keine Connectoren."));
+  const pre = el("div", "conn"), pa = el("div", "conn-actions"); pre.appendChild(el("strong", "", "Mit einem Klick"));
+  MCP_PRESETS.forEach((p) => { const b = el("button", "chip", "🔌 " + p.name + " · " + p.hint); b.onclick = () => mcpAddPreset(p, b); pa.append(b); });
+  pre.append(pa); box.appendChild(pre);
   box.appendChild(mcpAddForm());
-  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.error || s.status)); const acts = el("div", "conn-actions"), retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); if (s.scope === "global") { const rm = el("button", "chip", "Entfernen"); rm.onclick = async () => { if (!confirm("Connector „" + s.name + "“ entfernen?")) return; await window.mythos.mcp.remove(s.name); await configureMcp(); renderConnections(); }; acts.append(rm); } c.append(acts); box.append(c); });
+  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" || s.status === "auth" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.status === "auth" ? "Anmeldung nötig – klick auf „Anmelden“." : s.error || s.status)); const acts = el("div", "conn-actions");
+    if (s.url && (s.status === "auth" || s.status === "error")) { const li = el("button", "chip", "Anmelden"); li.onclick = () => mcpLogin(s.name, li); acts.append(li); }
+    if (s.oauth && s.status !== "auth") { const lo = el("button", "chip", "Abmelden"); lo.onclick = async () => { await window.mythos.mcp.logout(s.name); await configureMcp(); renderConnections(); }; acts.append(lo); }
+    const retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); if (s.scope === "global") { const rm = el("button", "chip", "Entfernen"); rm.onclick = async () => { if (!confirm("Connector „" + s.name + "“ entfernen?")) return; await window.mythos.mcp.remove(s.name); await configureMcp(); renderConnections(); }; acts.append(rm); } c.append(acts); box.append(c); });
   box.appendChild(el("div", "hint", "PLUGINS")); const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (browserStatus.connected ? "ok" : browserStatus.paired ? "" : "bad")); top.append(dot, el("strong", "", "Mythos Browser Control"), el("span", "chip", browserStatus.connected ? "verbunden" : browserStatus.paired ? "wartet" : "nicht gekoppelt")); c.append(top, el("div", "meta", "Steuert den sichtbaren Browser. Login, Passwort, Zahlung und Captcha bleiben immer bei dir.")); if (!browserStatus.paired) c.append(el("div", "paircode", browserStatus.code || "------"), el("div", "meta", "Diesen Code im Browser-Plugin unter „Mit Mythos Code koppeln“ eingeben.")); const actions = el("div", "conn-actions"), reset = el("button", "chip", browserStatus.paired ? "Neu koppeln" : "Neuen Code"); reset.onclick = async () => { browserStatus = await window.mythos.browser.reset(); renderConnections(); }; actions.append(reset); c.append(actions); box.append(c);
 }
 function openConnections() { $("connections").classList.add("open"); refreshBrowser(); }
 function mcpReport() {
   if (!mcpStatus.length) return "🔌 Keine MCP-Server eingerichtet.\n/mcp bearbeiten – Server für dieses Projekt (.mcp.json)\n/mcp global – Server für alle Projekte";
-  return "🔌 MCP-Server:\n" + mcpStatus.map((s) => (s.status === "connected" ? "✓ " : s.status === "error" ? "⚠ " : "⏳ ") + s.name + " (" + s.scope + ") – " +
+  return "🔌 MCP-Server:\n" + mcpStatus.map((s) => (s.status === "connected" ? "✓ " : s.status === "error" ? "⚠ " : s.status === "auth" ? "🔑 " : "⏳ ") + s.name + " (" + s.scope + ") – " +
     (s.status === "connected" ? s.tools.length + " Werkzeuge: " + s.tools.map((t) => t.name).slice(0, 12).join(", ") : s.error || s.status)).join("\n") +
     "\n\n/mcp neu – neu verbinden · /mcp bearbeiten · /mcp global";
 }

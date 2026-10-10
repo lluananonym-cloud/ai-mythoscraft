@@ -12,7 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.argv[2] || path.join(root, "build/desktop"));
 const lib = (p) => fs.readFileSync(path.join(root, "src/lib", p), "utf8");
 
-const SITE = process.env.MYTHOS_SITE_URL || "https://ai-mythos.lovable.app";
+const SITE = process.env.MYTHOS_SITE_URL || "https://mythos-core-ai.lovable.app";
 const env = fs.existsSync(path.join(root, ".env")) ? fs.readFileSync(path.join(root, ".env"), "utf8") : "";
 const PROJECT_ID = process.env.VITE_SUPABASE_PROJECT_ID || env.match(/VITE_SUPABASE_PROJECT_ID="?([\w-]+)"?/)?.[1];
 if (!PROJECT_ID) throw new Error("VITE_SUPABASE_PROJECT_ID fehlt (.env)");

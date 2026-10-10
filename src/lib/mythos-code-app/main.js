@@ -153,7 +153,21 @@ ipcMain.handle("chats:search", (_e, q) => {
 
 // ---------- Werkzeuge ----------
 const send = (ch, payload) => { if (w && !w.isDestroyed()) w.webContents.send(ch, payload); };
-const mcp = new McpManager({ onChange: () => send("mcp-changed", mcp.status()) });
+// OAuth-Tokens der Connectoren: im App-Datenordner, verschlüsselt, wenn das System es anbietet.
+const MCP_TOKENS = () => path.join(app.getPath("userData"), "mcp-oauth.bin");
+function readTokens() {
+  try { const b = fs.readFileSync(MCP_TOKENS()); return JSON.parse(canEncrypt() ? safeStorage.decryptString(b) : b.toString("utf8")); } catch { return {}; }
+}
+function writeTokens(all) {
+  const t = JSON.stringify(all);
+  fs.writeFileSync(MCP_TOKENS(), canEncrypt() ? safeStorage.encryptString(t) : Buffer.from(t, "utf8"));
+}
+const mcpTokens = {
+  get: (url) => readTokens()[url] || null,
+  set: (url, v) => { const a = readTokens(); a[url] = v; writeTokens(a); },
+  del: (url) => { const a = readTokens(); delete a[url]; writeTokens(a); },
+};
+const mcp = new McpManager({ onChange: () => send("mcp-changed", mcp.status()), store: mcpTokens, openExternal: (u) => shell.openExternal(u) });
 app.on("will-quit", () => { mcp.stopAll(); killAll(); });
 
 // System-Prompt: Werkzeuge + verbundene MCP-Werkzeuge + Gedächtnis + Ziel.
@@ -284,6 +298,8 @@ ipcMain.handle("mcp:remove", (_e, name) => {
   delete j.mcpServers[name]; fs.writeFileSync(MCP_GLOBAL(), JSON.stringify(j, null, 2)); return true;
 });
 ipcMain.handle("mcp:restart", (_e, name) => mcp.restart(name));
+ipcMain.handle("mcp:login", async (_e, name) => { try { return { ok: true, status: await mcp.login(name) }; } catch (e) { return { ok: false, error: e.message }; } });
+ipcMain.handle("mcp:logout", (_e, name) => mcp.logout(name));
 // Konfigurationsdatei öffnen (bei Bedarf mit Vorlage anlegen).
 ipcMain.handle("config:open", (_e, which, cwd) => {
   const file = which === "mcp-global" ? path.join(app.getPath("userData"), "mcp.json")
