@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode, clientImageFallback } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode, clientImageFallback, build } = await req.json();
     const resolved = resolveMythos(mythos);
     const ALLOWED_MODELS = new Set([
       "openai/gpt-5.5-pro",
@@ -161,6 +161,12 @@ Deno.serve(async (req) => {
         ? (lastTextRaw.find((p: any) => p.type === "text")?.text || "").trim()
         : "";
 
+    // Ganze Dateien (HTML-Seiten, Spiele, Apps) brauchen viel Platz: kleine Output-Caps schneiden sie sonst mitten im Code ab.
+    if (/```|<\/?(?:html|body|div|script)\b|\b(?:html|css|javascript|typescript|react|code|programmier|webseite|website|landingpage|spiel|game|app|skript|script|funktion)\b/i.test(lastText)) {
+      resolved.maxOut = Math.max(resolved.maxOut ?? 0, 16000);
+      resolved.style = `${resolved.style ?? ""} Ausnahme: Verlangt der Nutzer Code oder eine Datei, liefere sie immer vollständig und lauffähig, ohne Kürzungen, Auslassungen oder Platzhalter wie „…“.`;
+    }
+
     // ============== SLASH COMMANDS ==============
     // /identity <name>
     const idMatch = lastText.match(/^\/identity\s+(.+)$/i);
@@ -180,9 +186,10 @@ Deno.serve(async (req) => {
     // Bezüge wie "das" werden mit dem Chatverlauf zu einem vollständigen Prompt aufgelöst.
     const imgMatch = lastText.match(/^\/image\s+(.+)$/i);
     const hasImageAttachment = Array.isArray(lastTextRaw) && lastTextRaw.some((p: any) => p?.type === "image_url");
-    const autoImage = !imgMatch && !hasImageAttachment && isImageRequest(lastText);
+    // Im App-Builder ist "Bildergalerie" o. ä. ein Code-Wunsch, kein Bild-Wunsch.
+    const autoImage = !build && !imgMatch && !hasImageAttachment && isImageRequest(lastText);
     // Unklar ("generiere das als Fußball Trikot"): die KI entscheidet mit dem Verlauf und liefert gleich den Prompt.
-    const classified = !imgMatch && !autoImage && !hasImageAttachment && maybeImageRequest(lastText)
+    const classified = !build && !imgMatch && !autoImage && !hasImageAttachment && maybeImageRequest(lastText)
       ? await classifyImageRequest(lastText, messages, LOVABLE_API_KEY)
       : null;
     if (imgMatch || autoImage || classified) {
