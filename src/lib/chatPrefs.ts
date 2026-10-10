@@ -7,7 +7,19 @@ export type McpServer = {
   url: string;
   /** optionaler Authorization-Header, z. B. "Bearer abc…" */
   auth?: string;
+  /** Anmeldung per OAuth ("Anmelden"-Button), hat Vorrang vor auth */
+  oauth?: McpOAuth;
   enabled: boolean;
+};
+
+export type McpOAuth = {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  clientId: string;
+  clientSecret?: string;
+  tokenEndpoint: string;
+  resource: string;
 };
 
 export type Project = {
