@@ -31,6 +31,9 @@ const Datenschutz = () => (
         Wir verwenden deine Chats <strong>nicht</strong>, um eigene KI-Modelle zu trainieren.
       </li>
       <li>
+        <strong>Bezahlte Abos:</strong> Tarif, Laufzeit, PayPal-Abo-ID und Zahlungsstatus. Zweck: Vertragserfüllung und gesetzliche Aufbewahrungspflichten (Art. 6 Abs. 1 lit. b und c DSGVO).
+      </li>
+      <li>
         <strong>Werbeanfragen:</strong> Wenn du über „Werbung buchen“ eine Anzeige anfragst, verarbeiten wir Produkt, Link, Anzeigentext, Zeitraum und
         Kontakt-E-Mail, um die Anfrage zu prüfen und dir ein Angebot zu schicken (Art. 6 Abs. 1 lit. b DSGVO). Die Anfrage wird über FormSubmit per E-Mail an uns weitergeleitet.
       </li>
@@ -61,6 +64,7 @@ const Datenschutz = () => (
       <li><strong>Pollinations.ai</strong> und <strong>AI Horde</strong> (Haidra, Niederlande): kostenlose Bild-Backups, wenn die anderen Anbieter ausgelastet sind.</li>
       <li><strong>ElevenLabs</strong> (Eleven Labs Inc., USA): nur, falls für Songs freigeschaltet.</li>
       <li><strong>Suche und Webseiten-Abruf</strong> für die Recherche-Funktion: DuckDuckGo und Jina AI (der Suchbegriff bzw. die aufgerufene Adresse wird übermittelt).</li>
+      <li><strong>PayPal</strong> (PayPal (Europe) S.à r.l. et Cie, S.C.A., Luxemburg): Abwicklung bezahlter Abos. PayPal ist dabei eigener Verantwortlicher. Wir erhalten nur die Abo-ID, den Status und das Datum der nächsten Abbuchung, keine Bank- oder Kartendaten. Die PayPal-Knöpfe werden erst geladen, wenn du ein Abo abschließen willst, und PayPal setzt dann eigene, für die Zahlung nötige Cookies.</li>
       <li><strong>Apple</strong> und <strong>Microsoft</strong>: nur, wenn du dich damit anmeldest.</li>
       <li><strong>FormSubmit</strong> (formsubmit.co): Weiterleitung von Werbeanfragen per E-Mail.</li>
       <li><strong>GitHub</strong> (GitHub Inc., USA): Bereitstellung der Downloads (Desktop-Apps).</li>

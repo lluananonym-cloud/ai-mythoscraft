@@ -21,6 +21,8 @@ import { Switch } from "@/components/ui/switch";
 import { isPersistentSessionEnabled, setPersistentSessionEnabled } from "@/lib/persistentSession";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import Paywall from "@/components/Paywall";
+import { useSubscription, TIER_LIMITS } from "@/hooks/useSubscription";
 
 type ApiKey = {
   id: string; name: string; key_prefix: string; daily_limit: number;
@@ -105,6 +107,8 @@ const Dashboard = () => {
     await refreshProfile();
   };
 
+  const sub = useSubscription();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   return (
     <div className="min-h-screen">
       <TopNav />
@@ -113,6 +117,15 @@ const Dashboard = () => {
           <h1 className="font-display text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">Verwalte dein Profil & deine API-Keys</p>
         </div>
+
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-muted-foreground">Dein Tarif</div>
+            <div className="text-lg font-semibold">{TIER_LIMITS[sub.tier].label} <span className="text-sm font-normal text-muted-foreground">· {TIER_LIMITS[sub.tier].priceLabel}</span></div>
+          </div>
+          <Button onClick={() => setPaywallOpen(true)} className="rounded-full">{sub.tier === "free" ? "Upgrade mit PayPal" : "Abo verwalten"}</Button>
+        </div>
+        <Paywall open={paywallOpen} onOpenChange={setPaywallOpen} />
 
         <Tabs
           value={initialTab}

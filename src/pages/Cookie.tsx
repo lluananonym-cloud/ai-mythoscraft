@@ -7,6 +7,7 @@ const ROWS: [string, string, string][] = [
   ["mythos.consent", "Speichert deine Cookie-Entscheidung", "Notwendig, 12 Monate"],
   ["mythos.model, mythos.sidebar.collapsed, Chat-Einstellungen", "Gewähltes KI-Modell, Seitenleiste, eigene Anweisungen, Projekte", "Notwendig, bis du sie löschst"],
   ["mythos_ad_n, mythos_ad_admin", "Zählt, wann wieder Werbung kommt (ohne Profil)", "Notwendig, bis du sie löschst"],
+  ["PayPal-Cookies", "Nur beim Abo-Abschluss: Zahlung und Betrugsschutz durch PayPal (eigener Verantwortlicher)", "Notwendig für die Zahlung, Dauer laut PayPal"],
   ["Offline-Modelle (Browser-Cache)", "KI-Modelle für /offline und Sprache, damit sie nicht jedes Mal neu laden", "Nur wenn du die Funktion nutzt"],
 ];
 
