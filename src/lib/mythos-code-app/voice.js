@@ -41,7 +41,7 @@
   function cleanForSpeech(text) {
     return String(text)
       .replace(/```[\s\S]*?```/g, " (Code siehe Chat) ")
-      .replace(/<tool>[\s\S]*?<\/tool>/g, " ")
+      .replace(/<(tool_call|tool_use|tool)(?:\s[^>]*)?>[\s\S]*?(?:<\/\1\s*>|$)/gi, " ")
       .replace(/\[(.*?)\]\(.*?\)/g, "$1")
       .replace(/https?:\/\/\S+/g, " Link ")
       .replace(/ZIEL ERREICHT/g, "")
