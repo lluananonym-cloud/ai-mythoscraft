@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import ImageGeneration, { browserImageUrl, type GeneratedImage } from "@/components/chat/ImageGeneration";
+import ImageGeneration, { type GeneratedImage } from "@/components/chat/ImageGeneration";
+import { generateImageInBrowser } from "@/lib/browserImage";
 import { isImageRequest } from "@/lib/imageIntent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,8 +26,10 @@ import {
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
   ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
-  Globe2, Compass,
+  Globe2, Compass, ArrowUp, MoreHorizontal,
 } from "lucide-react";
+import { LegalLinks } from "@/components/CookieConsent";
+import { DayDivider, SuggestionBar, StepsTimeline, ThinkingBlock, TimelineRow, dayKey, dayLabel, relTime, useMinuteTick } from "@/components/chat/ChatTimeline";
 import { useSubscription } from "@/hooks/useSubscription";
 import Paywall from "@/components/Paywall";
 import { toast } from "sonner";
@@ -51,7 +54,7 @@ import { callTool, collectTools } from "@/lib/mcpClient";
 const SLASH_COMMANDS = [
   { cmd: "/goal",      args: "<ziel>",          icon: Target,    desc: "Ziel setzen – Mythos arbeitet selbstständig Schritt für Schritt, bis es erreicht ist" },
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
-  { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Echten KI-Song generieren (MusicGen im Browser, kostenlos)" },
+  { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Song mit Gesang erzeugen (1–3 Minuten)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
   { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
   { cmd: "/browser",   args: "[anweisung]",     icon: Puzzle,    desc: "Deinen echten Browser steuern per Mythos-Erweiterung (Pro)" },
@@ -79,7 +82,7 @@ const SLASH_COMMANDS = [
 type Persona = { id: string; name: string; avatar_emoji: string | null };
 type Attachment = { url: string; name: string; mime: string };
 type Conv = { id: string; title: string; mode: string; updated_at: string };
-type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: GeneratedImage; imagePending?: { prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string };
+type Msg = { id?: string; role: "user" | "assistant" | "tool"; content: string; metadata?: any; image?: GeneratedImage; imagePending?: { prompt: string }; music?: FunkPattern; song?: SongRequest; video?: VideoRequest; agent?: { task: string }; search?: string; ext?: { task: string }; attachments?: Attachment[]; agents?: AgentStatus[]; thinking?: string; thinkingMs?: number; steps?: string[]; created_at?: string };
 /** Status eines Teil-Agenten im Multi-Agent-Modus (vom agent-Endpunkt gestreamt). */
 type AgentStatus = { i: number; title: string; status: "läuft" | "fertig" | "fehler"; phase?: string };
 
@@ -100,7 +103,7 @@ const TOOL_CALL = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i;
 
 type ApiMsg = { role: string; content: any };
 type GoalState = { text: string; step: number; status: "läuft" | "erreicht" | "gestoppt" | "limit" };
-type StreamResult = { full: string; image?: GeneratedImage; music?: FunkPattern; agents?: AgentStatus[]; thinking: string; aborted: boolean };
+type StreamResult = { full: string; image?: GeneratedImage; music?: FunkPattern; agents?: AgentStatus[]; thinking: string; thinkingMs?: number; steps?: string[]; aborted: boolean };
 
 /** Nachricht aus dem Verlauf so umwandeln, wie das Modell sie bekommt. */
 const toApi = (m: Msg): ApiMsg =>
@@ -153,6 +156,8 @@ const Chat = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const suggestBodyRef = useRef<unknown>(null);
   const [slashIndex, setSlashIndex] = useState(0);
   const [convSearch, setConvSearch] = useState("");
   // Chats, in deren Nachrichten der Suchtext vorkommt (nicht nur im Titel).
@@ -244,6 +249,8 @@ const Chat = () => {
         ext: m.metadata?.ext,
         agents: m.metadata?.agents,
         thinking: m.metadata?.thinking,
+        thinkingMs: m.metadata?.thinkingMs,
+        steps: m.metadata?.steps,
       })) as Msg[];
       setMessages(enriched);
     }
@@ -270,6 +277,15 @@ const Chat = () => {
     setMobileSidebar(false);
     if (id !== chatId) nav(`/app/c/${id}`);
   };
+
+  useMinuteTick();
+  // Neue Nachrichten bekommen sofort einen Zeitstempel (für "gerade eben", "vor 5 Minuten" und Tages-Trenner).
+  useEffect(() => {
+    if (messages.some(m => !m.created_at)) {
+      const now = new Date().toISOString();
+      setMessages(prev => prev.map(m => (m.created_at ? m : { ...m, created_at: now })));
+    }
+  }, [messages]);
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
 
@@ -653,6 +669,10 @@ const Chat = () => {
     });
 
     let full = "", thinking = "";
+    let thinkStart = 0, thinkingMs = 0;
+    let steps: string[] = [];
+    let pendingImage: string | null = null;
+    let serverReasons: string[] = [];
     let imageData: GeneratedImage | undefined;
     let musicData: FunkPattern | undefined;
     let agentsData: AgentStatus[] | undefined;
@@ -704,44 +724,57 @@ const Chat = () => {
           if (json === "[DONE]") break;
           try {
             const p = JSON.parse(json);
-            if (p.imagePending) { setLast({ imagePending: p.imagePending }); continue; }
+            if (p.imagePending) { pendingImage = p.imagePending.prompt; setLast({ imagePending: p.imagePending }); continue; }
             if (p.imageFailed) {
-              // Server-Kette erschöpft: direkt aus dem Browser bei Pollinations versuchen (eigene IP, eigenes Limit).
+              // Server-Kette erschöpft: gleich danach direkt aus dem Browser versuchen (eigene IP, eigenes Limit).
               const { prompt, reasons } = p.imageFailed as { prompt: string; reasons?: string[] };
-              imageData = { url: browserImageUrl(prompt), prompt, fallback: true, reasons };
-              setLast({ image: imageData, imagePending: undefined });
+              pendingImage = prompt; serverReasons = reasons ?? [];
+              setLast({ imagePending: { prompt } });
               continue;
             }
             if (p.tool) {
-              setMessages(prev => {
-                const next = [...prev];
-                const last = next[next.length - 1];
-                last.content = (last.content || "") + `\n\n> 🔧 *${p.tool}*\n\n`;
-                return next;
-              });
+              // Werkzeug-Schritte erscheinen als Zeitleiste über der Antwort (wie bei Lovable).
+              steps = [...steps, String(p.tool).replace(/^\p{Extended_Pictographic}\s*/u, "")];
+              setLast({ steps });
               continue;
             }
             if (p.agents) { agentsData = p.agents; setLast({ agents: p.agents }); continue; }
             if (p.search) { setLast({ search: p.search }); continue; }
-            if (p.image) { imageData = p.image; setLast({ image: p.image, imagePending: undefined }); continue; }
+            if (p.image) { imageData = p.image; pendingImage = null; setLast({ image: p.image, imagePending: undefined }); continue; }
             if (p.music) { musicData = p.music; setLast({ music: p.music }); continue; }
             // Gedanken des Modells (je nach Anbieter unterschiedlich benannt) live mitschreiben.
             const d = p.choices?.[0]?.delta;
             const r = typeof d?.reasoning === "string" ? d.reasoning
               : typeof d?.reasoning_content === "string" ? d.reasoning_content
               : Array.isArray(d?.reasoning_details) ? d.reasoning_details.map((x: any) => x?.text || x?.summary || "").join("") : "";
-            if (r) { thinking += r; setLast({ thinking }); }
+            if (r) {
+              if (!thinkStart) thinkStart = Date.now();
+              thinking += r; setLast({ thinking });
+            }
             const c = d?.content;
-            if (c) { full += c; setLast({ content: full }); }
+            if (c) {
+              if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
+              full += c; setLast({ content: full });
+            }
           } catch { buf = line + "\n" + buf; break; }
         }
       }
-      return { full, image: imageData, music: musicData, agents: agentsData, thinking, aborted: false };
+      if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
+      // Kein Bild vom Server (Fehler oder Verbindung abgebrochen): der Browser erzeugt es selbst.
+      if (pendingImage && !imageData) {
+        const prompt = pendingImage;
+        const { url, reasons } = await generateImageInBrowser(prompt, ctrl.signal);
+        imageData = url
+          ? { url, prompt, fallback: true }
+          : { url: "", prompt, fallback: true, reasons: [...serverReasons, ...reasons] };
+        setLast({ image: imageData, imagePending: undefined });
+      }
+      return { full, image: imageData, music: musicData, agents: agentsData, thinking, thinkingMs, steps, aborted: false };
     } catch (e) {
       if ((e as Error)?.name === "AbortError") {
         // Gestoppt: was schon da ist, bleibt stehen.
         if (!full && !imageData) { setMessages(prev => prev.slice(0, -1)); return null; }
-        return { full, image: imageData, music: musicData, agents: agentsData, thinking, aborted: true };
+        return { full, image: imageData, music: musicData, agents: agentsData, thinking, thinkingMs, steps, aborted: true };
       }
       setMessages(prev => prev.slice(0, -1));
       throw e;
@@ -802,7 +835,7 @@ const Chat = () => {
       if (res.full || res.image || res.music) {
         await supabase.from("messages").insert({
           conversation_id: convId, role: "assistant", content: res.full,
-          metadata: { image: res.image, music: res.music, agents: res.agents, thinking: res.thinking || undefined, goal: goalText ? step : undefined },
+          metadata: { image: res.image, music: res.music, agents: res.agents, thinking: res.thinking || undefined, thinkingMs: res.thinkingMs || undefined, steps: res.steps?.length ? res.steps : undefined, goal: goalText ? step : undefined },
         });
       }
       history.push({ role: "assistant", content: res.full });
@@ -844,11 +877,18 @@ const Chat = () => {
     if (!final) return;
     if (adDue(isAdmin ? "admin" : sub.tier)) { const o = window.location.origin; pickAd(o).then(ad => setMessages(prev => [...prev, { role: "assistant", content: adMarkdown(ad, o), ad: true } as any])); }
     supabase.functions.invoke("extract-memory", { body: { text: userText } }).catch(() => {});
-    supabase.functions.invoke("suggest", {
-      body: { messages: [...history.slice(-6).map(m => ({ role: m.role, content: typeof m.content === "string" ? m.content : userText })), { role: "assistant", content: final }] },
-    }).then(({ data }) => {
-      if (data?.items?.length && !goalText) setSuggestions(data.items);
-    }).catch(() => {});
+    if (goalText) return;
+    suggestBodyRef.current = { messages: [...history.slice(-6).map(m => ({ role: m.role, content: typeof m.content === "string" ? m.content : userText })), { role: "assistant", content: final }] };
+    loadSuggestions();
+  };
+
+  const loadSuggestions = () => {
+    if (!suggestBodyRef.current) return;
+    setSuggestLoading(true);
+    supabase.functions.invoke("suggest", { body: suggestBodyRef.current })
+      .then(({ data }) => { if (data?.items?.length) setSuggestions(data.items); })
+      .catch(() => {})
+      .finally(() => setSuggestLoading(false));
   };
 
   const stop = () => {
@@ -858,7 +898,7 @@ const Chat = () => {
   };
 
   useEffect(() => { if (input) setSuggestions([]); }, [input]);
-  useEffect(() => { setSuggestions([]); }, [activeId]);
+  useEffect(() => { setSuggestions([]); suggestBodyRef.current = null; }, [activeId]);
 
   const copyMessage = async (text: string) => {
     try { await navigator.clipboard.writeText(text); toast.success("Kopiert"); } catch { toast.error("Kopieren fehlgeschlagen"); }
@@ -1176,22 +1216,6 @@ const Chat = () => {
               onLocked={(reason) => setPaywall({ open: true, reason })}
             />
 
-            <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="h-9 w-auto min-w-0 border-0 bg-transparent hover:bg-white/5 px-2 gap-1.5 text-xs text-muted-foreground focus:ring-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {MODES.map(m => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2">
-                      <m.icon className="h-3.5 w-3.5" />
-                      <span>{m.label}</span>
-                      <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
             <div className="flex-1" />
 
@@ -1311,6 +1335,9 @@ const Chat = () => {
               <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 space-y-6">
                 {messages.map((m, i) => (
                   <div key={i} className="animate-fade-in">
+                    {(i === 0 || dayKey(messages[i - 1].created_at) !== dayKey(m.created_at)) && (
+                      <DayDivider label={dayLabel(m.created_at)} />
+                    )}
                     {m.role === "user" && m.metadata?.auto ? (
                       <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
                         <div className="h-px flex-1 bg-white/10" />
@@ -1318,25 +1345,29 @@ const Chat = () => {
                         <div className="h-px flex-1 bg-white/10" />
                       </div>
                     ) : m.role === "tool" ? (
-                      <details className="ml-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
-                        <summary className="cursor-pointer select-none text-muted-foreground flex items-center gap-1.5">
-                          <Wrench className="h-3 w-3 text-violet-300" /> Werkzeug benutzt: <span className="font-mono text-foreground/80">{m.metadata?.tool}</span>
-                        </summary>
-                        {m.metadata?.args && <pre className="mt-2 whitespace-pre-wrap break-all text-muted-foreground">{JSON.stringify(m.metadata.args, null, 2)}</pre>}
-                        <div className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap break-words text-foreground/80">{m.content}</div>
-                      </details>
+                      <div className="not-prose">
+                        <TimelineRow label="Werkzeug benutzt" detail={m.metadata?.tool}>
+                          {m.metadata?.args && <pre className="mb-2 whitespace-pre-wrap break-all text-muted-foreground">{JSON.stringify(m.metadata.args, null, 2)}</pre>}
+                          <div className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words text-foreground/80">{m.content}</div>
+                        </TimelineRow>
+                      </div>
                     ) : m.role === "user" ? (
-                      <div className="flex justify-end">
-                        <div className="max-w-[85%] rounded-3xl px-4 py-2.5 bg-white/10 text-foreground">
+                      <div className="flex flex-col items-end gap-1.5">
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            {m.attachments.map((a, j) => a.mime.startsWith("image/")
+                              ? <img key={j} src={a.url} alt={a.name} className="h-20 w-20 rounded-xl object-cover border border-white/10" loading="lazy" />
+                              : <span key={j} className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs"><Paperclip className="h-3 w-3" />{a.name}</span>)}
+                          </div>
+                        )}
+                        <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-white/[0.08] text-foreground">
                           <p className="text-[15px] whitespace-pre-wrap break-words leading-relaxed">{m.content}</p>
                         </div>
+                        <span className="text-xs text-muted-foreground">{relTime(m.created_at)}</span>
                       </div>
                     ) : (
-                      <div className="flex gap-3">
-                        <div className="h-7 w-7 shrink-0 mt-1 flex items-center justify-center">
-                          <img src="/icon.png" alt="" aria-hidden="true" className="h-7 w-7 object-contain" loading="lazy" />
-                        </div>
-                        <div className="flex-1 min-w-0">
+                      <div>
+                        <div className="min-w-0">
                           <div className="prose-mythos text-[15px] break-words">
                             {m.agents && m.agents.length > 0 && (
                               <div className="not-prose mb-3 rounded-xl border border-violet-400/20 bg-violet-500/5 px-3 py-2 text-xs">
@@ -1351,13 +1382,9 @@ const Chat = () => {
                               </div>
                             )}
                             {m.thinking && (
-                              <details className="not-prose mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
-                                <summary className="cursor-pointer select-none text-muted-foreground">
-                                  {m.content ? "💭 Gedanken" : <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Denkt nach…</span>}
-                                </summary>
-                                <div className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed text-muted-foreground">{m.thinking}</div>
-                              </details>
+                              <ThinkingBlock text={m.thinking} ms={m.thinkingMs} live={!m.content && sending && i === messages.length - 1} />
                             )}
+                            {m.steps && m.steps.length > 0 && <StepsTimeline steps={m.steps} />}
                             {m.search && m.content && (
                               <div className="not-prose mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
                                 <Globe className="h-3 w-3" /> Im Internet gesucht: <span className="text-foreground/80">{m.search}</span>
@@ -1381,7 +1408,7 @@ const Chat = () => {
                                     Suche im Internet nach <span className="text-foreground/80">„{m.search}"</span>…
                                   </span>
                                 ) : (
-                                  <span>Denke nach…</span>
+                                  <span className="mythos-shimmer">Denkt nach…</span>
                                 )}
                               </div>
                             ) : null}
@@ -1405,8 +1432,9 @@ const Chat = () => {
                               />
                             )}
                           </div>
-                          {forDisplay(m.content) && !sending && (
-                            <div className="flex items-center gap-0.5 mt-2 -ml-1.5 opacity-40 hover:opacity-100 transition-opacity">
+                          {forDisplay(m.content) && !(sending && i === messages.length - 1) && (
+                            <div className="flex items-center gap-0.5 mt-2 -ml-1.5 text-muted-foreground">
+                              <span className="px-1.5 text-xs">{relTime(m.created_at)}</span>
                               <button onClick={() => copyMessage(forDisplay(m.content))} title="Kopieren" className="p-1.5 rounded-md hover:bg-white/5">
                                 <Copy className="h-3.5 w-3.5" />
                               </button>
@@ -1426,20 +1454,6 @@ const Chat = () => {
                     )}
                   </div>
                 ))}
-                {suggestions.length > 0 && !sending && (
-                  <div className="flex flex-wrap gap-1.5 pt-1 pl-10 animate-fade-in">
-                    <Lightbulb className="h-3.5 w-3.5 text-foreground/50 mt-1.5" />
-                    {suggestions.map((s, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setSuggestions([]); send(s); }}
-                        className="border border-white/10 rounded-full px-3 py-1 text-xs hover:border-white/30 hover:bg-white/5 transition-all"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -1529,7 +1543,15 @@ const Chat = () => {
                 onChange={(e) => { uploadFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
               />
 
-              <div className="relative rounded-3xl border border-white/10 bg-[hsl(0_0%_10%)] focus-within:border-white/25 transition-colors shadow-[0_8px_32px_hsl(0_0%_0%/0.4)]">
+              <SuggestionBar
+                items={sending ? [] : suggestions}
+                onPick={(s) => { setSuggestions([]); send(s); }}
+                onRefresh={loadSuggestions}
+                refreshing={suggestLoading}
+                onClose={() => setSuggestions([])}
+              />
+
+              <div className="rounded-[28px] border border-white/10 bg-[hsl(0_0%_9%)] focus-within:border-white/20 transition-colors shadow-[0_8px_32px_hsl(0_0%_0%/0.4)]">
                 <Textarea ref={textareaRef}
                   value={input}
                   onChange={(e) => { setInput(e.target.value); setSlashIndex(0); }}
@@ -1563,95 +1585,117 @@ const Chat = () => {
                     mode === "support" ? "Frage Mythos AI…" :
                     mode === "agent" ? "Was soll der Agent tun?" : "Frag mich alles…"
                   }
-                  className="min-h-[56px] max-h-[200px] overflow-hidden resize-none border-0 bg-transparent focus-visible:ring-0 text-[15px] px-4 pt-4 pb-14 shadow-none"
+                  className="min-h-[52px] max-h-[200px] overflow-y-auto resize-none border-0 bg-transparent focus-visible:ring-0 text-[16px] px-5 pt-4 pb-1 shadow-none placeholder:text-muted-foreground/70"
                                     style={{ height: 'auto' }}
                 />
-                {/* Action row inside composer */}
-                <div className="absolute left-2 bottom-2 flex items-center gap-1">
+                {/* Aktionszeile wie bei Lovable: + · … · Modus links, Mikro und Senden rechts */}
+                <div className="flex items-center gap-2 px-3 pb-3 pt-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        type="button" size="icon" variant="ghost"
-                        className="h-9 w-9 rounded-full"
+                      <button
+                        type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading || sending}
-                        aria-label="Anhang"
+                        aria-label="Datei anhängen"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-40 transition-colors"
                       >
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                      </Button>
+                        {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                      </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Datei anhängen</TooltipContent>
+                    <TooltipContent side="top">Datei oder Bild anhängen</TooltipContent>
                   </Tooltip>
-                </div>
 
-                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" aria-label="Mehr" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12] transition-colors">
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="w-60">
+                      <DropdownMenuLabel>Erstellen</DropdownMenuLabel>
+                      {[
+                        { cmd: "/image ", label: "Bild erstellen", icon: ImageIcon },
+                        { cmd: "/music ", label: "Song mit Gesang", icon: Music },
+                        { cmd: "/video ", label: "Kurzes Video", icon: Film },
+                        { cmd: "/goal ", label: "Ziel selbstständig erledigen", icon: Target },
+                        { cmd: "/research ", label: "Im Internet recherchieren", icon: Globe },
+                      ].map(({ cmd, label, icon: Icon }) => (
+                        <DropdownMenuItem key={cmd} onClick={() => { setInput(cmd); setTimeout(() => textareaRef.current?.focus(), 0); }}>
+                          <Icon className="h-4 w-4 mr-2" /> {label}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}>
+                        <AudioLines className="h-4 w-4 mr-2" /> Live-Sprachchat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setInput("/"); setTimeout(() => textareaRef.current?.focus(), 0); }}>
+                        <Code2 className="h-4 w-4 mr-2" /> Alle Befehle
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Select value={mode} onValueChange={setMode}>
+                    <SelectTrigger className="h-11 w-auto gap-1.5 rounded-full border-0 bg-white/[0.06] px-4 text-[15px] hover:bg-white/[0.12] focus:ring-0">
+                      <span>{MODES.find(m => m.value === mode)?.label ?? "Auto"}</span>
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      {MODES.map(m => (
+                        <SelectItem key={m.value} value={m.value}>
+                          <div className="flex items-center gap-2">
+                            <m.icon className="h-3.5 w-3.5" />
+                            <span>{m.label}</span>
+                            <span className="hidden sm:inline text-xs text-muted-foreground">— {m.desc}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex-1" />
+
                   {voice.supported && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
+                        <button
                           type="button"
                           onClick={() => { if (voice.status === "listening") voice.stopListening(); else voice.startDictation(); }}
                           disabled={sending}
-                          size="icon"
-                          variant="ghost"
-                          className={`h-9 w-9 rounded-full ${
-                            voice.status === "listening" && !voiceMode ? "bg-foreground text-background hover:bg-foreground/90" : ""
-                          }`}
                           aria-label="Diktieren"
+                          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+                            voice.status === "listening" && !voiceMode ? "bg-foreground text-background" : "bg-white/[0.06] hover:bg-white/[0.12]"
+                          }`}
                         >
-                          {voice.status === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                        </Button>
+                          {voice.status === "listening" ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent side="top">{voice.status === "listening" ? "Diktat stoppen" : "Diktieren"}</TooltipContent>
                     </Tooltip>
                   )}
-                  {!input.trim() && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-9 w-9 rounded-full"
-                          onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
-                          aria-label="Live-Sprachchat"
-                        >
-                          <AudioLines className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Live-Sprachchat</TooltipContent>
-                    </Tooltip>
-                  )}
+
                   {sending && !input.trim() ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={stop}
-                          size="icon"
-                          className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90"
-                          aria-label="Stopp"
-                        >
-                          <Square className="h-3.5 w-3.5 fill-current" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Stopp</TooltipContent>
-                    </Tooltip>
+                    <button
+                      onClick={stop}
+                      aria-label="Stopp"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90"
+                    >
+                      <Square className="h-4 w-4 fill-current" />
+                    </button>
                   ) : (
-                  <Button
-                    onClick={submitOrQueue}
-                    disabled={!input.trim() && !sending}
-                    size="icon"
-                    className="h-9 w-9 rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30"
-                    aria-label={sending ? "In die Warteschlange" : "Senden"}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                    <button
+                      onClick={submitOrQueue}
+                      disabled={!input.trim() && !sending}
+                      aria-label={sending ? "In die Warteschlange" : "Senden"}
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:bg-white/10 disabled:text-muted-foreground transition-colors"
+                    >
+                      <ArrowUp className="h-5 w-5" />
+                    </button>
                   )}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center mt-2 hidden sm:block">
-                Mythos AI kann Fehler machen. Wichtige Infos prüfen. <code className="font-mono">/</code> für Commands.
+              <p className="text-[10px] text-muted-foreground text-center mt-2">
+                Mythos AI ist eine KI und kann Fehler machen. Wichtige Infos bitte prüfen.
               </p>
+              <LegalLinks className="mt-1" />
             </div>
           </div>
         </main>

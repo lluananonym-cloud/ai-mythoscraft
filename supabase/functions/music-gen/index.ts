@@ -6,7 +6,8 @@ import { createClient } from "npm:@supabase/supabase-js@2.103.3";
 // dann über die schon gespeicherten Google-AI-Schlüssel). Optional ElevenLabs, falls je ein Schlüssel hinterlegt wird.
 // Klappt nichts davon, antwortet die Funktion mit { error: "no_music_key" } und der Browser nutzt den alten Synth-Modus.
 
-const LYRIA_MODELS = ['lyria-3.5-pro-preview', 'lyria-3-pro-preview'];
+// Lyria 3 Pro: ganze Songs (Strophe, Refrain, Gesang). Lyria 3 Clip: 30 Sekunden, als letzte Rettung.
+const LYRIA_MODELS = ['lyria-3-pro-preview', 'lyria-3-clip-preview'];
 
 async function elevenKey(): Promise<string | null> {
   const env = Deno.env.get('ELEVENLABS_API_KEY');
@@ -16,6 +17,19 @@ async function elevenKey(): Promise<string | null> {
     const { data } = await admin.from('app_secrets').select('value').eq('name', 'ELEVENLABS_API_KEY').maybeSingle();
     return data?.value || null;
   } catch { return null; }
+}
+
+/** Kurze, verständliche Gründe für die Anzeige im Chat. */
+function explain(errors: string[]): string[] {
+  const out = new Set<string>();
+  for (const e of errors) {
+    if (/402|credit|payment/i.test(e)) out.add('Lovable-Guthaben für Musik ist aufgebraucht.');
+    else if (/429|quota|RESOURCE_EXHAUSTED|billing/i.test(e)) out.add('Google erlaubt Lyria nur mit aktivierter Abrechnung im AI Studio (ca. 8 Cent pro Song).');
+    else if (/404|not found|unsupported|invalid model/i.test(e)) out.add('Das Musikmodell ist über diesen Zugang nicht freigeschaltet.');
+    else if (/401|403|API key/i.test(e)) out.add('Der gespeicherte Google-Schlüssel wurde abgelehnt.');
+  }
+  if (!errors.some((e) => e.startsWith('google'))) out.add('Kein Google-AI-Schlüssel gespeichert (/apikeyadmin).');
+  return [...out].slice(0, 3);
 }
 
 function songPrompt(prompt: string, seconds: number): string {
@@ -73,7 +87,8 @@ async function lyriaViaGoogle(text: string, errors: string[]) {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text }] }] }),
+        // Ohne responseModalities AUDIO liefert Lyria keinen Ton zurück.
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { responseModalities: ['AUDIO', 'TEXT'] } }),
       }).catch((e) => { errors.push(`google ${model}: ${e}`); return null; });
       if (!r) continue;
       if (!r.ok) { errors.push(`google ${model}: ${r.status} ${(await r.text()).slice(0, 160)}`); continue; }
@@ -119,7 +134,7 @@ async function realSong(req: Request, prompt: string, duration: unknown): Promis
   if (song) return json({ audio: song.data, mime: song.mime, lyrics: song.lyrics, seconds, source: song.source });
 
   console.warn('[music-gen] kein Musikmodell erreichbar', errors);
-  return json({ error: 'no_music_key', details: errors.slice(0, 6) });
+  return json({ error: 'no_music_key', details: errors.slice(0, 6), reasons: explain(errors) });
 }
 
 const SYSTEM = `You are a songwriter + composer. Given a user prompt, output STRICT JSON for a short song WITH VOCALS. Schema:

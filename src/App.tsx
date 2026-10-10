@@ -10,6 +10,7 @@ import MythosBackground from "@/components/MythosBackground";
 import SplashScreen from "@/components/SplashScreen";
 import { Loader2 } from "lucide-react";
 import Home from "./pages/Home";
+import CookieConsent from "./components/CookieConsent";
 
 /** Lädt eine Seite erst bei Bedarf. Fehlt nach einem Update eine alte Datei, wird die Seite einmal neu geladen. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- lazy() erwartet beliebige Props
@@ -76,6 +77,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SplashScreen />
+          <CookieConsent />
           <MythosBackground />
           <Suspense fallback={<PageLoading />}>
           <Routes>

@@ -99,7 +99,7 @@ async function viaPollinations(prompt: string, errors: string[]): Promise<string
   tries.push({ url: `https://image.pollinations.ai/prompt/${p}?model=flux&width=1024&height=1024&nologo=true&private=true&referrer=mythoscraft&seed=${seed}` });
   for (const t of tries) {
     try {
-      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(35_000) });
+      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(25_000) });
       const mime = (r.headers.get("content-type") || "").split(";")[0];
       if (!r.ok || !mime.startsWith("image/")) { errors.push(`pollinations: HTTP ${r.status}`); continue; }
       const bytes = new Uint8Array(await r.arrayBuffer());
@@ -164,16 +164,21 @@ export function explainErrors(error: string | undefined): string[] {
 }
 
 /** Erzeugt ein Bild und liefert eine anzeigbare URL (möglichst https aus dem Storage). */
-export async function generateImage(prompt: string, lovableKey?: string): Promise<{ url: string | null; provider?: ImageProvider; error?: string }> {
+export async function generateImage(
+  prompt: string,
+  lovableKey?: string,
+  opts: { browserFallback?: boolean } = {},
+): Promise<{ url: string | null; provider?: ImageProvider; error?: string }> {
   const errors: string[] = [];
-  // Edge Functions dürfen nicht ewig laufen: AI Horde bekommt nur die restliche Zeit.
-  const deadline = Date.now() + 130_000;
+  // Kann der Browser selbst weitermachen (Web-App), gibt der Server nach ~50 s ab, statt den Nutzer
+  // minutenlang auf AI Horde warten zu lassen. Sonst bekommt Horde die restliche Laufzeit.
+  const deadline = Date.now() + (opts.browserFallback ? 50_000 : 130_000);
   const chain: [ImageProvider, () => Promise<string | null>][] = [
     ["nano-banana", () => viaGateway(prompt, lovableKey, errors)],
     ["nvidia", () => viaNvidia(prompt, errors)],
     ["pollinations", () => viaPollinations(prompt, errors)],
-    ["horde", () => viaHorde(prompt, errors, deadline)],
   ];
+  if (!opts.browserFallback) chain.push(["horde", () => viaHorde(prompt, errors, deadline)]);
   for (const [provider, run] of chain) {
     if (Date.now() > deadline - 10_000) { errors.push(`${provider}: keine Zeit mehr`); break; }
     const url = await run();

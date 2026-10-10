@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LegalLinks } from "@/components/CookieConsent";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Loader2, Send, MessageSquare, Image as ImageIcon, Music, Film, Code2, Mic, Download, LayoutDashboard, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,6 +142,7 @@ const LoggedInHome = () => {
             </Link>
           ))}
         </section>
+        <LegalLinks className="mt-10" />
       </main>
     </div>
   );

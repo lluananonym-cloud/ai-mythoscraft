@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
             c.enqueue(sse({ imagePending: { prompt: classified ?? request } }));
             const prompt = classified ?? (needsContext ? await resolveImagePrompt(request, messages, LOVABLE_API_KEY) : request);
             c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}`, imagePending: { prompt } }));
-            const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY);
+            const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY, { browserFallback: !!clientImageFallback });
             if (url) {
               c.enqueue(sse({ image: { url, prompt } }));
               c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit ${PROVIDER_LABEL[provider ?? "nano-banana"]} — ${prompt}*` } }] }));
