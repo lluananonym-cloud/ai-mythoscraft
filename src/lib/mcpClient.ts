@@ -3,6 +3,9 @@
 // geht die Anfrage über die Edge-Funktion "mcp-proxy".
 import { supabase } from "@/integrations/supabase/client";
 import type { McpServer } from "@/lib/chatPrefs";
+import { authHeader, McpAuthError, refresh } from "@/lib/mcpOAuth";
+
+export { McpAuthError };
 
 const PROTOCOL = "2025-06-18";
 const CLIENT = { name: "mythos-web", version: "1" };
@@ -26,7 +29,8 @@ async function post(server: McpServer, s: Session, msg: any): Promise<any | unde
     "MCP-Protocol-Version": PROTOCOL,
   };
   if (s.id) headers["Mcp-Session-Id"] = s.id;
-  if (server.auth) headers.Authorization = server.auth;
+  const auth = await authHeader(server);
+  if (auth) headers.Authorization = auth;
 
   let status: number, body: string, type: string, sid: string | null;
   if (!s.viaProxy) {
@@ -46,6 +50,7 @@ async function post(server: McpServer, s: Session, msg: any): Promise<any | unde
   }
   if (sid) s.id = sid;
   if (status === 202 || status === 204) return undefined;
+  if (status === 401) throw new McpAuthError();
   if (status < 200 || status >= 300) throw new Error(`HTTP ${status}: ${body.slice(0, 200)}`);
   if (msg.id === undefined) return undefined;
   const replies = type.includes("text/event-stream") ? parseSse(body) : [JSON.parse(body)];
@@ -66,12 +71,16 @@ async function session(server: McpServer): Promise<Session> {
   return s;
 }
 
-async function rpc(server: McpServer, method: string, params: unknown) {
+async function rpc(server: McpServer, method: string, params: unknown, retried = false): Promise<any> {
   try {
     const s = await session(server);
     return await post(server, s, { jsonrpc: "2.0", id: rpcId++, method, params });
   } catch (e) {
     sessions.delete(server.id); // beim nächsten Mal neu verbinden
+    // Token abgelaufen: einmal erneuern und nochmal versuchen
+    if (e instanceof McpAuthError && !retried) {
+      return rpc(await refresh(server), method, params, true);
+    }
     throw e;
   }
 }

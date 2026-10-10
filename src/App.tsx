@@ -34,6 +34,7 @@ const Docs = lazyPage(() => import("./pages/Docs"));
 const Downloads = lazyPage(() => import("./pages/Downloads"));
 const Redeem = lazyPage(() => import("./pages/Redeem"));
 const CliAuth = lazyPage(() => import("./pages/CliAuth"));
+const McpOAuth = lazyPage(() => import("./pages/McpOAuth"));
 const CodeControl = lazyPage(() => import("./pages/CodeControl"));
 const Memories = lazyPage(() => import("./pages/Memories"));
 const Personas = lazyPage(() => import("./pages/Personas"));
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
             <Route path="/redeem" element={<Redeem />} />
             <Route path="/cli-auth" element={<CliAuth />} />
+            <Route path="/mcp-oauth" element={<McpOAuth />} />
             <Route path="/code" element={<CodeControl />} />
             <Route path="/memories" element={<RequireAuth><Memories /></RequireAuth>} />
             <Route path="/personas" element={<RequireAuth><Personas /></RequireAuth>} />

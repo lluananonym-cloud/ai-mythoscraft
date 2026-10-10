@@ -40,7 +40,10 @@ Deno.serve(async (req) => {
     if (PASS.includes(k.toLowerCase()) && typeof v === "string") headers[k] = v;
   }
   try {
-    const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body.payload), redirect: "error", signal: AbortSignal.timeout(60_000) });
+    // Standard: MCP-Nachricht als JSON. Für die OAuth-Anmeldung auch GET (Server-Infos) und Formular-POST (Token).
+    const method = body?.method === "GET" ? "GET" : "POST";
+    const payload = method === "GET" ? undefined : typeof body?.rawBody === "string" ? body.rawBody : JSON.stringify(body.payload);
+    const r = await fetch(url, { method, headers, body: payload, redirect: "error", signal: AbortSignal.timeout(60_000) });
     const text = (await r.text()).slice(0, 2_000_000);
     return json({ status: r.status, contentType: r.headers.get("content-type"), sessionId: r.headers.get("mcp-session-id"), body: text });
   } catch (e) {
