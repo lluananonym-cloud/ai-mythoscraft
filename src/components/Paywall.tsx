@@ -36,7 +36,7 @@ export default function Paywall({ open, onOpenChange, reason }: { open: boolean;
     setCancelling(true);
     const r = await cancelPayPal();
     setCancelling(false);
-    if (r.ok) { toast.success(`Gekündigt. Dein Abo läuft noch bis ${r.expires_at ? new Date(r.expires_at).toLocaleDateString("de-AT") : "Monatsende"}.`); sub.refresh(); }
+    if (r.ok) { toast.success(`Gekündigt. Dein Abo läuft noch bis ${r.expires_at ? new Date(r.expires_at).toLocaleDateString("de-DE") : "Monatsende"}.`); sub.refresh(); }
     else toast.error(r.error || "Kündigen fehlgeschlagen");
   };
   return (

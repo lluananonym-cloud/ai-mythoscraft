@@ -1,7 +1,7 @@
 // Bausteine für den Chat im Stil von Lovable: aufklappbarer Denk-Block, Schritt-Zeitleiste,
 // Werkzeug-Zeilen, Tages-Trenner, relative Zeit und die Vorschlags-Leiste über dem Eingabefeld.
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, FileText, Image as ImageIcon, Music, Globe, RefreshCw, SquareTerminal, Wrench, X } from "lucide-react";
+import { Brain, ChevronDown, FileText, Image as ImageIcon, Music, Globe, RefreshCw, SquareTerminal, Wrench, X } from "lucide-react";
 
 /** "gerade eben", "vor 5 Minuten", "vor 13 Stunden", "vor 2 Tagen". */
 export function relTime(iso?: string, now = Date.now()): string {
@@ -28,7 +28,7 @@ export function dayLabel(iso?: string): string {
   const y = new Date(); y.setDate(today.getDate() - 1);
   if (dayKey(d.toISOString()) === dayKey(today.toISOString())) return "Heute";
   if (dayKey(d.toISOString()) === dayKey(y.toISOString())) return "Gestern";
-  return d.toLocaleDateString("de-AT", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+  return d.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
 }
 
 export function DayDivider({ label }: { label: string }) {
@@ -56,25 +56,13 @@ function thinkLabel(ms?: number, live?: boolean): string {
   return `Nachgedacht für ${m} ${m === 1 ? "Minute" : "Minuten"}`;
 }
 
-/** Denk-Block wie bei Lovable: Zeile mit Pfeil, aufgeklappt mit grauer Linie links. */
-export function ThinkingBlock({ text, ms, live }: { text: string; ms?: number; live?: boolean }) {
-  const [open, setOpen] = useState(!!live);
-  useEffect(() => { if (!live) setOpen(false); }, [live]);
+/** Denk-Zeile wie bei Lovable ("Nachgedacht für 9 Sekunden"). Die rohen Gedanken des Modells
+ *  werden bewusst NICHT angezeigt (AGENTS.md): sichtbar sind nur Dauer und die Arbeitsschritte. */
+export function ThinkingBlock({ ms, live }: { ms?: number; live?: boolean }) {
   return (
-    <div className="not-prose mb-3">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-[14px] text-muted-foreground hover:text-foreground/80 transition-colors"
-      >
-        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} />
-        <span className={live ? "mythos-shimmer" : ""}>{thinkLabel(ms, live)}</span>
-      </button>
-      {open && (
-        <div className="mt-2 ml-2 max-h-80 overflow-y-auto border-l-2 border-white/15 pl-4 text-[14px] leading-relaxed text-foreground/70 whitespace-pre-wrap">
-          {text}
-        </div>
-      )}
+    <div className="not-prose mb-3 flex items-center gap-2 text-[14px] text-muted-foreground">
+      <Brain className="h-4 w-4" />
+      <span className={live ? "mythos-shimmer" : ""}>{thinkLabel(ms, live)}</span>
     </div>
   );
 }

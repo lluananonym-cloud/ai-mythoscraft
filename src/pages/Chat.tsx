@@ -761,6 +761,11 @@ const Chat = () => {
       }
       if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
       // Kein Bild vom Server (Fehler oder Verbindung abgebrochen): der Browser erzeugt es selbst.
+      // Auch wenn der Server (noch alte Version) gar kein Bild-Signal schickt: Bild-Wunsch erkannt -> Browser übernimmt.
+      if (!pendingImage && !imageData && (/^\/image\s+\S/i.test(lastUserText) || isImageRequest(lastUserText)) && !/data:image|!\[/.test(full)) {
+        pendingImage = lastUserText.replace(/^\/image\s+/i, "").trim();
+        setLast({ imagePending: { prompt: pendingImage } });
+      }
       if (pendingImage && !imageData) {
         const prompt = pendingImage;
         const { url, reasons } = await generateImageInBrowser(prompt, ctrl.signal);
@@ -1382,7 +1387,7 @@ const Chat = () => {
                               </div>
                             )}
                             {m.thinking && (
-                              <ThinkingBlock text={m.thinking} ms={m.thinkingMs} live={!m.content && sending && i === messages.length - 1} />
+                              <ThinkingBlock ms={m.thinkingMs} live={!m.content && sending && i === messages.length - 1} />
                             )}
                             {m.steps && m.steps.length > 0 && <StepsTimeline steps={m.steps} />}
                             {m.search && m.content && (

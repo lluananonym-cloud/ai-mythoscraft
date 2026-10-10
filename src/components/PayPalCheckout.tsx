@@ -1,5 +1,5 @@
 // PayPal-Abo abschließen: lädt PayPals Knöpfe erst, wenn jemand wirklich bezahlen will.
-// Vorher muss die Zustimmung zu AGB und sofortigem Start bestätigt sein (§ 16 FAGG).
+// Vorher muss die Zustimmung zu AGB und sofortigem Start bestätigt sein (§ 356 Abs. 4 und 5 BGB).
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -27,7 +27,7 @@ let sdkPromise: Promise<void> | null = null;
 function loadSdk(clientId: string): Promise<void> {
   sdkPromise ??= new Promise<void>((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription&currency=EUR&locale=de_AT`;
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription&currency=EUR&locale=de_DE`;
     s.onload = () => resolve();
     s.onerror = () => { sdkPromise = null; reject(new Error("PayPal konnte nicht geladen werden")); };
     document.head.appendChild(s);
@@ -61,7 +61,7 @@ export default function PayPalCheckout({ tier, onDone }: { tier: "light" | "pro"
             actions.subscription.create({
               plan_id: cfg.plans[tier],
               custom_id: user.id,
-              application_context: { brand_name: "Mythos AI", locale: "de-AT", shipping_preference: "NO_SHIPPING", user_action: "SUBSCRIBE_NOW" },
+              application_context: { brand_name: "Mythos AI", locale: "de-DE", shipping_preference: "NO_SHIPPING", user_action: "SUBSCRIBE_NOW" },
             }),
           onApprove: async (data: { subscriptionID?: string }) => {
             setState("busy");
@@ -101,7 +101,7 @@ export default function PayPalCheckout({ tier, onDone }: { tier: "light" | "pro"
         <span>
           Ich akzeptiere die <Link to="/nutzungsbedingungen" target="_blank" className="underline text-foreground">AGB</Link> und
           die <Link to="/datenschutz" target="_blank" className="underline text-foreground">Datenschutzerklärung</Link>. Ich will, dass das Abo sofort startet.
-          Trete ich innerhalb von 14 Tagen zurück, zahle ich nur den Teil bis dahin. Monatlich kündbar.
+          Widerrufe ich innerhalb von 14 Tagen, zahle ich nur den Teil bis dahin (Wertersatz). Monatlich kündbar.
         </span>
       </label>
       {agreed && (

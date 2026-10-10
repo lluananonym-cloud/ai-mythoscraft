@@ -1,7 +1,7 @@
 import LegalPage, { H, V } from "@/components/LegalPage";
 import { TIER_LIMITS as TIERS } from "@/hooks/useSubscription";
 
-// Allgemeine Geschäfts- und Nutzungsbedingungen (Österreich: ABGB, KSchG, FAGG, VGG).
+// Allgemeine Geschäfts- und Nutzungsbedingungen (Deutschland: BGB, inkl. Widerrufsbelehrung nach Anlage 1 zu Art. 246a EGBGB).
 const Nutzungsbedingungen = () => (
   <LegalPage title="Allgemeine Geschäftsbedingungen und Nutzungsbedingungen">
     <H>1. Geltungsbereich und Anbieter</H>
@@ -22,7 +22,7 @@ const Nutzungsbedingungen = () => (
     <H>3. Konto</H>
     <ul>
       <li>Für die meisten Funktionen brauchst du ein Konto. Deine Angaben müssen stimmen.</li>
-      <li>Die Nutzung ist ab 14 Jahren erlaubt, darunter nur mit Zustimmung eines Elternteils. Bezahlte Tarife dürfen Minderjährige nur mit Zustimmung der Eltern abschließen.</li>
+      <li>Die Nutzung ist ab 16 Jahren erlaubt, darunter nur mit Zustimmung eines Elternteils. Bezahlte Tarife dürfen Minderjährige nur mit Zustimmung der Eltern abschließen.</li>
       <li>Halte deine Zugangsdaten geheim. Bei Verdacht auf Missbrauch schreib uns sofort an <V k="email" />.</li>
     </ul>
 
@@ -33,21 +33,40 @@ const Nutzungsbedingungen = () => (
       <li><strong>{TIERS.pro.label}</strong>: {TIERS.pro.priceLabel}, mit allen Funktionen und ohne Werbung.</li>
     </ul>
     <p>
-      Alle Preise sind Endpreise in Euro (zur Umsatzsteuer siehe <a href="/impressum">Impressum</a>). Bezahlt wird im Voraus über PayPal. Bezahlte Tarife laufen monatlich und verlängern sich automatisch um einen Monat, wenn du nicht vor Ende des
-      laufenden Monats kündigst. Kündigen kannst du jederzeit im Dashboard („Abo verwalten“), in deinem PayPal-Konto oder formlos per E-Mail. Der bezahlte Monat läuft bis zum Ende weiter. Gutschein- und Einladungscodes können nicht gegen Geld eingelöst werden.
+      Alle Preise sind Endpreise in Euro. Als Kleinunternehmer nach § 19 UStG weisen wir keine Umsatzsteuer aus. Bezahlt wird im Voraus über PayPal. Bezahlte Tarife laufen monatlich und verlängern sich automatisch um einen Monat, wenn du nicht vor Ende des
+      laufenden Monats kündigst. Kündigen kannst du jederzeit im Dashboard über den Kündigungsbutton („Abo kündigen“, § 312k BGB), in deinem PayPal-Konto oder formlos per E-Mail. Der bezahlte Monat läuft bis zum Ende weiter. Gutschein- und Einladungscodes können nicht gegen Geld eingelöst werden.
       Preisänderungen gelten erst ab der nächsten Verlängerung und werden dir mindestens 30 Tage vorher mitgeteilt. Du kannst dann zum Änderungszeitpunkt kündigen.
     </p>
 
-    <H>5. Rücktrittsrecht für Verbraucher:innen</H>
+    <H>5. Widerrufsbelehrung für Verbraucher:innen</H>
+    <p><strong>Widerrufsrecht</strong></p>
     <p>
-      Als Verbraucher:in kannst du einen online geschlossenen Vertrag binnen 14 Tagen ohne Angabe von Gründen widerrufen (§ 11 FAGG). Die Frist beginnt mit dem
-      Tag des Vertragsabschlusses. Für den Rücktritt genügt eine eindeutige Erklärung an <V k="email" /> oder an unsere Postanschrift, zum Beispiel: „Hiermit
-      trete ich von meinem Vertrag über den Tarif … vom … zurück. Name, E-Mail des Kontos, Datum.“
+      Du hast das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des
+      Vertragsabschlusses. Um dein Widerrufsrecht auszuüben, musst du uns (<V k="firma" />, <V k="strasse" />, <V k="plzOrt" />, E-Mail: <V k="email" />)
+      mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder eine E-Mail) über deinen Entschluss, diesen Vertrag zu widerrufen,
+      informieren. Du kannst dafür das unten stehende Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist. Zur Wahrung der Widerrufsfrist
+      reicht es aus, dass du die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.
     </p>
+    <p><strong>Folgen des Widerrufs</strong></p>
     <p>
-      Wir erstatten alle Zahlungen binnen 14 Tagen nach Eingang des Rücktritts über dasselbe Zahlungsmittel. Hast du ausdrücklich verlangt, dass wir schon während
-      der Rücktrittsfrist mit der Leistung beginnen, zahlst du einen anteiligen Betrag für die bis zum Rücktritt erbrachten Leistungen (§ 16 FAGG). Das Rücktrittsrecht
-      erlischt, wenn die Leistung mit deiner ausdrücklichen Zustimmung und deiner Bestätigung, dass du dein Rücktrittsrecht dadurch verlierst, vollständig erbracht wurde (§ 18 FAGG).
+      Wenn du diesen Vertrag widerrufst, haben wir dir alle Zahlungen, die wir von dir erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab dem
+      Tag zurückzuzahlen, an dem die Mitteilung über deinen Widerruf dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe
+      Zahlungsmittel, das du bei der ursprünglichen Transaktion eingesetzt hast (PayPal), es sei denn, mit dir wurde ausdrücklich etwas anderes vereinbart; in keinem
+      Fall werden dir wegen dieser Rückzahlung Entgelte berechnet. Hast du verlangt, dass die Dienstleistung während der Widerrufsfrist beginnen soll, so hast du
+      uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem du uns von der Ausübung des Widerrufsrechts hinsichtlich dieses
+      Vertrags unterrichtest, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.
+    </p>
+    <p><strong>Muster-Widerrufsformular</strong></p>
+    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      (Wenn du den Vertrag widerrufen willst, dann fülle bitte dieses Formular aus und sende es zurück.)<br />
+      An <V k="firma" />, <V k="strasse" />, <V k="plzOrt" />, E-Mail: <V k="email" />:<br />
+      Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung: Tarif …<br />
+      Bestellt am (*) …<br />
+      Name des/der Verbraucher(s) …<br />
+      Anschrift des/der Verbraucher(s) …<br />
+      Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)<br />
+      Datum …<br />
+      (*) Unzutreffendes streichen.
     </p>
 
     <H>6. Erlaubte Nutzung</H>
@@ -64,20 +83,20 @@ const Nutzungsbedingungen = () => (
     <ul>
       <li>Deine Eingaben bleiben deine. Du räumst uns nur die Rechte ein, die wir brauchen, um den Dienst zu erbringen (Speichern, Verarbeiten, Übermitteln an KI-Anbieter).</li>
       <li>An den für dich erzeugten Ergebnissen räumen wir dir, soweit uns Rechte daran zustehen, ein unbefristetes, weltweites und auch kommerzielles Nutzungsrecht ein. Bei Musik und Bildern können zusätzlich die Bedingungen des jeweiligen KI-Anbieters gelten.</li>
-      <li>KI-Ergebnisse sind nach österreichischem Recht oft nicht urheberrechtlich geschützt, und ähnliche Ergebnisse können auch anderen Nutzer:innen entstehen. Wir garantieren nicht, dass Ergebnisse frei von Rechten Dritter sind. Prüfe sie vor einer Veröffentlichung.</li>
+      <li>KI-Ergebnisse sind nach deutschem Urheberrecht oft nicht geschützt, und ähnliche Ergebnisse können auch anderen Nutzer:innen entstehen. Wir garantieren nicht, dass Ergebnisse frei von Rechten Dritter sind. Prüfe sie vor einer Veröffentlichung.</li>
       <li>KI-Ergebnisse können falsch, unvollständig oder veraltet sein. Sie ersetzen keine Rechts-, Steuer-, Medizin- oder Finanzberatung.</li>
       <li>Wenn du KI-erzeugte Bilder, Videos oder Töne veröffentlichst, die echt wirken (Deepfakes), musst du sie als KI-generiert kennzeichnen (Art. 50 KI-Verordnung).</li>
     </ul>
 
     <H>8. Gewährleistung</H>
-    <p>Gegenüber Verbraucher:innen gilt die gesetzliche Gewährleistung, insbesondere für digitale Leistungen nach dem Verbrauchergewährleistungsgesetz (VGG).</p>
+    <p>Es gelten die gesetzlichen Rechte bei Mängeln, für digitale Produkte insbesondere die §§ 327 ff. BGB. Wir stellen dir dabei auch die nötigen Aktualisierungen bereit (§ 327f BGB).</p>
 
     <H>9. Haftung</H>
     <p>
       Wir haften unbeschränkt für Vorsatz und grobe Fahrlässigkeit sowie für Personenschäden. Bei leichter Fahrlässigkeit haften wir nur für die Verletzung
       wesentlicher Vertragspflichten und begrenzt auf den typischerweise vorhersehbaren Schaden. Gegenüber Unternehmer:innen ist die Haftung für leichte
       Fahrlässigkeit, entgangenen Gewinn und Datenverlust ausgeschlossen. Für den kostenlosen Tarif haften wir nur für Vorsatz und grobe Fahrlässigkeit.
-      Zwingende gesetzliche Ansprüche, etwa nach dem Produkthaftungsgesetz, bleiben unberührt.
+      Zwingende gesetzliche Ansprüche, etwa nach dem Produkthaftungsgesetz, bleiben unberührt. Gegenüber Verbraucher:innen gilt diese Begrenzung nicht für die Rechte bei Mängeln digitaler Produkte.
     </p>
 
     <H>10. Werbung buchen</H>
@@ -100,9 +119,9 @@ const Nutzungsbedingungen = () => (
 
     <H>13. Anwendbares Recht und Gerichtsstand</H>
     <p>
-      Es gilt österreichisches Recht unter Ausschluss des UN-Kaufrechts und der Verweisungsnormen. Für Verbraucher:innen mit gewöhnlichem Aufenthalt in einem
-      anderen EU-Staat bleiben die zwingenden Schutzvorschriften ihres Heimatstaats unberührt. Gerichtsstand für Unternehmer:innen ist das sachlich zuständige
-      Gericht am Sitz unseres Unternehmens. Für Verbraucher:innen gelten die gesetzlichen Gerichtsstände (§ 14 KSchG).
+      Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Für Verbraucher:innen mit gewöhnlichem Aufenthalt in einem anderen EU-Staat bleiben die
+      zwingenden Schutzvorschriften ihres Heimatstaats unberührt (Art. 6 Rom-I-Verordnung). Gerichtsstand für Kaufleute ist unser Geschäftssitz. Für
+      Verbraucher:innen gelten die gesetzlichen Gerichtsstände. Zur Verbraucherschlichtung siehe <a href="/impressum">Impressum</a>.
     </p>
 
     <H>14. Schlussbestimmungen</H>

@@ -1,15 +1,15 @@
 import LegalPage, { H, V } from "@/components/LegalPage";
 import { LEGAL } from "@/lib/legal";
 
-// Impressum nach § 5 ECG, § 14 UGB, § 63 GewO und Offenlegung nach § 25 MedienG (Österreich).
+// Impressum nach § 5 Digitale-Dienste-Gesetz (DDG) und § 18 Abs. 2 Medienstaatsvertrag (MStV), Deutschland.
 const Impressum = () => (
   <LegalPage title="Impressum">
-    <H>Diensteanbieter und Medieninhaber</H>
+    <H>Angaben gemäß § 5 DDG</H>
     <p>
       <strong><V k="firma" /></strong><br />
-      Inhaber: <V k="inhaber" /><br />
       <V k="strasse" /><br />
-      <V k="plzOrt" />, <V k="land" />
+      <V k="plzOrt" /><br />
+      <V k="land" />
     </p>
 
     <H>Kontakt</H>
@@ -20,32 +20,22 @@ const Impressum = () => (
 
     <H>Unternehmensdaten</H>
     <ul>
-      <li>Rechtsform: {LEGAL.firmenbuch ? "Eingetragenes Einzelunternehmen (e.U.)" : "Einzelunternehmen"}</li>
-      <li>Unternehmensgegenstand: <V k="gegenstand" /></li>
-      {LEGAL.firmenbuch && <li>Firmenbuchnummer und Firmenbuchgericht: <V k="firmenbuch" /></li>}
-      {LEGAL.uid && <li>UID-Nummer: <V k="uid" /></li>}
-      <li>Firmensitz: <V k="plzOrt" /></li>
+      <li>Rechtsform: Einzelunternehmen</li>
+      <li>Tätigkeit: <V k="gegenstand" /></li>
+      {LEGAL.register && <li>Registereintrag: <V k="register" /></li>}
+      {LEGAL.uid && <li>Umsatzsteuer: <V k="uid" /></li>}
+      <li>Zuständige Behörde für die Gewerbeanmeldung: <V k="behoerde" /></li>
     </ul>
 
-    <H>Gewerberechtliche Angaben</H>
-    <ul>
-      <li>Gewerbe: <V k="gewerbe" /></li>
-      <li>Gewerbebehörde: <V k="behoerde" /></li>
-      <li>Mitglied der <V k="kammer" /></li>
-      <li>Anwendbare Rechtsvorschriften: Gewerbeordnung (GewO), abrufbar unter <a href="https://www.ris.bka.gv.at" target="_blank" rel="noreferrer">www.ris.bka.gv.at</a></li>
-    </ul>
-
-    <H>Offenlegung nach § 25 Mediengesetz</H>
+    <H>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</H>
     <p>
-      Medieninhaber: <V k="firma" />, <V k="strasse" />, <V k="plzOrt" />.<br />
-      Grundlegende Richtung: Informationen über den KI-Dienst <V k="produkt" />, seine Funktionen, Preise und Neuigkeiten.
+      <V k="inhaber" />, <V k="strasse" />, <V k="plzOrt" />
     </p>
 
     <H>Verbraucherstreitbeilegung</H>
     <p>
-      Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
-      Bei Problemen schreib uns einfach an die oben genannte E-Mail-Adresse. Verbraucher:innen können sich unabhängig davon an die{" "}
-      <a href="https://www.ombudsmann.at" target="_blank" rel="noreferrer">Internet Ombudsstelle</a> wenden.
+      Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen (§ 36 VSBG).
+      Bei Problemen schreib uns einfach an die oben genannte E-Mail-Adresse.
     </p>
 
     <H>Haftung für Inhalte und Links</H>

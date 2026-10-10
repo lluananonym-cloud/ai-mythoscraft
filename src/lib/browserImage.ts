@@ -3,7 +3,7 @@
 // Reihenfolge: Pollinations (schnell, ohne Schlüssel) -> AI Horde (Community-Netz, langsamer).
 // Fertige Bilder werden, wenn möglich, in den eigenen Storage kopiert, damit sie nicht ablaufen.
 import { supabase } from "@/integrations/supabase/client";
-import { externalAllowed } from "@/lib/consent";
+import { externalBlocked } from "@/lib/consent";
 
 const HORDE = "https://aihorde.net/api/v2";
 const HORDE_HEADERS = { "Content-Type": "application/json", apikey: "0000000000", "Client-Agent": "mythoscraft:1.0:mythoscraft.online" };
@@ -91,7 +91,7 @@ async function viaHorde(prompt: string, reasons: string[], signal?: AbortSignal)
 export async function generateImageInBrowser(prompt: string, signal?: AbortSignal): Promise<{ url: string | null; reasons: string[] }> {
   const reasons: string[] = [];
   // Direkt-Laden bei Drittanbietern nur mit Einwilligung (Cookie-Einstellungen → Externe KI-Dienste).
-  if (!externalAllowed()) {
+  if (externalBlocked()) {
     reasons.push("Browser-Backup ist aus. Erlaube unten bei „Cookie-Einstellungen“ die externen KI-Dienste, dann klappt es auch bei vollen Servern.");
     return { url: null, reasons };
   }
