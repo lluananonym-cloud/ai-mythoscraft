@@ -72,3 +72,6 @@ verify_jwt = false
 
 [functions.labs]
 verify_jwt = false
+
+[functions.paypal]
+verify_jwt = false

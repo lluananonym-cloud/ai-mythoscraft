@@ -33,8 +33,8 @@ const Nutzungsbedingungen = () => (
       <li><strong>{TIERS.pro.label}</strong>: {TIERS.pro.priceLabel}, mit allen Funktionen und ohne Werbung.</li>
     </ul>
     <p>
-      Alle Preise sind Endpreise in Euro (zur Umsatzsteuer siehe <a href="/impressum">Impressum</a>). Bezahlte Tarife laufen monatlich und verlängern sich automatisch um einen Monat, wenn du nicht vor Ende des
-      laufenden Monats kündigst. Die Kündigung ist jederzeit formlos per E-Mail möglich. Gutschein- und Einladungscodes können nicht gegen Geld eingelöst werden.
+      Alle Preise sind Endpreise in Euro (zur Umsatzsteuer siehe <a href="/impressum">Impressum</a>). Bezahlt wird im Voraus über PayPal. Bezahlte Tarife laufen monatlich und verlängern sich automatisch um einen Monat, wenn du nicht vor Ende des
+      laufenden Monats kündigst. Kündigen kannst du jederzeit im Dashboard („Abo verwalten“), in deinem PayPal-Konto oder formlos per E-Mail. Der bezahlte Monat läuft bis zum Ende weiter. Gutschein- und Einladungscodes können nicht gegen Geld eingelöst werden.
       Preisänderungen gelten erst ab der nächsten Verlängerung und werden dir mindestens 30 Tage vorher mitgeteilt. Du kannst dann zum Änderungszeitpunkt kündigen.
     </p>
 

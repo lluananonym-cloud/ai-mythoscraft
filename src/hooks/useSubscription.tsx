@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,14 +24,23 @@ export function useSubscription() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [chatsToday, setChatsToday] = useState(0);
+  const [paidViaPayPal, setPaidViaPayPal] = useState(false);
+  const syncedRef = useRef(false);
 
   const refresh = async () => {
     if (!user) { setTier("free"); setIsAdmin(false); setLoading(false); return; }
     const [{ data: sub }, { data: roles }] = await Promise.all([
-      supabase.from("subscriptions").select("tier,expires_at").eq("user_id", user.id).maybeSingle(),
+      supabase.from("subscriptions").select("tier,expires_at,note").eq("user_id", user.id).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", user.id),
     ]);
     const admin = !!roles?.some(r => r.role === "admin");
+    // PayPal-Abo: kurz vor Ablauf bei PayPal nachfragen, ob die nächste Monatszahlung durch ist.
+    const isPayPal = /^paypal:/.test(String((sub as { note?: string } | null)?.note ?? ""));
+    setPaidViaPayPal(isPayPal && !/:(CANCELLED|EXPIRED|SUSPENDED)$/.test(String((sub as { note?: string }).note)));
+    if (isPayPal && sub?.expires_at && new Date(sub.expires_at).getTime() - Date.now() < 3 * 86400e3 && !syncedRef.current) {
+      syncedRef.current = true;
+      supabase.functions.invoke("paypal", { body: { action: "sync" } }).then(({ data }) => { if (data?.ok && !data.none) refresh(); }).catch(() => {});
+    }
     setIsAdmin(admin);
     let resolved: Tier = "free";
     if (admin) resolved = "pro";
@@ -55,7 +64,7 @@ export function useSubscription() {
   const isLight = tier === "light";
 
   return {
-    tier, isPro, isLight, isAdmin, loading, chatsToday, limits,
+    tier, isPro, isLight, isAdmin, loading, chatsToday, limits, paidViaPayPal,
     chatLimitReached: chatsToday >= limits.chatsPerDay,
     canUseVoice: limits.voice,
     canGenerateImage: limits.imageGen,

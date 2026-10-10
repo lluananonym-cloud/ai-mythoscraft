@@ -12,10 +12,12 @@ export const LEGAL = {
   plzOrt: "[PLZ Ort]",
   land: "Österreich",
   email: "[kontakt@deine-domain.at]",
+  /** optional: "" blendet die Zeile aus */
   telefon: "[+43 …] (optional, empfohlen)",
-  /** Firmenbuchnummer und -gericht, z. B. "FN 123456a, Landesgericht Linz" */
+  /** Firmenbuchnummer und -gericht, z. B. "FN 123456a, Landesgericht Linz".
+   *  Noch nicht im Firmenbuch eingetragen? Dann "" eintragen und bei firma nur deinen Namen (ohne "e.U."). */
   firmenbuch: "[FN …], [Landes-/Handelsgericht …]",
-  /** UID-Nummer, falls vorhanden; sonst Satz zur Kleinunternehmerregelung stehen lassen */
+  /** UID-Nummer, falls vorhanden; sonst Satz zur Kleinunternehmerregelung stehen lassen ("" blendet die Zeile aus) */
   uid: "[ATU…] – oder: keine UID, Kleinunternehmer gemäß § 6 Abs. 1 Z 27 UStG",
   /** Unternehmensgegenstand */
   gegenstand: "Entwicklung und Betrieb von Software und KI-gestützten Online-Diensten",

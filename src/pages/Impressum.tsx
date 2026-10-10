@@ -1,4 +1,5 @@
 import LegalPage, { H, V } from "@/components/LegalPage";
+import { LEGAL } from "@/lib/legal";
 
 // Impressum nach § 5 ECG, § 14 UGB, § 63 GewO und Offenlegung nach § 25 MedienG (Österreich).
 const Impressum = () => (
@@ -13,16 +14,16 @@ const Impressum = () => (
 
     <H>Kontakt</H>
     <p>
-      E-Mail: <V k="email" /><br />
-      Telefon: <V k="telefon" />
+      E-Mail: <V k="email" />
+      {LEGAL.telefon && <><br />Telefon: <V k="telefon" /></>}
     </p>
 
     <H>Unternehmensdaten</H>
     <ul>
-      <li>Rechtsform: Eingetragenes Einzelunternehmen (e.U.)</li>
+      <li>Rechtsform: {LEGAL.firmenbuch ? "Eingetragenes Einzelunternehmen (e.U.)" : "Einzelunternehmen"}</li>
       <li>Unternehmensgegenstand: <V k="gegenstand" /></li>
-      <li>Firmenbuchnummer und Firmenbuchgericht: <V k="firmenbuch" /></li>
-      <li>UID-Nummer: <V k="uid" /></li>
+      {LEGAL.firmenbuch && <li>Firmenbuchnummer und Firmenbuchgericht: <V k="firmenbuch" /></li>}
+      {LEGAL.uid && <li>UID-Nummer: <V k="uid" /></li>}
       <li>Firmensitz: <V k="plzOrt" /></li>
     </ul>
 
