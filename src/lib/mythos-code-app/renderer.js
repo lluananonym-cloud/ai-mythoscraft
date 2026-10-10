@@ -38,7 +38,7 @@ function diffBox(it) {
 }
 // Sichere Arbeitszusammenfassung statt privater interner Gedankengänge.
 function thinkBox(think) {
-  const d = el("details", "think"); const sm = el("summary", "", "◎ Arbeitsprotokoll");
+  const d = el("details", "think"); const sm = el("summary", "", "Arbeitsschritte ansehen");
   const b = el("div", "body"); b.style.whiteSpace = "pre-wrap"; b.textContent = think;
   d.append(sm, b); return d;
 }
@@ -134,8 +134,8 @@ function paintRun(run) {
   if (root.lastElementChild !== e.box) root.appendChild(e.box);
   const col = { appendChild(x) { const kids = e.box.children; if (kids[col.i] !== x) e.box.insertBefore(x, kids[col.i] || null); col.i++; }, i: 0 };
   const vis = visibleText(run.stream).trim();
-  if (!e.activity || !e.activity.isConnected) { e.activity = el("details", "activity"); e.activity.open = true; e.actSum = el("summary"); e.actSpin = el("span", "spin"); e.actTitle = el("span", "", "Mythos arbeitet"); e.actTime = el("span", "elapsed mono"); e.actSteps = el("div", "steps"); e.actSafe = el("div", "safe", "Live-Aktivitäten zeigen sichere Arbeitsschritte, keine privaten internen Gedanken."); e.actSum.append(e.actSpin, e.actTitle, e.actTime); e.activity.append(e.actSum, e.actSteps, e.actSafe); }
-  e.actTime.textContent = fmt(Date.now() - run.t0); const lastAct = (run.activity || [])[(run.activity || []).length - 1]; e.actTitle.textContent = run.phase || (lastAct ? lastAct.text : "Mythos arbeitet");
+  if (!e.activity || !e.activity.isConnected) { e.activity = el("details", "activity"); e.activity.open = true; e.actSum = el("summary"); e.actSpin = el("span", "spin"); e.actTitle = el("span", "", "Mythos arbeitet"); e.actTime = el("span", "elapsed mono"); e.actTime.style.display = "none"; e.actSteps = el("div", "steps"); e.actSafe = el("div", "safe", "Live-Aktivitäten zeigen sichere Arbeitsschritte, keine privaten internen Gedanken."); e.actSum.append(e.actSpin, e.actTitle, e.actTime); e.activity.append(e.actSum, e.actSteps, e.actSafe); }
+  e.actTime.textContent = fmt(Date.now() - run.t0); const lastAct = (run.activity || [])[(run.activity || []).length - 1]; e.actTitle.textContent = "Läuft seit " + fmt(Date.now() - run.t0) + " · " + (run.phase || (lastAct ? lastAct.text : "Mythos arbeitet"));
   const acts = run.activity || []; if (e.activityCount !== acts.length) { e.actSteps.textContent = ""; acts.slice().reverse().forEach((a, k) => { const row = el("div", "step" + (k === 0 ? " now" : "")); row.append(el("span", "", a.icon || "•"), el("span", "", a.text), el("time", "", fmt(a.at - run.t0))); e.actSteps.appendChild(row); }); e.actSteps.scrollTop = 0; e.activityCount = acts.length; }
   col.appendChild(e.activity);
   if (vis) {
@@ -266,7 +266,9 @@ function stop(c) {
   if (run.ctl) run.ctl.abort(); window.mythos.abort(run.id);
   (run.subs || []).forEach((s) => { if (s.ctl) s.ctl.abort(); window.mythos.abort(s.id); });
 }
-function setAuto(on) { $("auto").checked = !!on; cfg.auto = !!on; window.mythos.setCfg(cfg); }
+function setAuto(on) { $("auto").checked = !!on; cfg.auto = !!on; window.mythos.setCfg(cfg); paintModePill(); }
+// "Auto"-Knopf im Eingabefeld (wie bei Lovable): Auto = Vollzugriff, Fragen = vor Änderungen nachfragen.
+function paintModePill() { const p = $("modePill"); if (p) { p.textContent = $("auto").checked ? "Auto" : "Fragen"; p.title = $("auto").checked ? "Mythos arbeitet ohne Nachfragen (klicken zum Umschalten)" : "Mythos fragt vor Befehlen und Änderungen (klicken zum Umschalten)"; } }
 // Neue Nutzer-Nachricht anhängen (beim Bearbeiten wird der Chat vorher ab dort abgeschnitten).
 function pushUser(c, display, content, extra) {
   if (c === chat && editing != null) { const it = c.view[editing]; c.history.length = it.h; c.view.length = editing; editing = null; renderEdit(); renderChat(); }
@@ -1267,6 +1269,7 @@ $("edtext").onkeydown = (e) => {
 $("btnResume").onclick = continueChat; $("btnGoalEnd").onclick = endGoal;
 $("btnGoalStop").onclick = () => stop(chat); $("btnGoalGo").onclick = continueChat;
 $("auto").onchange = () => setAuto($("auto").checked);
+$("modePill").style.cursor = "pointer"; $("modePill").onclick = () => setAuto(!$("auto").checked);
 $("autotest").onchange = () => { if (!cfg.folder) { $("autotest").checked = false; return note("Wähle zuerst einen Projektordner."); } setAutoTest($("autotest").checked); };
 $("btnFolder").onclick = pickProject; $("btnAddProj").onclick = pickProject;
 $("btnNew").onclick = () => newChat();
@@ -1285,7 +1288,7 @@ $("btnOut").onclick = async () => {
   await window.mythos.setCfg(cfg); location.reload();
 };
 Promise.all([window.mythos.prompts(), window.mythos.getCfg()]).then(([p, c]) => {
-  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme();
+  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; paintModePill(); $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme();
   if (cfg.key) show();
 });
 

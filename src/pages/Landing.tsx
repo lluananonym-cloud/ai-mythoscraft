@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LegalLinks } from "@/components/CookieConsent";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TopNav from "@/components/TopNav";
@@ -265,13 +266,7 @@ const Landing = () => {
           <div className="container flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <Logo size="sm" />
             <p>© 2026 Mythos AI · Built for <a href="https://mythoscraft.online" className="text-accent hover:underline">mythoscraft.online</a></p>
-            <nav className="flex flex-wrap gap-2">
-              <a href="/impressum" className="hover:underline">Impressum</a>
-              <a href="/datenschutz" className="hover:underline">Datenschutz</a>
-              <a href="/nutzungsbedingungen" className="hover:underline">Nutzungsbedingungen</a>
-              <a href="/cookie" className="hover:underline">Cookie‑Hinweis</a>
-              <a href="/ki-regeln" className="hover:underline">KI‑Inhalts‑Regeln</a>
-            </nav>
+            <LegalLinks className="!text-sm" />
           </div>
         </footer>
       <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} feature={upgradeFeature} reason={upgradeReason} />

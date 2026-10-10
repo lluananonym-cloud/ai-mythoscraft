@@ -23,11 +23,8 @@ const STARS = Array.from({ length: 14 }, (_, i) => ({
 
 export type GeneratedImage = { url: string; prompt: string; fallback?: boolean; reasons?: string[] };
 
-/** Direkter Pollinations-Link: lädt der Browser selbst, wenn alle Server-Anbieter ausgefallen sind. */
-export function browserImageUrl(prompt: string): string {
-  const seed = Math.floor(Math.random() * 1e6);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?model=flux&width=1024&height=1024&nologo=true&referrer=mythoscraft&seed=${seed}`;
-}
+export { pollinationsUrl as browserImageUrl } from "@/lib/browserImage";
+import { openConsent } from "@/lib/consent";
 
 type Props = {
   /** Gesetzt, solange der Server das Bild noch erzeugt. */
@@ -42,7 +39,8 @@ export default function ImageGeneration({ pending, image }: Props) {
 
   // Bild vorladen: die Animation bleibt stehen, bis es wirklich da ist (Browser-Backup kann dauern).
   useEffect(() => {
-    if (!image?.url) return;
+    if (!image) return;
+    if (!image.url) { setStatus("error"); return; }
     setStatus("loading");
     const img = new Image();
     let alive = true;
@@ -77,11 +75,16 @@ export default function ImageGeneration({ pending, image }: Props) {
         <PendingCard prompt={pending?.prompt ?? image!.prompt} onPlay={() => setPlaying(true)} />
       ) : image && status === "error" ? (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-          ❌ Bild-Generierung fehlgeschlagen. Alle Anbieter sind gerade nicht erreichbar, versuch es gleich nochmal.
+          Das Bild konnte gerade nicht erstellt werden. Alle Bild-Dienste sind ausgelastet, bitte in einer Minute noch einmal versuchen.
           {!!image.reasons?.length && (
             <ul className="mt-2 list-disc pl-5 text-xs text-red-200/70">
               {image.reasons.map((r) => <li key={r}>{r}</li>)}
             </ul>
+          )}
+          {image.reasons?.some((r) => r.startsWith("Browser-Backup ist aus")) && (
+            <button onClick={openConsent} className="mt-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white hover:bg-white/10">
+              Cookie-Einstellungen öffnen
+            </button>
           )}
         </div>
       ) : null}
@@ -160,6 +163,8 @@ function RevealImage({ image, onOpen }: { image: { url: string; prompt: string }
         onLoad={() => requestAnimationFrame(() => setLoaded(true))}
         className={`mg-reveal ${loaded ? "mg-in" : "absolute inset-0 opacity-0"} h-auto w-full`}
       />
+      {/* Kennzeichnung KI-generierter Inhalte (Art. 50 KI-Verordnung) */}
+      {loaded && <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur">KI-generiert</span>}
     </button>
   );
 }

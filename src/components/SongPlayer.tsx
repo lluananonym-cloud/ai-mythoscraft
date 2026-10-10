@@ -68,6 +68,8 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Warum statt echtem Gesang nur die Synth-Version kam (sonst wirkt es, als wäre nichts passiert).
+  const [notice, setNotice] = useState<string[] | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [spec, setSpec] = useState<MusicSpec | null>(null);
@@ -110,7 +112,11 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
     });
     if ((r.headers.get("Content-Type") || "").includes("json")) {
       const j = await r.json().catch(() => ({}));
-      if (j?.error === "no_music_key") { console.warn("[song] kein Musikmodell erreichbar", j.details); return false; }
+      if (j?.error === "no_music_key") {
+        console.warn("[song] kein Musikmodell erreichbar", j.details);
+        setNotice(Array.isArray(j.reasons) && j.reasons.length ? j.reasons : ["Kein Musikmodell mit Gesang erreichbar."]);
+        return false;
+      }
       if (!j?.audio) throw new Error(j?.error || `Fehler ${r.status}`);
       const bin = atob(j.audio);
       const bytes = new Uint8Array(bin.length);
@@ -148,6 +154,7 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
 
   const generate = async () => {
     setErrorMsg(null);
+    setNotice(null);
     setStatus("loading");
     setProgress(5);
     setProgressMsg("Song wird gestartet…");
@@ -260,6 +267,13 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
         <p className="text-xs text-muted-foreground">
           Klick „Generieren" für einen echten Song mit Gesang ({Math.round(seconds / 6) / 10} Minuten).
         </p>
+      )}
+
+      {notice && status !== "loading" && (
+        <div className="mb-2 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+          Echter Gesang ging gerade nicht, deshalb kommt eine Instrumental-Version.
+          <ul className="mt-1 list-disc pl-4 text-amber-100/70">{notice.map((n) => <li key={n}>{n}</li>)}</ul>
+        </div>
       )}
 
       {status === "error" && errorMsg && (

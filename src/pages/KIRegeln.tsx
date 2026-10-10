@@ -1,24 +1,36 @@
-import TopNav from "@/components/TopNav";
+import LegalPage, { H, V } from "@/components/LegalPage";
 
+// Regeln für KI-Inhalte und Transparenz nach der KI-Verordnung (EU) 2024/1689.
 const KIRegeln = () => (
-  <div className="min-h-screen flex flex-col">
-    <TopNav />
-    <main className="container max-w-3xl py-12 mx-auto">
-      <h1 className="font-display text-3xl md:text-4xl font-bold mb-6">Regeln für KI‑generierte Inhalte</h1>
-      <section className="space-y-4 text-muted-foreground">
-        <p>Die Nutzung der KI‑gestützten Funktionen von Mythos AI unterliegt folgenden Richtlinien. Durch die Nutzung erklären Sie sich mit diesen Bedingungen einverstanden.</p>
-        <ul className="list-disc list-inside ml-4">
-          <li>Erzeugen Sie keine Inhalte, die gegen geltendes Recht verstoßen (z. B. Hassrede, defamatory Äußerungen, Gewaltverherrlichung, Kinder‑pornografie).</li>
-          <li>Veröffentlichen Sie keine urheberrechtlich geschützten Materialien ohne entsprechende Lizenz oder Erlaubnis.</li>
-          <li>Vermeiden Sie die Nutzung von KI‑Ergebnissen für Spam, betrügerische Aktivitäten oder Täuschungsversuche.</li>
-          <li>Respektieren Sie die Privatsphäre Dritter – veröffentlichen Sie keine persönlichen Daten ohne Einwilligung.</li>
-          <li>Bei generierten Inhalten, die eindeutig als KI‑basiert erkennbar sind, kennzeichnen Sie diese, wenn ein möglicher Missbrauch besteht.</li>
-        </ul>
-        <p>Verstöße gegen diese Regeln können zur Sperrung des Accounts und zur Meldung an zuständige Behörden führen.</p>
-        <p>Bei Fragen oder Meldungen von Verstößen kontaktieren Sie bitte unser Support-Team unter <a href="mailto:support@mythoscraft.online" className="underline text-primary">support@mythoscraft.online</a>.</p>
-      </section>
-    </main>
-  </div>
+  <LegalPage title="KI-Regeln und Transparenz">
+    <H>Du sprichst mit einer KI</H>
+    <p>
+      <V k="produkt" /> ist ein KI-System. Antworten, Bilder, Songs, Videos und Code werden von KI-Modellen erzeugt und nicht von Menschen geprüft.
+      Sie können falsch sein. Prüfe wichtige Informationen selbst. Erzeugte Bilder tragen im Chat den Hinweis „KI-generiert“.
+    </p>
+
+    <H>Was nicht erlaubt ist</H>
+    <ul>
+      <li>Rechtswidrige Inhalte, etwa Verhetzung, Gewaltaufrufe, Terrorpropaganda oder Darstellungen sexuellen Kindesmissbrauchs.</li>
+      <li>Sexuelle oder entwürdigende Bilder realer Personen und täuschend echte Fälschungen (Deepfakes), um andere zu täuschen oder bloßzustellen.</li>
+      <li>Urheberrechtlich geschützte Werke (Texte, Songs, Figuren) ohne Erlaubnis nachmachen oder als eigene ausgeben.</li>
+      <li>Persönliche Daten anderer ohne deren Zustimmung eingeben oder veröffentlichen.</li>
+      <li>Spam, Betrug, Phishing, Schadsoftware oder Angriffe auf fremde Systeme.</li>
+      <li>Mobbing, Belästigung und Drohungen.</li>
+    </ul>
+
+    <H>Wenn du KI-Inhalte veröffentlichst</H>
+    <ul>
+      <li>Kennzeichne echt wirkende KI-Bilder, -Videos und -Stimmen als „KI-generiert“ (Art. 50 KI-Verordnung).</li>
+      <li>Prüfe vor einer kommerziellen Nutzung, ob Rechte Dritter (Marken, Logos, bekannte Figuren, Stimmen) betroffen sind.</li>
+    </ul>
+
+    <H>Melden</H>
+    <p>
+      Rechtswidrige Inhalte oder Missbrauch kannst du an <V k="email" /> melden. Wir prüfen jede Meldung, entfernen rechtswidrige Inhalte und sperren bei Bedarf
+      Konten. Strafbare Inhalte melden wir an die Behörden.
+    </p>
+  </LegalPage>
 );
 
 export default KIRegeln;

@@ -1,29 +1,65 @@
-import TopNav from "@/components/TopNav";
+import LegalPage, { H, V } from "@/components/LegalPage";
 
+// Impressum nach § 5 ECG, § 14 UGB, § 63 GewO und Offenlegung nach § 25 MedienG (Österreich).
 const Impressum = () => (
-  <div className="min-h-screen flex flex-col">
-    <TopNav />
-    <main className="container max-w-3xl py-12 mx-auto">
-      <h1 className="font-display text-3xl md:text-4xl font-bold mb-6">Impressum</h1>
-      <section className="space-y-4 text-muted-foreground">
-        <p><strong>Angaben gemäß § 5 TMG</strong></p>
-        <p>
-          Mythos AI GmbH<br />
-          Musterstraße 123<br />
-          12345 Beispielstadt<br />
-          Deutschland
-        </p>
-        <p><strong>Vertreten durch:</strong> Max Mustermann (Geschäftsführer)</p>
-        <p><strong>Kontakt:</strong> E-Mail: support@mythoscraft.online – Telefon: +49 123 4567890</p>
-        <p><strong>Registereintrag:</strong> Eintragung im Handelsregister.
-          Registergericht: Amtsgericht Beispielstadt<br />
-          Registernummer: HRB 123456
-        </p>
-        <p><strong>Umsatzsteuer-ID:</strong> DE 123456789</p>
-        <p>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV: Max Mustermann (Adresse wie oben).</p>
-      </section>
-    </main>
-  </div>
+  <LegalPage title="Impressum">
+    <H>Diensteanbieter und Medieninhaber</H>
+    <p>
+      <strong><V k="firma" /></strong><br />
+      Inhaber: <V k="inhaber" /><br />
+      <V k="strasse" /><br />
+      <V k="plzOrt" />, <V k="land" />
+    </p>
+
+    <H>Kontakt</H>
+    <p>
+      E-Mail: <V k="email" /><br />
+      Telefon: <V k="telefon" />
+    </p>
+
+    <H>Unternehmensdaten</H>
+    <ul>
+      <li>Rechtsform: Eingetragenes Einzelunternehmen (e.U.)</li>
+      <li>Unternehmensgegenstand: <V k="gegenstand" /></li>
+      <li>Firmenbuchnummer und Firmenbuchgericht: <V k="firmenbuch" /></li>
+      <li>UID-Nummer: <V k="uid" /></li>
+      <li>Firmensitz: <V k="plzOrt" /></li>
+    </ul>
+
+    <H>Gewerberechtliche Angaben</H>
+    <ul>
+      <li>Gewerbe: <V k="gewerbe" /></li>
+      <li>Gewerbebehörde: <V k="behoerde" /></li>
+      <li>Mitglied der <V k="kammer" /></li>
+      <li>Anwendbare Rechtsvorschriften: Gewerbeordnung (GewO), abrufbar unter <a href="https://www.ris.bka.gv.at" target="_blank" rel="noreferrer">www.ris.bka.gv.at</a></li>
+    </ul>
+
+    <H>Offenlegung nach § 25 Mediengesetz</H>
+    <p>
+      Medieninhaber: <V k="firma" />, <V k="strasse" />, <V k="plzOrt" />.<br />
+      Grundlegende Richtung: Informationen über den KI-Dienst <V k="produkt" />, seine Funktionen, Preise und Neuigkeiten.
+    </p>
+
+    <H>Verbraucherstreitbeilegung</H>
+    <p>
+      Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+      Bei Problemen schreib uns einfach an die oben genannte E-Mail-Adresse. Verbraucher:innen können sich unabhängig davon an die{" "}
+      <a href="https://www.ombudsmann.at" target="_blank" rel="noreferrer">Internet Ombudsstelle</a> wenden.
+    </p>
+
+    <H>Haftung für Inhalte und Links</H>
+    <p>
+      Die Inhalte dieser Website wurden sorgfältig erstellt. Antworten, Bilder, Songs und Videos werden jedoch von künstlicher Intelligenz
+      erzeugt und können fehlerhaft sein. Für Inhalte externer Websites, auf die wir verlinken, sind ausschließlich deren Betreiber verantwortlich.
+      Bei Bekanntwerden von Rechtsverletzungen entfernen wir entsprechende Links oder Inhalte umgehend.
+    </p>
+
+    <H>Urheberrecht</H>
+    <p>
+      Texte, Grafiken, Logos und Software dieser Website sind urheberrechtlich geschützt. Eine Verwendung außerhalb der Grenzen des
+      Urheberrechts ist nur mit unserer Zustimmung erlaubt. Zu KI-erzeugten Inhalten siehe die <a href="/nutzungsbedingungen">AGB</a>.
+    </p>
+  </LegalPage>
 );
 
 export default Impressum;
