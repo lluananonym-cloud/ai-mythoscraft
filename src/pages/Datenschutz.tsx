@@ -1,18 +1,18 @@
 import LegalPage, { H, V } from "@/components/LegalPage";
 import { openConsent } from "@/lib/consent";
 
-// Datenschutzerklärung nach Art. 13/14 DSGVO, DSG und § 165 TKG 2021.
+// Datenschutzerklärung nach Art. 13/14 DSGVO, BDSG und § 25 TDDDG (Deutschland).
 const Datenschutz = () => (
   <LegalPage title="Datenschutzerklärung">
     <p>
       Wir verarbeiten personenbezogene Daten nur, soweit das für den Betrieb von <V k="produkt" /> nötig ist, und nach der
-      Datenschutz-Grundverordnung (DSGVO), dem österreichischen Datenschutzgesetz (DSG) und dem Telekommunikationsgesetz 2021 (TKG 2021).
+      Datenschutz-Grundverordnung (DSGVO), dem Bundesdatenschutzgesetz (BDSG) und dem Telekommunikation-Digitale-Dienste-Datenschutz-Gesetz (TDDDG).
     </p>
 
     <H>1. Verantwortlicher</H>
     <p>
-      <V k="firma" />, Inhaber <V k="inhaber" />, <V k="strasse" />, <V k="plzOrt" />, <V k="land" />.<br />
-      E-Mail: <V k="email" />. Ein Datenschutzbeauftragter ist nicht bestellt und gesetzlich nicht erforderlich.
+      <V k="firma" />, <V k="strasse" />, <V k="plzOrt" />, <V k="land" />.<br />
+      E-Mail: <V k="email" />. Ein Datenschutzbeauftragter ist nicht bestellt und gesetzlich nicht erforderlich (§ 38 BDSG).
     </p>
 
     <H>2. Welche Daten wir verarbeiten und warum</H>
@@ -80,11 +80,12 @@ const Datenschutz = () => (
     <H>6. Cookies, lokaler Speicher und externe Dienste</H>
     <p>
       Wir verwenden keine Tracking- oder Werbe-Cookies. Im lokalen Speicher deines Browsers liegen nur Daten, die technisch nötig sind: deine Anmeldung,
-      Einstellungen (z. B. gewähltes Modell, Seitenleiste) und deine Cookie-Entscheidung (§ 165 Abs. 3 TKG 2021, keine Einwilligung nötig).
+      Einstellungen (z. B. gewähltes Modell, Seitenleiste) und deine Cookie-Entscheidung. Dafür ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).
     </p>
     <p>
-      <strong>Mit deiner Einwilligung</strong> (Art. 6 Abs. 1 lit. a DSGVO) lädt dein Browser Bilder direkt bei Pollinations.ai oder AI Horde, wenn unsere Server
-      gerade keine Bilder erzeugen können. Dabei erhält der Anbieter deine IP-Adresse und den Bild-Wunsch. Du kannst die Einwilligung jederzeit widerrufen:{" "}
+      <strong>Bild-Backup:</strong> Wenn du ein Bild anforderst und unsere Server gerade keines erzeugen können, lädt dein Browser es direkt bei Pollinations.ai
+      oder AI Horde. Dabei erhält der Anbieter deine IP-Adresse und den Bild-Wunsch. Das dient der Erfüllung deiner Anfrage (Art. 6 Abs. 1 lit. b DSGVO).
+      Du kannst das Bild-Backup jederzeit ausschalten:{" "}
       <button onClick={openConsent} className="text-foreground underline">Cookie-Einstellungen öffnen</button>.
       Schriftarten werden von unserem eigenen Server geladen, nicht von Google.
     </p>
@@ -101,12 +102,12 @@ const Datenschutz = () => (
     <H>8. Speicherdauer</H>
     <p>
       Kontodaten, Chats und erzeugte Inhalte speichern wir, bis du sie löschst oder die Löschung deines Kontos verlangst (formlos per E-Mail). Danach werden sie innerhalb von 30 Tagen entfernt,
-      soweit keine gesetzlichen Aufbewahrungspflichten bestehen (z. B. 7 Jahre für Buchhaltungsunterlagen nach § 132 BAO).
+      soweit keine gesetzlichen Aufbewahrungspflichten bestehen (z. B. bis zu 10 Jahre für Buchhaltungsunterlagen nach § 147 AO und § 257 HGB).
     </p>
 
     <H>9. Mindestalter</H>
     <p>
-      Die Nutzung ist ab 14 Jahren erlaubt (§ 4 Abs. 4 DSG). Jüngere dürfen <V k="produkt" /> nur mit Zustimmung eines Elternteils nutzen.
+      Die Nutzung ist ab 16 Jahren erlaubt (Art. 8 DSGVO). Jüngere dürfen <V k="produkt" /> nur mit Zustimmung eines Elternteils nutzen.
     </p>
 
     <H>10. Deine Rechte</H>
@@ -115,8 +116,9 @@ const Datenschutz = () => (
       das Recht, eine Einwilligung jederzeit mit Wirkung für die Zukunft zu widerrufen. Schreib dafür an <V k="email" />.
     </p>
     <p>
-      Wenn du meinst, dass wir deine Daten rechtswidrig verarbeiten, kannst du dich bei der Aufsichtsbehörde beschweren: Österreichische Datenschutzbehörde,
-      Barichgasse 40–42, 1030 Wien, <a href="https://www.dsb.gv.at" target="_blank" rel="noreferrer">www.dsb.gv.at</a>.
+      Wenn du meinst, dass wir deine Daten rechtswidrig verarbeiten, kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), zum
+      Beispiel bei der Landesdatenschutzbehörde in <V k="bundesland" /> oder in deinem Bundesland. Eine Liste aller Behörden gibt es beim{" "}
+      <a href="https://www.bfdi.bund.de/DE/Service/Anschriften/Laender/Laender-node.html" target="_blank" rel="noreferrer">Bundesbeauftragten für den Datenschutz</a>.
     </p>
 
     <H>11. Sicherheit</H>

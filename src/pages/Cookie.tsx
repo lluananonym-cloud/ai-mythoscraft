@@ -1,7 +1,7 @@
 import LegalPage, { H } from "@/components/LegalPage";
 import { openConsent } from "@/lib/consent";
 
-// Cookie-Hinweis: was im Browser gespeichert wird und wofür (§ 165 Abs. 3 TKG 2021).
+// Cookie-Hinweis: was im Browser gespeichert wird und wofür (§ 25 TDDDG).
 const ROWS: [string, string, string][] = [
   ["Anmeldung (sb-…-auth-token)", "Hält dich eingeloggt", "Notwendig, bis zur Abmeldung"],
   ["mythos.consent", "Speichert deine Cookie-Entscheidung", "Notwendig, 12 Monate"],
@@ -15,7 +15,7 @@ const Cookie = () => (
   <LegalPage title="Cookie-Hinweis">
     <p>
       Wir verwenden <strong>keine</strong> Tracking-, Analyse- oder Werbe-Cookies und geben keine Daten an Werbenetzwerke weiter.
-      Im Browser speichern wir nur, was der Dienst technisch braucht. Dafür ist keine Einwilligung nötig.
+      Im Browser speichern wir nur, was der Dienst technisch braucht. Dafür ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).
     </p>
 
     <H>Was gespeichert wird</H>
@@ -30,11 +30,11 @@ const Cookie = () => (
       </table>
     </div>
 
-    <H>Externe KI-Dienste (nur mit Einwilligung)</H>
+    <H>Bild-Backup über externe KI-Dienste</H>
     <p>
       Wenn unsere Server gerade kein Bild erzeugen können, kann dein Browser es direkt bei Pollinations.ai oder AI Horde laden. Dabei erfahren
-      diese Anbieter deine IP-Adresse und den Bild-Wunsch. Das passiert nur, wenn du „Alle akzeptieren“ gewählt oder „Externe KI-Dienste“
-      eingeschaltet hast.
+      diese Anbieter deine IP-Adresse und den Bild-Wunsch. Das passiert nur, wenn du selbst ein Bild anforderst, und es wird dabei nichts in
+      deinem Browser gespeichert. Du kannst das Bild-Backup jederzeit ausschalten.
     </p>
     <p>
       <button onClick={openConsent} className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-foreground hover:bg-white/[0.12]">

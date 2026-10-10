@@ -1,31 +1,29 @@
-// Alle Angaben für Impressum, Datenschutz und AGB an EINER Stelle.
+// Alle Angaben für Impressum, Datenschutz und AGB an EINER Stelle (Anbieter in Deutschland).
 // Alles in [eckigen Klammern] ist ein Platzhalter und muss vor dem Veröffentlichen ersetzt werden.
 // Solange ein Platzhalter drin ist, zeigen die Rechtsseiten ihn gelb markiert an.
 
 export const LEGAL = {
-  /** Firmenwortlaut laut Firmenbuch, z. B. "Max Muster e.U." */
-  firma: "[Vorname Nachname] e.U.",
-  /** Inhaber:in des Einzelunternehmens */
-  inhaber: "[Vorname Nachname]",
-  /** Anschrift des Unternehmenssitzes (keine Postfachadresse) */
-  strasse: "[Straße Hausnummer/Tür]",
+  /** Name des Anbieters. Als Einzelunternehmer ohne Handelsregister-Eintrag einfach Vor- und Nachname. */
+  firma: "Luan Schneider",
+  /** Inhaber (bei Einzelunternehmen dieselbe Person) */
+  inhaber: "Luan Schneider",
+  /** Ladungsfähige Anschrift (Wohnadresse oder Adresse eines Impressum-Service, kein Postfach) */
+  strasse: "[Straße Hausnummer]",
   plzOrt: "[PLZ Ort]",
-  land: "Österreich",
-  email: "[kontakt@deine-domain.at]",
+  land: "Deutschland",
+  email: "[kontakt@deine-domain.de]",
   /** optional: "" blendet die Zeile aus */
-  telefon: "[+43 …] (optional, empfohlen)",
-  /** Firmenbuchnummer und -gericht, z. B. "FN 123456a, Landesgericht Linz".
-   *  Noch nicht im Firmenbuch eingetragen? Dann "" eintragen und bei firma nur deinen Namen (ohne "e.U."). */
-  firmenbuch: "[FN …], [Landes-/Handelsgericht …]",
-  /** UID-Nummer, falls vorhanden; sonst Satz zur Kleinunternehmerregelung stehen lassen ("" blendet die Zeile aus) */
-  uid: "[ATU…] – oder: keine UID, Kleinunternehmer gemäß § 6 Abs. 1 Z 27 UStG",
+  telefon: "",
+  /** Handelsregister, nur falls eingetragen, z. B. "HRA 12345, Amtsgericht München". Sonst "" (Zeile wird ausgeblendet). */
+  register: "",
+  /** USt-IdNr. oder Satz zur Kleinunternehmerregelung ("" blendet die Zeile aus) */
+  uid: "keine USt-IdNr., Kleinunternehmer gemäß § 19 UStG (es wird keine Umsatzsteuer berechnet)",
   /** Unternehmensgegenstand */
   gegenstand: "Entwicklung und Betrieb von Software und KI-gestützten Online-Diensten",
-  /** Gewerbebehörde (Bezirkshauptmannschaft oder Magistrat) */
-  behoerde: "[Bezirkshauptmannschaft/Magistrat …]",
-  /** Gewerbe laut Gewerbeschein */
-  gewerbe: "Dienstleistungen in der automatischen Datenverarbeitung und Informationstechnik (freies Gewerbe)",
-  kammer: "Wirtschaftskammer [Bundesland], Fachgruppe Unternehmensberatung, Buchhaltung und Informationstechnologie (UBIT)",
+  /** Zuständiges Gewerbeamt (Stadt oder Gemeinde, bei der das Gewerbe angemeldet ist) */
+  behoerde: "[Gewerbeamt der Stadt/Gemeinde …]",
+  /** Bundesland, für die zuständige Datenschutz-Aufsichtsbehörde */
+  bundesland: "[Bundesland]",
   /** Stand der Rechtstexte */
   stand: "Oktober 2026",
   produkt: "Mythos AI",

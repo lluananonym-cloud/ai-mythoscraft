@@ -117,7 +117,16 @@ export default function SongPlayer({ request }: { request: SongRequest }) {
         setNotice(Array.isArray(j.reasons) && j.reasons.length ? j.reasons : ["Kein Musikmodell mit Gesang erreichbar."]);
         return false;
       }
-      if (!j?.audio) throw new Error(j?.error || `Fehler ${r.status}`);
+      // Alte Server-Version (kennt den Song-Modus noch nicht) schickt nur ein Synth-Rezept zurück.
+      if (j?.spec) {
+        setNotice(["Die Server-Funktion für Songs ist noch die alte Version. In Lovable müssen die Edge Functions neu bereitgestellt werden."]);
+        return false;
+      }
+      if (!j?.audio) {
+        console.warn("[song] unerwartete Antwort", r.status, j);
+        setNotice([j?.error ? String(j.error) : "Der Musik-Server hat keine Audiodaten geschickt."]);
+        return false;
+      }
       const bin = atob(j.audio);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
