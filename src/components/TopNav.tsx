@@ -58,6 +58,11 @@ const TopNav = () => {
               <Code2 className="h-4 w-4 mr-1.5" />Erstellen
             </Button>
           </Link>
+          <Link to="/build" onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
+              <Code2 className="h-4 w-4 mr-1.5" />Coding
+            </Button>
+          </Link>
           <Link to="/browser" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
               <Globe className="h-4 w-4 mr-1.5" />Browser-Agent

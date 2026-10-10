@@ -1,3 +1,4 @@
+import { copyText } from "@/lib/copyText";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -81,7 +82,7 @@ export default function ArtifactsDialog({ open, onOpenChange, onOpenChat }: Prop
                 {a.kind === "code" && (
                   <>
                     <Button variant="ghost" size="icon" className="h-7 w-7" title="Kopieren"
-                      onClick={() => navigator.clipboard.writeText(a.code).then(() => toast.success("Kopiert"))}><Copy className="h-3.5 w-3.5" /></Button>
+                      onClick={() => copyText(a.code).then((ok) => ok ? toast.success("Kopiert") : toast.error("Kopieren fehlgeschlagen"))}><Copy className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" title="Herunterladen" onClick={() => download(a)}><Download className="h-3.5 w-3.5" /></Button>
                   </>
                 )}

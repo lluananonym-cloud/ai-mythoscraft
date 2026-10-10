@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { Check, Copy, Download, Play, FileArchive } from "lucide-react";
 import JSZip from "jszip";
 import { toast } from "sonner";
+import { copyText } from "@/lib/copyText";
 
 const EXT: Record<string, string> = {
   html: "html", xml: "xml", javascript: "js", js: "js", jsx: "jsx", typescript: "ts", ts: "ts",
@@ -28,7 +29,7 @@ function IconBtn({ onClick, title, children }: { onClick: () => void; title: str
       onClick={onClick}
       title={title}
       aria-label={title}
-      className="rounded-md border border-white/10 bg-background/60 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:text-foreground hover:bg-white/10"
+      className="rounded-md border border-white/10 bg-background/60 p-2 sm:p-1.5 touch-manipulation text-muted-foreground backdrop-blur transition-colors hover:text-foreground hover:bg-white/10"
     >
       {children}
     </button>
@@ -60,7 +61,7 @@ function CodeCard({ lang, code }: { lang: string; code: string }) {
   const isHtml = lang === "html" || /^\s*<(!doctype|html)/i.test(code);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(code);
+    if (!(await copyText(code))) { toast.error("Kopieren hat nicht geklappt. Halte den Code gedrückt und kopiere ihn von Hand."); return; }
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };

@@ -1,3 +1,5 @@
+import { copyText } from "@/lib/copyText";
+import { MAX_CONTINUE, CONTINUE_PROMPT, looksCut, stitch } from "@/lib/codeContinue";
 import { useState, useEffect, useRef } from "react";
 import ImageGeneration, { type GeneratedImage } from "@/components/chat/ImageGeneration";
 import { generateImageInBrowser } from "@/lib/browserImage";
@@ -21,7 +23,7 @@ import { adDue, pickAd, adMarkdown } from "@/lib/mythosAds";
 import LogoOrb from "@/components/LogoOrb";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
-  Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
+  AppWindow, Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
   Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
@@ -636,7 +638,7 @@ const Chat = () => {
   };
 
   /** Ein Modell-Aufruf mit Streaming in die letzte (leere) Assistent-Nachricht. null = fehlgeschlagen. */
-  const streamOnce = async (apiMessages: ApiMsg[], convId: string): Promise<StreamResult | null> => {
+  const streamOnce = async (apiMessages: ApiMsg[], convId: string, prefix = ""): Promise<StreamResult | null> => {
     const chosenModel = (profile as any)?.ai_model as string | undefined;
     const modelForCall = isPuterModel(chosenModel) ? chosenModel : undefined;
     // Bild-Wünsche laufen immer über die Chat-Funktion (dort sitzen Erkennung und Backup-Kette).
@@ -754,7 +756,7 @@ const Chat = () => {
             const c = d?.content;
             if (c) {
               if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
-              full += c; setLast({ content: full });
+              full += c; setLast({ content: prefix + stitch(prefix, full) });
             }
           } catch { buf = line + "\n" + buf; break; }
         }
@@ -837,6 +839,17 @@ const Chat = () => {
         : history;
       const res = await streamOnce(apiMessages, convId);
       if (!res) { if (goalText) setGoal(g => g && { ...g, status: "gestoppt" }); break; }
+      // Abgeschnittener Code (offener ```-Block, HTML ohne </html>): automatisch an derselben Stelle weiterschreiben lassen.
+      for (let more = 0; more < MAX_CONTINUE && !res.aborted && !stopRef.current && looksCut(res.full); more++) {
+        const next = await streamOnce([
+          ...apiMessages,
+          { role: "assistant", content: res.full },
+          { role: "user", content: CONTINUE_PROMPT },
+        ], convId, res.full);
+        if (!next || !next.full) break;
+        res.full = res.full + stitch(res.full, next.full);
+        if (next.aborted) { res.aborted = true; break; }
+      }
       if (res.full || res.image || res.music) {
         await supabase.from("messages").insert({
           conversation_id: convId, role: "assistant", content: res.full,
@@ -906,7 +919,7 @@ const Chat = () => {
   useEffect(() => { setSuggestions([]); suggestBodyRef.current = null; }, [activeId]);
 
   const copyMessage = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); toast.success("Kopiert"); } catch { toast.error("Kopieren fehlgeschlagen"); }
+    if (await copyText(text)) toast.success("Kopiert"); else toast.error("Kopieren fehlgeschlagen");
   };
 
   const exportChat = () => {
@@ -1059,6 +1072,7 @@ const Chat = () => {
           <span>Neu</span>
         </button>
         <NavItem icon={FolderOpen} label="Projekte" onClick={() => setDialog("projects")} active={!!activeProject} />
+        <NavItem icon={AppWindow} label="App-Builder" onClick={() => nav("/build")} badge="Neu" />
         <NavItem icon={Shapes} label="Artifacts" onClick={() => setDialog("artifacts")} />
         <NavItem icon={Clock} label="Routinen" onClick={() => nav("/agents")} />
         <NavItem icon={Briefcase} label="Anpassungen" onClick={() => setDialog("customize")} />

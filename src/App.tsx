@@ -50,6 +50,7 @@ const BrowserAgent = lazyPage(() => import("./pages/BrowserAgent"));
 const Onboarding = lazyPage(() => import("./pages/Onboarding"));
 const NotFound = lazyPage(() => import("./pages/NotFound.tsx"));
 const Impressum = lazyPage(() => import("./pages/Impressum"));
+const Build = lazyPage(() => import("./pages/Build"));
 const Datenschutz = lazyPage(() => import("./pages/Datenschutz"));
 const Nutzungsbedingungen = lazyPage(() => import("./pages/Nutzungsbedingungen"));
 const Cookie = lazyPage(() => import("./pages/Cookie"));
@@ -115,6 +116,7 @@ const App = () => (
             <Route path="/ki-team" element={<RequireAuth><KiTeam /></RequireAuth>} />
             <Route path="/rueckblick" element={<RequireAuth><Rueckblick /></RequireAuth>} />
             <Route path="/marktplatz" element={<RequireAuth><Marktplatz /></RequireAuth>} />
+            <Route path="/build" element={<RequireAuth><Build /></RequireAuth>} />
             <Route path="/impressum" element={<Impressum />} />
             <Route path="/datenschutz" element={<Datenschutz />} />
             <Route path="/nutzungsbedingungen" element={<Nutzungsbedingungen />} />
