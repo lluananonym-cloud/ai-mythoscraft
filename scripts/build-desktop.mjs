@@ -38,7 +38,8 @@ const write = (dir, file, content, mode) => {
   if (mode) fs.chmodSync(p, mode);
 };
 
-const SHARED_TOOLS = lib("mythos-code-shared/tools.js");
+const TOOL_PARSE = lib("mythos-code-shared/toolparse.js");
+const SHARED_TOOLS = fill(lib("mythos-code-shared/tools.js"), { "// @@TOOL_PARSE@@": TOOL_PARSE });
 fs.rmSync(out, { recursive: true, force: true });
 
 // ---- Desktop-App ----
@@ -68,7 +69,7 @@ write(app, "main.js", fill(lib("mythos-code-app/main.js"), { "// @@SHARED_TOOLS@
 for (const f of ["preload.js", "index.html", "markdown.js", "mcp.js", "voice.js"]) write(app, f, fill(lib(`mythos-code-app/${f}`)));
 write(app, "tts-worker.js", gunzipB64(lib("mythos-code-app/tts-worker.js.gz.b64")));
 write(app, "stt-worker.js", gunzipB64(lib("mythos-code-app/stt-worker.js.gz.b64")));
-write(app, "renderer.js", fill(lib("mythos-code-app/renderer.js"), { "__SITE__": SITE, "__FN__": FN_BASE }));
+write(app, "renderer.js", fill(lib("mythos-code-app/renderer.js"), { "// @@TOOL_PARSE@@": TOOL_PARSE, "__SITE__": SITE, "__FN__": FN_BASE }));
 write(app, "config.json", JSON.stringify({ site: SITE }, null, 2));
 
 // ---- CLI (npm-Paket) ----

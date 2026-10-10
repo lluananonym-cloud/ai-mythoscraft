@@ -2,6 +2,8 @@
 // Wird roh in bin/mythos.js (CLI, ESM) und main.js (App, CommonJS) eingefügt.
 // Erwartet, dass `fs` und `path` im umgebenden Code schon importiert sind.
 
+// @@TOOL_PARSE@@
+
 const TOOL_PROMPT = [
   "Werkzeuge – antworte pro Schritt mit GENAU EINEM Block:",
   '<tool>{"name":"run","cmd":"..."}</tool>  Shell-Befehl ausführen (Ausgabe läuft live mit)',
@@ -14,6 +16,7 @@ const TOOL_PROMPT = [
   '<tool>{"name":"fetch","url":"https://..."}</tool>  Webseite als Text lesen',
   '<tool>{"name":"cloud","app":"Name der App"}</tool>  Mythos Cloud verbinden: eigenes Backend (Datenbank) + KI-Gateway (Chat, Streaming, Bilder) für die App, die du baust. Nutze das IMMER, sobald die App Daten speichern oder KI nutzen soll – statt Supabase/Firebase/OpenAI-Keys o. Ä. Legt mythos-cloud.js im Projekt an und erklärt die Nutzung.',
   '<tool>{"name":"todo","items":[{"text":"Schritt","done":false}]}</tool>  Aufgabenliste anlegen/aktualisieren (bei größeren Aufgaben zuerst planen, dann Punkte abhaken; immer die komplette Liste senden)',
+  "Es gibt NUR diese Werkzeuge (plus die unten genannten MCP-/Browser-Werkzeuge, falls welche aufgeführt sind). Erfinde keine Werkzeuge, Connectoren oder MCP-Server. Fehlt etwas (z. B. ein nicht verbundener Connector), sag das dem Nutzer kurz und mach mit dem Rest weiter. Schließe jeden Block mit </tool>.",
   "Nach jedem Werkzeug bekommst du das Ergebnis. Suche erst, statt Dateien blind zu lesen. Ändere bestehende Dateien mit edit statt write.",
   "Arbeite Schritt für Schritt, bis die Aufgabe erledigt ist, dann antworte normal ohne <tool> (Markdown erlaubt).",
 ].join("\n");

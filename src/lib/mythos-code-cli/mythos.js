@@ -138,9 +138,9 @@ function streamPrinter() {
   return {
     push(full) {
       let vis = full;
-      const k = vis.indexOf("<tool>");
+      const k = vis.search(/<tool(?:_call|_use)?[\s>]/i);
       if (k >= 0) vis = vis.slice(0, k);
-      else for (let n = 5; n > 0; n--) if (vis.endsWith("<tool>".slice(0, n))) { vis = vis.slice(0, -n); break; }
+      else { const p = vis.match(/<(?:t(?:o(?:o(?:l(?:_(?:c(?:a(?:l(?:l)?)?)?|u(?:s(?:e)?)?)?)?)?)?)?)?$/i); if (p) vis = vis.slice(0, p.index); }
       if (vis.length <= printed) return;
       buf += vis.slice(printed); printed = vis.length;
       let i; while ((i = buf.indexOf("\n")) !== -1) { line(buf.slice(0, i)); buf = buf.slice(i + 1); }
@@ -324,15 +324,17 @@ async function turnInner(history) {
     pr.end(); activity = "";
     if (stopped) break;
     history.push({ role: "assistant", content: out });
-    const m = out.match(/<tool>([\s\S]*?)<\/tool>/);
-    if (!m) {
+    const pb = parseToolBlock(out);
+    if (!pb.tool && !pb.error) {
       if (!goal || /ZIEL ERREICHT/.test(out)) return goal ? "reached" : "done";
       if (++nudges > 40) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
       history.push({ role: "user", content: GOAL_NUDGE });
       continue;
     }
     nudges = 0;
-    let t; try { t = JSON.parse(m[1]); } catch { history.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+    if (pb.error) { history.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON in <tool>…</tool>." }); continue; }
+    const t = pb.tool, bad = toolProblem(t);
+    if (bad) { history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); continue; }
     const res = await runTool(t);
     history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + res });
   }
@@ -395,7 +397,7 @@ async function commit(msg) {
     stopped = false;
     try {
       msg = (await call([{ role: "user", content: "Schreibe eine kurze Git-Commit-Nachricht auf Deutsch für diese Änderungen: erste Zeile max. 72 Zeichen, optional Leerzeile + Stichpunkte. Antworte NUR mit der Nachricht, ohne Werkzeuge, ohne Codeblock.\n\n" + st.out + "\n" + diff.slice(0, 20000) }]))
-        .replace(/<tool>[\s\S]*?<\/tool>/g, "").replace(/^```\w*\n?|```$/g, "").trim();
+        .replace(TOOL_BLOCK_RE, "").replace(/^```\w*\n?|```$/g, "").trim();
     } catch (e) { clearLine(); return say(C.r + "⚠ " + e.message + C.x); }
     clearLine();
   }
@@ -537,7 +539,7 @@ async function command(q, history) {
     let sum = "";
     try {
       sum = (await call([{ role: "user", content: "Fasse den bisherigen Verlauf dieses Coding-Chats so zusammen, dass ein Agent nahtlos weiterarbeiten kann: **Ziel**, **Stand**, **Wichtige Dateien & Entscheidungen**, **Offene Punkte**. Maximal 25 Zeilen, ohne Werkzeuge.\n\nVERLAUF:\n" + transcript }]))
-        .replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+        .replace(TOOL_BLOCK_RE, "").trim();
     } catch (e) { clearLine(); return console.log(C.r + "⚠ " + e.message + C.x + "\n"); }
     clearLine();
     history.length = 0;
@@ -547,7 +549,7 @@ async function command(q, history) {
   if (cmd === "/stats") { const b = gitBranch(); return console.log(mdLines(projectStats(ROOT) + (b ? "\n**Git:** Branch `" + b + "`" : "")) + "\n"); }
   if (cmd === "/export") {
     const file = path.resolve(ROOT, arg || "mythos-chat-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".md");
-    const msgs = history.map((m) => ({ role: /^Werkzeug-Ergebnis/.test(m.content) ? "tool" : m.role, text: String(m.content).replace(/<tool>[\s\S]*?<\/tool>/g, "").slice(0, 20000) })).filter((m) => m.text.trim());
+    const msgs = history.map((m) => ({ role: /^Werkzeug-Ergebnis/.test(m.content) ? "tool" : m.role, text: String(m.content).replace(TOOL_BLOCK_RE, "").slice(0, 20000) })).filter((m) => m.text.trim());
     fs.writeFileSync(file, chatToMarkdown("Mythos-Chat – " + path.basename(ROOT), msgs));
     return console.log(C.g + "✓ Gespeichert: " + file + C.x + "\n");
   }

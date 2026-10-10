@@ -101,7 +101,11 @@ const GOAL_MAX_STEPS = 20;
 // Obergrenze für alle Antworten einer Runde (Schritte + Werkzeug-Aufrufe).
 const MAX_TURNS = 60;
 const GOAL_DONE = /\[ZIEL ERREICHT\]/i;
-const TOOL_CALL = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i;
+// Werkzeug-Aufruf: <tool_call>…</tool_call>, aber auch <tool>/<tool_use> und ohne End-Tag (Modelle sind da nicht sauber).
+const TOOL_OPEN = /<(tool_call|tool_use|tool)(?:\s[^>]*)?>/i;
+const TOOL_BLOCK = /<(tool_call|tool_use|tool)(?:\s[^>]*)?>[\s\S]*?(?:<\/\1\s*>|$)/gi;
+// So oft darf das Modell hintereinander ein Werkzeug erfinden, bevor wir abbrechen.
+const MAX_BAD_TOOLS = 2;
 
 type ApiMsg = { role: string; content: any };
 type GoalState = { text: string; step: number; status: "läuft" | "erreicht" | "gestoppt" | "limit" };
@@ -114,17 +118,25 @@ const toApi = (m: Msg): ApiMsg =>
     : { role: m.role, content: m.content };
 
 function parseToolCall(text: string): { name: string; arguments: unknown } | null {
-  const m = text.match(TOOL_CALL);
+  const m = TOOL_OPEN.exec(text);
   if (!m) return null;
+  let body = text.slice(m.index + m[0].length);
+  const end = body.search(/<\/(?:tool_call|tool_use|tool)\s*>/i);
+  if (end >= 0) body = body.slice(0, end);
+  body = body.replace(/```[a-z]*\s*/gi, "").trim();
+  const a = body.indexOf("{"), b = body.lastIndexOf("}");
+  if (a < 0 || b < a) return { name: "", arguments: {} };
   try {
-    const j = JSON.parse(m[1].replace(/^```(?:json)?|```$/g, "").trim());
-    return typeof j?.name === "string" ? { name: j.name, arguments: j.arguments ?? j.args ?? {} } : null;
-  } catch { return null; }
+    const j = JSON.parse(body.slice(a, b + 1));
+    if (typeof j?.name !== "string") return { name: "", arguments: {} };
+    const { name, arguments: args1, args, input, ...rest } = j;
+    return { name, arguments: args1 ?? args ?? input ?? rest };
+  } catch { return { name: "", arguments: {} }; }
 }
 
 /** Technische Markierungen aus einer Antwort entfernen, bevor sie angezeigt wird. */
 const forDisplay = (text: string) =>
-  text.replace(/<tool_call>[\s\S]*?(<\/tool_call>|$)/gi, "").replace(GOAL_DONE, "").trimEnd();
+  text.replace(TOOL_BLOCK, "").replace(/<\/(?:tool_call|tool_use|tool)\s*>/gi, "").replace(GOAL_DONE, "").trimEnd();
 
 const Chat = () => {
   const { user, profile, isAdmin, signOut } = useAuth();
@@ -806,8 +818,11 @@ const Chat = () => {
         '<tool_call>{"name": "werkzeug_name", "arguments": { ... }}</tool_call>\n' +
         "und hörst danach sofort auf zu schreiben. Du bekommst dann das Ergebnis und machst weiter. Höchstens ein Aufruf pro Antwort. " +
         "Erfinde keine Ergebnisse.\n\n" +
-        tools.map(t => `- ${t.key}: ${(t.tool.description || "").slice(0, 300)}\n  Parameter: ${JSON.stringify(t.tool.inputSchema ?? {}).slice(0, 600)}`).join("\n"),
+        tools.map(t => `- ${t.key}: ${(t.tool.description || "").slice(0, 300)}\n  Parameter: ${JSON.stringify(t.tool.inputSchema ?? {}).slice(0, 600)}`).join("\n") +
+        "\n\nEs gibt NUR diese Werkzeuge. Erfinde keine anderen (z. B. todo, run, write) – fehlt etwas, sag es dem Nutzer.",
       );
+    } else {
+      parts.push("## Werkzeuge\nIn diesem Chat sind keine Werkzeuge verbunden. Schreibe nie <tool>- oder <tool_call>-Blöcke, sondern antworte direkt als normaler Text.");
     }
     if (goalNow) {
       parts.push(
@@ -831,6 +846,7 @@ const Chat = () => {
     const tools = servers.length ? await collectTools(servers) : [];
     let step = 1;
     let final = "";
+    let badTools = 0;
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       const hints = buildHints(tools, goalText ? { text: goalText, step } : null, convId);
       // Hinweise als eigene System-Nachricht direkt vor der letzten Nutzer-Nachricht – so bleiben Slash-Befehle unverändert.
@@ -860,12 +876,24 @@ const Chat = () => {
       final = res.full;
       if (res.aborted || stopRef.current) { if (goalText) setGoal(g => g && { ...g, status: "gestoppt" }); break; }
 
-      const call = tools.length ? parseToolCall(res.full) : null;
-      if (call) {
-        const entry = tools.find(t => t.key === call.name);
+      const call = parseToolCall(res.full);
+      const entry = call ? tools.find(t => t.key === call.name) : undefined;
+      // Erfundenes oder kaputtes Werkzeug: nichts anzeigen, dem Modell still sagen, was es gibt, und neu antworten lassen.
+      if (call && !entry) {
+        if (++badTools > MAX_BAD_TOOLS) break;
+        const fix = (call.name ? `Das Werkzeug „${call.name}" gibt es hier nicht.` : "Dein Werkzeug-Block war ungültig.") +
+          (tools.length ? ` Verfügbar sind nur: ${tools.map(t => t.key).join(", ")}.` : " In diesem Chat sind keine Werkzeuge verbunden.") +
+          " Schreibe keinen Werkzeug-Block mehr dafür, sondern antworte direkt als Text.";
+        // Bestand die Antwort nur aus dem Block, die leere Blase gleich weiterverwenden.
+        const keep = forDisplay(res.full).trim() || res.image || res.music;
+        setMessages(prev => keep ? [...prev, { role: "assistant", content: "" }] : [...prev.slice(0, -1), { role: "assistant", content: "" }]);
+        history.push({ role: "user", content: fix });
+        continue;
+      }
+      if (call && entry) {
         let result: string;
         try {
-          result = entry ? await callTool(entry.server, entry.tool.name, call.arguments) : `FEHLER: Werkzeug „${call.name}" gibt es nicht.`;
+          result = await callTool(entry.server, entry.tool.name, call.arguments);
         } catch (e) { result = "FEHLER: " + ((e as Error)?.message || "unbekannt"); }
         result = result.slice(0, 12000) || "(leer)";
         const meta = { tool: call.name, args: call.arguments as any };

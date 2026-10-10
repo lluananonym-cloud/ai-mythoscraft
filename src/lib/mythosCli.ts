@@ -1,7 +1,8 @@
 import JSZip from "jszip";
 // Quelltexte von CLI und Desktop-App liegen als echte Dateien daneben und werden roh in die ZIPs gepackt.
 import CLI_JS from "./mythos-code-cli/mythos.js?raw";
-import SHARED_TOOLS from "./mythos-code-shared/tools.js?raw";
+import SHARED_TOOLS_RAW from "./mythos-code-shared/tools.js?raw";
+import TOOL_PARSE from "./mythos-code-shared/toolparse.js?raw";
 import APP_MAIN from "./mythos-code-app/main.js?raw";
 import APP_PRELOAD from "./mythos-code-app/preload.js?raw";
 import APP_HTML from "./mythos-code-app/index.html?raw";
@@ -30,8 +31,11 @@ async function gunzipB64(b64: string): Promise<string> {
 const fill = (src: string, vars: Record<string, string> = {}) =>
   Object.entries(vars).reduce((out, [k, v]) => out.split(k).join(v.replace(/\r\n/g, "\n")), src.replace(/\r\n/g, "\n"));
 
+// Werkzeug-Parser steckt in tools.js (CLI, App-Hauptprozess) und wird zusätzlich in renderer.js eingefügt.
+const SHARED_TOOLS = fill(SHARED_TOOLS_RAW, { "// @@TOOL_PARSE@@": TOOL_PARSE });
+
 export const CLI_PKG = "mythos-code";
-export const CLI_VERSION = "1.7.7";
+export const CLI_VERSION = "1.7.8";
 const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/v1-messages`;
 
 const pkgJson = () => JSON.stringify({
@@ -115,7 +119,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "2.3.2";
+export const APP_VERSION = "2.3.3";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -201,7 +205,7 @@ export async function buildAppZip(site: string): Promise<Blob> {
   root.file("voice.js", fill(APP_VOICE));
   root.file("tts-worker.js", await gunzipB64(APP_TTS_WORKER_GZ));
   root.file("stt-worker.js", await gunzipB64(APP_STT_WORKER_GZ));
-  root.file("renderer.js", fill(APP_RENDERER, { "__SITE__": site, "__FN__": FN_BASE }));
+  root.file("renderer.js", fill(APP_RENDERER, { "// @@TOOL_PARSE@@": TOOL_PARSE, "__SITE__": site, "__FN__": FN_BASE }));
   root.file("config.json", JSON.stringify({ site }, null, 2));
   root.file("README.md", "# Mythos Code App\n\nWird per GitHub Actions zu `MythosCode-Setup.exe` gebaut.\n");
   root.folder(".github")!.folder("workflows")!.file("build.yml", appWorkflow());

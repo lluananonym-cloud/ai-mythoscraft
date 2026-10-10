@@ -5,6 +5,10 @@ let remotePair = null, remoteTimer = null; // Fernsteuerung vom Handy (siehe /ha
 let prompts = { nudge: "", summary: "", memoryFile: "MYTHOS.md", models: [] };
 // Laufende Aufgaben je Chat – mehrere Chats können gleichzeitig arbeiten.
 const runs = new Map();
+
+// @@TOOL_PARSE@@
+/** Was gerade wirklich verfügbar ist (für toolProblem). */
+const toolExtra = () => ({ mcp: mcpStatus.filter((s) => s.status === "connected").map((s) => ({ server: s.name, tools: s.tools.map((t) => t.name) })), browser: !!browserStatus.connected });
 const EMPTY = $("empty").cloneNode(true);
 const fmt = (ms) => { const s = Math.floor(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s"; };
 const fmtTok = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + " Mio." : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n));
@@ -234,9 +238,10 @@ function renderTokens() {
 }
 // Antwort live mitlesen: sichtbarer Text ohne <tool>-Block (auch nicht halb angefangen).
 function visibleText(full) {
-  const k = full.indexOf("<tool>"); if (k >= 0) return full.slice(0, k);
-  for (let n = 5; n > 0; n--) if (full.endsWith("<tool>".slice(0, n))) return full.slice(0, -n);
-  return full;
+  const k = full.search(/<tool(?:_call|_use)?[\s>]/i); if (k >= 0) return full.slice(0, k);
+  // Halb angefangenes Tag am Ende („<to“, „<tool_ca“) noch nicht zeigen.
+  const p = full.match(/<(?:t(?:o(?:o(?:l(?:_(?:c(?:a(?:l(?:l)?)?)?|u(?:s(?:e)?)?)?)?)?)?)?)?$/i);
+  return p ? full.slice(0, p.index) : full;
 }
 // Live-Status aus der Antwort, z. B. „✍ schreibt src/main.js · 12 KB“ (wie streamActivity in tools.js).
 function streamActivity(full) {
@@ -379,9 +384,9 @@ async function runAgent(c, opts) {
       if (run.stopped) break;
       const out = res.text, think = res.think;
       c.history.push({ role: "assistant", content: out });
-      const m = out.match(/<tool>([\s\S]*?)<\/tool>/); const text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+      const pb = parseToolBlock(out), text = pb.text;
       if (text) addTo(c, "a", text);
-      if (!m) {
+      if (!pb.tool && !pb.error) {
         if (takeInject()) continue;
         // Offene Punkte in der Aufgabenliste -> nicht mittendrin aufhören.
         const open = openTodos();
@@ -416,7 +421,10 @@ async function runAgent(c, opts) {
         finished = true; reached = !!goal; break;
       }
       nudges = 0;
-      let t; try { t = JSON.parse(m[1]); } catch (e) { c.history.push({ role: "user", content: "Tool-JSON ungültig (" + e.message + "). Sende den Block erneut als gültiges JSON; Zeilenumbrüche in Strings als \\n escapen." }); continue; }
+      // Kaputte oder erfundene Aufrufe nie anzeigen, sondern dem Modell erklären, was es gibt.
+      if (pb.error) { c.history.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON in <tool>…</tool>; Zeilenumbrüche in Strings als \\n escapen." }); continue; }
+      const t = pb.tool, bad = toolProblem(t, toolExtra());
+      if (bad) { c.history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); saveChat(c); continue; }
       if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
       activityPush(run, t.name === "run" ? "⌘" : t.name === "mcp" ? "🔌" : t.name === "browser" ? "◎" : (t.name === "edit" || t.name === "write") ? "✎" : "•", toolLabel(t));
       let r;
@@ -441,7 +449,7 @@ async function runAgent(c, opts) {
     if (goal && !run.stopped) {
       c.history.push({ role: "user", content: prompts.summary });
       const sres = await ask();
-      summary = sres.text.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+      summary = sres.text.replace(TOOL_BLOCK_RE, "").trim();
       c.history.push({ role: "assistant", content: summary });
       addTo(c, "sum", summary, run.activity && run.activity.length ? { think: run.activity.map((a) => (a.icon || "•") + " " + a.text).join("\n") } : undefined);
     }
@@ -491,7 +499,7 @@ async function goalCompact(run, c) {
   const transcript = c.history.slice(0, c.history.length - tail.length)
     .map((m) => (m.role === "user" ? "NUTZER/WERKZEUG: " : "MYTHOS: ") + String(m.content).slice(0, 2000)).join("\n\n").slice(-60000);
   try {
-    const sum = (await call(run, [{ role: "user", content: COMPACT_PROMPT + transcript }], "Du fasst Coding-Chats präzise zusammen.")).text.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    const sum = (await call(run, [{ role: "user", content: COMPACT_PROMPT + transcript }], "Du fasst Coding-Chats präzise zusammen.")).text.replace(TOOL_BLOCK_RE, "").trim();
     if (!sum) return;
     c.history = [
       { role: "user", content: "ZIEL (/goal): " + c.goal + "\n\nZusammenfassung der bisherigen Arbeit (automatisch komprimiert):\n\n" + sum },
@@ -523,7 +531,7 @@ async function gitCommit(msg) {
     const n = flash("⏳ Mythos schreibt die Commit-Nachricht…");
     try {
       msg = (await quickCall("Schreibe eine kurze Git-Commit-Nachricht auf Deutsch für diese Änderungen: erste Zeile max. 72 Zeichen, optional Leerzeile + Stichpunkte. Antworte NUR mit der Nachricht, ohne Werkzeuge, ohne Codeblock.\n\n" + await window.mythos.git.diff(cfg.folder), "Du schreibst Git-Commit-Nachrichten."))
-        .replace(/<tool>[\s\S]*?<\/tool>/g, "").replace(/^```\w*\n?|```$/g, "").trim();
+        .replace(TOOL_BLOCK_RE, "").replace(/^```\w*\n?|```$/g, "").trim();
     } catch (e) { return note("⚠ " + e.message); } finally { n.remove(); }
   }
   if (!confirm("Alle Änderungen committen mit dieser Nachricht?\n\n" + msg)) return note("Commit abgebrochen.");
@@ -1491,9 +1499,11 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       const out = (await call(s, hist, sys)).text;
       if (run.stopped) break;
       hist.push({ role: "assistant", content: out });
-      const m = out.match(/<tool>([\s\S]*?)<\/tool>/), text = out.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
-      if (!m) { s.result = text || "(fertig, ohne Bericht)"; break; }
-      let t; try { t = JSON.parse(m[1]); } catch (e) { hist.push({ role: "user", content: "Tool-JSON ungültig." }); continue; }
+      const pb = parseToolBlock(out), text = pb.text;
+      if (!pb.tool && !pb.error) { s.result = text || "(fertig, ohne Bericht)"; break; }
+      if (pb.error) { hist.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON." }); continue; }
+      const t = pb.tool, bad = toolProblem(t, toolExtra());
+      if (bad) { hist.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); continue; }
       s.phase = toolLabel(t); update();
       if (t.name !== "todo") addTo(c, "tool", tag + toolLabel(t));
       let r;
@@ -1677,7 +1687,7 @@ async function improvePrompt(text) {
   const n = flash("✨ Mythos verbessert deine Aufgabe …");
   $("btnImprove").disabled = true;
   try {
-    const better = (await quickCall(IMPROVE_PROMPT + orig, "Du verbesserst Aufgaben-Beschreibungen für einen Coding-Agenten.")).replace(/<tool>[\s\S]*?<\/tool>/g, "").replace(/^```\w*\n?|```$/g, "").trim();
+    const better = (await quickCall(IMPROVE_PROMPT + orig, "Du verbesserst Aufgaben-Beschreibungen für einen Coding-Agenten.")).replace(TOOL_BLOCK_RE, "").replace(/^```\w*\n?|```$/g, "").trim();
     if (better) { improveUndo = orig; inp.value = better; grow(); inp.focus(); $("btnImproveUndo").style.display = ""; $("improvebar").classList.add("show"); }
   } catch (e) { note("⚠ " + e.message); } finally { n.remove(); $("btnImprove").disabled = false; }
 }
@@ -1772,7 +1782,7 @@ async function compactChat() {
   if (before < 1500) return note("🗜 Der Verlauf hat erst ≈ " + fmtTok(before) + " Tokens – Komprimieren lohnt sich ab etwa 1,5k.");
   const n = flash("🗜 Fasse den Chat zusammen …");
   try {
-    const sum = (await quickCall(COMPACT_PROMPT + transcript, "Du fasst Coding-Chats präzise zusammen.")).replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    const sum = (await quickCall(COMPACT_PROMPT + transcript, "Du fasst Coding-Chats präzise zusammen.")).replace(TOOL_BLOCK_RE, "").trim();
     if (!sum) throw new Error("Leere Zusammenfassung");
     chat.history = [
       { role: "user", content: "Zusammenfassung des bisherigen Chats (komprimiert):\n\n" + sum },

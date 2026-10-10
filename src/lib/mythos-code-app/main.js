@@ -172,12 +172,14 @@ app.on("will-quit", () => { mcp.stopAll(); killAll(); });
 
 // System-Prompt: Werkzeuge + verbundene MCP-Werkzeuge + Gedächtnis + Ziel.
 function mcpPrompt() {
-  const tools = mcp.status().filter((s) => s.status === "connected").flatMap((s) => s.tools.map((t) => ({ server: s.name, ...t })));
-  if (!tools.length) return "";
+  const all = mcp.status(), tools = all.filter((s) => s.status === "connected").flatMap((s) => s.tools.map((t) => ({ server: s.name, ...t })));
+  const off = all.filter((s) => s.status !== "connected").map((s) => s.name);
+  if (!tools.length) return "\n\nEs sind keine MCP-Connectoren verbunden" + (off.length ? " (eingerichtet, aber nicht verbunden: " + off.join(", ") + ")" : "") + " – nutze kein mcp-Werkzeug. Braucht die Aufgabe einen Connector, sag dem Nutzer, dass er ihn unter 🔌 verbinden soll.";
   const args = (t) => (t.inputSchema && t.inputSchema.properties
     ? " · args: " + JSON.stringify(Object.fromEntries(Object.entries(t.inputSchema.properties).map(([k, v]) => [k, (v && v.type) || "any"]))).slice(0, 200) : "");
   return '\n\nMCP-Werkzeuge (externe Server) – Aufruf: <tool>{"name":"mcp","server":"...","tool":"...","args":{...}}</tool>\n' +
-    tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n");
+    tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n") +
+    (off.length ? "\nNicht verbunden (nicht nutzen): " + off.join(", ") : "");
 }
 function browserPrompt() {
   if (!bridgeState().connected) return "";
