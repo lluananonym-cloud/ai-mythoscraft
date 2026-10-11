@@ -1,0 +1,10 @@
+{
+  "client_id": "https://mythoscraft.online/mcp-client.json",
+  "client_name": "Mythos",
+  "client_uri": "https://mythoscraft.online",
+  "logo_uri": "https://mythoscraft.online/icon-192.png",
+  "redirect_uris": ["https://mythoscraft.online/mcp-oauth"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}

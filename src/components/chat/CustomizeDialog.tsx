@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Brain, Drama, Loader2, Plug, Plus, Trash2, Wrench, Puzzle } from "lucide-react";
+import { Brain, Drama, Loader2, LogIn, LogOut, Plug, Plus, Trash2, Wrench, Puzzle } from "lucide-react";
 import { toast } from "sonner";
 import {
   getInstructions, getMcpServers, newId, setInstructions, setMcpServers, type McpServer,
 } from "@/lib/chatPrefs";
-import { listTools } from "@/lib/mcpClient";
+import { listTools, McpAuthError } from "@/lib/mcpClient";
+import { login, logout } from "@/lib/mcpOAuth";
+
+/** Bekannte Connectoren zum Hinzufügen mit einem Klick (Anmeldung per OAuth). */
+const PRESETS = [
+  { name: "Higgsfield", url: "https://mcp.higgsfield.ai/mcp", hint: "Bilder & Videos" },
+];
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 
@@ -19,7 +25,7 @@ type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 export default function CustomizeDialog({ open, onOpenChange }: Props) {
   const nav = useNavigate();
   const [servers, setServers] = useState<McpServer[]>([]);
-  const [tools, setTools] = useState<Record<string, string[] | "err" | "load">>({});
+  const [tools, setTools] = useState<Record<string, string[] | "err" | "load" | "auth">>({});
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [auth, setAuth] = useState("");
@@ -39,9 +45,42 @@ export default function CustomizeDialog({ open, onOpenChange }: Props) {
       const list = await listTools(s);
       setTools(t => ({ ...t, [s.id]: list.map(x => x.name) }));
     } catch (e) {
+      if (e instanceof McpAuthError) {
+        setTools(t => ({ ...t, [s.id]: "auth" }));
+        toast.info(`${s.name}: Bitte auf „Anmelden“ klicken.`);
+        return;
+      }
       setTools(t => ({ ...t, [s.id]: "err" }));
       toast.error(`${s.name}: ${e instanceof Error ? e.message : "nicht erreichbar"}`);
     }
+  };
+
+  // Muss direkt aus dem Klick kommen, damit der Browser das Login-Fenster nicht blockiert.
+  const signIn = async (s: McpServer) => {
+    setTools(t => ({ ...t, [s.id]: "load" }));
+    try {
+      const next = await login(s);
+      setServers(getMcpServers());
+      toast.success(`${s.name} verbunden`);
+      await test(next);
+    } catch (e) {
+      setTools(t => ({ ...t, [s.id]: "auth" }));
+      toast.error(`${s.name}: ${e instanceof Error ? e.message : "Anmeldung fehlgeschlagen"}`);
+    }
+  };
+
+  const signOut = (s: McpServer) => {
+    logout(s);
+    setServers(getMcpServers());
+    setTools(t => ({ ...t, [s.id]: "auth" }));
+  };
+
+  const addPreset = (p: (typeof PRESETS)[number]) => {
+    const existing = servers.find(x => x.url === p.url);
+    if (existing) { signIn(existing); return; }
+    const s: McpServer = { id: newId(), name: p.name, url: p.url, enabled: true };
+    save([...servers, s]);
+    signIn(s);
   };
 
   const add = () => {
@@ -92,15 +131,33 @@ export default function CustomizeDialog({ open, onOpenChange }: Props) {
                     </Button>
                     {Array.isArray(t) && <span className="text-muted-foreground truncate">{t.length} Werkzeuge: {t.slice(0, 6).join(", ")}{t.length > 6 ? " …" : ""}</span>}
                     {t === "err" && <span className="text-destructive">nicht erreichbar</span>}
+                    {t === "auth" && (
+                      <Button size="sm" className="h-7 text-xs" onClick={() => signIn(s)}>
+                        <LogIn className="h-3 w-3 mr-1" /> Anmelden
+                      </Button>
+                    )}
+                    {s.oauth && t !== "auth" && (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs ml-auto" onClick={() => signOut(s)}>
+                        <LogOut className="h-3 w-3 mr-1" /> Abmelden
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
             })}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Mit einem Klick:</span>
+              {PRESETS.map(p => (
+                <Button key={p.url} variant="outline" size="sm" className="h-7 text-xs" onClick={() => addPreset(p)}>
+                  <Plug className="h-3 w-3 mr-1" /> {p.name} <span className="text-muted-foreground ml-1">· {p.hint}</span>
+                </Button>
+              ))}
+            </div>
             <div className="rounded-xl border border-white/10 p-3 space-y-2">
               <div className="text-sm font-medium">Eigenen Connector hinzufügen</div>
               <Input placeholder="Name (z. B. GitHub)" value={name} onChange={e => setName(e.target.value)} />
               <Input placeholder="MCP-URL, z. B. https://example.com/mcp" value={url} onChange={e => setUrl(e.target.value)} />
-              <Input placeholder="Authorization (optional), z. B. Bearer …" value={auth} onChange={e => setAuth(e.target.value)} type="password" />
+              <Input placeholder="Authorization (optional, sonst Anmelden-Button), z. B. Bearer …" value={auth} onChange={e => setAuth(e.target.value)} type="password" />
               <Button size="sm" onClick={add}><Plus className="h-4 w-4 mr-1" /> Hinzufügen</Button>
               <p className="text-[11px] text-muted-foreground">Wird nur in diesem Browser gespeichert.</p>
             </div>
