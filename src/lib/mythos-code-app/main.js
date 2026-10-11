@@ -11,11 +11,13 @@ const canEncrypt = () => { try { return safeStorage.isEncryptionAvailable(); } c
 function load() {
   let c; try { c = JSON.parse(fs.readFileSync(CFG(), "utf8")); } catch { return {}; }
   if (c.keyEnc) { try { c.key = safeStorage.decryptString(Buffer.from(c.keyEnc, "base64")); } catch { /* auf anderem PC verschlüsselt */ } delete c.keyEnc; }
+  if (c.discordTokenEnc) { try { c.discordToken = safeStorage.decryptString(Buffer.from(c.discordTokenEnc, "base64")); } catch { /* auf anderem PC verschlüsselt */ } delete c.discordTokenEnc; }
   return c;
 }
 function save(c) {
   const out = Object.assign({}, c);
   if (out.key && canEncrypt()) { out.keyEnc = safeStorage.encryptString(out.key).toString("base64"); delete out.key; }
+  if (out.discordToken && canEncrypt()) { out.discordTokenEnc = safeStorage.encryptString(out.discordToken).toString("base64"); delete out.discordToken; }
   const tmp = CFG() + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(out, null, 2)); fs.renameSync(tmp, CFG());
 }
 /** Nur Projekte, denen der Nutzer vertraut, dürfen eigene Hooks und MCP-Server starten. */
@@ -107,6 +109,32 @@ ipcMain.handle("notify", (_e, title, body) => {
   const n = new Notification({ title, body }); n.on("click", showWin); n.show(); return true;
 });
 ipcMain.handle("cfg:get", () => load());
+// Discord-Bot: Anfragen aus Discord an Mythos. Die Discord-API erlaubt keine Aufrufe aus dem Fenster (CORS),
+// deshalb gehen sie hier über den Hauptprozess. Nur feste Pfade unter /api/v10, Token aus der gespeicherten Konfiguration.
+async function discordApi(token, method, apiPath, body) {
+  apiPath = String(apiPath || "");
+  if (!token || !/^\/(users|channels|oauth2)\/[\w@/?=&.-]*$/.test(apiPath)) return { ok: false, status: 0, error: "Ungültige Anfrage" };
+  try {
+    const r = await fetch("https://discord.com/api/v10" + apiPath, {
+      method: method || "GET",
+      headers: Object.assign({ Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://mythos-core-ai.lovable.app, 1.0) MythosCode" }, body ? { "content-type": "application/json" } : {}),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await r.text();
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    return { ok: r.ok, status: r.status, data };
+  } catch (e) { return { ok: false, status: 0, error: e.message }; }
+}
+ipcMain.handle("discord:check", async (_e, token) => {
+  token = String(token || "").trim();
+  const me = await discordApi(token, "GET", "/users/@me");
+  if (!me.ok) return { error: me.status === 401 ? "Der Bot-Token stimmt nicht." : "Discord nicht erreichbar (" + (me.error || me.status) + ")." };
+  const appInfo = await discordApi(token, "GET", "/oauth2/applications/@me");
+  const flags = appInfo.ok && appInfo.data ? appInfo.data.flags || 0 : 0;
+  // GATEWAY_MESSAGE_CONTENT (1<<18) oder _LIMITED (1<<19): Bot darf Nachrichten im Kanal ohne Erwähnung lesen.
+  return { id: me.data.id, name: me.data.username, appId: (appInfo.ok && appInfo.data && appInfo.data.id) || me.data.id, content: !!(flags & ((1 << 18) | (1 << 19))) };
+});
+ipcMain.handle("discord:api", (_e, method, apiPath, body) => discordApi(load().discordToken, method, apiPath, body));
 ipcMain.handle("cfg:set", (_e, c) => { save(c || {}); return true; });
 const safeUrl = (u) => /^(https?:\/\/|mailto:)/i.test(String(u || ""));
 ipcMain.handle("open", (_e, url) => (safeUrl(url) ? shell.openExternal(url) : false));
