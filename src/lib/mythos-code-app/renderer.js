@@ -16,6 +16,7 @@ const post = (fn, body, h) => fetch(CFG.fn + "/" + fn, { method: "POST", headers
 const el = (tag, cls, text) => { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; };
 const base = (p) => p.split(/[\\/]/).filter(Boolean).pop() || p;
 const openLink = (u) => window.mythos.open(u);
+window.mythosFolder = () => (chat && chat.folder) || cfg.folder || "";
 const md = (box, text) => window.renderMarkdown(box, text, openLink);
 let follow = true;
 const nearBottom = () => follow;
