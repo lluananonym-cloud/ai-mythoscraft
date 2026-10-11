@@ -33,18 +33,42 @@ class AuthNeeded extends Error { constructor(msg) { super(msg || "Anmeldung nöt
 async function getJson(url) {
   try { const r = await fetch(url, { headers: { Accept: "application/json" } }); return r.ok ? await r.json() : null; } catch { return null; }
 }
-async function discover(mcpUrl) {
+/** Sucht die OAuth-Infos des Servers. found = echte Metadaten gefunden (nicht nur geraten). */
+async function discover(mcpUrl, wwwAuth) {
   const u = new URL(mcpUrl), p = u.pathname.replace(/\/$/, "");
+  const hinted = wwwAuth && (wwwAuth.match(/resource_metadata="([^"]+)"/) || [])[1];
   let prm = null;
-  for (const c of [p && `${u.origin}/.well-known/oauth-protected-resource${p}`, `${u.origin}/.well-known/oauth-protected-resource`].filter(Boolean)) { prm = await getJson(c); if (prm) break; }
+  for (const c of [hinted, p && `${u.origin}/.well-known/oauth-protected-resource${p}`, `${u.origin}/.well-known/oauth-protected-resource`].filter(Boolean)) { prm = await getJson(c); if (prm) break; }
   const iss = new URL((prm && prm.authorization_servers && prm.authorization_servers[0]) || u.origin), ip = iss.pathname.replace(/\/$/, "");
   let meta = null;
   for (const c of [`${iss.origin}/.well-known/oauth-authorization-server${ip}`, `${iss.origin}/.well-known/openid-configuration${ip}`, ip && `${iss.origin}${ip}/.well-known/openid-configuration`].filter(Boolean)) {
     meta = await getJson(c); if (meta && meta.authorization_endpoint && meta.token_endpoint) break; meta = null;
   }
+  const found = !!(meta || prm);
   if (!meta) meta = { authorization_endpoint: `${iss.origin}/authorize`, token_endpoint: `${iss.origin}/token`, registration_endpoint: `${iss.origin}/register` };
-  return { meta, resource: (prm && prm.resource) || mcpUrl, scope: prm && Array.isArray(prm.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
+  return { meta, found, resource: (prm && prm.resource) || mcpUrl, scope: prm && Array.isArray(prm.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
 }
+/** Verbindet sich einmal mit dem Server (wie Claude beim Hinzufügen) und erkennt, welche Anmeldung er braucht. */
+async function probe(mcpUrl, headers) {
+  let r;
+  try {
+    r = await fetch(mcpUrl, {
+      method: "POST", signal: AbortSignal.timeout(15000),
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": PROTOCOL, ...(headers || {}) },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: CLIENT } }),
+    });
+  } catch (e) { throw new Error("Server nicht erreichbar: " + (e.cause && e.cause.message || e.message)); }
+  try { if (r.body) r.body.cancel(); } catch { /* egal */ }
+  const needsAuth = r.status === 401 || r.status === 403;
+  if (!needsAuth && !r.ok && r.status !== 202) throw new Error("Server antwortet mit HTTP " + r.status);
+  const d = await discover(mcpUrl, r.headers.get("www-authenticate")).catch(() => null);
+  const oauth = !!(d && d.found);
+  const client = !oauth ? "dcr" : d.meta.client_id_metadata_document_supported ? "cimd" : d.meta.registration_endpoint ? "dcr" : "custom";
+  return { auth: needsAuth ? "now" : oauth ? "ondemand" : "none", client, oauth };
+}
+// Öffentliche Client-Beschreibung (CIMD) von Mythos Code und feste Rückleitungsadresse für eigene OAuth-Clients.
+const CIMD_URL = "https://mythos-core-ai.lovable.app/oauth/mythos-code.json";
+const REDIRECT_PORT = 33418;
 const b64url = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 async function tokenRequest(o, params) {
   const form = new URLSearchParams({ ...params, client_id: o.clientId, resource: o.resource });
@@ -56,19 +80,30 @@ async function tokenRequest(o, params) {
   return { accessToken: j.access_token, refreshToken: j.refresh_token || undefined, expiresAt: j.expires_in ? Date.now() + Number(j.expires_in) * 1000 : undefined };
 }
 /** Öffnet den Login im Standard-Browser und wartet auf die Rückleitung an 127.0.0.1. */
-async function oauthLogin(mcpUrl, openExternal) {
+async function oauthLogin(mcpUrl, openExternal, opts) {
+  const o = opts || {};
   const { meta, resource, scope } = await discover(mcpUrl);
   const server = http.createServer();
-  await new Promise((res, rej) => { server.once("error", rej); server.listen(0, "127.0.0.1", res); });
+  const listen = (port) => new Promise((res, rej) => { server.once("error", rej); server.listen(port, "127.0.0.1", res); });
+  // Feste Adresse (für CIMD und eigene Clients nötig), sonst ein freier Port.
+  try { await listen(REDIRECT_PORT); } catch { await listen(0); }
   const redirect = `http://127.0.0.1:${server.address().port}/callback`;
   try {
-    if (!meta.registration_endpoint) throw new Error("Dieser Server erlaubt keine automatische Anmeldung für fremde Apps.");
-    const reg = await fetch(meta.registration_endpoint, {
-      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ client_name: "Mythos Code", client_uri: "https://mythoscraft.online", redirect_uris: [redirect], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" }),
-    });
-    if (!reg.ok) throw new Error("Registrierung fehlgeschlagen (HTTP " + reg.status + ")");
-    const rj = await reg.json();
+    let rj;
+    if (o.client === "custom") {
+      if (!o.clientId) throw new Error("Bitte eine Client-ID angeben.");
+      rj = { client_id: o.clientId, client_secret: o.clientSecret || undefined };
+    } else if (o.client === "cimd") {
+      rj = { client_id: CIMD_URL };
+    } else {
+      if (!meta.registration_endpoint) throw new Error("Dieser Server erlaubt keine automatische Registrierung – wähle „Eigenen OAuth-Client verwenden“.");
+      const reg = await fetch(meta.registration_endpoint, {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ client_name: "Mythos Code", client_uri: "https://mythos-core-ai.lovable.app", redirect_uris: [redirect], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" }),
+      });
+      if (!reg.ok) throw new Error("Registrierung fehlgeschlagen (HTTP " + reg.status + ")");
+      rj = await reg.json();
+    }
     const verifier = b64url(crypto.randomBytes(48)), state = b64url(crypto.randomBytes(16));
     const auth = new URL(meta.authorization_endpoint);
     const q = { response_type: "code", client_id: rj.client_id, redirect_uri: redirect, code_challenge: b64url(crypto.createHash("sha256").update(verifier).digest()), code_challenge_method: "S256", state, resource };
@@ -272,8 +307,8 @@ class McpManager {
   /** Anmeldung im Browser, danach neu verbinden. */
   async login(name) {
     const cl = this.clients.get(name); if (!cl || !cl.cfg.url) throw new Error("Nur für Connectoren mit URL");
-    const url = expandEnv(cl.cfg).url;
-    this.store.set(url, await oauthLogin(url, this.openExternal));
+    const cfg = expandEnv(cl.cfg);
+    this.store.set(cfg.url, await oauthLogin(cfg.url, this.openExternal, cfg.oauth));
     return this.restart(name);
   }
   logout(name) {
@@ -295,4 +330,4 @@ class McpManager {
   stopAll() { for (const c of this.clients.values()) c.stop(); }
 }
 
-module.exports = { McpManager };
+module.exports = { McpManager, probe, REDIRECT_PORT };

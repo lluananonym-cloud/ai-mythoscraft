@@ -1,6 +1,7 @@
 // Leitet MCP-Anfragen (Streamable HTTP) aus dem Web-Chat an Connectoren weiter,
 // deren Server den Browser per CORS blockieren. Nur für eingeloggte Nutzer, nur https,
-// keine internen Adressen.
+// keine internen Adressen. Auch für die OAuth-Anmeldung: GET (Server-Infos) und
+// Formular-POST (Token, Registrierung) über "method" und "rawBody".
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
 
 const corsHeaders = {
@@ -11,7 +12,8 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const PASS = ["content-type", "accept", "mcp-protocol-version", "mcp-session-id", "authorization"];
+// Diese Header nie weiterreichen; alle anderen (auch eigene Request-Header der Connectoren) schon.
+const DROP = ["host", "cookie", "connection", "content-length", "transfer-encoding", "upgrade", "te", "keep-alive", "proxy-authorization", "x-forwarded-for"];
 
 function blockedHost(host: string) {
   const h = host.toLowerCase().replace(/^\[|\]$/g, "");
@@ -37,12 +39,14 @@ Deno.serve(async (req) => {
 
   const headers: Record<string, string> = {};
   for (const [k, v] of Object.entries(body?.headers || {})) {
-    if (PASS.includes(k.toLowerCase()) && typeof v === "string") headers[k] = v;
+    if (!DROP.includes(k.toLowerCase()) && typeof v === "string") headers[k] = v;
   }
+  const method = body?.method === "GET" ? "GET" : "POST";
+  const payload = method === "GET" ? undefined : typeof body?.rawBody === "string" ? body.rawBody : JSON.stringify(body.payload);
   try {
-    const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body.payload), redirect: "error", signal: AbortSignal.timeout(60_000) });
+    const r = await fetch(url, { method, headers, body: payload, redirect: "error", signal: AbortSignal.timeout(60_000) });
     const text = (await r.text()).slice(0, 2_000_000);
-    return json({ status: r.status, contentType: r.headers.get("content-type"), sessionId: r.headers.get("mcp-session-id"), body: text });
+    return json({ status: r.status, contentType: r.headers.get("content-type"), sessionId: r.headers.get("mcp-session-id"), wwwAuthenticate: r.headers.get("www-authenticate"), body: text });
   } catch (e) {
     return json({ error: "Connector nicht erreichbar: " + (e instanceof Error ? e.message : String(e)) });
   }
