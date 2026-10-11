@@ -112,12 +112,21 @@ const SERVER_RES = [
 ];
 const looksLikeServer = (cmd) => SERVER_RES.some((re) => re.test(String(cmd || "")));
 
+/** Antwort sieht aus wie eine Schritt-für-Schritt-Anleitung zum Selbermachen (statt erledigter Arbeit)? */
+function looksLikeTutorial(text) {
+  const t = String(text || "");
+  const steps = (t.match(/^\s*(?:\d+[.)]|schritt\s*\d+|step\s*\d+)/gim) || []).length;
+  const shell = /```(?:bash|sh|shell|cmd|powershell|ps1|bat|console)?\s*\n\s*(?:npm|npx|pip|pip3|python|py|pyinstaller|node|yarn|pnpm|git|cargo|go|dotnet|mvn|gradle|winget|choco|cd|mkdir|electron-builder)\b/i.test(t);
+  const youDo = /\b(?:führe|öffne|installiere|gib|tippe|kopiere|speichere|erstelle|lade)\b[^.\n]{0,60}\b(?:aus|ein|dann|folgende|den befehl|im terminal|die datei)\b|\bdu (?:musst|kannst|solltest)\b/i.test(t);
+  return (shell && (steps >= 2 || youDo)) || (steps >= 3 && youDo);
+}
 // Gegen oberflächliche Arbeit: Hat Mythos nach seinen Änderungen wirklich geprüft?
 const WEB_FILE_RE = /\.(?:html?|css|s[ac]ss|jsx?|tsx?|mjs|vue|svelte)$/i;
 function verifyTracker() {
-  const st = { changed: false, web: false, verified: false, checked: false, nudges: 0 };
+  const st = { changed: false, web: false, verified: false, checked: false, nudges: 0, acted: false, tutorNudged: false };
   return {
     note(t, result) {
+      if (t.name !== "todo") st.acted = true;
       const ok = !/^(?:FEHLER|BLOCKIERT|Vom Nutzer)/.test(String(result || ""));
       if ((t.name === "write" || t.name === "edit") && ok) { st.changed = true; st.verified = false; if (WEB_FILE_RE.test(String(t.path || ""))) { st.web = true; st.checked = false; } }
       if (t.name === "verify") st.verified = true;
@@ -125,7 +134,14 @@ function verifyTracker() {
       if (t.name === "check" && /ERGEBNIS: ✓/.test(String(result || ""))) st.checked = true;
     },
     /** Hinweis fürs Modell, falls noch nicht geprüft – oder "". Höchstens 3-mal. */
-    nudge() {
+    nudge(answer, question) {
+      // Anleitung statt Tat: Antwort ohne ein einziges Werkzeug, die dem Nutzer Befehle/Schritte zum Selbermachen gibt
+      // (außer der Nutzer hat ausdrücklich nach einer Erklärung gefragt).
+      const wantsHowTo = /\b(?:wie (?:geht|mache|kann ich|funktioniert)|erklär|anleitung|tutorial|zeig mir wie|how to|explain)\b/i.test(String(question || ""));
+      if (!st.acted && !st.tutorNudged && answer && !wantsHowTo && looksLikeTutorial(answer)) {
+        st.tutorNudged = true;
+        return "Du hast eine Anleitung geschrieben, statt es selbst zu tun. Der Nutzer will das ERGEBNIS, keine Anleitung – du hast vollen Zugriff auf seinen PC. Führe die Schritte jetzt selbst mit deinen Werkzeugen aus (Dateien anlegen, Pakete installieren, bauen, z. B. die .exe erzeugen), prüfe das Ergebnis (Datei existiert, startet) und antworte dann im Antwortformat mit dem Pfad zum fertigen Ergebnis.";
+      }
       if (st.nudges >= 3) return "";
       if (st.changed && !st.verified) { st.nudges++; st.verified = true; return "Bevor du fertig bist: Du hast Dateien geändert, aber noch nicht geprüft. Führe jetzt verify aus (oder passende Build-/Test-Befehle), behebe jedes ✗ und antworte erst danach."; }
       if (st.web && !st.checked) { st.nudges++; st.checked = true; return "Bevor du fertig bist: Du hast an einer Webseite gearbeitet, sie aber nicht im Browser geprüft. Starte sie (serve für statische Seiten, start für Dev-Server/Backends) und prüfe sie mit check. Behebe alles, was check als ✗ meldet (weiße Seite, Konsolenfehler, fehlende Dateien, „Cannot GET /“), prüfe erneut und antworte dann im Antwortformat mit der Adresse."; }

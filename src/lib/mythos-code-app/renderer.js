@@ -382,6 +382,7 @@ async function runAgent(c, opts) {
   const goal = c.goal || "", max = goal ? Infinity : 400, autoTest = autoTestOn(run.folder);
   let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null, toolFails = 0;
   const tracker = verifyTracker();
+  const question = String((c.history.filter((m) => m.role === "user").pop() || {}).content || "");
   const openTodos = () => { const it = run.todoItem; return it && it.items ? it.items.filter((x) => !x.done) : []; };
   const takeInject = () => { const inj = run.inject || []; run.inject = [];
     inj.forEach((it) => { const files = (it.att || []).filter((f) => !f.image);
@@ -422,7 +423,7 @@ async function runAgent(c, opts) {
         const open = openTodos();
         if (open.length && nudges < 8) { nudges++; c.history.push({ role: "user", content: "Es sind noch " + open.length + " Punkte offen: " + open.map((x) => x.text).join("; ") + ". Mach direkt weiter mit dem nächsten Werkzeug. Wenn etwas unmöglich ist, markiere es erledigt und erkläre warum." }); saveChat(c); continue; }
         // Selbstprüfung nach Änderungen (gegen oberflächliche Arbeit): verify, bei Webseiten zusätzlich check.
-        const vn = tracker.nudge();
+        const vn = tracker.nudge(text, question);
         if (vn) { activityPush(run, "🔎", "Arbeit selbst prüfen"); c.history.push({ role: "user", content: vn }); saveChat(c); continue; }
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
