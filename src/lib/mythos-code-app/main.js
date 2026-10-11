@@ -117,7 +117,7 @@ async function discordApi(token, method, apiPath, body) {
   try {
     const r = await fetch("https://discord.com/api/v10" + apiPath, {
       method: method || "GET",
-      headers: Object.assign({ Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://mythos-core-ai.lovable.app, 1.0) MythosCode" }, body ? { "content-type": "application/json" } : {}),
+      headers: Object.assign({ Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://mythos-core-ai-ai.lovable.app, 1.0) MythosCode" }, body ? { "content-type": "application/json" } : {}),
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await r.text();

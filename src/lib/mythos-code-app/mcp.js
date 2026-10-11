@@ -69,7 +69,7 @@ async function probe(mcpUrl, headers) {
   return { auth: needsAuth ? "now" : oauth ? "ondemand" : "none", client, oauth };
 }
 // Öffentliche Client-Beschreibung (CIMD) von Mythos Code und feste Rückleitungsadresse für eigene OAuth-Clients.
-const CIMD_URL = "https://mythos-core-ai.lovable.app/oauth/mythos-code.json";
+const CIMD_URL = "https://mythos-core-ai-ai.lovable.app/oauth/mythos-code.json";
 const REDIRECT_PORT = 33418;
 const b64url = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 async function tokenRequest(o, params) {
@@ -101,7 +101,7 @@ async function oauthLogin(mcpUrl, openExternal, opts) {
       if (!meta.registration_endpoint) throw new Error("Dieser Server erlaubt keine automatische Registrierung – wähle „Eigenen OAuth-Client verwenden“.");
       const reg = await fetch(meta.registration_endpoint, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ client_name: "Mythos Code", client_uri: "https://mythos-core-ai.lovable.app", redirect_uris: [redirect], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" }),
+        body: JSON.stringify({ client_name: "Mythos Code", client_uri: "https://mythos-core-ai-ai.lovable.app", redirect_uris: [redirect], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" }),
       });
       if (!reg.ok) throw new Error("Registrierung fehlgeschlagen (HTTP " + reg.status + ")");
       rj = await reg.json();
