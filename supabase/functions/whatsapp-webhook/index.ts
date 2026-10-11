@@ -3,6 +3,7 @@ import { aiFetch } from "../_shared/ai.ts";
 // Currently accepts simple JSON: { phone_number, content, channel?, display_name? }
 // Plug Twilio later: parse Twilio's form-urlencoded body (From, Body) and send replies via Twilio API.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { formatServerArticles, relevantServerArticles } from "../_shared/serverKnowledge.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,7 @@ const AUTO_HANDOVER_MINUTES = 10;
 async function aiReply(history: { role: string; content: string }[], identity: string | null, apiKey: string): Promise<string> {
   const system = identity
     ? `Du bist **${identity}**. Antworte freundlich und kurz auf WhatsApp/SMS (kein Markdown, max. 600 Zeichen).`
-    : `Du bist Mythos AI Support für mythoscraft.online. Antworte freundlich und kurz auf WhatsApp/SMS (kein Markdown, max. 600 Zeichen). Bei Unklarheit sage, ein Mitarbeiter meldet sich.`;
+    : `Du bist Mythos AI Support für mythoscraft.online. Antworte freundlich und kurz auf WhatsApp/SMS (kein Markdown, max. 600 Zeichen). Bei Unklarheit sage, ein Mitarbeiter meldet sich.\n\nServer-Wissen aus dem Server-Plugin (verbindlich, nichts dazu erfinden):\n${formatServerArticles(relevantServerArticles([...history].reverse().find((m) => m.role === "user")?.content || "", 3))}`;
   const r = await aiFetch("gateway", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

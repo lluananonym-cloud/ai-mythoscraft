@@ -3,6 +3,7 @@ import { explainErrors, generateImage, PROVIDER_LABEL } from "../_shared/image.t
 import { classifyImageRequest, isImageRequest, maybeImageRequest, resolveImagePrompt } from "../_shared/imageIntent.ts";
 import { mythosIdentity, mythosIdentityReminder } from "../_shared/identity.ts";
 import { MYTHOS_CATALOG, MYTHOS_FILES } from "../_shared/catalog.ts";
+import { PLUGIN_CATEGORY_PREFIX, formatServerArticles, isServerQuestion, relevantServerArticles, serverKnowledgeText } from "../_shared/serverKnowledge.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -398,20 +399,27 @@ Deno.serve(async (req) => {
     } else if (mode === "support") {
       const { data: kb } = await supabase
         .from("knowledge_articles").select("title,category,body").eq("is_published", true);
-      const kbAll = (kb || []).map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
+      // Plugin-Artikel kommen aus dem Code (serverKnowledge.ts); im Admin eingespielte Kopien nicht doppelt senden.
+      const kbAll = (kb || []).filter((a: any) => !String(a.category || "").startsWith(PLUGIN_CATEGORY_PREFIX))
+        .map((a: any) => `### [${a.category}] ${a.title}\n${a.body}`).join("\n\n---\n\n");
       // Spar-Modus: Wissensbasis stark gekürzt -> deutlich weniger Tokens pro Anfrage.
-      const kbText = resolved.lean ? kbAll.slice(0, 2500) : kbAll;
+      const kbText = resolved.lean ? kbAll.slice(0, 1500) : kbAll;
+      const pluginText = resolved.lean
+        ? `## Server-Wissen MythosCraft (aus dem Server-Plugin, verbindlich)\n${formatServerArticles(relevantServerArticles(lastText, 3))}`
+        : serverKnowledgeText();
 
       system = `Du bist **Mythos AI**, der offizielle Support-Assistent für den Minecraft-Server **mythoscraft.online** (SMP).
 Antworte freundlich, präzise und auf Deutsch. Nutze Markdown.
 
 Slash-Commands die der User nutzen kann: \`/identity <name>\`, \`/image <prompt>\`, \`/music <vibe>\`, \`/research <thema>\`.
 
-Verifiziertes Wissen:
+${pluginText}
 
-${kbText || "(noch keine Artikel)"}
+Weitere Artikel aus der Knowledge Base (bei Widerspruch gilt das Plugin-Wissen oben):
 
-Wenn unklar: ehrlich sagen + auf Discord oder /helpop verweisen.${memoryBlock}`;
+${kbText || "(keine weiteren Artikel)"}
+
+Wenn etwas weder oben noch in den Artikeln steht: ehrlich sagen und auf Discord oder \`/helpop\` im Spiel verweisen.${memoryBlock}`;
     } else {
       system = `Du bist Mythos AI, ein freundlicher, kompetenter KI-Assistent. Antworte präzise und in der Sprache des Users (default: Deutsch). Nutze Markdown.
 
@@ -422,6 +430,10 @@ Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend)
 - \`/research <thema>\` — Deep Research mit Web-Suche
 
 Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memoryBlock}`;
+      // Fragen zum MythosCraft-Server auch im normalen Chat mit Plugin-Wissen beantworten.
+      if (isServerQuestion(lastText)) {
+        system += `\n\n## Server-Wissen MythosCraft (mythoscraft.online, aus dem Server-Plugin, verbindlich)\nNutze nur dieses Wissen für Server-Fragen und erfinde nichts dazu. Fehlt etwas: ehrlich sagen und auf Discord oder \`/helpop\` verweisen.\n\n${formatServerArticles(relevantServerArticles(lastText, resolved.lean ? 2 : 5))}`;
+      }
     }
 
     if (voiceMode) system += `\n\n## Sprach-Modus\nDeine Antwort wird laut vorgelesen. Antworte daher in gesprochener Sprache: kurze Sätze, maximal 3-5 Sätze, keine Listen, keine Emojis, kein Markdown, keine Links, keine Code-Blöcke.`;

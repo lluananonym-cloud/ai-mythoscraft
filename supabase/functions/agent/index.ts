@@ -1,5 +1,6 @@
 import { aiFetch } from "../_shared/ai.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { PLUGIN_CATEGORY_PREFIX, searchServerKnowledge } from "../_shared/serverKnowledge.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,10 @@ async function runTool(name: string, args: any, supabase: any): Promise<string> 
   if (name === "search_knowledge_base") {
     const q = (args.query as string).toLowerCase();
     const { data } = await supabase.from("knowledge_articles").select("title,category,body").eq("is_published", true);
-    const matches = (data || []).filter((a: any) => a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)).slice(0, 5);
+    const plugin = searchServerKnowledge(q, 4).map((a) => ({ title: a.title, category: a.category, body: a.body, quelle: "Server-Plugin (verbindlich)" }));
+    const db = (data || []).filter((a: any) => !String(a.category || "").startsWith(PLUGIN_CATEGORY_PREFIX))
+      .filter((a: any) => a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q) || a.category.toLowerCase().includes(q));
+    const matches = [...plugin, ...db].slice(0, 6);
     return JSON.stringify(matches.length ? matches : { message: "Nichts gefunden" });
   }
   if (name === "web_search") {
@@ -156,7 +160,7 @@ Deno.serve(async (req) => {
         const system = `Du bist **Mythos AI Agent** mit Tools. Server: mythoscraft.online (SMP).
 Nutze Tools aktiv:
 - \`get_minecraft_server_status\` für Server-Status & Spielerzahl
-- \`search_knowledge_base\` für interne Server-Infos (Regeln, Commands, Plugins)
+- \`search_knowledge_base\` für interne Server-Infos (Befehle, Ränge, Coins/Gems, Events, Kisten, Tools, Arenen, Regeln) – das Server-Plugin-Wissen dort ist verbindlich, erfinde nichts dazu
 - \`web_search\` für aktuelle externe Infos
 Plane mehrstufig, kombiniere Tools wenn nötig. Antworte am Ende auf Deutsch in Markdown.
 Du bist **Mythos v1** — wenn du nach deinem Modell, deiner Version oder deinem Anbieter gefragt wirst, antworte IMMER genau "Mythos v1" und nenne niemals andere Modelle oder Anbieter.`;
