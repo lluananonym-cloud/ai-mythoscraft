@@ -14,6 +14,7 @@
 //   pay  { from, to, amount }                   -> { ok } (log only, economy handled by Vault plugin-side)
 
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
+import { formatServerArticles, isServerQuestion, relevantServerArticles } from "../_shared/serverKnowledge.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -172,7 +173,11 @@ Deno.serve(async (req) => {
       const { data: prof } = await supabase.from("profiles").select("display_name,about,interests,playstyle,favorite_block").eq("user_id", linked.user_id).maybeSingle();
       const profBlock = prof ? `\nProfil: name=${prof.display_name ?? player}${prof.about ? `, ueber=${prof.about}` : ""}${prof.playstyle ? `, playstyle=${prof.playstyle}` : ""}${prof.favorite_block ? `, lieblingsblock=${prof.favorite_block}` : ""}${prof.interests?.length ? `, interessen=${prof.interests.join(", ")}` : ""}` : "";
       const memBlock = mems?.length ? `\nErinnerungen:\n${mems.map((m: any) => `- ${m.content}`).join("\n")}` : "";
-      const sys = `${personaPrompt}${profBlock}${memBlock}`;
+      // Nur auf dem eigenen MythosCraft-Server (Master-Key) das Plugin-Wissen mitgeben, nicht auf fremden Servern.
+      const serverBlock = key === MASTER_KEY && isServerQuestion(`mythoscraft ${userText}`)
+        ? `\nServer-Wissen MythosCraft (aus dem Plugin, verbindlich, nichts erfinden):\n${formatServerArticles(relevantServerArticles(userText, 2))}`
+        : "";
+      const sys = `${personaPrompt}${profBlock}${memBlock}${serverBlock}`;
       const reply = await callAI(sys, `Spieler ${player} fragt: ${userText}`, LOVABLE_API_KEY);
       const trimmed = reply.replace(/[*_`#>]/g, "").slice(0, 220);
       await supabase.from("mc_events").insert({
@@ -188,7 +193,10 @@ Deno.serve(async (req) => {
       if (!message.toLowerCase().startsWith(trigger.toLowerCase())) return json({ ok: true, ignored: true });
       const userText = message.slice(trigger.length).trim();
       if (!userText) return json({ reply: `Hi ${player}, frag mich was nach ${trigger}!` });
-      const reply = await callAI(personaPrompt, `Spieler ${player} fragt: ${userText}`, LOVABLE_API_KEY);
+      const chatSys = key === MASTER_KEY
+        ? `${personaPrompt}\nServer-Wissen MythosCraft (aus dem Plugin, verbindlich, nichts erfinden):\n${formatServerArticles(relevantServerArticles(userText, 2))}`
+        : personaPrompt;
+      const reply = await callAI(chatSys, `Spieler ${player} fragt: ${userText}`, LOVABLE_API_KEY);
       const trimmed = reply.replace(/[*_`#>]/g, "").slice(0, 220);
       await supabase.from("mc_events").insert({
         server_id: server.id, event_type: "chat", player_name: player, content: userText, ai_response: trimmed,

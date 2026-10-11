@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Shield, Users, Phone, Gift } from "lucide-react";
 import { toast } from "sonner";
 import PhoneInbox from "@/components/PhoneInbox";
 import RewardsAdmin from "@/components/RewardsAdmin";
+import { SERVER_KNOWLEDGE, SERVER_KNOWLEDGE_VERSION } from "../../supabase/functions/_shared/serverKnowledge.ts";
 
 type Article = { id: string; title: string; category: string; body: string; is_published: boolean; created_at: string };
 type UserRow = { user_id: string; email: string; display_name: string | null; role?: string };
@@ -43,6 +44,21 @@ const Admin = () => {
     }
     setOpen(false); setEditing(null); loadArticles();
     toast.success("Gespeichert");
+  };
+  // Server-Wissen aus dem MythosCraft-Plugin in die Knowledge Base schreiben (aktualisiert vorhandene Plugin-Artikel).
+  const importPluginKnowledge = async () => {
+    const { data: existing } = await supabase.from("knowledge_articles").select("id,title,category").like("category", "plugin-%");
+    let n = 0;
+    for (const a of SERVER_KNOWLEDGE) {
+      const hit = existing?.find((e: any) => e.title === a.title && e.category === a.category);
+      const { error } = hit
+        ? await supabase.from("knowledge_articles").update({ body: a.body, is_published: true }).eq("id", hit.id)
+        : await supabase.from("knowledge_articles").insert({ title: a.title, category: a.category, body: a.body, is_published: true });
+      if (!error) n++;
+    }
+    loadArticles();
+    if (n === SERVER_KNOWLEDGE.length) toast.success(`${n} Plugin-Artikel eingespielt (${SERVER_KNOWLEDGE_VERSION})`);
+    else toast.error(`Nur ${n}/${SERVER_KNOWLEDGE.length} Artikel gespeichert – Admin-Rechte?`);
   };
   const del = async (id: string) => { if (!confirm("Löschen?")) return; await supabase.from("knowledge_articles").delete().eq("id", id); loadArticles(); };
 
@@ -77,6 +93,10 @@ const Admin = () => {
           <TabsContent value="kb" className="mt-6">
             <div className="flex justify-between items-center mb-4">
               <p className="text-sm text-muted-foreground">{articles.length} Artikel · Werden automatisch in den Support-Mode injiziert</p>
+              <div className="flex gap-2">
+              <Button variant="outline" onClick={importPluginKnowledge} title="Befehle, Ränge, Events, Kisten usw. aus dem Server-Plugin übernehmen">
+                Plugin-Wissen einspielen
+              </Button>
               <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
                 <DialogTrigger asChild>
                   <Button onClick={() => setEditing({ id: "", title: "", category: "general", body: "", is_published: true } as Article)} className="bg-gradient-primary text-primary-foreground hover:opacity-90">
@@ -97,6 +117,7 @@ const Admin = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
             <div className="glass-strong rounded-2xl divide-y divide-border/50">
               {articles.map(a => (
