@@ -340,8 +340,9 @@ ipcMain.handle("cloudpc:open", (_e, url) => {
     // Anmeldung (z. B. Google) darf im Fenster weiterleiten; nur Nicht-Web-Adressen gehen nach draußen.
     cloudPc.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
     cloudPc.on("closed", () => { cloudPc = null; });
-    cloudPc.loadURL(url);
   }
+  // Neue Aufgabe oder erneutes Öffnen: Seite (neu) laden, damit eine mitgegebene Aufgabe startet.
+  if (url.includes("?task=") || !cloudPc.webContents.getURL()) cloudPc.loadURL(url);
   cloudPc.show(); cloudPc.focus();
   return { ok: true };
 });

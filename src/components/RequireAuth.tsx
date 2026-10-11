@@ -6,7 +6,8 @@ const RequireAuth = ({ children, adminOnly = false, skipOnboarding = false }: { 
   const { user, loading, isAdmin, profile } = useAuth();
   const loc = useLocation();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (!user) return <Navigate to="/auth" replace state={{ from: loc.pathname }} />;
+  // Nach dem Anmelden zurück zur gewünschten Seite (z. B. /cloud-pc aus der Code-App), nicht immer in den Chat.
+  if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace state={{ from: loc.pathname }} />;
   if (adminOnly && !isAdmin) return <Navigate to="/app" replace />;
   if (!skipOnboarding && profile && !profile.onboarded && loc.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;

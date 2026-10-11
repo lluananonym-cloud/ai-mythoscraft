@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useSearchParams } from "react-router-dom";
 import LabsShell from "@/components/labs/LabsShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,18 @@ export default function CloudPc() {
     if (!selected || typingRef.current) return;
     setDraft(fs.isFile(selected) ? fs.read(selected) : "");
   }, [selected, version, fs]);
+
+  // Aufgabe aus dem Chat (/cloudpc <aufgabe>) oder aus der Code-App direkt starten.
+  const [params, setParams] = useSearchParams();
+  const autoTask = useRef(params.get("task"));
+  useEffect(() => {
+    const t = autoTask.current?.trim();
+    if (!t) return;
+    autoTask.current = null;
+    setParams({}, { replace: true });
+    void startAgent(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Links und Fehler aus der Vorschau.
   useEffect(() => {

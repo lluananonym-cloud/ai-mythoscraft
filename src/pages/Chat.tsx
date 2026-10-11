@@ -58,6 +58,7 @@ const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Song mit Gesang erzeugen (1–3 Minuten)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
+  { cmd: "/cloudpc",   args: "[aufgabe]",       icon: Monitor,   desc: "Mythos Cloud-PC: Agent mit eigenem Computer, du schaust live zu (kostenlos)" },
   { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
   { cmd: "/browser",   args: "[anweisung]",     icon: Puzzle,    desc: "Deinen echten Browser steuern per Mythos-Erweiterung (Pro)" },
   { cmd: "/research",  args: "<thema>",         icon: Globe,     desc: "Deep Research mit Web-Suche" },
@@ -497,6 +498,14 @@ const Chat = () => {
         return;
       }
       text = `🎯 Ziel: ${goalText}`;
+    }
+    // /cloudpc — Mythos Cloud-PC öffnen, optional direkt mit Aufgabe
+    const pcMatch = text.match(/^\/(?:cloudpc|cloud-pc|pc|computer)\b\s*([\s\S]*)$/i);
+    if (pcMatch) {
+      if (!override) setInput("");
+      const t = pcMatch[1].trim();
+      nav(t ? `/cloud-pc?task=${encodeURIComponent(t)}` : "/cloud-pc");
+      return;
     }
     if (sub.chatLimitReached) { setPaywall({ open: true, reason: `Du hast dein tägliches Free-Limit (${20} Chats) erreicht.` }); return; }
     if (wantsImage && !sub.canGenerateImage) { setPaywall({ open: true, reason: "Bilder generieren ist eine Pro-Funktion." }); return; }
