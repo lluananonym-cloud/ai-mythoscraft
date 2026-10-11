@@ -326,6 +326,25 @@ ipcMain.handle("config:open", (_e, which, cwd) => {
 
 // ---------- Live-Vorschau: eigenes Fenster, lädt bei Dateiänderungen neu ----------
 let preview = null, watcher = null, reloadTimer = null;
+// Mythos Cloud-PC: eigenes Fenster mit der Cloud-PC-Seite der Website. Der Rechner läuft dort im Browser,
+// die Anmeldung bleibt in einer eigenen, dauerhaften Sitzung gespeichert.
+let cloudPc = null;
+ipcMain.handle("cloudpc:open", (_e, url) => {
+  url = String(url || "");
+  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
+  if (!cloudPc || cloudPc.isDestroyed()) {
+    cloudPc = new BrowserWindow({ width: 1320, height: 860, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Cloud-PC",
+      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
+    cloudPc.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
+    // Anmeldung (z. B. Google) darf im Fenster weiterleiten; nur Nicht-Web-Adressen gehen nach draußen.
+    cloudPc.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
+    cloudPc.on("closed", () => { cloudPc = null; });
+    cloudPc.loadURL(url);
+  }
+  cloudPc.show(); cloudPc.focus();
+  return { ok: true };
+});
 ipcMain.handle("preview:open", (_e, target, cwd) => {
   let url = String(target || "").trim();
   if (!url) {

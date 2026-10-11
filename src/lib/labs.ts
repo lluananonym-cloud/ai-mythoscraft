@@ -111,7 +111,7 @@ export function shrinkImage(file: File, max = 1280): Promise<string> {
 }
 
 // ---------- Eigene Apps (aus Foto zu App, KI-Team und Marktplatz) ----------
-export type MyApp = { id: string; title: string; html: string; source: "foto" | "team" | "markt"; created_at: string };
+export type MyApp = { id: string; title: string; html: string; source: "foto" | "team" | "markt" | "pc"; created_at: string };
 const APPS_KEY = "mythos.labs.apps";
 
 export function listMyApps(): MyApp[] {
