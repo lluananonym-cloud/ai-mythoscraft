@@ -4,7 +4,7 @@
 // {"name":…,"arguments":{…}} statt flacher Felder, echte Zeilenumbrüche in Strings oder abgeschnittenes JSON.
 // Nichts davon darf als Rohtext im Chat landen.
 
-const TOOL_NAMES = ["run", "read", "edit", "write", "search", "ls", "websearch", "fetch", "cloud", "todo"];
+const TOOL_NAMES = ["run", "start", "logs", "stop", "serve", "check", "verify", "read", "edit", "write", "search", "ls", "websearch", "fetch", "cloud", "todo"];
 const TOOL_OPEN_RE = /<(tool_call|tool_use|tool)(?:\s[^>]*)?>/i;
 // Ein ganzer Block – auch nicht geschlossen (dann bis zum Textende).
 const TOOL_BLOCK_RE = /<(tool_call|tool_use|tool)(?:\s[^>]*)?>[\s\S]*?(?:<\/\1\s*>|$)/gi;
@@ -96,4 +96,40 @@ function toolProblem(t, extra) {
   }
   if (t.name === "browser") return extra.browser ? "" : "FEHLER: Das Browser-Plugin ist nicht verbunden. " + list + tail;
   return TOOL_NAMES.includes(t.name) ? "" : "FEHLER: Werkzeug „" + t.name + "“ gibt es nicht. " + list + tail;
+}
+
+// Befehle, die nicht von selbst enden (Dev-Server, Watcher, Bots) → im Hintergrund statt mit run.
+const SERVER_RES = [
+  /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|preview|watch)\b(?!\s*:?\s*(?:build|test))/i,
+  /\b(?:npx\s+|bunx\s+)?vite(?:\s+(?:dev|serve|preview))?(?:\s+--?\w[\w-]*(?:[ =]\S+)?)*\s*(?:$|[;&|])/i,
+  /\b(?:next|nuxt|nuxi|astro|remix|gatsby)\s+(?:dev|start|develop|preview)\b/i,
+  /\b(?:webpack(?:-dev-server|\s+serve)|react-scripts\s+start|ng\s+serve|vue-cli-service\s+serve|parcel(?!\s+build)\b)/i,
+  /\b(?:live-server|http-server|lite-server|browser-sync)\b|\bnpx\s+serve\b|\bserve\s+(?:-[sl]\b|\.|\S*dist|\S*build|\S*public)/i,
+  /\b(?:nodemon|ts-node-dev|tsx\s+watch|node\s+--watch)\b|\s--watch\b/i,
+  /\bpython\d?(?:\.exe)?\s+-m\s+http\.server\b|\bphp\s+-S\b|\bflask\s+run\b|\buvicorn\b|\bgunicorn\b|\bmanage\.py\s+runserver\b|\brails\s+s(?:erver)?\b|\b(?:jekyll|hugo)\s+serve(?:r)?\b/i,
+  /\bnode\s+(?:\S*[\\/])?(?:server|app|index|bot)\.(?:c|m)?js\b/i,
+  /\belectron\s+\./i,
+];
+const looksLikeServer = (cmd) => SERVER_RES.some((re) => re.test(String(cmd || "")));
+
+// Gegen oberflächliche Arbeit: Hat Mythos nach seinen Änderungen wirklich geprüft?
+const WEB_FILE_RE = /\.(?:html?|css|s[ac]ss|jsx?|tsx?|mjs|vue|svelte)$/i;
+function verifyTracker() {
+  const st = { changed: false, web: false, verified: false, checked: false, nudges: 0 };
+  return {
+    note(t, result) {
+      const ok = !/^(?:FEHLER|BLOCKIERT|Vom Nutzer)/.test(String(result || ""));
+      if ((t.name === "write" || t.name === "edit") && ok) { st.changed = true; st.verified = false; if (WEB_FILE_RE.test(String(t.path || ""))) { st.web = true; st.checked = false; } }
+      if (t.name === "verify") st.verified = true;
+      if (t.name === "run" && /\b(?:build|test|tsc|lint|pytest|cargo|go\s+(?:build|test)|mvn)\b/i.test(String(t.cmd || ""))) st.verified = true;
+      if (t.name === "check" && /ERGEBNIS: ✓/.test(String(result || ""))) st.checked = true;
+    },
+    /** Hinweis fürs Modell, falls noch nicht geprüft – oder "". Höchstens 3-mal. */
+    nudge() {
+      if (st.nudges >= 3) return "";
+      if (st.changed && !st.verified) { st.nudges++; st.verified = true; return "Bevor du fertig bist: Du hast Dateien geändert, aber noch nicht geprüft. Führe jetzt verify aus (oder passende Build-/Test-Befehle), behebe jedes ✗ und antworte erst danach."; }
+      if (st.web && !st.checked) { st.nudges++; st.checked = true; return "Bevor du fertig bist: Du hast an einer Webseite gearbeitet, sie aber nicht im Browser geprüft. Starte sie (serve für statische Seiten, start für Dev-Server/Backends) und prüfe sie mit check. Behebe alles, was check als ✗ meldet (weiße Seite, Konsolenfehler, fehlende Dateien, „Cannot GET /“), prüfe erneut und antworte dann im Antwortformat mit der Adresse."; }
+      return "";
+    },
+  };
 }

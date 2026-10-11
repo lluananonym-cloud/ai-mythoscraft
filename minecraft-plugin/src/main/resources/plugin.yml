@@ -3,7 +3,7 @@ version: '1.0.0'
 main: online.mythoscraft.ai.MythosAIPlugin
 api-version: '1.20'
 author: MythosCraft
-description: Verbindet Server mit ai-mythoscraft.lovable.app (Chat, Events, Link-Codes).
+description: Verbindet Server mit mythos-core-ai-ai-ai.lovable.app (Chat, Events, Link-Codes).
 commands:
   ai:
     description: Chatte mit Mythos AI. /ai <text>, /ai link, /ai unlink, /ai stats

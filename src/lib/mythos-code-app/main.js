@@ -117,7 +117,7 @@ async function discordApi(token, method, apiPath, body) {
   try {
     const r = await fetch("https://discord.com/api/v10" + apiPath, {
       method: method || "GET",
-      headers: Object.assign({ Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://mythos-core-ai-ai.lovable.app, 1.0) MythosCode" }, body ? { "content-type": "application/json" } : {}),
+      headers: Object.assign({ Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://mythos-core-ai-ai-ai.lovable.app, 1.0) MythosCode" }, body ? { "content-type": "application/json" } : {}),
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await r.text();
@@ -196,7 +196,7 @@ const mcpTokens = {
   del: (url) => { const a = readTokens(); delete a[url]; writeTokens(a); },
 };
 const mcp = new McpManager({ onChange: () => send("mcp-changed", mcp.status()), store: mcpTokens, openExternal: (u) => shell.openExternal(u) });
-app.on("will-quit", () => { mcp.stopAll(); killAll(); });
+app.on("will-quit", () => { mcp.stopAll(); killAll(); stopAllBackground(); });
 
 // System-Prompt: Werkzeuge + verbundene MCP-Werkzeuge + Gedächtnis + Ziel.
 function mcpPrompt() {
@@ -219,6 +219,8 @@ const FILES_PROMPT = "\n\nDateien schicken: Will der Nutzer eine Datei BEKOMMEN 
   "Der Chat zeigt daraus eine Datei-Karte, die er mit einem Klick speichern kann; mehrere Karten kann er gesammelt in einen Ordner speichern. " +
   "Tabellen als .csv (Semikolon), Grafiken als .svg, Dokumente als .md oder .html. Kleine Binärdateien nur mit sicher bekannten Bytes: ```datei:name.png;base64. " +
   "Dateien im Projekt änderst du weiterhin mit write/edit.";
+ipcMain.handle("bg:list", () => [...BG.values()].filter((j) => j.code == null).map((j) => ({ id: j.id, cmd: j.cmd, url: j.url, cwd: j.cwd })));
+ipcMain.handle("bg:stop", (_e, id) => bgStop(id));
 ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + FILES_PROMPT + mcpPrompt() + browserPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
 ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, review: REVIEW_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
 
@@ -282,7 +284,10 @@ ipcMain.handle("tool", async (_e, t, cwd, runId) => {
   const blocked = pre.filter((h) => h.code === 2);
   if (blocked.length) return { result: "Durch Hook blockiert: " + (blocked.map((h) => h.out).join("\n") || "ohne Begründung"), hooks: pre };
   let r;
-  if (t.name === "run") {
+  // Server & Watcher enden nie → automatisch im Hintergrund starten, statt die Aufgabe zu blockieren.
+  if (t.name === "run" && looksLikeServer(t.cmd)) t = { name: "start", cmd: t.cmd };
+  if (isDevTool(t)) r = await appDevTool(t, root, runId);
+  else if (t.name === "run") {
     const x = await runLive(t.cmd, root, runId, "tool-output");
     r = { result: (x.text + (x.code ? "\nExit: " + x.code : "")).slice(-8000) || "(keine Ausgabe)", code: x.code };
   } else if (isWebTool(t)) r = await webTool(t);
@@ -294,6 +299,78 @@ ipcMain.handle("tool", async (_e, t, cwd, runId) => {
   if (notes.length) r.result += "\n\nHook-Ausgabe:\n" + notes.join("\n");
   return { ...r, hooks: pre.concat(post) };
 });
+
+// ---------- start/logs/stop/serve/verify/check – check rendert die Seite zusätzlich in einem unsichtbaren Fenster ----------
+async function appDevTool(t, root, runId) {
+  const r = await devTool(t, root, { onChunk: (s) => send("tool-output", { id: runId, chunk: s }), track: (p) => children.set(runId, p) });
+  if (t.name === "verify") children.delete(runId);
+  if (t.name === "check" && wantsRender(r)) {
+    const rv = await renderCheck(r.url).catch((e) => { logError(e); return null; });
+    r.result = rv ? checkReport(r.url, r.http, renderVerdict(rv)) : checkReport(r.url, r.http, null, "ℹ Browser-Test nicht möglich – nur HTTP-Prüfung.");
+    if (rv && rv.image) r.image = rv.image;
+  }
+  const out = { result: r.result };
+  if (r.image) out.image = r.image;
+  if (r.url) out.url = r.url;
+  if (t.name === "start" && r.code == null && r.id) out.bg = { id: r.id, url: r.url || "" };
+  return out;
+}
+// Netzwerkfehler je Prüffenster (webContents-ID → Liste).
+const checkFails = new Map();
+let checkSession = null;
+function getCheckSession() {
+  if (checkSession) return checkSession;
+  checkSession = session.fromPartition("mythos-check");
+  checkSession.webRequest.onCompleted((d) => { const l = checkFails.get(d.webContentsId); if (l && d.statusCode >= 400 && !/favicon\.ico/.test(d.url)) l.push("HTTP " + d.statusCode + " " + d.url); });
+  checkSession.webRequest.onErrorOccurred((d) => { const l = checkFails.get(d.webContentsId); if (l && !/ERR_ABORTED/.test(d.error) && !/favicon\.ico/.test(d.url)) l.push(d.error + " " + d.url); });
+  return checkSession;
+}
+/** Seite wie im echten Browser laden: sichtbarer Inhalt, Konsolenfehler, fehlgeschlagene Dateien, Screenshot. */
+function renderCheck(url) {
+  return new Promise((resolve) => {
+    const win = new BrowserWindow({ show: false, width: 1280, height: 800, paintWhenInitiallyHidden: true,
+      webPreferences: { session: getCheckSession(), sandbox: true, contextIsolation: true, backgroundThrottling: false } });
+    const wc = win.webContents, id = wc.id, errors = [];
+    checkFails.set(id, []);
+    let loadErr = "", done = false;
+    wc.setWindowOpenHandler(() => ({ action: "deny" }));
+    wc.on("console-message", (e, level, message, line, source) => {
+      // Electron 31: (event, level, message, line, sourceId) · neuere: Felder am Event.
+      const lv = typeof level === "number" ? level : e && e.level, msg = typeof message === "string" ? message : e && e.message;
+      const src = source || (e && e.sourceId) || "", ln = line || (e && e.lineNumber) || "";
+      if ((lv === 3 || lv === "error") && msg && errors.length < 30) errors.push(msg + (src ? " (" + String(src).split("/").pop() + ":" + ln + ")" : ""));
+    });
+    wc.on("did-fail-load", (_e, code, desc, _u, main) => { if (main && code !== -3) loadErr = desc + " (" + code + ")"; });
+    const finish = async () => {
+      if (done) return; done = true; clearTimeout(hard);
+      let info = { text: 0, vis: 0, sample: "", overlay: "" }, image = null;
+      try {
+        info = await Promise.race([wc.executeJavaScript(`(() => {
+          const b = document.body; if (!b) return { text: 0, vis: 0, sample: "", overlay: "" };
+          const t = (b.innerText || "").trim();
+          let vis = 0;
+          for (const el of b.querySelectorAll("img,svg,canvas,video,button,input,textarea,select,iframe")) { const r = el.getBoundingClientRect(); if (r.width > 4 && r.height > 4) vis++; }
+          const ov = document.querySelector("vite-error-overlay");
+          const overlay = ov ? ((ov.shadowRoot && ov.shadowRoot.textContent) || "Vite-Fehler").replace(/\s+/g, " ").trim()
+            : (document.querySelector("nextjs-portal") ? "Next.js-Fehleranzeige" : "");
+          return { text: t.length, vis, sample: t.replace(/\s+/g, " ").slice(0, 200), overlay, title: document.title };
+        })()`), new Promise((_, rej) => setTimeout(() => rej(new Error("Zeitüberschreitung")), 5000))]);
+      } catch (e) { errors.push("Seite konnte nicht ausgewertet werden: " + e.message); }
+      try {
+        const img = await wc.capturePage();
+        if (!img.isEmpty()) { const small = img.getSize().width > 1024 ? img.resize({ width: 1024 }) : img; image = { media_type: "image/jpeg", data: small.toJPEG(70).toString("base64") }; }
+      } catch { /* kein Screenshot */ }
+      const failed = checkFails.get(id) || []; checkFails.delete(id);
+      if (loadErr) errors.unshift("Seite lädt nicht: " + loadErr);
+      try { win.destroy(); } catch { /* egal */ }
+      resolve(Object.assign({ errors, failed, image }, info));
+    };
+    const hard = setTimeout(finish, 30000);
+    wc.on("did-finish-load", () => setTimeout(finish, 2500));
+    wc.on("did-fail-load", (_e, code, _d, _u, main) => { if (main && code !== -3) setTimeout(finish, 300); });
+    win.loadURL(url).catch(() => {});
+  });
+}
 
 // ---------- Automatisch testen ----------
 ipcMain.handle("tests:detect", (_e, cwd) => {

@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
         code = String(Math.floor(100000 + Math.random() * 900000));
         await supabase.from("mc_link_codes").insert({ code, mc_uuid: mcUuid, mc_name: player, server_id: server.id });
       }
-      return json({ code, verify_code: code, expires_in: 600, website: "https://ai-mythoscraft.lovable.app/dashboard" });
+      return json({ code, verify_code: code, expires_in: 600, website: "https://mythos-core-ai-ai-ai.lovable.app/dashboard" });
     }
 
     if (action === "__unlink__") {
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         }
         return json({
           linked: false, code, verify_code: code,
-          reply: `Hi ${player}! Dein Verifizierungs-Code: ${code}\nGib ihn ein auf ai-mythoscraft.lovable.app -> Dashboard -> Minecraft verknüpfen.`,
+          reply: `Hi ${player}! Dein Verifizierungs-Code: ${code}\nGib ihn ein auf mythos-core-ai-ai-ai.lovable.app -> Dashboard -> Minecraft verknüpfen.`,
         });
       }
 

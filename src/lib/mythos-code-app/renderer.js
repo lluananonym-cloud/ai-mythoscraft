@@ -81,6 +81,16 @@ function draw(it, i) {
     sv.onclick = () => { const a = document.createElement("a"); a.href = it.src; a.download = "mythos-bild.jpg"; a.click(); };
     b.appendChild(sv); d.append(ic, b);
   }
+  else if (it.cls === "check") {
+    // Seitenprüfung: Ergebnis + Screenshot, den Mythos gesehen hat.
+    d = el("details", "out check"); d.open = !it.ok;
+    d.appendChild(el("summary", "", (it.ok ? "✅ Seite geprüft: " : "⚠ Seitenprüfung: ") + (it.url || "")));
+    const b = el("div", "checkbody");
+    if (it.src) { const im = el("img"); im.src = it.src; im.alt = "Screenshot"; b.appendChild(im); }
+    b.appendChild(el("pre", "", it.text));
+    if (it.url) { const o = el("button", "chip", "🌐 Im Browser öffnen"); o.onclick = () => window.mythos.open(it.url); b.appendChild(o); }
+    d.appendChild(b);
+  }
   else if (it.cls === "out") { d = el("details", "out"); d.append(el("summary", "", "▸ Ausgabe von " + (it.cmd || "Befehl")), el("pre", "", it.text)); }
   else if (it.cls === "done") {
     d = el("div", "t done", it.text);
@@ -90,7 +100,7 @@ function draw(it, i) {
   const box = $("col").querySelector(":scope > .runbox"); if (box) $("col").insertBefore(d, box); else $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
-const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai.lovable.app/werbung)_";
+const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai-ai-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai-ai.lovable.app/werbung)_";
 let adCache = null;
 async function pickAd() {
   try { if (!adCache || Date.now() - adCache.at > 6e5) { const j = await (await post("ad-review", { action: "list" })).json(); adCache = { at: Date.now(), ads: j.ads || [] }; } } catch (e) { adCache = { at: Date.now(), ads: [] }; }
@@ -98,7 +108,7 @@ async function pickAd() {
   let ad = pool[0]; for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
   if (ad.house) return AD_MD;
   const s = (x) => String(x || "").replace(/[\[\]()<>*_`]/g, ""); const link = /^https?:\/\//.test(ad.link) ? ad.link : "https://" + ad.link;
-  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai.lovable.app/werbung)_";
+  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai-ai.lovable.app/werbung)_";
 }
 function adDue(tier) {
   const today = new Date().toDateString();
@@ -318,6 +328,12 @@ function processQueue(c) { if (isBusy(c) || !c.queue || !c.queue.length) return;
 
 function toolLabel(t) {
   if (t.name === "run") return "⚙ run " + t.cmd;
+  if (t.name === "start") return "▶ startet im Hintergrund: " + t.cmd;
+  if (t.name === "serve") return "🌐 Webserver für " + (t.path || ".");
+  if (t.name === "check") return "🔍 prüft Seite " + (t.url || t.path || "");
+  if (t.name === "verify") return "🧪 prüft Projekt (Build, Typecheck, Tests …)";
+  if (t.name === "logs") return "📜 Logs " + (t.id || "");
+  if (t.name === "stop") return "■ stoppt " + (t.id || "");
   if (t.name === "search") return "🔎 search /" + t.pattern + "/" + (t.glob ? " " + t.glob : "");
   if (t.name === "edit" || t.name === "write") return "✎ " + t.name + " " + t.path;
   if (t.name === "websearch") return "🌐 websearch " + t.query;
@@ -327,7 +343,19 @@ function toolLabel(t) {
   if (t.name === "cloud") return "☁ Mythos Cloud verbinden: " + (t.app || "App");
   return "⚙ " + t.name + " " + (t.path || "");
 }
-const needsConfirm = (t) => ["run", "write", "edit", "mcp", "cloud"].includes(t.name);
+const needsConfirm = (t) => ["run", "start", "verify", "write", "edit", "mcp", "cloud"].includes(t.name);
+/** Werkzeug-Ergebnis in den Verlauf; Screenshots nur in der neuesten Seitenprüfung mitschicken (spart Tokens). */
+function pushResult(hist, r, extra) {
+  const text = "Werkzeug-Ergebnis:\n" + r.result + (extra || "");
+  if (!r.image) { hist.push({ role: "user", content: text }); return; }
+  hist.forEach((m) => { if (m.shot) { delete m.images; delete m.shot; } });
+  hist.push({ role: "user", content: text + "\n\n(Screenshot der Seite anbei – sieh ihn dir genau an: Sieht sie so aus, wie der Nutzer es will? Leer, kaputt oder unschön → beheben.)", images: [r.image], shot: true });
+}
+/** Seitenprüfung im Chat zeigen. */
+function showCheck(c, r) {
+  const ok = /ERGEBNIS: ✓/.test(r.result || "");
+  addTo(c, "check", String(r.result || "").slice(0, 4000), { ok: ok, url: r.url || "", src: r.image ? "data:" + r.image.media_type + ";base64," + r.image.data : "" });
+}
 // Mythos Cloud: Backend + KI-Gateway für die gebaute App verbinden, dann mythos-cloud.js ins Projekt schreiben.
 async function runTool(t, folder, id) {
   if (t.name !== "cloud") return window.mythos.tool(t, folder, id);
@@ -352,7 +380,8 @@ async function runAgent(c, opts) {
   run.git = run.folder ? await window.mythos.git.info(run.folder).catch(() => null) : null;
   // /goal hat kein Schrittlimit: es endet nur, wenn das Ziel erreicht ist oder der Nutzer stoppt.
   const goal = c.goal || "", max = goal ? Infinity : 400, autoTest = autoTestOn(run.folder);
-  let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null, verified = false, toolFails = 0;
+  let steps = 0, nudges = 0, finished = false, reached = false, summary = "", changed = false, testRounds = 0, testCmd = null, toolFails = 0;
+  const tracker = verifyTracker();
   const openTodos = () => { const it = run.todoItem; return it && it.items ? it.items.filter((x) => !x.done) : []; };
   const takeInject = () => { const inj = run.inject || []; run.inject = [];
     inj.forEach((it) => { const files = (it.att || []).filter((f) => !f.image);
@@ -367,7 +396,7 @@ async function runAgent(c, opts) {
   try {
     // Multi-Agent: neue Aufgaben erst aufteilen und parallel bearbeiten lassen.
     if (opts && opts.fresh && cfg.multi && await multiAgentPhase(run, c)) changed = true;
-    if (opts && opts.fresh) c.history.push({ role: "user", content: "ARBEITSWEISE: Lege bei mehrstufigen Aufgaben zuerst mit dem todo-Werkzeug einen Plan an. Untersuche das Projekt (ls/search/read), bevor du änderst. Ändere gezielt. Wenn ein Befehl oder Werkzeug fehlschlägt: Ursache lesen, anderen Weg probieren – nie aufgeben. Prüfe am Ende selbst (Build/Tests/Datei erneut lesen). Höre erst auf, wenn ALLES erledigt ist." });
+    if (opts && opts.fresh) c.history.push({ role: "user", content: "ARBEITSWEISE: Lege bei mehrstufigen Aufgaben zuerst mit dem todo-Werkzeug einen Plan an. Untersuche das Projekt (ls/search/read), bevor du änderst. Ändere gezielt und vollständig. Wenn ein Befehl oder Werkzeug fehlschlägt: Ursache lesen, anderen Weg probieren – nie aufgeben. Prüfe am Ende wirklich: verify (Build/Typecheck/Tests) und bei Webseiten serve/start + check. Server immer mit start, nie mit run. Höre erst auf, wenn ALLES erledigt und geprüft ist, und antworte dann im Antwortformat." });
     for (; steps < max && !run.stopped; steps++) {
       if (goal) { c.goalStep = (c.goalStep || 0) + 1; if (c === chat) renderGoal(); await goalCompact(run, c); if (run.stopped) break; }
       takeInject();
@@ -392,8 +421,9 @@ async function runAgent(c, opts) {
         // Offene Punkte in der Aufgabenliste -> nicht mittendrin aufhören.
         const open = openTodos();
         if (open.length && nudges < 8) { nudges++; c.history.push({ role: "user", content: "Es sind noch " + open.length + " Punkte offen: " + open.map((x) => x.text).join("; ") + ". Mach direkt weiter mit dem nächsten Werkzeug. Wenn etwas unmöglich ist, markiere es erledigt und erkläre warum." }); saveChat(c); continue; }
-        // Selbstprüfung nach Änderungen (gegen oberflächliche Arbeit).
-        if (changed && !verified && !autoTest) { verified = true; c.history.push({ role: "user", content: "Prüfe deine Änderungen jetzt kritisch: lies die geänderten Dateien noch einmal, führe – falls vorhanden – Build/Lint/Tests aus und behebe jeden Fehler. Antworte erst danach mit einer kurzen Zusammenfassung ohne Werkzeug." }); saveChat(c); continue; }
+        // Selbstprüfung nach Änderungen (gegen oberflächliche Arbeit): verify, bei Webseiten zusätzlich check.
+        const vn = tracker.nudge();
+        if (vn) { activityPush(run, "🔎", "Arbeit selbst prüfen"); c.history.push({ role: "user", content: vn }); saveChat(c); continue; }
         // /goal: Mythos hat aufgehört, ohne das Ziel als erreicht zu melden -> weiter antreiben.
         if (goal && !/ZIEL ERREICHT/.test(out)) {
           if (++nudges % 40 === 0) noteTo(c, "🎯 Mythos hängt beim Ziel – versucht es weiter mit einem anderen Ansatz (Stopp mit Esc).");
@@ -424,8 +454,10 @@ async function runAgent(c, opts) {
       nudges = 0;
       // Kaputte oder erfundene Aufrufe nie anzeigen, sondern dem Modell erklären, was es gibt.
       if (pb.error) { c.history.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON in <tool>…</tool>; Zeilenumbrüche in Strings als \\n escapen." }); continue; }
-      const t = pb.tool, bad = toolProblem(t, toolExtra());
+      let t = pb.tool; const bad = toolProblem(t, toolExtra());
       if (bad) { c.history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); saveChat(c); continue; }
+      // Server & Watcher enden nie → im Hintergrund starten, damit Mythos fertig wird.
+      if (t.name === "run" && looksLikeServer(t.cmd)) t = { name: "start", cmd: t.cmd };
       if (t.name !== "todo") addTo(c, "tool", toolLabel(t));
       activityPush(run, t.name === "run" ? "⌘" : t.name === "mcp" ? "🔌" : t.name === "browser" ? "◎" : (t.name === "edit" || t.name === "write") ? "✎" : "•", toolLabel(t));
       let r;
@@ -433,16 +465,19 @@ async function runAgent(c, opts) {
       else if ((r = await safetyGate(c, t))) { /* Sicherheitsnetz */ }
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Mythos möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
-        if (t.name === "run") run.out = "";
+        if (t.name === "run" || t.name === "start" || t.name === "verify") run.out = "";
         try { r = await runTool(t, run.folder, run.id); }
         catch (e) { r = { result: "FEHLER beim Ausführen: " + e.message + " – probiere einen anderen Weg." }; }
         finally { run.out = null; paintRun(run); }
         (r.hooks || []).filter((h) => h.out || h.code).forEach((h) => noteTo(c, "🪝 " + h.event + ": " + h.command + " → Exit " + h.code + (h.out ? "\n" + h.out.slice(0, 600) : "")));
-        if (t.name === "run") addTo(c, "out", r.result.slice(-4000), { cmd: t.cmd });
+        if (t.name === "run" || t.name === "start" || t.name === "verify") addTo(c, "out", r.result.slice(-4000), { cmd: t.cmd || "Projektprüfung" });
+        if (t.name === "check") showCheck(c, r);
+        if (r.bg && r.bg.url) noteTo(c, "▶ Läuft im Hintergrund: " + r.bg.url + " (" + t.cmd + ")");
         if (r.diff && r.diff.lines.length) { addTo(c, "diff", "", { path: t.path, d: r.diff }); changed = true; }
       }
-      const failed = /^(FEHLER|Exit: [1-9])|\nExit: [1-9]/.test(String(r.result || ""));
-      c.history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + r.result + (failed ? "\n\n(Das ist fehlgeschlagen. Analysiere die Ursache und versuche es anders – nicht aufgeben.)" : "") });
+      tracker.note(t, r.result);
+      const failed = /^(FEHLER|Exit: [1-9])|\nExit: [1-9]|ERGEBNIS: ✗/.test(String(r.result || ""));
+      pushResult(c.history, r, failed ? "\n\n(Das ist fehlgeschlagen. Analysiere die Ursache und versuche es anders – nicht aufgeben.)" : "");
       saveChat(c);
     }
     if (!finished && !run.stopped && steps >= max) noteTo(c, "Schrittlimit (" + max + ") erreicht – mit /weiter macht Mythos weiter.");
@@ -1798,8 +1833,9 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       const pb = parseToolBlock(out), text = pb.text;
       if (!pb.tool && !pb.error) { s.result = text || "(fertig, ohne Bericht)"; break; }
       if (pb.error) { hist.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON." }); continue; }
-      const t = pb.tool, bad = toolProblem(t, toolExtra());
+      let t = pb.tool; const bad = toolProblem(t, toolExtra());
       if (bad) { hist.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); continue; }
+      if (t.name === "run" && looksLikeServer(t.cmd)) t = { name: "start", cmd: t.cmd };
       s.phase = toolLabel(t); update();
       if (t.name !== "todo") addTo(c, "tool", tag + toolLabel(t));
       let r;
@@ -1808,10 +1844,11 @@ async function runSubAgent(run, c, s, n, task, sys, update) {
       else if (needsConfirm(t) && !$("auto").checked && !confirm("Agent " + (s.i + 1) + " möchte ausführen:\n" + toolLabel(t))) r = { result: "Vom Nutzer abgelehnt." };
       else {
         r = await runTool(t, run.folder, s.id);
-        if (t.name === "run") addTo(c, "out", r.result.slice(-3000), { cmd: tag + t.cmd });
+        if (t.name === "run" || t.name === "start" || t.name === "verify") addTo(c, "out", r.result.slice(-3000), { cmd: tag + (t.cmd || "Projektprüfung") });
+        if (t.name === "check") showCheck(c, r);
         if (r.diff && r.diff.lines.length) { addTo(c, "diff", "", { path: tag + t.path, d: r.diff }); s.changed = true; }
       }
-      hist.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + r.result });
+      pushResult(hist, r);
     }
     s.status = run.stopped ? "gestoppt" : "fertig"; s.phase = "";
     if (s.result && !run.stopped) addTo(c, "a", "**" + tag + "Agent " + (s.i + 1) + " – " + s.title + ":** " + s.result);
@@ -2099,7 +2136,7 @@ async function compactChat() {
  * zum Abbrechen oder null zum Weitermachen.
  */
 async function safetyGate(c, t, who) {
-  if (t.name !== "run") return null;
+  if (t.name !== "run" && t.name !== "start") return null;
   const why = await window.mythos.safety.check(t.cmd).catch(() => null);
   if (!why) return null;
   noteTo(c, "🛡 Sicherheitsnetz: " + (who ? who + " – " : "") + "dieser Befehl " + why + ":\n" + t.cmd);

@@ -12,7 +12,7 @@ dem Spieler alle Web-Funktionen ingame.
 ## Config (`plugins/MythosAI/config.yml`)
 
 ```yaml
-website: "https://ai-mythoscraft.lovable.app"   # Basis-URL der Mythos AI Website
+website: "https://mythos-core-ai-ai-ai.lovable.app"   # Basis-URL der Mythos AI Website
 api_key: "sk-mc-DEIN-KEY-HIER"                  # aus dem Web-Admin -> Minecraft
 default_key: "191306"                            # optional shortcut — Plugin akzeptiert diesen "master" Key
 chat_trigger: "!ai"                              # optional zusätzlicher Chat-Trigger

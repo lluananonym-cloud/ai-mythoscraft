@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { McpServer, McpToken } from "@/lib/chatPrefs";
 
 const PROTOCOL = "2025-06-18";
-export const CIMD_URL = "https://mythos-core-ai-ai.lovable.app/oauth/mythos-web.json";
+export const CIMD_URL = "https://mythos-core-ai-ai-ai.lovable.app/oauth/mythos-web.json";
 export const redirectUri = () => `${window.location.origin}/mcp-callback`;
 
 export class McpAuthError extends Error {
