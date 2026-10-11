@@ -9,6 +9,7 @@
 //   profile                               -> { profile }                    (Token)
 //   give { amount }                       -> { profile }                    (Token, nur Owner: /mcc <anzahl>)
 //   players { uuids: string[] }           -> { players: [{ uuid, name, plus }] }  (öffentlich, für Plus-Abzeichen)
+//   channel-stats { url }                 -> { platform, followers, name }  (öffentlich, live von YouTube/TikTok/Twitch/Instagram)
 //   creator-apply { mcName, discord, platform, channelUrl, followers, message } -> { ok }
 //   cosmetics                             -> { cosmetics, equippedCape }    (öffentlich, Token optional)
 //   cosmetic-create { name, imageBase64, frames, frameTimeMs, plusOnly } -> { cosmetic }  (Token, nur Owner)
@@ -47,11 +48,102 @@ const cleanUuid = (u: string) => u.replace(/-/g, "").toLowerCase();
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 type Player = {
-  uuid: string; name: string; plus: boolean; coins: number; is_owner: boolean; equipped_cape: string | null;
+  uuid: string; name: string; plus: boolean; coins: number; is_owner: boolean; creator: boolean;
+  equipped_cape: string | null;
 };
 const publicProfile = (p: Player) => ({
-  uuid: p.uuid, name: p.name, plus: p.plus, coins: p.coins, owner: p.is_owner, equippedCape: p.equipped_cape,
+  uuid: p.uuid, name: p.name, plus: p.plus, coins: p.coins, owner: p.is_owner, creator: p.creator || p.is_owner,
+  equippedCape: p.equipped_cape,
 });
+
+// ---- Live-Abonnenten für das Creator-Programm ----
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Cookie": "SOCS=CAI; CONSENT=YES+1",
+};
+
+/** "1.23M" / "12,345" / "4.5K" -> Zahl */
+function parseCount(raw: string): number {
+  const m = raw.replace(/,/g, "").trim().match(/^([\d.]+)\s*([KMB])?$/i);
+  if (!m) return NaN;
+  const mult = { K: 1e3, M: 1e6, B: 1e9 }[(m[2] ?? "").toUpperCase() as "K" | "M" | "B"] ?? 1;
+  return Math.round(Number(m[1]) * mult);
+}
+
+async function getPage(url: string): Promise<string> {
+  const r = await fetch(url, { headers: BROWSER_HEADERS, redirect: "follow", signal: AbortSignal.timeout(10_000) });
+  if (!r.ok) throw new Error(`Seite antwortet mit ${r.status}`);
+  return await r.text();
+}
+
+const metaTitle = (html: string) =>
+  html.match(/<meta property="og:title" content="([^"]*)"/)?.[1]?.replace(/&amp;/g, "&") ?? null;
+
+async function channelStats(rawUrl: string): Promise<{ platform: string; followers: number; name: string | null }> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Ungültiger Link");
+  }
+  const host = url.hostname.replace(/^(www\.|m\.)/, "").toLowerCase();
+  const first = url.pathname.split("/").filter(Boolean)[0] ?? "";
+
+  if (host === "youtube.com" || host === "youtu.be") {
+    const key = Deno.env.get("YOUTUBE_API_KEY");
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (key) {
+      const q = first.startsWith("@") ? `forHandle=${encodeURIComponent(first)}`
+        : first === "channel" && parts[1] ? `id=${encodeURIComponent(parts[1])}`
+        : `forUsername=${encodeURIComponent(parts[1] ?? first)}`;
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&${q}&key=${key}`);
+      const d = await r.json() as { items?: { snippet: { title: string }; statistics: { subscriberCount: string } }[] };
+      const item = d.items?.[0];
+      if (item) return { platform: "YouTube", followers: Number(item.statistics.subscriberCount) || 0, name: item.snippet.title };
+    }
+    const path = parts.length ? "/" + parts.slice(0, first === "channel" || first === "c" || first === "user" ? 2 : 1).join("/") : "";
+    if (!path) throw new Error("Bitte den Link zu deinem Kanal angeben, nicht zu einem Video");
+    const html = await getPage(`https://www.youtube.com${path}?hl=en&gl=US`);
+    const m = html.match(/"([\d.,]+\s*[KMB]?) subscribers?"/i) ?? html.match(/([\d.,]+\s*[KMB]?) subscribers?/i);
+    if (!m) throw new Error("Abonnenten auf YouTube nicht gefunden");
+    return { platform: "YouTube", followers: parseCount(m[1]), name: metaTitle(html) };
+  }
+
+  if (host === "tiktok.com") {
+    const user = first.replace(/^@/, "");
+    if (!/^[\w.]{2,24}$/.test(user)) throw new Error("Bitte den Link zu deinem TikTok-Profil angeben");
+    const html = await getPage(`https://www.tiktok.com/@${user}`);
+    const m = html.match(/"followerCount":(\d+)/);
+    if (!m) throw new Error("Follower auf TikTok nicht gefunden");
+    const name = html.match(/"nickname":"([^"]*)"/)?.[1] ?? user;
+    return { platform: "TikTok", followers: Number(m[1]), name };
+  }
+
+  if (host === "twitch.tv") {
+    if (!/^\w{3,25}$/.test(first)) throw new Error("Bitte den Link zu deinem Twitch-Kanal angeben");
+    const r = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: { "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko", "Content-Type": "application/json" },
+      body: JSON.stringify({ query: `query { user(login: "${first.toLowerCase()}") { displayName followers { totalCount } } }` }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const d = await r.json() as { data?: { user?: { displayName: string; followers: { totalCount: number } } | null } };
+    const u = d.data?.user;
+    if (!u) throw new Error("Twitch-Kanal nicht gefunden");
+    return { platform: "Twitch", followers: u.followers.totalCount, name: u.displayName };
+  }
+
+  if (host === "instagram.com") {
+    if (!/^[\w.]{1,30}$/.test(first)) throw new Error("Bitte den Link zu deinem Instagram-Profil angeben");
+    const html = await getPage(`https://www.instagram.com/${first}/`);
+    const m = html.match(/content="([\d.,]+\s*[KMB]?) Followers/i);
+    if (!m) throw new Error("Follower auf Instagram nicht gefunden");
+    return { platform: "Instagram", followers: parseCount(m[1]), name: first };
+  }
+
+  throw new Error("Live-Abruf geht für YouTube, TikTok, Twitch und Instagram");
+}
 
 type Cosmetic = {
   id: string; name: string; type: string; texture_path: string; frames: number; frame_time_ms: number;
@@ -127,9 +219,9 @@ async function session(db: ReturnType<typeof admin>, body: Record<string, unknow
     const { data: owner } = await db.from("mcc_players").select("uuid").eq("is_owner", true).maybeSingle();
     if (!owner) {
       const start = Number(await config(db, "owner_start_coins")) || 0;
-      await db.from("mcc_players").update({ is_owner: true, plus: true, updated_at: new Date().toISOString() }).eq("uuid", uuid);
+      await db.from("mcc_players").update({ is_owner: true, plus: true, creator: true, updated_at: new Date().toISOString() }).eq("uuid", uuid);
       const coins = start > 0 ? await db.rpc("mcc_add_coins", { _uuid: uuid, _amount: start, _reason: "owner-start" }) : null;
-      player = { ...player, is_owner: true, plus: true, coins: (coins?.data as number | undefined) ?? player.coins };
+      player = { ...player, is_owner: true, plus: true, creator: true, coins: (coins?.data as number | undefined) ?? player.coins };
     }
   }
 
@@ -251,6 +343,16 @@ Deno.serve(async (req) => {
           .update({ equipped_cape: id, updated_at: new Date().toISOString() }).eq("uuid", p.uuid);
         if (error) throw error;
         return json({ profile: publicProfile({ ...p, equipped_cape: id }) });
+      }
+
+      case "channel-stats": {
+        try {
+          const stats = await channelStats(str(body.url, 300));
+          if (!Number.isFinite(stats.followers)) return json({ error: "Abonnenten konnten nicht gelesen werden" }, 422);
+          return json(stats);
+        } catch (e) {
+          return json({ error: e instanceof Error ? e.message : "Abruf fehlgeschlagen" }, 422);
+        }
       }
 
       case "creator-apply": {
