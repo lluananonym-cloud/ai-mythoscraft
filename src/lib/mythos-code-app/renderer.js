@@ -1336,6 +1336,7 @@ $("mcp").onclick = () => command("/mcp");
 $("modelBtn").onclick = (e) => { e.stopPropagation(); toggleModelMenu(); };
 document.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest(".mpick")) $("modelMenu").style.display = "none"; });
 $("navProj").onclick = (e) => { if (e.target.id !== "btnAddProj") pickProject(); };
+$("navPc").onclick = async () => { const r = await window.mythos.cloudPc(CFG.site.replace(/\/$/, "") + "/cloud-pc"); if (r && r.error) alert(r.error); };
 $("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
 $("artClose").onclick = () => $("artifacts").classList.remove("open");
 $("artifacts").onclick = (e) => { if (e.target === $("artifacts")) $("artifacts").classList.remove("open"); };

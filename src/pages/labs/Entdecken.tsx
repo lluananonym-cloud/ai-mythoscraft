@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import LabsShell from "@/components/labs/LabsShell";
-import { Compass, Swords, Globe2, Camera, Users, CalendarHeart, Store, ChevronRight } from "lucide-react";
+import { Compass, Swords, Globe2, Camera, Users, CalendarHeart, Store, ChevronRight, Monitor } from "lucide-react";
 
 const LABS = [
+  { to: "/cloud-pc", icon: Monitor, title: "Mythos Cloud-PC", text: "Mythos bekommt einen eigenen Computer. Du schaust live zu, wie er baut, recherchiert und testet." },
   { to: "/arena", icon: Swords, title: "Live-Arena", text: "Zwei KI-Modelle, eine Aufgabe. Du stimmst ab, wer gewinnt." },
   { to: "/welt", icon: Globe2, title: "Welt-Modus", text: "Deine Chats, Bilder und Apps als 3D-Insel zum Anklicken." },
   { to: "/foto-app", icon: Camera, title: "Foto zu App", text: "Skizze fotografieren, fertige klickbare App bekommen." },

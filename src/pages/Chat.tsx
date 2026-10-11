@@ -28,7 +28,7 @@ import {
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
   ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
-  Globe2, Compass, ArrowUp, MoreHorizontal,
+  Globe2, Compass, ArrowUp, MoreHorizontal, Monitor,
 } from "lucide-react";
 import { LegalLinks } from "@/components/CookieConsent";
 import { DayDivider, SuggestionBar, StepsTimeline, ThinkingBlock, TimelineRow, dayKey, dayLabel, relTime, useMinuteTick } from "@/components/chat/ChatTimeline";
@@ -1105,6 +1105,7 @@ const Chat = () => {
         <NavItem icon={Clock} label="Routinen" onClick={() => nav("/agents")} />
         <NavItem icon={Briefcase} label="Anpassungen" onClick={() => setDialog("customize")} />
         <NavItem icon={Globe2} label="Welt-Modus" onClick={() => nav("/welt")} />
+        <NavItem icon={Monitor} label="Cloud-PC" onClick={() => nav("/cloud-pc")} badge="Neu" />
         <NavItem icon={Compass} label="Entdecken" onClick={() => nav("/entdecken")} badge="Neu" />
       </div>
 

@@ -63,6 +63,7 @@ const FotoApp = lazyPage(() => import("./pages/labs/FotoApp"));
 const KiTeam = lazyPage(() => import("./pages/labs/KiTeam"));
 const Rueckblick = lazyPage(() => import("./pages/labs/Rueckblick"));
 const Marktplatz = lazyPage(() => import("./pages/labs/Marktplatz"));
+const CloudPc = lazyPage(() => import("./pages/labs/CloudPc"));
 
 const queryClient = new QueryClient();
 
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/ki-team" element={<RequireAuth><KiTeam /></RequireAuth>} />
             <Route path="/rueckblick" element={<RequireAuth><Rueckblick /></RequireAuth>} />
             <Route path="/marktplatz" element={<RequireAuth><Marktplatz /></RequireAuth>} />
+            <Route path="/cloud-pc" element={<RequireAuth><CloudPc /></RequireAuth>} />
             <Route path="/build" element={<RequireAuth><Build /></RequireAuth>} />
             <Route path="/impressum" element={<Impressum />} />
             <Route path="/datenschutz" element={<Datenschutz />} />

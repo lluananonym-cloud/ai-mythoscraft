@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("mythos", {
   browser: { start: inv("browser:start"), state: inv("browser:state"), reset: inv("browser:pair-reset"), task: inv("browser:task"), stop: inv("browser:stop"), onEvent: on("browser-event") },
   openConfig: inv("config:open"),
   preview: inv("preview:open"),
+  cloudPc: inv("cloudpc:open"),
   files: { list: inv("files:list"), read: inv("files:read"), save: inv("files:save"), reveal: inv("files:reveal"), find: inv("files:find") },
   term: { run: inv("term:run"), kill: inv("term:kill"), cd: inv("term:cd"), onOutput: on("term-output") },
 });
