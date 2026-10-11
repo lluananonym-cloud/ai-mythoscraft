@@ -342,6 +342,7 @@ async function turnInner(history) {
   const max = goal ? 4000 : 60;
   let nudges = 0;
   const tracker = verifyTracker();
+  const question = String((history.filter((m) => m.role === "user").pop() || {}).content || "");
   for (let i = 0; i < max && !stopped; i++) {
     const pr = streamPrinter();
     let think = null;
@@ -355,7 +356,7 @@ async function turnInner(history) {
     history.push({ role: "assistant", content: out });
     const pb = parseToolBlock(out);
     if (!pb.tool && !pb.error) {
-      const nudge = tracker.nudge();
+      const nudge = tracker.nudge(out, question);
       if (nudge) { say(C.d + "🔎 Mythos prüft seine Arbeit …" + C.x); history.push({ role: "user", content: nudge }); continue; }
       if (!goal || /ZIEL ERREICHT/.test(out)) return goal ? "reached" : "done";
       if (++nudges > 40) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
