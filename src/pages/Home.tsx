@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LegalLinks } from "@/components/CookieConsent";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Loader2, Send, MessageSquare, Image as ImageIcon, Music, Film, Code2, Mic, Download, LayoutDashboard, ArrowRight } from "lucide-react";
+import { Loader2, Send, MessageSquare, Image as ImageIcon, Music, Film, Code2, Phone, Download, LayoutDashboard, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -85,8 +85,8 @@ const LoggedInHome = () => {
           />
           <div className="flex items-center justify-between gap-2 pt-1">
             <div className="flex items-center gap-1">
-              <Button asChild variant="ghost" size="icon" className="h-9 w-9" aria-label="Live-Sprachchat">
-                <Link to="/voice"><Mic className="h-4 w-4" /></Link>
+              <Button asChild variant="ghost" size="icon" className="h-9 w-9" aria-label="Mythos anrufen">
+                <Link to="/voice"><Phone className="h-4 w-4" /></Link>
               </Button>
             </div>
             <Button onClick={start} size="icon" className="h-9 w-9 bg-gradient-primary text-primary-foreground" aria-label="Senden">
@@ -133,7 +133,7 @@ const LoggedInHome = () => {
 
         <section className="mt-10 grid grid-cols-3 gap-2">
           {[
-            { to: "/voice", icon: Mic, label: "Sprechen" },
+            { to: "/voice", icon: Phone, label: "Anrufen" },
             { to: "/downloads", icon: Download, label: "Downloads" },
             { to: "/dashboard", icon: LayoutDashboard, label: "Konto" },
           ].map(l => (

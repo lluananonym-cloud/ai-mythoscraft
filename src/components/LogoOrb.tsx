@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-type Status = "idle" | "listening" | "speaking";
+type Status = "idle" | "listening" | "speaking" | "thinking";
 type Props = {
   status: Status;
   /** Aktuelle Lautstärke 0..1 (Mythos-Stimme beim Sprechen, Mikrofon beim Zuhören). */
@@ -37,7 +37,7 @@ export default function LogoOrb({ status, getLevel, className }: Props) {
       amp += (target - amp) * (target > amp ? 0.35 : 0.12);
       const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2;
       const base = Math.min(W, H) * 0.3;
-      const hue = st === "listening" ? 190 : st === "speaking" ? 278 : 255;
+      const hue = st === "listening" ? 190 : st === "speaking" ? 278 : st === "thinking" ? 230 : 255;
       ctx.clearRect(0, 0, W, H);
 
       // Leuchten hinter dem Logo
@@ -58,9 +58,9 @@ export default function LogoOrb({ status, getLevel, className }: Props) {
       }
 
       if (img.complete && img.naturalWidth) {
-        const breathe = st === "idle" ? 0.025 * Math.sin(t * 1.6) : 0;
+        const breathe = st === "idle" ? 0.025 * Math.sin(t * 1.6) : st === "thinking" ? 0.04 * Math.sin(t * 4) : 0;
         const size = base * 2 * (1 + amp * 0.2 + breathe);
-        const rot = t * 0.06 + amp * 0.06 * Math.sin(t * 9);
+        const rot = (st === "thinking" ? t * 0.9 : t * 0.06) + amp * 0.06 * Math.sin(t * 9);
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
         ctx.shadowColor = `hsla(${hue}, 100%, 65%, ${0.55 + amp * 0.4})`;
         ctx.shadowBlur = base * (0.18 + amp * 0.5);

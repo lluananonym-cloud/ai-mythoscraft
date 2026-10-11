@@ -166,6 +166,7 @@ export class MythosSpeaker {
   private data = new Uint8Array(256);
   private token = 0;
   private fakeUntil = 0;
+  private streamWake: (() => void) | null = null;
 
   private audio() {
     if (!this.ctx) {
@@ -198,6 +199,7 @@ export class MythosSpeaker {
 
   stop() {
     this.token++;
+    this.streamWake?.(); this.streamWake = null;
     try { this.source?.stop(); } catch { /* schon aus */ }
     this.source = null; this.fakeUntil = 0;
     try { window.speechSynthesis?.cancel(); } catch { /* egal */ }
@@ -237,6 +239,95 @@ export class MythosSpeaker {
     }
     this.source = null;
     if (my === this.token) opts.onEnd?.();
+  }
+
+  /**
+   * Spricht eine Antwort, während sie noch entsteht (Live-Anruf): Jeder fertige Satz wird sofort
+   * vorgelesen, statt auf die ganze Antwort zu warten. `push` bekommt neue Textstücke, `end` schließt ab.
+   * `onEnd` kommt erst, wenn alles gesagt ist (nicht nach `stop()`).
+   */
+  stream(opts: SpeakOpts = {}) {
+    this.stop();
+    const my = ++this.token;
+    const queue: { text: string; buf?: Promise<AudioBuffer | null> }[] = [];
+    let raw = "", done = 0, ended = false, started = false;
+    const wake = () => { const w = this.streamWake; this.streamWake = null; w?.(); };
+    const cut = (final: boolean) => {
+      const rest = raw.slice(done);
+      const fences = rest.split("```").length - 1;
+      if (!final && fences % 2) return; // Code-Block noch offen
+      let end = rest.length;
+      if (!final) {
+        // Nur nach dem letzten geschlossenen Code-Block nach Satzenden suchen.
+        const from = fences ? rest.lastIndexOf("```") + 3 : 0;
+        let last = -1;
+        for (const m of rest.slice(from).matchAll(/[.!?…:;](?=\s)|\n/g)) last = from + (m.index ?? 0) + m[0].length;
+        if (last < 0) return;
+        end = last;
+      }
+      const piece = cleanForSpeech(rest.slice(0, end));
+      done += end;
+      if (piece) { for (const s of splitSentences(piece)) queue.push({ text: s }); wake(); }
+    };
+    const begin = () => { if (!started) { started = true; opts.onStart?.(); } };
+    const piper = () => (state.status === "ready" ? loaded : null);
+    const synth = (item: { text: string; buf?: Promise<AudioBuffer | null> }) => {
+      const p = piper();
+      if (p && !item.buf) {
+        const ctx = this.audio();
+        item.buf = p.then((v) => v.predict(item.text)).then((ab) => ctx.decodeAudioData(ab)).catch(() => null);
+      }
+      return item.buf;
+    };
+    (async () => {
+      loadVoice()?.catch(() => {});
+      while (my === this.token) {
+        if (!queue.length) {
+          if (ended) break;
+          await new Promise<void>((r) => { this.streamWake = r; });
+          continue;
+        }
+        const item = queue[0];
+        const bufP = synth(item);
+        if (queue[1]) synth(queue[1]); // nächsten Satz schon berechnen
+        const buf = bufP ? await bufP : null;
+        if (my !== this.token) return;
+        queue.shift();
+        if (buf) {
+          begin();
+          const ctx = this.audio();
+          await new Promise<void>((res) => {
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.connect(this.analyser as AnalyserNode);
+            src.onended = () => res();
+            this.source = src; src.start();
+          });
+          this.source = null;
+        } else {
+          await this.sayBrowser(item.text, opts.lang || "de-DE", my, begin);
+        }
+      }
+      if (my === this.token) { this.fakeUntil = 0; opts.onEnd?.(); }
+    })();
+    return {
+      push: (t: string) => { if (my !== this.token || ended) return; raw += t; cut(false); },
+      end: () => { if (my !== this.token || ended) return; cut(true); ended = true; wake(); },
+    };
+  }
+
+  /** Ein Satz mit der Browser-Stimme, als Promise (mit Sicherheits-Timeout, falls `onend` ausbleibt). */
+  private sayBrowser(text: string, lang: string, my: number, onStart: () => void) {
+    return new Promise<void>((res) => {
+      if (!("speechSynthesis" in window)) return res();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang; u.rate = 1.02;
+      const v = pickBrowserVoice(lang); if (v) u.voice = v;
+      const timer = window.setTimeout(() => finish(), 4000 + text.length * 110);
+      const finish = () => { window.clearTimeout(timer); this.fakeUntil = 0; res(); };
+      u.onstart = () => { if (my !== this.token) return; this.fakeUntil = Date.now() + 60000; onStart(); };
+      u.onend = finish; u.onerror = finish;
+      window.speechSynthesis.speak(u);
+    });
   }
 
   private speakBrowser(sentences: string[], opts: SpeakOpts, my: number) {

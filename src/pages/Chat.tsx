@@ -24,11 +24,11 @@ import LogoOrb from "@/components/LogoOrb";
 import {
   Plus, Send, Trash2, MessageSquare, Loader2, Sparkles, Brain, HelpCircle, Menu,
   AppWindow, Mic, MicOff, Volume2, VolumeX, Paperclip, X as XIcon, Drama, Copy, Download, Lightbulb,
-  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, AudioLines, Film,
+  Image as ImageIcon, Music, Globe, FileText, Languages, UserCog, WifiOff, Smile, Film,
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
   ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
-  Globe2, Compass, ArrowUp, MoreHorizontal, Monitor,
+  Globe2, Compass, ArrowUp, MoreHorizontal, Monitor, Phone,
 } from "lucide-react";
 import { LegalLinks } from "@/components/CookieConsent";
 import { DayDivider, SuggestionBar, StepsTimeline, ThinkingBlock, TimelineRow, dayKey, dayLabel, relTime, useMinuteTick } from "@/components/chat/ChatTimeline";
@@ -1288,13 +1288,13 @@ const Chat = () => {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost" size="icon" className="h-9 w-9"
-                  onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}
-                  aria-label="Live-Sprachchat"
+                  onClick={() => { if (sub.canUseVoice) nav(activeId ? `/voice?c=${activeId}` : "/voice"); else setPaywall({ open: true, reason: "Live-Anrufe mit Mythos sind eine Pro-Funktion." }); }}
+                  aria-label="Mythos anrufen"
                 >
-                  <AudioLines className="h-4 w-4" />
+                  <Phone className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Live-Sprachchat</TooltipContent>
+              <TooltipContent side="bottom">Mythos anrufen</TooltipContent>
             </Tooltip>
 
             {voice.supported && (
@@ -1673,8 +1673,8 @@ const Chat = () => {
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => { if (sub.canUseVoice) nav("/voice"); else setPaywall({ open: true, reason: "Live-Sprachchat ist eine Pro-Funktion." }); }}>
-                        <AudioLines className="h-4 w-4 mr-2" /> Live-Sprachchat
+                      <DropdownMenuItem onClick={() => { if (sub.canUseVoice) nav(activeId ? `/voice?c=${activeId}` : "/voice"); else setPaywall({ open: true, reason: "Live-Anrufe mit Mythos sind eine Pro-Funktion." }); }}>
+                        <Phone className="h-4 w-4 mr-2" /> Mythos anrufen
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setInput("/"); setTimeout(() => textareaRef.current?.focus(), 0); }}>
                         <Code2 className="h-4 w-4 mr-2" /> Alle Befehle
