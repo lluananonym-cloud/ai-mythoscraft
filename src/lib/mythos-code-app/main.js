@@ -185,7 +185,13 @@ function browserPrompt() {
   if (!bridgeState().connected) return "";
   return '\n\nBrowser-Plugin – Aufruf: <tool>{"name":"browser","task":"konkrete Browser-Aufgabe"}</tool>. Nutze es, wenn die Aufgabe echte Webseiten bedienen oder lesen soll. Logins, Passwörter, Zahlungen und Captchas übernimmt immer der Nutzer.';
 }
-ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + mcpPrompt() + browserPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
+// Dateien schicken: Codeblöcke ```datei:name.ext werden im Chat zu Datei-Karten mit „Speichern“.
+const FILES_PROMPT = "\n\nDateien schicken: Will der Nutzer eine Datei BEKOMMEN (nicht ins Projekt schreiben) – z. B. ein Dokument, eine Tabelle, ein Skript, ein Logo –, " +
+  "schreibe den vollständigen Inhalt in einen Codeblock mit erster Zeile ```datei:dateiname.endung (Ordner erlaubt, z. B. datei:export/daten.csv). " +
+  "Der Chat zeigt daraus eine Datei-Karte, die er mit einem Klick speichern kann; mehrere Karten kann er gesammelt in einen Ordner speichern. " +
+  "Tabellen als .csv (Semikolon), Grafiken als .svg, Dokumente als .md oder .html. Kleine Binärdateien nur mit sicher bekannten Bytes: ```datei:name.png;base64. " +
+  "Dateien im Projekt änderst du weiterhin mit write/edit.";
+ipcMain.handle("prompt:system", (_e, folder, goal) => TOOL_PROMPT + FILES_PROMPT + mcpPrompt() + browserPrompt() + memoryPrompt(folder ? readMemory(folder) : "") + goalPrompt(goal));
 ipcMain.handle("prompts", () => ({ nudge: GOAL_NUDGE, summary: SUMMARY_PROMPT, review: REVIEW_PROMPT, memoryFile: MEMORY_FILE, models: MODELS }));
 
 // Laufende Prozesse je Kennung – mehrere Aufgaben (und das Terminal) laufen parallel.
@@ -404,6 +410,27 @@ ipcMain.handle("files:save", (_e, cwd, rel, text) => {
   const f = cwd && inside(cwd, rel);
   if (!f) return { error: "Ungültiger Pfad" };
   try { const before = readText(f) ?? ""; fs.writeFileSync(f, text); return { ok: true, diff: lineDiff(before, text) }; } catch (e) { return { error: e.message }; }
+});
+// Vom Chat geschickte Dateien speichern (eine per Dialog, oder alle in einen gewählten Ordner).
+const fileBuf = (f) => (f.base64 ? Buffer.from(String(f.content || "").replace(/^data:[^,]*,/, "").replace(/\s+/g, ""), "base64") : String(f.content || ""));
+ipcMain.handle("files:saveAs", async (_e, f, cwd) => {
+  const name = String(f && f.name || "datei.txt").split(/[\\/]/).pop();
+  const r = await dialog.showSaveDialog(w, { defaultPath: path.join(cwd || app.getPath("downloads"), name) });
+  if (r.canceled || !r.filePath) return { canceled: true };
+  try { fs.writeFileSync(r.filePath, fileBuf(f)); shell.showItemInFolder(r.filePath); return { ok: true, path: r.filePath }; } catch (e) { return { error: e.message }; }
+});
+ipcMain.handle("files:saveAll", async (_e, files, cwd) => {
+  const r = await dialog.showOpenDialog(w, { title: "Ordner für die Dateien wählen", defaultPath: cwd || app.getPath("downloads"), properties: ["openDirectory", "createDirectory"] });
+  if (r.canceled || !r.filePaths[0]) return { canceled: true };
+  const dir = r.filePaths[0]; let n = 0;
+  try {
+    for (const f of files || []) {
+      const out = inside(dir, String(f.name || "").replace(/^[\\/]+/, ""));
+      if (!out) continue;
+      fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, fileBuf(f)); n++;
+    }
+    shell.openPath(dir); return { ok: true, count: n, dir: dir };
+  } catch (e) { return { error: e.message, count: n }; }
 });
 ipcMain.handle("files:reveal", (_e, cwd, rel) => { const f = cwd && inside(cwd, rel); if (f) shell.showItemInFolder(f); return !!f; });
 
