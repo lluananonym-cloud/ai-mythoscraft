@@ -715,6 +715,7 @@ const COMMANDS = [
   ["/plugins", "", "MCP- und Browser-Verbindungen verwalten"],
   ["/browser", "<aufgabe>", "Aufgabe an das gekoppelte Browser-Plugin senden"],
   ["/hooks", "[bearbeiten|global]", "Hooks anzeigen und einrichten"],
+  ["/discord", "[token]|neu|aus", "💬 Mythos über Discord Aufgaben geben (eigener Bot, antwortet dort)"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
   ["/bild", "<beschreibung>", "Bild generieren (wie /image auf der Website)"],
   ["/koppeln", "[aus]", "Mit der Mythos-Handy-App koppeln, um diesen Chat von unterwegs fernzusteuern"],
@@ -771,10 +772,151 @@ async function remoteRunTask(task) {
   await post("remote", { kind: "result", pair_id: remotePair.id, api_key: cfg.key, task_id: task.id, status: "done", result });
 }
 
+// ---------- Discord: Anfragen an Mythos aus Discord (/discord) ----------
+// Ein eigener Discord-Bot hört mit. Nur die Person, die den Kopplungscode geschickt hat, darf Aufgaben geben
+// (per Direktnachricht, mit @Erwähnung oder im gekoppelten Kanal). Mythos antwortet in Discord.
+const DC_INTENTS = 1 | (1 << 9) | (1 << 12); // Server, Server-Nachrichten, Direktnachrichten
+const DC_CONTENT = 1 << 15; // Nachrichteninhalt (im Developer Portal einschalten)
+let dc = null; // { ws, hb, seq, botId, content, code, closed, queue, busy }
+function dcStop() { if (!dc) return; dc.closed = true; clearInterval(dc.hb); clearTimeout(dc.retry); try { dc.ws && dc.ws.close(); } catch {} dc = null; }
+function dcConnect(content) {
+  if (!cfg.discordToken) return;
+  const prev = dc; dcStop();
+  dc = { seq: null, botId: cfg.discordBot && cfg.discordBot.id, content: content != null ? content : !(prev && prev.content === false), code: prev && prev.code, queue: [], busy: false, closed: false };
+  const me = dc;
+  const ws = new WebSocket("wss://gateway.discord.gg/?v=10&encoding=json"); me.ws = ws;
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.s != null) me.seq = m.s;
+    if (m.op === 10) {
+      clearInterval(me.hb);
+      me.hb = setInterval(() => { try { ws.send(JSON.stringify({ op: 1, d: me.seq })); } catch {} }, m.d.heartbeat_interval);
+      ws.send(JSON.stringify({ op: 2, d: { token: cfg.discordToken, intents: DC_INTENTS | (me.content ? DC_CONTENT : 0), properties: { os: "windows", browser: "MythosCode", device: "MythosCode" } } }));
+    } else if (m.op === 1) ws.send(JSON.stringify({ op: 1, d: me.seq }));
+    else if (m.op === 7 || m.op === 9) ws.close(4000);
+    else if (m.op === 0 && m.t === "READY") me.botId = m.d.user.id;
+    else if (m.op === 0 && m.t === "MESSAGE_CREATE") dcOnMessage(m.d);
+  };
+  ws.onclose = (ev) => {
+    clearInterval(me.hb);
+    if (me.closed || dc !== me) return;
+    if (ev.code === 4004) { note("⚠ Discord: Der Bot-Token ist ungültig geworden. Neu verbinden mit /discord <token>."); dcStop(); return; }
+    // 4014: Nachrichteninhalt ist im Developer Portal nicht erlaubt → ohne weitermachen (DMs und @Erwähnungen gehen trotzdem).
+    if (ev.code === 4014 && me.content) { dcConnect(false); return; }
+    me.retry = setTimeout(() => { if (dc === me) dcConnect(me.content); }, 5000);
+  };
+}
+const dcApi = (method, p, body) => window.mythos.discord.api(method, p, body);
+async function dcSend(channel, text, replyTo) {
+  const parts = []; let rest = String(text || "").trim() || "(keine Antwort)";
+  while (rest.length > 1900) { let cut = rest.lastIndexOf("\n", 1900); if (cut < 1000) cut = 1900; parts.push(rest.slice(0, cut)); rest = rest.slice(cut).trimStart(); }
+  parts.push(rest);
+  for (let i = 0; i < parts.length; i++) {
+    await dcApi("POST", "/channels/" + channel + "/messages", Object.assign({ content: parts[i], allowed_mentions: { parse: [] } },
+      i === 0 && replyTo ? { message_reference: { message_id: replyTo, fail_if_not_exists: false } } : {}));
+  }
+}
+function dcOnMessage(d) {
+  if (!dc || !d || !d.author || d.author.bot) return;
+  const mentioned = (d.mentions || []).some((u) => u.id === dc.botId);
+  const text = String(d.content || "").replace(new RegExp("<@!?" + dc.botId + ">", "g"), "").trim();
+  if (!cfg.discordOwner) {
+    if (dc.code && text === dc.code) {
+      cfg.discordOwner = d.author.id; cfg.discordChannel = d.guild_id ? d.channel_id : ""; dc.code = null; window.mythos.setCfg(cfg);
+      note("💬 Discord verbunden mit **" + (d.author.global_name || d.author.username) + "**. Anfragen von dort laufen jetzt in diesem Chat.");
+      dcSend(d.channel_id, "✅ Verbunden! Schreib mir hier einfach, was Mythos auf deinem PC machen soll" + (d.guild_id ? " (in diesem Kanal oder mit @Erwähnung)" : "") + ".\nBeispiele: `/goal Baue eine Todo-App`, `status`, `stop`.", d.id);
+    }
+    return;
+  }
+  if (d.author.id !== cfg.discordOwner) return;
+  if (d.guild_id && !mentioned && d.channel_id !== cfg.discordChannel) return;
+  if (!text) return;
+  dc.queue.push({ text, channel: d.channel_id, id: d.id, who: d.author.global_name || d.author.username });
+  dcWork();
+}
+async function dcWork() {
+  if (!dc || dc.busy) return;
+  const me = dc; me.busy = true;
+  try {
+    while (me.queue.length && dc === me) {
+      const t = me.queue.shift();
+      try { await dcRunTask(t); } catch (e) { await dcSend(t.channel, "⚠ " + e.message, t.id); }
+    }
+  } finally { me.busy = false; }
+}
+async function dcRunTask(t) {
+  const c = chat;
+  if (/^(stop|stopp|abbrechen)$/i.test(t.text)) {
+    if (!isBusy(c)) return dcSend(t.channel, "Mythos arbeitet gerade an nichts.", t.id);
+    stop(c); noteTo(c, "■ Über Discord gestoppt."); return dcSend(t.channel, "■ Gestoppt.", t.id);
+  }
+  if (/^(status|stand)$/i.test(t.text)) {
+    const r = runOf(c);
+    return dcSend(t.channel, (isBusy(c) ? "⟳ Mythos arbeitet" + (r ? " seit " + fmt(Date.now() - r.t0) : "") : "✓ Mythos ist frei") + (c.goal ? "\n🎯 Ziel: " + c.goal + (c.goalStep ? " (Schritt " + c.goalStep + ")" : "") : "") + (cfg.folder ? "\n📁 " + base(cfg.folder) : ""), t.id);
+  }
+  if (isBusy(c)) {
+    const r = runOf(c);
+    if (r && !r.stopped && !t.text.startsWith("/")) {
+      (r.inject = r.inject || []).push({ q: t.text, att: [] }); addTo(c, "u", "💬 Discord: " + t.text + "  (wird bei nächster Gelegenheit berücksichtigt)");
+      return dcSend(t.channel, "📥 Mythos arbeitet gerade und berücksichtigt das bei nächster Gelegenheit.", t.id);
+    }
+    return dcSend(t.channel, "Mythos arbeitet gerade. Schreib `stop` zum Abbrechen oder versuch es gleich nochmal.", t.id);
+  }
+  if (!cfg.folder) return dcSend(t.channel, "Auf dem PC ist kein Projektordner geöffnet.", t.id);
+  if (/^\/(goal|ziel)\s+\S/i.test(t.text) && !$("auto").checked) return dcSend(t.channel, "Für `/goal` braucht Mythos Vollzugriff. Schreib zuerst `/vollzugriff an`.", t.id);
+  if (!t.text.startsWith("/") && !$("auto").checked) noteTo(c, "💬 Discord-Anfrage: Mythos fragt vor Änderungen am PC nach (Vollzugriff ist aus).");
+  const startLen = c.view.length;
+  dcApi("POST", "/channels/" + t.channel + "/typing");
+  const typing = setInterval(() => { if (isBusy(c)) dcApi("POST", "/channels/" + t.channel + "/typing"); }, 8000);
+  try {
+    await submit(c, t.text, []);
+    await new Promise((r) => setTimeout(r, 300));
+    while (isBusy(c)) await new Promise((r) => setTimeout(r, 500));
+  } finally { clearInterval(typing); }
+  const out = c.view.slice(startLen);
+  const answer = out.filter((v) => v.cls === "a" || v.cls === "sum").map((v) => v.text);
+  const notes = out.filter((v) => v.cls === "note" || v.cls === "done").map((v) => v.text);
+  const text = (answer.length ? answer.slice(-2).join("\n\n") + (notes.length ? "\n\n" + notes[notes.length - 1] : "") : notes.join("\n")).trim();
+  return dcSend(t.channel, text || "(Mythos hat geantwortet, aber ohne Text, z. B. nur Dateien geändert. Auf dem PC nachsehen.)", t.id);
+}
+async function dcCommand(arg) {
+  if (/^(aus|off|trennen|stop)$/i.test(arg)) {
+    dcStop(); delete cfg.discordToken; delete cfg.discordBot; delete cfg.discordOwner; delete cfg.discordChannel; window.mythos.setCfg(cfg);
+    return note("💬 Discord getrennt. Den Bot kannst du im Discord Developer Portal löschen.");
+  }
+  if ((/^(neu|koppeln)$/i.test(arg) || !arg) && cfg.discordToken && (arg || !cfg.discordOwner)) {
+    delete cfg.discordOwner; delete cfg.discordChannel; window.mythos.setCfg(cfg);
+    if (!dc) dcConnect();
+    dc.code = String(Math.floor(100000 + Math.random() * 900000));
+    return note("💬 Schick dem Bot in Discord diesen Code (als Direktnachricht oder mit @Erwähnung):\n\n## " + dc.code);
+  }
+  if (!arg) {
+    if (cfg.discordToken && cfg.discordOwner) return note("💬 Discord ist verbunden" + (cfg.discordBot ? " (Bot **" + cfg.discordBot.name + "**)" : "") + ". Schreib dem Bot per Direktnachricht" + (cfg.discordChannel ? ", im gekoppelten Kanal" : "") + " oder mit @Erwähnung.\nIn Discord: `status`, `stop`, `/goal …` oder einfach eine Aufgabe.\nAndere Person koppeln: **/discord neu** · Trennen: **/discord aus**");
+    return note("💬 **Mythos über Discord steuern** (einmalig einrichten, etwa 2 Minuten):\n\n" +
+      "1. [discord.com/developers/applications](https://discord.com/developers/applications) öffnen → **New Application** → Name „Mythos“\n" +
+      "2. Links **Bot** → **Reset Token** → Token kopieren. Darunter **Message Content Intent** einschalten und speichern.\n" +
+      "3. Hier eingeben: **/discord DEIN-TOKEN**\n\n" +
+      "Danach bekommst du einen Einladungslink für deinen Server (den mit der Ziel-Benachrichtigung) und einen Code zum Koppeln.");
+  }
+  note("💬 Prüfe den Bot-Token …");
+  const r = await window.mythos.discord.check(arg);
+  if (r.error) return note("⚠ " + r.error);
+  cfg.discordToken = arg; cfg.discordBot = { id: r.id, name: r.name, appId: r.appId }; delete cfg.discordOwner; delete cfg.discordChannel;
+  window.mythos.setCfg(cfg);
+  dcConnect(r.content);
+  dc.code = String(Math.floor(100000 + Math.random() * 900000));
+  const invite = "https://discord.com/oauth2/authorize?client_id=" + r.appId + "&scope=bot&permissions=68608";
+  note("💬 Bot **" + r.name + "** ist bereit.\n\n" +
+    "1. [Bot auf deinen Server einladen](" + invite + ") (den Server, in dem die Ziel-Benachrichtigungen ankommen)\n" +
+    "2. Schick dem Bot diesen Code, als Direktnachricht oder im Kanal mit @" + r.name + ":\n\n## " + dc.code + "\n\n" +
+    (r.content ? "Danach reicht es, im selben Kanal zu schreiben." : "Tipp: Schalte im Developer Portal unter Bot den **Message Content Intent** ein, dann musst du im Kanal den Bot nicht jedes Mal erwähnen. Direktnachrichten gehen auch so."));
+}
+
 async function command(q) {
   const cmd = q.split(/\s+/)[0].toLowerCase(), arg = q.slice(cmd.length).trim();
   if (cmd !== "/goal" && cmd !== "/ziel" && editing != null) { editing = null; renderEdit(); }
   if (cmd === "/bild" || cmd === "/image") return generateImage(arg);
+  if (cmd === "/discord") return dcCommand(arg);
   if (cmd === "/koppeln") {
     if (/^(aus|stop|trennen)$/i.test(arg)) { remoteStop(); note("📱 Kopplung getrennt."); return; }
     if (remotePair && remotePair.claimed) { note("📱 Handy ist schon gekoppelt" + (remotePair.device ? " (" + remotePair.device + ")" : "") + ". Mit **/koppeln aus** trennen."); return; }
@@ -1299,6 +1441,7 @@ function show() {
   $("login").style.display = "none"; $("app").style.display = "flex";
   renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands(); setTimeout(() => checkTrust(cfg.folder), 600);
   renderSched(); setTimeout(checkSchedule, 1500);
+  if (cfg.discordToken && !dc) dcConnect();
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }
