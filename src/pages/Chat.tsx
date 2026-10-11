@@ -28,7 +28,7 @@ import {
   PanelLeftClose, PanelLeft, LogOut, Key, Shield, Bot, Users, BarChart3,
   Crown, Gamepad2, Server, Ticket, User as UserIcon, Search, Puzzle,
   ArrowLeft, ArrowRight, FolderOpen, Shapes, Clock, Briefcase, Target, Square, Code2, Wrench, ChevronRight,
-  Globe2, Compass, ArrowUp, MoreHorizontal, Monitor, Phone,
+  Globe2, Compass, ArrowUp, MoreHorizontal, Monitor, Clapperboard, Phone,
 } from "lucide-react";
 import { LegalLinks } from "@/components/CookieConsent";
 import { DayDivider, SuggestionBar, StepsTimeline, ThinkingBlock, TimelineRow, dayKey, dayLabel, relTime, useMinuteTick } from "@/components/chat/ChatTimeline";
@@ -59,6 +59,7 @@ const SLASH_COMMANDS = [
   { cmd: "/image",     args: "<beschreibung>",  icon: ImageIcon, desc: "Bild generieren (Nano Banana)" },
   { cmd: "/music",     args: "<stil/vibe>",     icon: Music,     desc: "Song mit Gesang erzeugen (1–3 Minuten)" },
   { cmd: "/video",     args: "<szene>",         icon: Film,      desc: "Kurzes KI-Video (Bild + Animation, kostenlos im Browser)" },
+  { cmd: "/film",      args: "[idee]",          icon: Clapperboard, desc: "Mythos Filmstudio: aus einer Idee einen Kurzfilm mit Sprecher und Musik drehen (kostenlos)" },
   { cmd: "/cloudpc",   args: "[aufgabe]",       icon: Monitor,   desc: "Mythos Cloud-PC: Agent mit eigenem Computer, du schaust live zu (kostenlos)" },
   { cmd: "/agent",     args: "<aufgabe>",       icon: Globe,     desc: "Browser-Agent: KI surft live — du siehst jeden Klick (Pro)" },
   { cmd: "/browser",   args: "[anweisung]",     icon: Puzzle,    desc: "Deinen echten Browser steuern per Mythos-Erweiterung (Pro)" },
@@ -323,6 +324,9 @@ const Chat = () => {
     if (!text || sending) return;
     // Auto-detect generation commands
     const lowerText = text.toLowerCase();
+    // „Dreh mir einen Kurzfilm über …“ → Filmstudio
+    const filmAsk = text.match(/^(?:bitte\s+)?(?:dreh|drehe|mach|mache|erstell|erstelle|produzier|produziere)\s+(?:mir\s+|uns\s+)?(?:einen|ein)\s+(?:kurzfilm|film)\s+(?:über|ueber|von|zu|mit)\s+([\s\S]+)$/i);
+    if (filmAsk) text = `/film ${filmAsk[1].trim()}`;
     if (lowerText.includes("generiere mir ein video von")) {
       const match = lowerText.match(/generiere mir ein video von (.+)/i);
       if (match && match[1]) {
@@ -499,6 +503,14 @@ const Chat = () => {
         return;
       }
       text = `🎯 Ziel: ${goalText}`;
+    }
+    // /film — Mythos Filmstudio öffnen, optional direkt mit Idee
+    const filmMatch = text.match(/^\/(?:film|filmstudio|kurzfilm)\b\s*([\s\S]*)$/i);
+    if (filmMatch) {
+      if (!override) setInput("");
+      const t = filmMatch[1].trim();
+      nav(t ? `/filmstudio?idee=${encodeURIComponent(t)}` : "/filmstudio");
+      return;
     }
     // /cloudpc — Mythos Cloud-PC öffnen, optional direkt mit Aufgabe
     const pcMatch = text.match(/^\/(?:cloudpc|cloud-pc|pc|computer)\b\s*([\s\S]*)$/i);
@@ -1117,6 +1129,7 @@ const Chat = () => {
         <NavItem icon={Briefcase} label="Anpassungen" onClick={() => setDialog("customize")} />
         <NavItem icon={Globe2} label="Welt-Modus" onClick={() => nav("/welt")} />
         <NavItem icon={Monitor} label="Cloud-PC" onClick={() => nav("/cloud-pc")} badge="Neu" />
+        <NavItem icon={Clapperboard} label="Filmstudio" onClick={() => nav("/filmstudio")} badge="Neu" />
         <NavItem icon={Compass} label="Entdecken" onClick={() => nav("/entdecken")} badge="Neu" />
       </div>
 
