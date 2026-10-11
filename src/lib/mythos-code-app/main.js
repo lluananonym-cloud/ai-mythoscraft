@@ -352,6 +352,24 @@ ipcMain.handle("cloudpc:open", (_e, url) => {
   cloudPc.show(); cloudPc.focus();
   return { ok: true };
 });
+// Mythos Filmstudio: eigenes Fenster mit der Filmstudio-Seite. Gleiche Sitzung wie der Cloud-PC, damit man nur einmal angemeldet sein muss.
+let filmStudio = null;
+ipcMain.handle("filmstudio:open", (_e, url) => {
+  url = String(url || "");
+  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
+  if (!filmStudio || filmStudio.isDestroyed()) {
+    filmStudio = new BrowserWindow({ width: 1320, height: 900, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Filmstudio",
+      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
+    filmStudio.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
+    filmStudio.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
+    filmStudio.on("closed", () => { filmStudio = null; });
+  }
+  // Neue Idee oder erstes Öffnen: Seite laden, damit eine mitgegebene Idee sofort gedreht wird.
+  if (url.includes("?idee=") || !filmStudio.webContents.getURL()) filmStudio.loadURL(url);
+  filmStudio.show(); filmStudio.focus();
+  return { ok: true };
+});
 ipcMain.handle("preview:open", (_e, target, cwd) => {
   let url = String(target || "").trim();
   if (!url) {
