@@ -1385,13 +1385,13 @@ $("btnOut").onclick = async () => {
   await window.mythos.setCfg(cfg); location.reload();
 };
 Promise.all([window.mythos.prompts(), window.mythos.getCfg()]).then(([p, c]) => {
-  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; paintModePill(); $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme();
+  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; paintModePill(); $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme(); $("vbarge").classList.toggle("on", cfg.bargeIn !== false);
   if (cfg.key) show();
 });
 
 // ---------- Sprachmodus: zuhören → Whisper → Mythos → Antwort vorlesen → wieder zuhören ----------
 const V = window.MythosVoice;
-const vm = { on: false, phase: "idle", rec: null, waitChat: null, orbStop: null, cam: null, scr: null };
+const vm = { on: false, phase: "idle", rec: null, barge: null, waitChat: null, orbStop: null, cam: null, scr: null };
 function setVStatus(text, sub) { $("vstatus").textContent = text; if (sub != null) $("vsub").textContent = sub; }
 const voiceLevel = () => (vm.phase === "listening" && vm.rec ? vm.rec.level() : vm.phase === "speaking" ? V.speaker.level() : 0);
 function voiceStart(firstText) {
@@ -1405,6 +1405,7 @@ function voiceStart(firstText) {
 }
 function voiceStop() {
   vm.on = false; vm.waitChat = null;
+  stopBarge();
   if (vm.rec) { vm.rec.cancel(); vm.rec = null; }
   V.speaker.stop(); vm.phase = "idle";
   stopSee("cam"); stopSee("scr");
@@ -1418,18 +1419,45 @@ async function voiceListen() {
   try {
     vm.rec = await V.record({
       onSpeech: () => setVStatus("Ich höre zu …"),
-      onDone: async (pcm) => {
-        vm.rec = null;
-        if (!vm.on) return;
-        if (!pcm) return voiceListen();
-        vm.phase = "thinking"; setVStatus("Verstehe …", "");
-        let text = "";
-        try { text = await V.transcribe(pcm); } catch (e) { note("🎙 Spracherkennung fehlgeschlagen: " + e.message); return voiceStop(); }
-        if (!vm.on) return;
-        voiceHandleText(text);
-      },
+      onDone: (pcm) => { vm.rec = null; voiceHeard(pcm); },
     });
   } catch (e) { note("🎙 Mikrofon nicht verfügbar: " + e.message); voiceStop(); }
+}
+async function voiceHeard(pcm) {
+  if (!vm.on) return;
+  if (!pcm) return voiceListen();
+  vm.phase = "thinking"; setVStatus("Verstehe …", "");
+  let text = "";
+  try { text = await V.transcribe(pcm); } catch (e) { note("🎙 Spracherkennung fehlgeschlagen: " + e.message); return voiceStop(); }
+  if (!vm.on) return;
+  voiceHandleText(text);
+}
+// Dazwischenreden wie am Telefon: Während Mythos spricht, hört ein zweites, unempfindlicheres Mikro mit.
+// Spricht man deutlich los, verstummt Mythos sofort und die laufende Aufnahme wird zur nächsten Frage.
+async function startBarge() {
+  if (cfg.bargeIn === false || vm.barge) return;
+  const h = { r: null };
+  vm.barge = h;
+  try {
+    h.r = await V.record({
+      learnMs: 600, minRms: 0.045, noiseMult: 2.6, minLoudMs: 350, silenceMs: 1100,
+      onSpeech: () => {
+        if (!vm.on || vm.phase !== "speaking" || vm.barge !== h) return;
+        V.speaker.stop(); vm.phase = "listening"; vm.barge = null; vm.rec = h.r;
+        setVStatus("Ich höre zu …", "Kurze Pause = fertig");
+      },
+      onDone: (pcm) => {
+        if (vm.barge === h) vm.barge = null;
+        if (vm.rec !== h.r) return; // nur genutzt, wenn wirklich dazwischengeredet wurde
+        vm.rec = null; voiceHeard(pcm);
+      },
+    });
+    if (vm.barge !== h || !vm.on || vm.phase !== "speaking") { if (vm.rec !== h.r) h.r.cancel(); if (vm.barge === h) vm.barge = null; }
+  } catch (e) { if (vm.barge === h) vm.barge = null; }
+}
+function stopBarge() {
+  const h = vm.barge; vm.barge = null;
+  if (h && h.r && vm.rec !== h.r) h.r.cancel();
 }
 function voiceHandleText(raw) {
   const text = String(raw).replace(/^\[.*?\]$|^\(.*?\)$/g, "").trim(); // Whisper-Geräusch-Markierungen
@@ -1487,13 +1515,15 @@ function setWake(on) {
 }
 function voiceReply(c, text) {
   if (!vm.on || vm.waitChat !== c) return;
-  vm.waitChat = null; vm.phase = "speaking"; setVStatus("Mythos spricht …", "Klick auf das Logo = unterbrechen");
-  V.speaker.speak(text, { onEnd: () => { if (vm.on && vm.phase === "speaking") { vm.phase = "idle"; voiceListen(); } } });
+  vm.waitChat = null; vm.phase = "speaking";
+  setVStatus("Mythos spricht …", cfg.bargeIn === false ? "Klick auf das Logo = unterbrechen" : "Einfach dazwischenreden oder aufs Logo klicken = unterbrechen");
+  V.speaker.speak(text, { onEnd: () => { if (vm.on && vm.phase === "speaking") { vm.phase = "idle"; stopBarge(); voiceListen(); } } });
+  startBarge();
 }
 function voiceInterrupt() {
   if (!vm.on) return;
   if (vm.phase === "listening" && vm.rec) vm.rec.stop();
-  else if (vm.phase === "speaking") { V.speaker.stop(); vm.phase = "idle"; voiceListen(); }
+  else if (vm.phase === "speaking") { V.speaker.stop(); stopBarge(); vm.phase = "idle"; voiceListen(); }
   else if (vm.phase === "thinking" && isBusy(chat)) stop(chat);
 }
 V.onSttState((s) => { if (vm.on && s.status === "loading") $("vsub").textContent = "Spracherkennung wird geladen … " + s.pct + "% (nur beim ersten Mal)"; });
@@ -1502,6 +1532,8 @@ V.VOICES.forEach((v) => { const o = el("option", "", v.label); o.value = v.id; $
 $("vvoice").onchange = () => { cfg.voice = $("vvoice").value; window.mythos.setCfg(cfg); V.speaker.setVoice(cfg.voice); };
 $("btnVoice").onclick = () => (vm.on ? voiceStop() : voiceStart());
 $("vcamBtn").onclick = () => toggleSee("cam"); $("vscrBtn").onclick = () => toggleSee("scr");
+const paintBarge = () => $("vbarge").classList.toggle("on", cfg.bargeIn !== false);
+$("vbarge").onclick = () => { cfg.bargeIn = cfg.bargeIn === false; window.mythos.setCfg(cfg); paintBarge(); if (cfg.bargeIn === false) stopBarge(); else if (vm.on && vm.phase === "speaking") startBarge(); };
 $("wake").onchange = () => setWake($("wake").checked); $("wakechip").onclick = () => setWake(false);
 $("vclose").onclick = voiceStop; $("vstop").onclick = voiceInterrupt; $("vorb").onclick = voiceInterrupt;
 

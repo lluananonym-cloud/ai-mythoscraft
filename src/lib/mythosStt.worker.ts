@@ -4,7 +4,7 @@
 import { pipeline, env } from "@huggingface/transformers";
 
 type Msg =
-  | { type: "init"; model: string; ortWasm: string; dtype?: string | Record<string, string>; device?: "webgpu" | "wasm" }
+  | { type: "init"; model: string; ortWasm?: string; dtype?: string | Record<string, string>; device?: "webgpu" | "wasm" }
   | { type: "transcribe"; id: number; audio: Float32Array; language?: string };
 
 let asr: ((audio: Float32Array, opts: Record<string, unknown>) => Promise<{ text: string } | { text: string }[]>) | null = null;
@@ -15,7 +15,7 @@ self.onmessage = async (e: MessageEvent<Msg>) => {
     if (m.type === "init") {
       env.allowLocalModels = false;
       const onnx = env.backends.onnx as { wasm?: { wasmPaths?: string } };
-      if (onnx.wasm) onnx.wasm.wasmPaths = m.ortWasm;
+      if (onnx.wasm && m.ortWasm) onnx.wasm.wasmPaths = m.ortWasm;
       asr = (await pipeline("automatic-speech-recognition", m.model, {
         dtype: (m.dtype || { encoder_model: "fp32", decoder_model_merged: "q8" }) as never,
         device: m.device || "wasm",

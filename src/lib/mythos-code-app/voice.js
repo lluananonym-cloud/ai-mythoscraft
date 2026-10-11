@@ -202,7 +202,11 @@
   }
 
   // ---------- Aufnahme mit Sprach-Erkennung (Pause = fertig) ----------
+  // Zum Dazwischenreden, während Mythos spricht: learnMs (Restecho lernen), höhere minRms/noiseMult
+  // und minLoudMs (so lange muss es laut sein), damit die eigene Stimme aus dem Lautsprecher nicht zählt.
   async function record(opts) {
+    const learnMs = opts.learnMs || 0, minRms = opts.minRms || 0.018, mult = opts.noiseMult || 2, needMs = opts.minLoudMs || 0;
+    let loudMs = 0;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
     const ctx = new AudioContext({ sampleRate: 16000 });
     const src = ctx.createMediaStreamSource(stream);
@@ -224,10 +228,12 @@
       const rms = Math.sqrt(sum / d.length);
       level = Math.min(1, rms * 12);
       const now = Date.now();
-      if (now - startedAt < 400) noise = Math.max(noise, rms * 1.5); // Grundrauschen der ersten Zeit
-      const loud = rms > Math.max(0.018, noise * 2);
-      if (loud) { lastLoud = now; if (!heard) { heard = true; opts.onSpeech && opts.onSpeech(); } }
-      if (heard || loud) chunks.push(new Float32Array(d));
+      if (now - startedAt < Math.max(400, learnMs)) noise = Math.max(noise, rms * 1.5); // Grundrauschen der ersten Zeit
+      const loud = now - startedAt >= learnMs && rms > Math.max(minRms, noise * mult);
+      const frameMs = (d.length / ctx.sampleRate) * 1000;
+      if (loud) { lastLoud = now; loudMs += frameMs; if (!heard && loudMs >= needMs) { heard = true; opts.onSpeech && opts.onSpeech(); } }
+      else if (!heard) loudMs = Math.max(0, loudMs - frameMs / 2);
+      if (heard || loudMs > 0) chunks.push(new Float32Array(d));
       else { chunks.length = 0; chunks.push(new Float32Array(d)); } // kurzen Vorlauf behalten
       if (heard && now - lastLoud > (opts.silenceMs || 1300)) finish();
       if (now - startedAt > (opts.maxMs || 60000)) finish();
