@@ -475,7 +475,8 @@ async function runAgent(c, opts) {
     hs.filter((h) => h.out || h.code).forEach((h) => noteTo(c, "🪝 Stop: " + h.command + " → Exit " + h.code + (h.out ? "\n" + h.out.slice(0, 600) : ""))));
   const title = run.stopped ? "■ Gestoppt nach " + took : reached ? "🎯 Ziel erreicht" : finished ? "✓ Fertig nach " + took : "⚠ Unterbrochen – Mythos braucht dich";
   window.mythos.notify("Mythos Code – " + c.title, title);
-  if (cfg.notify && (goal || Date.now() - run.t0 > 60000)) window.mythos.push(cfg.notify, "Mythos Code – " + (run.folder ? base(run.folder) : c.title), title + (summary ? "\n\n" + summary.slice(0, 1500) : ""));
+  if (cfg.notify && (goal || Date.now() - run.t0 > 60000)) window.mythos.push(cfg.notify, "Mythos Code – " + (run.folder ? base(run.folder) : c.title), title + (summary ? "\n\n" + summary.slice(0, 1500) : "") +
+    (remotePair && remotePair.claimed ? "\n\n💬 Antworten: " + remoteLink("") : "\n\n💬 Vom Handy antworten: am PC einmal /koppeln eingeben"));
   if (typeof voiceReply === "function") voiceReply(c, run.lastText || (run.stopped ? "Gestoppt." : "Fertig."));
   if (!run.stopped) playDone(finished);
   if (!run.stopped) processQueue(c); else if (c === chat) renderQueue();
@@ -718,7 +719,7 @@ const COMMANDS = [
   ["/discord", "[token]|neu|aus", "💬 Mythos über Discord Aufgaben geben (eigener Bot, antwortet dort)"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
   ["/bild", "<beschreibung>", "Bild generieren (wie /image auf der Website)"],
-  ["/koppeln", "[aus]", "Mit der Mythos-Handy-App koppeln, um diesen Chat von unterwegs fernzusteuern"],
+  ["/koppeln", "[aus]", "📱 Mythos vom Handy schreiben: Link zum Antippen (auch per Discord/ntfy), kein Konto nötig"],
   ["/warteschlange", "[leeren]", "Warteschlange anzeigen oder leeren"],
   ["/suche", "<text>", "Alle Chats durchsuchen"],
   ["/tokens", "", "Geschätzten Token-Verbrauch dieses Chats anzeigen"],
@@ -732,13 +733,24 @@ const needFolder = () => { if (!cfg.folder) { note("Wähle zuerst einen Projekto
 // ---------- Fernsteuerung vom Handy (/koppeln) ----------
 // Wie beim Koppeln einer Smart-TV-App: PC zeigt einen 6-stelligen Code, das Handy gibt ihn ein.
 // Aufgaben vom Handy laufen im gerade geöffneten Chat, wie normal eingetippt – Mythos merkt keinen Unterschied.
-function remoteStop() { remotePair = null; clearTimeout(remoteTimer); remoteTimer = null; }
+function remoteStop() { remotePair = null; clearTimeout(remoteTimer); remoteTimer = null; if (cfg.remotePair) { delete cfg.remotePair; window.mythos.setCfg(cfg); } }
+const remoteLink = (code) => CFG.site.replace(/\/$/, "") + "/code" + (code ? "?code=" + code : "");
+// Gekoppeltes Handy bleibt nach einem Neustart der App verbunden.
+function remoteResume() {
+  if (remotePair || !cfg.remotePair || !cfg.remotePair.id || !cfg.key) return;
+  remotePair = { id: cfg.remotePair.id, code: "", claimed: true, device: cfg.remotePair.device || "" };
+  remotePollLoop();
+}
 async function remotePairStart() {
   try {
     const r = await (await post("remote", { kind: "create", api_key: cfg.key, device_name: "Windows-PC" })).json();
     if (r.error || !r.pair_id) { note("⚠ Kopplung fehlgeschlagen: " + (r.error || "unbekannt")); return; }
     remotePair = { id: r.pair_id, code: r.code, claimed: false, device: "" };
-    note("📱 Öffne in der Mythos-Handy-App den „Code“-Tab und gib diesen Code ein:\n\n## " + r.code + "\n\nGültig 10 Minuten. Mit **/koppeln aus** abbrechen.");
+    const link = remoteLink(r.code);
+    const sent = cfg.notify ? await window.mythos.push(cfg.notify, "Mythos Code", "📱 Tippe hier, um Mythos vom Handy aus Aufgaben zu schicken (Link gilt 10 Minuten):\n" + link) : false;
+    note("📱 **Mythos vom Handy schreiben:** Öffne auf dem Handy diesen Link (oder scanne ihn ab):\n\n[" + link + "](" + link + ")\n\n" +
+      (sent ? "Den Link habe ich dir auch dorthin geschickt, wo deine Benachrichtigungen ankommen (z. B. Discord). Einfach antippen.\n\n" : "") +
+      "Oder in der Mythos-Handy-App im „Code“-Tab diesen Code eingeben:\n\n## " + r.code + "\n\nGültig 10 Minuten. Mit **/koppeln aus** abbrechen.");
     remotePollLoop();
   } catch (e) { note("⚠ Kopplung fehlgeschlagen: " + e.message); }
 }
@@ -749,9 +761,15 @@ function remotePollLoop() {
     try {
       if (!remotePair.claimed) {
         const r = await (await post("remote", { kind: "status", pair_id: remotePair.id, api_key: cfg.key })).json();
-        if (r.claimed) { remotePair.claimed = true; remotePair.device = r.device_name || ""; note("📱 Handy verbunden" + (remotePair.device ? " (" + remotePair.device + ")" : "") + " – Aufgaben von dort laufen jetzt in diesem Chat."); }
+        if (r.claimed) {
+          remotePair.claimed = true; remotePair.device = r.device_name || "";
+          cfg.remotePair = { id: remotePair.id, device: remotePair.device }; window.mythos.setCfg(cfg);
+          note("📱 Handy verbunden" + (remotePair.device ? " (" + remotePair.device + ")" : "") + " – Aufgaben von dort laufen jetzt in diesem Chat. Die Verbindung bleibt auch nach einem Neustart bestehen.");
+        }
       } else {
-        const r = await (await post("remote", { kind: "poll", pair_id: remotePair.id, api_key: cfg.key })).json();
+        const res = await post("remote", { kind: "poll", pair_id: remotePair.id, api_key: cfg.key });
+        const r = await res.json();
+        if (res.status === 404 && /Kopplung/.test(r.error || "")) { note("📱 Das Handy hat die Verbindung getrennt."); remoteStop(); return; }
         if (r.task) await remoteRunTask(r.task);
       }
     } catch (e) { /* nächster Versuch reicht */ }
@@ -759,17 +777,43 @@ function remotePollLoop() {
   }, remotePair && remotePair.claimed ? 3000 : 2500);
 }
 async function remoteRunTask(task) {
-  if (!cfg.folder || isBusy(chat)) {
-    await post("remote", { kind: "result", pair_id: remotePair.id, api_key: cfg.key, task_id: task.id, status: "error",
-      result: !cfg.folder ? "Auf dem PC ist kein Projektordner geöffnet." : "Mythos arbeitet auf dem PC gerade an etwas anderem – gleich nochmal versuchen." });
-    return;
+  const pairId = remotePair.id;
+  let result, status = "done";
+  try { result = await runRemoteText(task.prompt, "Handy"); } catch (e) { result = "⚠ " + e.message; status = "error"; }
+  await post("remote", { kind: "result", pair_id: pairId, api_key: cfg.key, task_id: task.id, status, result });
+}
+/** Aufgabe von unterwegs (Handy-Seite, Discord) im aktuellen Chat ausführen und die Antwort als Text zurückgeben. */
+async function runRemoteText(text, from) {
+  const c = chat;
+  text = String(text || "").trim();
+  if (/^(stop|stopp|abbrechen)$/i.test(text)) {
+    if (!isBusy(c)) return "Mythos arbeitet gerade an nichts.";
+    stop(c); noteTo(c, "■ Über " + from + " gestoppt."); return "■ Gestoppt.";
   }
-  const startLen = chat.view.length;
-  submit(chat, task.prompt, []);
-  while (isBusy(chat)) await new Promise((r) => setTimeout(r, 400));
-  const pieces = chat.view.slice(startLen).filter((v) => v.cls === "a" || v.cls === "sum").map((v) => v.text);
-  const result = pieces.join("\n\n").trim() || "(Mythos hat geantwortet, aber ohne Text – z. B. nur Dateien geändert. Auf dem PC nachsehen.)";
-  await post("remote", { kind: "result", pair_id: remotePair.id, api_key: cfg.key, task_id: task.id, status: "done", result });
+  if (/^(status|stand)$/i.test(text)) {
+    const r = runOf(c);
+    return (isBusy(c) ? "⟳ Mythos arbeitet" + (r ? " seit " + fmt(Date.now() - r.t0) : "") : "✓ Mythos ist frei") + (c.goal ? "\n🎯 Ziel: " + c.goal + (c.goalStep ? " (Schritt " + c.goalStep + ")" : "") : "") + (cfg.folder ? "\n📁 " + base(cfg.folder) : "");
+  }
+  if (isBusy(c)) {
+    const r = runOf(c);
+    if (r && !r.stopped && !text.startsWith("/")) {
+      (r.inject = r.inject || []).push({ q: text, att: [] }); addTo(c, "u", "💬 " + from + ": " + text + "  (wird bei nächster Gelegenheit berücksichtigt)");
+      return "📥 Mythos arbeitet gerade und berücksichtigt das bei nächster Gelegenheit.";
+    }
+    return "Mythos arbeitet gerade. Schreib „stop“ zum Abbrechen oder versuch es gleich nochmal.";
+  }
+  if (!cfg.folder) return "Auf dem PC ist kein Projektordner geöffnet.";
+  if (/^\/(goal|ziel)\s+\S/i.test(text) && !$("auto").checked) return "Für /goal braucht Mythos Vollzugriff. Schreib zuerst „/vollzugriff an“.";
+  if (!text.startsWith("/") && !$("auto").checked) noteTo(c, "💬 " + from + ": Mythos fragt vor Änderungen am PC nach (Vollzugriff ist aus).");
+  const startLen = c.view.length;
+  await submit(c, text, []);
+  await new Promise((r) => setTimeout(r, 300));
+  while (isBusy(c)) await new Promise((r) => setTimeout(r, 500));
+  const out = c.view.slice(startLen);
+  const answer = out.filter((v) => v.cls === "a" || v.cls === "sum").map((v) => v.text);
+  const notes = out.filter((v) => v.cls === "note" || v.cls === "done").map((v) => v.text);
+  const res = (answer.length ? answer.slice(-2).join("\n\n") + (notes.length ? "\n\n" + notes[notes.length - 1] : "") : notes.join("\n")).trim();
+  return res || "(Mythos hat geantwortet, aber ohne Text, z. B. nur Dateien geändert. Auf dem PC nachsehen.)";
 }
 
 // ---------- Discord: Anfragen an Mythos aus Discord (/discord) ----------
@@ -845,39 +889,9 @@ async function dcWork() {
   } finally { me.busy = false; }
 }
 async function dcRunTask(t) {
-  const c = chat;
-  if (/^(stop|stopp|abbrechen)$/i.test(t.text)) {
-    if (!isBusy(c)) return dcSend(t.channel, "Mythos arbeitet gerade an nichts.", t.id);
-    stop(c); noteTo(c, "■ Über Discord gestoppt."); return dcSend(t.channel, "■ Gestoppt.", t.id);
-  }
-  if (/^(status|stand)$/i.test(t.text)) {
-    const r = runOf(c);
-    return dcSend(t.channel, (isBusy(c) ? "⟳ Mythos arbeitet" + (r ? " seit " + fmt(Date.now() - r.t0) : "") : "✓ Mythos ist frei") + (c.goal ? "\n🎯 Ziel: " + c.goal + (c.goalStep ? " (Schritt " + c.goalStep + ")" : "") : "") + (cfg.folder ? "\n📁 " + base(cfg.folder) : ""), t.id);
-  }
-  if (isBusy(c)) {
-    const r = runOf(c);
-    if (r && !r.stopped && !t.text.startsWith("/")) {
-      (r.inject = r.inject || []).push({ q: t.text, att: [] }); addTo(c, "u", "💬 Discord: " + t.text + "  (wird bei nächster Gelegenheit berücksichtigt)");
-      return dcSend(t.channel, "📥 Mythos arbeitet gerade und berücksichtigt das bei nächster Gelegenheit.", t.id);
-    }
-    return dcSend(t.channel, "Mythos arbeitet gerade. Schreib `stop` zum Abbrechen oder versuch es gleich nochmal.", t.id);
-  }
-  if (!cfg.folder) return dcSend(t.channel, "Auf dem PC ist kein Projektordner geöffnet.", t.id);
-  if (/^\/(goal|ziel)\s+\S/i.test(t.text) && !$("auto").checked) return dcSend(t.channel, "Für `/goal` braucht Mythos Vollzugriff. Schreib zuerst `/vollzugriff an`.", t.id);
-  if (!t.text.startsWith("/") && !$("auto").checked) noteTo(c, "💬 Discord-Anfrage: Mythos fragt vor Änderungen am PC nach (Vollzugriff ist aus).");
-  const startLen = c.view.length;
   dcApi("POST", "/channels/" + t.channel + "/typing");
-  const typing = setInterval(() => { if (isBusy(c)) dcApi("POST", "/channels/" + t.channel + "/typing"); }, 8000);
-  try {
-    await submit(c, t.text, []);
-    await new Promise((r) => setTimeout(r, 300));
-    while (isBusy(c)) await new Promise((r) => setTimeout(r, 500));
-  } finally { clearInterval(typing); }
-  const out = c.view.slice(startLen);
-  const answer = out.filter((v) => v.cls === "a" || v.cls === "sum").map((v) => v.text);
-  const notes = out.filter((v) => v.cls === "note" || v.cls === "done").map((v) => v.text);
-  const text = (answer.length ? answer.slice(-2).join("\n\n") + (notes.length ? "\n\n" + notes[notes.length - 1] : "") : notes.join("\n")).trim();
-  return dcSend(t.channel, text || "(Mythos hat geantwortet, aber ohne Text, z. B. nur Dateien geändert. Auf dem PC nachsehen.)", t.id);
+  const typing = setInterval(() => { if (isBusy(chat)) dcApi("POST", "/channels/" + t.channel + "/typing"); }, 8000);
+  try { return await dcSend(t.channel, await runRemoteText(t.text, "Discord"), t.id); } finally { clearInterval(typing); }
 }
 async function dcCommand(arg) {
   if (/^(aus|off|trennen|stop)$/i.test(arg)) {
@@ -1442,6 +1456,7 @@ function show() {
   renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands(); setTimeout(() => checkTrust(cfg.folder), 600);
   renderSched(); setTimeout(checkSchedule, 1500);
   if (cfg.discordToken && !dc) dcConnect();
+  remoteResume();
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }

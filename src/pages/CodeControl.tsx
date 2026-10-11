@@ -11,6 +11,14 @@ import { Loader2, MonitorSmartphone, Send, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 const LS_KEY = "mythos.remotePair"; // { pairId, secret, device }
+const LS_TASKS = "mythos.remoteTasks"; // Verlauf wie in einem Messenger
+const QUICK = [
+  { label: "Status", text: "status" },
+  { label: "Stopp", text: "stop" },
+  { label: "Ziel setzen", text: "/goal ", fill: true },
+  { label: "Weiter", text: "/weiter" },
+];
+const deviceName = () => (/iphone|ipad/i.test(navigator.userAgent) ? "iPhone" : /android/i.test(navigator.userAgent) ? "Android-Handy" : "Browser");
 type Pair = { pairId: string; secret: string; device?: string };
 type Task = { id: string; prompt: string; status: "pending" | "running" | "done" | "error"; result?: string };
 
@@ -35,20 +43,23 @@ const CodeControl = () => {
   const [code, setCode] = useState(() => (params.get("code") || "").replace(/\D/g, "").slice(0, 6));
   const [connecting, setConnecting] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try { return JSON.parse(localStorage.getItem(LS_TASKS) || "[]"); } catch { return []; }
+  });
+  useEffect(() => { try { localStorage.setItem(LS_TASKS, JSON.stringify(tasks.slice(-50))); } catch { /* egal */ } }, [tasks]);
   const pollers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   useEffect(() => () => { Object.values(pollers.current).forEach(clearInterval); }, []);
 
-  const connect = async () => {
-    const clean = code.replace(/\D/g, "").slice(0, 6);
+  const connect = async (raw = code) => {
+    const clean = raw.replace(/\D/g, "").slice(0, 6);
     if (clean.length !== 6) { toast.error("Bitte den 6-stelligen Code vom PC eingeben."); return; }
     setConnecting(true);
     try {
-      const r = await call({ kind: "claim", code: clean, device_name: "iPhone" });
+      const r = await call({ kind: "claim", code: clean, device_name: deviceName() });
       const p: Pair = { pairId: r.pair_id, secret: r.pair_secret, device: "PC" };
       localStorage.setItem(LS_KEY, JSON.stringify(p));
-      setPair(p); setCode("");
+      setPair(p); setCode(""); setTasks([]);
       toast.success("Verbunden!");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Verbinden fehlgeschlagen"); }
     setConnecting(false);
@@ -58,6 +69,15 @@ const CodeControl = () => {
     if (pair) call({ kind: "unpair", pair_id: pair.pairId, pair_secret: pair.secret }).catch(() => {});
     localStorage.removeItem(LS_KEY); setPair(null); setTasks([]);
   };
+
+  // Link aus der Benachrichtigung (…/code?code=123456): direkt verbinden, ohne Tippen.
+  const autoCode = useRef(code);
+  useEffect(() => {
+    if (autoCode.current.length === 6) void connect(autoCode.current);
+    autoCode.current = "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const pollTask = (pairId: string, secret: string, id: string) => {
     pollers.current[id] = setInterval(async () => {
@@ -71,9 +91,17 @@ const CodeControl = () => {
     }, 1500);
   };
 
-  const send = async () => {
-    if (!pair || !prompt.trim()) return;
-    const text = prompt.trim(); setPrompt("");
+  // Offene Aufgaben nach dem Neuladen der Seite weiter abfragen.
+  useEffect(() => {
+    if (!pair) return;
+    tasks.filter((t) => (t.status === "pending" || t.status === "running") && !pollers.current[t.id]).forEach((t) => pollTask(pair.pairId, pair.secret, t.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pair]);
+
+  const send = async (override?: string) => {
+    const text = (override ?? prompt).trim();
+    if (!pair || !text) return;
+    if (override == null) setPrompt("");
     try {
       const r = await call({ kind: "push", pair_id: pair.pairId, pair_secret: pair.secret, prompt: text });
       const task: Task = { id: r.task_id, prompt: text, status: "pending" };
@@ -103,7 +131,7 @@ const CodeControl = () => {
               placeholder="123456" inputMode="numeric" className="text-center text-2xl tracking-[0.3em] font-mono h-14"
               onKeyDown={(e) => e.key === "Enter" && connect()}
             />
-            <Button onClick={connect} disabled={connecting || code.length !== 6} className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90">
+            <Button onClick={() => connect()} disabled={connecting || code.length !== 6} className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90">
               {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
               Verbinden
             </Button>
@@ -114,7 +142,12 @@ const CodeControl = () => {
               <span className="text-sm flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" /> Verbunden mit {pair.device || "PC"}</span>
               <Button variant="ghost" size="sm" onClick={disconnect} className="text-muted-foreground"><Unlink className="h-3.5 w-3.5 mr-1" /> Trennen</Button>
             </div>
-            <p className="text-xs text-muted-foreground">Aufgaben laufen im gerade auf dem PC geöffneten Chat – wie dort eingetippt.</p>
+            <p className="text-xs text-muted-foreground">Schreib Mythos wie in einem Messenger. Aufgaben laufen im gerade auf dem PC geöffneten Chat, wie dort eingetippt. Tipp: Seite zum Startbildschirm hinzufügen.</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK.map((q) => (
+                <Button key={q.label} size="sm" variant="outline" onClick={() => (q.fill ? setPrompt(q.text) : send(q.text))}>{q.label}</Button>
+              ))}
+            </div>
             <div className="space-y-3">
               {tasks.slice().reverse().map((t) => (
                 <div key={t.id} className="space-y-1.5">
@@ -129,8 +162,8 @@ const CodeControl = () => {
             </div>
             <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-background/95 backdrop-blur p-3 flex gap-2 max-w-md mx-auto">
               <Input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Aufgabe an den PC …"
-                onKeyDown={(e) => e.key === "Enter" && send()} />
-              <Button onClick={send} disabled={!prompt.trim()} size="icon" className="shrink-0 bg-gradient-primary text-primary-foreground hover:opacity-90">
+                onKeyDown={(e) => { if (e.key === "Enter") void send(); }} />
+              <Button onClick={() => send()} disabled={!prompt.trim()} size="icon" className="shrink-0 bg-gradient-primary text-primary-foreground hover:opacity-90">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
