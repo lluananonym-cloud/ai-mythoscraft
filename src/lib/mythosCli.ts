@@ -35,7 +35,7 @@ const fill = (src: string, vars: Record<string, string> = {}) =>
 const SHARED_TOOLS = fill(SHARED_TOOLS_RAW, { "// @@TOOL_PARSE@@": TOOL_PARSE });
 
 export const CLI_PKG = "mythos-code";
-export const CLI_VERSION = "1.7.8";
+export const CLI_VERSION = "1.8.0";
 const API = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/v1-messages`;
 
 const pkgJson = () => JSON.stringify({
@@ -119,7 +119,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "2.9.2";
+export const APP_VERSION = "2.10.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {

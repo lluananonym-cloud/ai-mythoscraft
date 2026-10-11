@@ -4,7 +4,7 @@ mach mir eine eigene ki namens mythos ai die vorallem auf den support von dem se
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://ai-mythoscraft.lovable.app
+**Live app**: https://mythos-core-ai-ai-ai.lovable.app
 
 ## Build with Lovable
 

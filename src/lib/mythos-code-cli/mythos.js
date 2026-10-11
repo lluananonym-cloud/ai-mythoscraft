@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
+import http from "node:http";
 import { exec, spawn, execFileSync } from "node:child_process";
 
 // @@SHARED_TOOLS@@
@@ -252,6 +253,25 @@ function runLive(cmd) {
   });
 }
 
+// start/logs/stop/serve/verify/check – check zusätzlich mit echtem Browser (Chrome/Edge headless), falls installiert.
+async function cliDevTool(t) {
+  stopTick();
+  const live = t.name === "start" || t.name === "verify" ? (s) => process.stdout.write(C.d + s + C.x) : null;
+  const r = await devTool(t, ROOT, { onChunk: live, track: (p) => { child = p; } });
+  child = null;
+  let text = r.result, image = null;
+  if (t.name === "check" && wantsRender(r)) {
+    say(C.d + "   🌐 Browser-Test …" + C.x);
+    const h = await headlessRender(r.url).catch(() => null);
+    if (h && h.ok) { text = checkReport(r.url, r.http, renderVerdict(h)); image = h.image; }
+    else text = checkReport(r.url, r.http, null, "ℹ Kein Chrome/Edge gefunden – nur HTTP-Prüfung (Pfad mit MYTHOS_CHROME setzen).");
+  }
+  startTick();
+  const show = text.split("\n").filter((l) => /^[✓✗⚠ℹ]|^ERGEBNIS|^Prüfbericht|^Seitenprüfung|^Läuft|^Befehl|^FEHLER/.test(l)).slice(0, 14);
+  say(show.map((l) => (/✗|FEHLER/.test(l) ? C.r : /✓/.test(l) ? C.g : C.d) + "   " + l + C.x).join("\n"));
+  return image ? { text, image } : text;
+}
+
 // Mythos Cloud: Backend + KI-Gateway für die gebaute App verbinden und mythos-cloud.js anlegen.
 async function cloudConnect(t) {
   try {
@@ -273,7 +293,14 @@ async function runTool(t) {
     say(C.c + C.b + "📋 Aufgabenliste " + done + "/" + items.length + C.x + "\n" + items.map((x) => (x.done ? C.g + "  ☑ " + C.d : "  ☐ ") + x.text + C.x).join("\n"));
     return todoSummary(items);
   }
+  // Server & Watcher enden nie → automatisch im Hintergrund starten, statt die Aufgabe zu blockieren.
+  if (t.name === "run" && looksLikeServer(t.cmd)) { say(C.d + "↪ " + t.cmd + " läuft dauerhaft – wird im Hintergrund gestartet" + C.x); t = { name: "start", cmd: t.cmd }; }
   const label = t.name === "run" ? "run " + t.cmd
+    : t.name === "start" ? "start (Hintergrund) " + t.cmd
+    : t.name === "serve" ? "serve " + (t.path || ".")
+    : t.name === "check" ? "check " + (t.url || t.path || "")
+    : t.name === "verify" ? "verify (Build, Typecheck, Tests …)"
+    : t.name === "logs" || t.name === "stop" ? t.name + " " + (t.id || "")
     : t.name === "search" ? "search /" + t.pattern + "/" + (t.glob ? " " + t.glob : "")
     : t.name === "write" ? "write " + t.path + " (" + String(t.content || "").length + " Zeichen)"
     : t.name === "websearch" ? "websearch " + t.query
@@ -282,7 +309,7 @@ async function runTool(t) {
     : t.name + " " + (t.path || "");
   say(C.y + "⚙  " + label + C.x);
   // Sicherheitsnetz: gefährliche Befehle fragen immer nach (auch mit --yes) und werden bei /goal blockiert.
-  const why = t.name === "run" ? dangerCheck(t.cmd) : null;
+  const why = t.name === "run" || t.name === "start" ? dangerCheck(t.cmd) : null;
   if (why) {
     say(C.r + "🛡 Sicherheitsnetz: dieser Befehl " + why + "." + C.x);
     if (goal) return "BLOCKIERT vom Sicherheitsnetz: Der Befehl " + why + ". Der Nutzer ist nicht da und kann das nicht bestätigen – finde einen sichereren Weg ohne diesen Befehl.";
@@ -291,7 +318,7 @@ async function runTool(t) {
     startTick();
     if (a !== "j" && a !== "y") return "Vom Nutzer abgelehnt (Sicherheitsnetz). Finde einen sichereren Weg.";
   }
-  if ((t.name === "run" || t.name === "write" || t.name === "edit" || t.name === "cloud") && !autoYes && !why) {
+  if (["run", "start", "verify", "write", "edit", "cloud"].includes(t.name) && !autoYes && !why) {
     stopTick();
     const a = (await ask(C.d + "   Erlauben? [j/N/a=immer] " + C.x)).trim().toLowerCase();
     startTick();
@@ -299,6 +326,7 @@ async function runTool(t) {
   }
   if (t.name === "run") return runLive(t.cmd);
   if (t.name === "cloud") return cloudConnect(t);
+  if (isDevTool(t)) return cliDevTool(t);
   if (isWebTool(t)) {
     const r = await webTool(t);
     say(C.d + "   " + r.result.split("\n").filter(Boolean).slice(0, 3).join(" · ").slice(0, 160) + C.x);
@@ -311,8 +339,9 @@ async function runTool(t) {
 
 // ---------- Eine Aufgabe (auch /goal) ----------
 async function turnInner(history) {
-  const max = goal ? 4000 : 40;
+  const max = goal ? 4000 : 60;
   let nudges = 0;
+  const tracker = verifyTracker();
   for (let i = 0; i < max && !stopped; i++) {
     const pr = streamPrinter();
     let think = null;
@@ -326,6 +355,8 @@ async function turnInner(history) {
     history.push({ role: "assistant", content: out });
     const pb = parseToolBlock(out);
     if (!pb.tool && !pb.error) {
+      const nudge = tracker.nudge();
+      if (nudge) { say(C.d + "🔎 Mythos prüft seine Arbeit …" + C.x); history.push({ role: "user", content: nudge }); continue; }
       if (!goal || /ZIEL ERREICHT/.test(out)) return goal ? "reached" : "done";
       if (++nudges > 40) { say(C.y + "🎯 Mythos kommt beim Ziel nicht weiter – schau es dir bitte an (/weiter macht weiter)." + C.x); return "stuck"; }
       history.push({ role: "user", content: GOAL_NUDGE });
@@ -335,8 +366,11 @@ async function turnInner(history) {
     if (pb.error) { history.push({ role: "user", content: pb.error + " Sende den Block vollständig als gültiges JSON in <tool>…</tool>." }); continue; }
     const t = pb.tool, bad = toolProblem(t);
     if (bad) { history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + bad }); continue; }
-    const res = await runTool(t);
-    history.push({ role: "user", content: "Werkzeug-Ergebnis:\n" + res });
+    const res = await runTool(t), resText = typeof res === "string" ? res : res.text;
+    tracker.note(t, resText);
+    // Screenshot nur in der neuesten Prüfung mitschicken (spart Tokens).
+    if (res.image) history.forEach((m) => { if (m.shot) { delete m.images; delete m.shot; } });
+    history.push(res.image ? { role: "user", content: "Werkzeug-Ergebnis:\n" + resText + "\n\n(Screenshot der Seite anbei – sieh ihn dir an: Ist das Layout so, wie der Nutzer es will?)", images: [res.image], shot: true } : { role: "user", content: "Werkzeug-Ergebnis:\n" + resText });
   }
   if (!stopped) say(C.y + "Schrittlimit (" + max + ") erreicht – mit /weiter macht Mythos weiter." + C.x);
   return stopped ? "stopped" : "limit";
@@ -584,5 +618,7 @@ async function main() {
     await turn(history, text + files.map((f) => "\n\n### " + f.name + "\n```\n" + f.content + "\n```").join(""), images);
   }
   rl.close();
+  process.exit(0); // beendet auch Hintergrund-Server (process.on("exit") in den Werkzeugen)
 }
+for (const sig of ["SIGTERM", "SIGHUP"]) process.on(sig, () => process.exit(0));
 main();

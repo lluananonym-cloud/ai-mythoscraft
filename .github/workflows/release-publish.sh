@@ -3,7 +3,7 @@
 # Eingabe (env): TAG, TITLE, VER, HASH, GITHUB_REPOSITORY · Argument: Datei
 set -euo pipefail
 FILE="$1"
-NOTES="Automatisch gebaut. Download über https://mythos-core-ai-ai.lovable.app/downloads
+NOTES="Automatisch gebaut. Download über https://mythos-core-ai-ai-ai.lovable.app/downloads
 
 <!-- version: $VER -->
 <!-- source: $HASH -->"
