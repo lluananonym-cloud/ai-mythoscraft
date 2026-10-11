@@ -52,6 +52,7 @@ import ArtifactsDialog from "@/components/chat/ArtifactsDialog";
 import ProjectsDialog from "@/components/chat/ProjectsDialog";
 import { getInstructions, getMcpServers, getProjects, projectOfChat, setProjects, type Project } from "@/lib/chatPrefs";
 import { callTool, collectTools } from "@/lib/mcpClient";
+import { FILE_PROMPT } from "@/lib/chatFiles";
 
 const SLASH_COMMANDS = [
   { cmd: "/goal",      args: "<ziel>",          icon: Target,    desc: "Ziel setzen – Mythos arbeitet selbstständig Schritt für Schritt, bis es erreicht ist" },
@@ -845,6 +846,7 @@ const Chat = () => {
     } else {
       parts.push("## Werkzeuge\nIn diesem Chat sind keine Werkzeuge verbunden. Schreibe nie <tool>- oder <tool_call>-Blöcke, sondern antworte direkt als normaler Text.");
     }
+    parts.push(FILE_PROMPT);
     if (goalNow) {
       parts.push(
         `## /goal-Modus – Schritt ${goalNow.step} von höchstens ${GOAL_MAX_STEPS}\n` +

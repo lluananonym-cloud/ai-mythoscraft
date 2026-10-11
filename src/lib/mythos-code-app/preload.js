@@ -21,6 +21,6 @@ contextBridge.exposeInMainWorld("mythos", {
   preview: inv("preview:open"),
   cloudPc: inv("cloudpc:open"),
   filmStudio: inv("filmstudio:open"),
-  files: { list: inv("files:list"), read: inv("files:read"), save: inv("files:save"), reveal: inv("files:reveal"), find: inv("files:find") },
+  files: { list: inv("files:list"), read: inv("files:read"), save: inv("files:save"), reveal: inv("files:reveal"), saveAs: inv("files:saveAs"), saveAll: inv("files:saveAll"), find: inv("files:find") },
   term: { run: inv("term:run"), kill: inv("term:kill"), cd: inv("term:cd"), onOutput: on("term-output") },
 });
