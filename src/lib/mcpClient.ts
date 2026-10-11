@@ -2,7 +2,8 @@
 // Versucht erst die direkte Verbindung; blockiert der Server den Browser (CORS),
 // geht die Anfrage über die Edge-Funktion "mcp-proxy".
 import { supabase } from "@/integrations/supabase/client";
-import type { McpServer } from "@/lib/chatPrefs";
+import { getMcpServers, setMcpServers, type McpServer } from "@/lib/chatPrefs";
+import { McpAuthError, refreshToken } from "@/lib/mcpOauth";
 
 const PROTOCOL = "2025-06-18";
 const CLIENT = { name: "mythos-web", version: "1" };
@@ -19,14 +20,33 @@ function parseSse(text: string): any[] {
     .filter(Boolean).map(d => { try { return JSON.parse(d); } catch { return null; } }).filter(Boolean);
 }
 
-async function post(server: McpServer, s: Session, msg: any): Promise<any | undefined> {
+/** Aktuelle Daten des Connectors (Token kann inzwischen erneuert worden sein). */
+const fresh = (server: McpServer) => getMcpServers().find(x => x.id === server.id) || server;
+function saveToken(server: McpServer, oauth: McpServer["oauth"]) {
+  setMcpServers(getMcpServers().map(x => x.id === server.id ? { ...x, oauth } : x));
+}
+
+async function authHeader(server: McpServer, force = false): Promise<string | undefined> {
+  if (server.auth) return server.auth;
+  let t = fresh(server).oauth;
+  if (!t) return undefined;
+  if (force || (t.expiresAt && t.expiresAt - 60_000 < Date.now() && t.refreshToken)) {
+    t = await refreshToken(t);
+    saveToken(server, t);
+  }
+  return "Bearer " + t.accessToken;
+}
+
+async function post(server: McpServer, s: Session, msg: any, retried = false): Promise<any | undefined> {
   const headers: Record<string, string> = {
+    ...(server.headers || {}),
     "Content-Type": "application/json",
     Accept: "application/json, text/event-stream",
     "MCP-Protocol-Version": PROTOCOL,
   };
   if (s.id) headers["Mcp-Session-Id"] = s.id;
-  if (server.auth) headers.Authorization = server.auth;
+  const authz = await authHeader(server);
+  if (authz) headers.Authorization = authz;
 
   let status: number, body: string, type: string, sid: string | null;
   if (!s.viaProxy) {
@@ -43,6 +63,11 @@ async function post(server: McpServer, s: Session, msg: any): Promise<any | unde
     const { data, error } = await supabase.functions.invoke("mcp-proxy", { body: { url: server.url, headers, payload: msg } });
     if (error || data?.error) throw new Error(data?.error || error?.message || "Proxy-Fehler");
     status = data.status; type = data.contentType || ""; sid = data.sessionId; body = data.body || "";
+  }
+  if (status === 401) {
+    const t = fresh(server).oauth;
+    if (!retried && !server.auth && t?.refreshToken) { await authHeader(server, true); return post(server, s, msg, true); }
+    throw new McpAuthError();
   }
   if (sid) s.id = sid;
   if (status === 202 || status === 204) return undefined;

@@ -549,26 +549,91 @@ function renderMcp() {
   b.title = mcpStatus.map((s) => s.name + ": " + s.status + (s.error ? " (" + s.error + ")" : "") + " · " + s.tools.length + " Werkzeuge").join("\n");
 }
 async function refreshBrowser() { browserStatus = await window.mythos.browser.start().catch(() => ({ running: false, paired: false, connected: false })); renderConnections(); }
-/** Formular „Connector hinzufügen“ – URL (Streamable HTTP) oder Befehl (z. B. npx …), wie bei Claude. */
+/** Karte „Connector hinzufügen“ – öffnet den Dialog wie bei Claude. */
 function mcpAddForm() {
   const c = el("div", "conn"), f = el("div", "conn-actions");
-  c.appendChild(el("strong", "", "＋ Connector hinzufügen"));
-  c.appendChild(el("div", "meta", "MCP-Server-URL (https://…) oder ein Startbefehl wie „npx -y @modelcontextprotocol/server-github“. Gilt für alle Projekte."));
-  const name = el("input", "search"), target = el("input", "search"), auth = el("input", "search");
-  name.placeholder = "Name, z. B. GitHub"; target.placeholder = "https://…/mcp  oder  npx -y …"; auth.placeholder = "Authorization (optional), z. B. Bearer …"; auth.type = "password";
-  [name, target, auth].forEach((i) => { i.style.flex = "1"; i.style.margin = "0"; });
-  const add = el("button", "chip", "Hinzufügen");
-  add.onclick = async () => {
-    const t = target.value.trim(); if (!t) return target.focus();
-    let entry;
-    if (/^https?:\/\//i.test(t)) { entry = { type: "http", url: t }; if (auth.value.trim()) entry.headers = { Authorization: auth.value.trim() }; }
-    else { const parts = t.match(/(?:[^\s"]+|"[^"]*")+/g).map((x) => x.replace(/^"|"$/g, "")); entry = { command: parts[0], args: parts.slice(1) }; }
-    const n = name.value.trim() || (entry.url ? new URL(entry.url).hostname : entry.command);
-    if (!(await window.mythos.mcp.add(n, entry))) return note("⚠ Connector konnte nicht gespeichert werden.");
-    await configureMcp(); renderConnections(); note("🔌 Connector „" + n + "“ hinzugefügt – Mythos kann seine Werkzeuge jetzt benutzen.");
+  c.appendChild(el("strong", "", "＋ Eigener Connector"));
+  c.appendChild(el("div", "meta", "MCP-Server per URL verbinden (mit Anmeldung, wenn der Server sie verlangt). Gilt für alle Projekte."));
+  const add = el("button", "chip", "＋ Connector hinzufügen"); add.onclick = () => mcpDialog();
+  f.append(add); c.append(f); return c;
+}
+/** Dialog „Benutzerdefinierten Connector hinzufügen“: Schritt 1 Name + URL, dann Verbindung prüfen, Schritt 2 Anmeldung. */
+function mcpDialog() {
+  const wrap = el("div", "connect-modal open"), box = el("div", "connect-box glass mcpdlg");
+  wrap.appendChild(box); document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.onclick = (e) => { if (e.target === wrap) close(); };
+  const st = { name: "", url: "", auth: "now", client: "dcr", clientId: "", clientSecret: "", headers: [], found: null, redirect: "" };
+  const input = (ph, val, on, type) => { const i = el("input", "search mcp-field"); i.placeholder = ph; i.value = val || ""; if (type) i.type = type; i.oninput = () => on(i.value); return i; };
+  const head = () => { const h = el("div", "connect-head"); h.append(el("h2", "serif", "Benutzerdefinierten Connector hinzufügen")); const x = el("button", "chip", "✕"); x.onclick = close; h.append(x); box.append(h, el("div", "mcp-sub", "Verbinde Mythos mit deinen Daten und Tools.")); };
+  const warn = () => box.append(el("div", "mcp-sub mcp-warn", "Verwende nur Connectors von Entwicklern, denen du vertraust. Mythos hat keine Kontrolle darüber, welche Tools Entwickler bereitstellen, und kann nicht garantieren, dass sie wie vorgesehen funktionieren oder sich nicht verändern."));
+  const radio = (group, value, title, desc) => {
+    const l = el("label", "mcp-opt"), r = el("input"); r.type = "radio"; r.name = group; r.checked = st[group] === value;
+    r.onchange = () => { st[group] = value; step2(); };
+    const t = el("div"), tt = el("div", "mcp-opt-title", title);
+    if (st.found && st.found[group] === value) tt.append(el("span", "mcp-badge", "Erkannt"));
+    t.append(tt, el("div", "mcp-sub", desc)); l.append(r, t); return l;
   };
-  f.append(name, target); const f2 = el("div", "conn-actions"); f2.append(auth, add);
-  c.append(f, f2); return c;
+  function step1(err) {
+    box.textContent = ""; head();
+    const n = input("Name", st.name, (v) => (st.name = v)), u = input("MCP-Server-URL", st.url, (v) => (st.url = v));
+    box.append(n, el("div", "mcp-sub", "Wird in der Connector-Liste angezeigt."), u,
+      el("div", "mcp-sub", "Die HTTPS-Adresse, unter der der Server MCP-Anfragen entgegennimmt, zum Beispiel https://mcp.example.com/mcp. Ein Startbefehl wie „npx -y …“ geht auch."));
+    if (err) box.append(el("div", "mcp-err", "⚠ " + err));
+    warn();
+    const foot = el("div", "mcp-foot"), cancel = el("button", "chip", "Abbrechen"), next = el("button", "chip primary", "Weiter");
+    cancel.onclick = close;
+    next.onclick = async () => {
+      const t = st.url.trim(); if (!t) return u.focus();
+      if (!/^https?:\/\//i.test(t)) { // Startbefehl (stdio) – keine Anmeldung nötig
+        const parts = t.match(/(?:[^\s"]+|"[^"]*")+/g).map((x) => x.replace(/^"|"$/g, ""));
+        return finish({ command: parts[0], args: parts.slice(1) }, st.name.trim() || parts[0]);
+      }
+      next.disabled = true; next.textContent = "Verbinde …";
+      const r = await window.mythos.mcp.probe(t, {}).catch((e) => ({ ok: false, error: e.message }));
+      if (!r.ok) return step1(r.error || "Server nicht erreichbar");
+      st.found = { auth: r.auth, client: r.client }; st.auth = r.auth; st.client = r.client; st.redirect = r.redirect;
+      step2();
+    };
+    foot.append(cancel, next); box.append(foot); n.focus();
+  }
+  function step2() {
+    box.textContent = ""; head();
+    const sum = el("div", "mcp-summary"); sum.append(el("strong", "", st.name.trim() || new URL(st.url.trim()).hostname), el("div", "mcp-mono", st.url.trim())); box.append(sum);
+    box.append(el("div", "mcp-sec", "Authentifizierung"),
+      radio("auth", "now", "Jetzt anmelden", "Du meldest dich über den OAuth-Flow des Servers an, bevor Mythos Tools oder Ressourcen verwendet."),
+      radio("auth", "ondemand", "Bei Bedarf anmelden", "Mythos verbindet sich zunächst ohne Anmeldedaten und fordert dich zur Anmeldung auf, wenn der Server dies verlangt. Für Server, die einige Tools auch ohne Konto anbieten."),
+      radio("auth", "none", "Keine Anmeldung", "Für Server mit offenem Zugriff oder für Server, die einen API-Schlüssel statt OAuth verwenden."));
+    if (st.auth !== "none") {
+      box.append(el("div", "mcp-sec", "OAuth-Client"),
+        radio("client", "cimd", "Mythos' veröffentlichte Identität verwenden", "Der Server liest die Client-Details von Mythos von einer öffentlichen URL (CIMD). Keine Einrichtung erforderlich, aber der Server muss dies unterstützen."),
+        radio("client", "dcr", "Automatisch registrieren", "Mythos registriert einen OAuth-Client beim Server, wenn du dich verbindest (DCR). Funktioniert mit den meisten Servern."),
+        radio("client", "custom", "Eigenen OAuth-Client verwenden", "Gib eine Client-ID ein, die du selbst beim Server registriert hast. Lass das Secret leer, es sei denn, dein Autorisierungsserver erfordert eines."));
+      if (st.client === "custom") box.append(input("Client-ID", st.clientId, (v) => (st.clientId = v)), input("Client-Secret (optional)", st.clientSecret, (v) => (st.clientSecret = v), "password"), el("div", "mcp-sub", "Weiterleitungs-URL beim Server eintragen: " + st.redirect));
+    }
+    box.append(el("div", "mcp-sec", "Request-Header"), el("div", "mcp-sub", "Wird mit jeder Anfrage zusammen mit dem OAuth-Bearer-Token gesendet. Werte werden nur auf diesem PC gespeichert. Du kannst bis zu vier hinzufügen."));
+    st.headers.forEach((h, i) => { const row = el("div", "conn-actions"), k = input("Header-Name", h.k, (v) => (h.k = v)), v = input("Wert", h.v, (x) => (h.v = x), "password"), rm = el("button", "chip", "✕"); rm.onclick = () => { st.headers.splice(i, 1); step2(); }; row.append(k, v, rm); box.append(row); });
+    if (st.headers.length < 4) { const add = el("button", "chip", "＋ Header hinzufügen"); add.onclick = () => { st.headers.push({ k: "", v: "" }); step2(); }; const row = el("div", "conn-actions"); row.append(add); box.append(row); }
+    warn();
+    const foot = el("div", "mcp-foot"), back = el("button", "chip", "Zurück"), ok = el("button", "chip primary", "Hinzufügen");
+    back.onclick = () => step1();
+    ok.onclick = () => {
+      if (st.auth !== "none" && st.client === "custom" && !st.clientId.trim()) return note("⚠ Bitte eine Client-ID angeben.");
+      const entry = { type: "http", url: st.url.trim() }, hs = st.headers.filter((h) => h.k.trim() && h.v.trim());
+      if (hs.length) entry.headers = Object.fromEntries(hs.map((h) => [h.k.trim(), h.v.trim()]));
+      entry.oauth = { auth: st.auth, client: st.client };
+      if (st.client === "custom") { entry.oauth.clientId = st.clientId.trim(); if (st.clientSecret.trim()) entry.oauth.clientSecret = st.clientSecret.trim(); }
+      finish(entry, st.name.trim() || new URL(entry.url).hostname);
+    };
+    foot.append(back, ok); box.append(foot);
+  }
+  async function finish(entry, n) {
+    if (!(await window.mythos.mcp.add(n, entry))) return note("⚠ Connector konnte nicht gespeichert werden.");
+    close(); await configureMcp(); renderConnections();
+    if (entry.oauth && entry.oauth.auth === "now") return mcpLogin(n.replace(/[^\w .-]/g, "").slice(0, 40));
+    note("🔌 Connector „" + n + "“ hinzugefügt – Mythos kann seine Werkzeuge jetzt benutzen.");
+  }
+  step1();
 }
 /** Bekannte Connectoren (Anmeldung per OAuth im Browser), wie im Web-Chat. */
 const MCP_PRESETS = [{ name: "Higgsfield", url: "https://mcp.higgsfield.ai/mcp", hint: "Bilder & Videos" }];

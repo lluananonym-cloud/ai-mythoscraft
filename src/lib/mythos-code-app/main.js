@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, Notification, nativeImage, powerSaveBlocker, session, desktopCapturer, safeStorage } = require("electron");
 const fs = require("fs"); const path = require("path"); const http = require("http"); const crypto = require("crypto"); const { exec, execFile, spawn } = require("child_process");
-const { McpManager } = require("./mcp.js");
+const { McpManager, probe: mcpProbe, REDIRECT_PORT: MCP_REDIRECT_PORT } = require("./mcp.js");
 // Sprachmodus: mehrere Threads für die lokale Spracherkennung, falls keine Grafikkarte (WebGPU) nutzbar ist.
 app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
 
@@ -298,6 +298,11 @@ ipcMain.handle("mcp:add", (_e, name, entry) => {
 ipcMain.handle("mcp:remove", (_e, name) => {
   const j = readJsonFile(MCP_GLOBAL(), {}); if (!j.mcpServers || !j.mcpServers[name]) return false;
   delete j.mcpServers[name]; fs.writeFileSync(MCP_GLOBAL(), JSON.stringify(j, null, 2)); return true;
+});
+// Dialog „Connector hinzufügen“: Server einmal ansprechen und Anmeldung erkennen.
+ipcMain.handle("mcp:probe", async (_e, url, headers) => {
+  try { if (!/^https?:\/\//i.test(url)) throw new Error("Bitte eine https-Adresse angeben."); return { ok: true, redirect: `http://127.0.0.1:${MCP_REDIRECT_PORT}/callback`, ...(await mcpProbe(url, headers)) }; }
+  catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle("mcp:restart", (_e, name) => mcp.restart(name));
 ipcMain.handle("mcp:login", async (_e, name) => { try { return { ok: true, status: await mcp.login(name) }; } catch (e) { return { ok: false, error: e.message }; } });

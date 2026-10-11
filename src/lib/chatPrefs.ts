@@ -8,6 +8,26 @@ export type McpServer = {
   /** optionaler Authorization-Header, z. B. "Bearer abc…" */
   auth?: string;
   enabled: boolean;
+  /** Anmeldung wie bei Claude: jetzt, bei Bedarf oder gar nicht. */
+  authMode?: "now" | "ondemand" | "none";
+  /** OAuth-Client: veröffentlichte Identität (CIMD), automatisch registrieren (DCR) oder eigener Client. */
+  clientMode?: "cimd" | "dcr" | "custom";
+  clientId?: string;
+  clientSecret?: string;
+  /** zusätzliche Request-Header (bis zu 4) */
+  headers?: Record<string, string>;
+  /** gespeichertes OAuth-Token nach der Anmeldung */
+  oauth?: McpToken;
+};
+
+export type McpToken = {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  tokenEndpoint: string;
+  clientId: string;
+  clientSecret?: string;
+  resource: string;
 };
 
 export type Project = {
