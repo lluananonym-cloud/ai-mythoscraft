@@ -698,6 +698,7 @@ const COMMANDS = [
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
   ["/projekt", "", "Projektordner wählen"],
+  ["/film", "[idee]", "🎬 Mythos Filmstudio: aus einer Idee einen Kurzfilm mit Sprecher, Musik und Schnitt drehen"],
   ["/cloudpc", "[aufgabe]", "🖥 Mythos Cloud-PC öffnen: Agent mit eigenem Computer, du schaust live zu"],
   ["/modell", "[name]", "Modell anzeigen oder wechseln"],
   ["/vorschau", "[url|datei]", "Live-Vorschau öffnen (lädt bei Änderungen neu)"],
@@ -831,6 +832,7 @@ async function command(q) {
   if (cmd === "/weiter") return chat.history.length ? continueChat() : note("Hier gibt es noch nichts zum Weitermachen.");
   if (cmd === "/neu") return newChat();
   if (cmd === "/projekt") return pickProject();
+  if (cmd === "/film" || cmd === "/filmstudio" || cmd === "/kurzfilm") return openFilmStudio(arg);
   if (cmd === "/cloudpc" || cmd === "/cloud-pc" || cmd === "/pc" || cmd === "/computer") return openCloudPc(arg);
   if (cmd === "/modell" || cmd === "/model") {
     if (!arg) return note("🧠 Modelle:\n" + prompts.models.map((m) => (m.id === (cfg.model || "mythos-code") ? "● " : "○ ") + m.label + " – " + m.desc).join("\n") + "\nWechseln: oben im Auswahlfeld oder /modell <name>");
@@ -1345,6 +1347,13 @@ async function openCloudPc(task) {
   else note("🖥 Cloud-PC geöffnet" + (task ? " – Mythos legt mit deiner Aufgabe los." : "."));
 }
 $("navPc").onclick = () => openCloudPc("");
+async function openFilmStudio(idea) {
+  const url = CFG.site.replace(/\/$/, "") + "/filmstudio" + (idea ? "?idee=" + encodeURIComponent(idea) : "");
+  const r = await window.mythos.filmStudio(url);
+  if (r && r.error) note("⚠ Filmstudio: " + r.error);
+  else note("🎬 Filmstudio geöffnet" + (idea ? " – Mythos dreht deinen Film." : "."));
+}
+$("navFilm").onclick = () => openFilmStudio("");
 $("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
 $("artClose").onclick = () => $("artifacts").classList.remove("open");
 $("artifacts").onclick = (e) => { if (e.target === $("artifacts")) $("artifacts").classList.remove("open"); };

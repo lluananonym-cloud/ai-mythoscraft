@@ -83,12 +83,12 @@ export const APP_RULES = `Erzeuge EIN vollständiges, sofort lauffähiges HTML-D
 Antworte NUR mit dem HTML.`;
 
 /** Bild für Tagesrückblick usw.: erst über den Server, sonst direkt im Browser bei Pollinations. */
-export async function makeImage(prompt: string): Promise<string> {
+export async function makeImage(prompt: string, size = { width: 768, height: 768 }): Promise<string> {
   try {
     return (await labs<{ url: string }>({ kind: "image", prompt })).url;
   } catch {
     const seed = Math.floor(Math.random() * 1e6);
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?model=flux&width=768&height=768&nologo=true&referrer=mythoscraft&seed=${seed}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?model=flux&width=${size.width}&height=${size.height}&nologo=true&referrer=mythoscraft&seed=${seed}`;
   }
 }
 
