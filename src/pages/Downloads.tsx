@@ -159,7 +159,7 @@ const AppCard = ({ app, release, releasesLoaded, canDownload, onLocked, extVersi
           )}
           {asset && release && !app.directUrl && (
             <p className="text-[11px] text-center text-muted-foreground">
-              {fmtSize(asset.size)} · aktualisiert {fmtDate(release.publishedAt)}
+              {fmtSize(asset.size)} · aktualisiert {fmtDate(asset.updatedAt || release.publishedAt)}
             </p>
           )}
         </div>
