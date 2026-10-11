@@ -4,7 +4,8 @@ name: Build Desktop Apps
 # (öffentlichen) Repo ab. Die Website (/downloads) verlinkt direkt darauf,
 # es muss also nichts mehr von Hand gebaut oder hochgeladen werden.
 #
-# - Mythos Code App: aus src/lib/mythos-code-app (Lovable) -> MythosCode-Setup.exe
+# - Mythos Code App: aus src/lib/mythos-code-app (Lovable) -> MythosCode-Setup-<version>.exe
+#                    + latest.yml (Update-Feed: die App sucht dort nach neuen Versionen)
 # - Mythos CLI:      aus src/lib/mythos-code-cli (Lovable)  -> mythos-code.tgz
 # - Mythos Browser:  aus dem privaten Repo mythos-browser (Secret APPS_REPO_TOKEN)
 #
@@ -54,6 +55,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG: code-latest
       ASSET: MythosCode-Setup.exe
+      PRUNE: MythosCode-Setup-*
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -87,8 +89,13 @@ jobs:
           VER: ${{ steps.src.outputs.app_version }}
           HASH: ${{ steps.src.outputs.hash }}
         run: |
-          mkdir -p out && cp build/desktop/app/dist/MythosCode-Setup.exe "out/$ASSET"
-          bash .github/workflows/release-publish.sh "out/$ASSET"
+          D=build/desktop/app/dist
+          EXE="MythosCode-Setup-$VER.exe"
+          test -f "$D/$EXE" && test -f "$D/latest.yml"
+          grep -q "^version: $VER$" "$D/latest.yml"
+          # Fester Name bleibt als Kopie für alte Links; die Website verlinkt die Datei mit Version.
+          mkdir -p out && cp "$D/$EXE" "out/$ASSET"
+          bash .github/workflows/release-publish.sh "$D/$EXE" "$D/$EXE.blockmap" "out/$ASSET" "$D/latest.yml"
 
   cli:
     name: Mythos CLI

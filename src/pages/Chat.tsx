@@ -478,8 +478,8 @@ const Chat = () => {
       if (!override) setInput("");
       // Die Setup-EXE wird automatisch von GitHub Actions gebaut (build-apps.yml) und liegt immer aktuell im Release.
       const { APP_USER_GUIDE } = await import("@/lib/mythosCli");
-      const { APPS, downloadUrl } = await import("@/lib/downloads");
-      const url = downloadUrl(APPS.find((x) => x.id === "code")!);
+      const { APPS, latestDownloadUrl } = await import("@/lib/downloads");
+      const url = await latestDownloadUrl(APPS.find((x) => x.id === "code")!);
       const a = document.createElement("a");
       a.href = url; a.target = "_blank"; a.rel = "noopener"; a.click();
       localReply(APP_USER_GUIDE(url));
