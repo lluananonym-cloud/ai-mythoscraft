@@ -659,7 +659,7 @@ function renderConnections() {
   MCP_PRESETS.forEach((p) => { const b = el("button", "chip", "🔌 " + p.name + " · " + p.hint); b.onclick = () => mcpAddPreset(p, b); pa.append(b); });
   pre.append(pa); box.appendChild(pre);
   box.appendChild(mcpAddForm());
-  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" || s.status === "auth" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.status === "auth" ? "Anmeldung nötig – klick auf „Anmelden“." : s.error || s.status)); const acts = el("div", "conn-actions");
+  mcpStatus.forEach((s) => { const c = el("div", "conn"), top = el("div", "conn-top"), dot = el("span", "dot " + (s.status === "connected" ? "ok" : s.status === "error" || s.status === "auth" ? "bad" : "")); top.append(dot, el("strong", "", s.name), el("span", "chip", s.scope)); c.append(top, el("div", "meta", s.status === "connected" ? s.tools.length + " Werkzeuge verbunden" : s.status === "auth" ? "Anmeldung nötig – klick auf „Anmelden“." : s.status === "connecting" ? "Verbinde …" : s.error || s.status)); const acts = el("div", "conn-actions");
     if (s.url && (s.status === "auth" || s.status === "error")) { const li = el("button", "chip", "Anmelden"); li.onclick = () => mcpLogin(s.name, li); acts.append(li); }
     if (s.oauth && s.status !== "auth") { const lo = el("button", "chip", "Abmelden"); lo.onclick = async () => { await window.mythos.mcp.logout(s.name); await configureMcp(); renderConnections(); }; acts.append(lo); }
     const retry = el("button", "chip", "Neu verbinden"); retry.onclick = async () => { await window.mythos.mcp.restart(s.name); await configureMcp(); }; acts.append(retry); if (s.scope === "global") { const rm = el("button", "chip", "Entfernen"); rm.onclick = async () => { if (!confirm("Connector „" + s.name + "“ entfernen?")) return; await window.mythos.mcp.remove(s.name); await configureMcp(); renderConnections(); }; acts.append(rm); } c.append(acts); box.append(c); });
@@ -1310,7 +1310,8 @@ window.mythos.onOutput((p) => {
   }
 });
 window.mythos.term.onOutput((p) => { if (p.id === "term") termWrite(stripAnsi(p.chunk)); });
-window.mythos.mcp.onChange((s) => { mcpStatus = s; renderMcp(); });
+// Status live nachziehen – auch in der offenen Connector-Liste, sonst bleibt dort „Verbinde …“ stehen.
+window.mythos.mcp.onChange((s) => { mcpStatus = s; renderMcp(); if ($("connections").classList.contains("open")) renderConnections(); });
 window.mythos.browser.onEvent((ev) => { const r = runOf(chat); if (r) activityPush(r, ev.kind === "error" ? "⚠" : ev.kind === "action" ? "↗" : "◎", ev.text || "Browser-Aktivität"); else note("◎ Browser: " + (ev.text || ev.kind)); refreshBrowser(); });
 $("btnLogin").onclick = login;
 $("btnSend").onclick = () => (isBusy(chat) ? stop(chat) : send());
