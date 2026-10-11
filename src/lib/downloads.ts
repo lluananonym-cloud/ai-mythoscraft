@@ -100,7 +100,7 @@ export const downloadUrl = (app: AppDownload, assetName?: string) =>
 export type ReleaseInfo = {
   tag: string;
   publishedAt: string;
-  assets: { name: string; size: number; url: string }[];
+  assets: { name: string; size: number; url: string; updatedAt: string }[];
 };
 
 /** Liest alle Releases einmal (öffentliche GitHub-API, kein Token nötig). */
@@ -115,7 +115,7 @@ export async function fetchReleases(): Promise<Record<string, ReleaseInfo>> {
     out[rel.tag_name] = {
       tag: rel.tag_name,
       publishedAt: rel.published_at,
-      assets: (rel.assets ?? []).map((a: any) => ({ name: a.name, size: a.size, url: a.browser_download_url })),
+      assets: (rel.assets ?? []).map((a: any) => ({ name: a.name, size: a.size, url: a.browser_download_url, updatedAt: a.updated_at || rel.published_at })),
     };
   }
   return out;
