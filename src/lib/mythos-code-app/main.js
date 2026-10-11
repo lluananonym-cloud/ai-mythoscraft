@@ -59,8 +59,49 @@ app.whenReady().then(() => {
     desktopCapturer.getSources({ types: ["screen"] }).then((src) => cb(src.length ? { video: src[0] } : {})).catch(() => cb({}));
   });
   win();
+  initUpdater();
 });
 app.on("before-quit", () => { quitting = true; });
+
+// ---------- Updates: beim Start und jede Stunde nach einer neuen Version suchen ----------
+// Quelle: Release "code-latest" auf GitHub (latest.yml + MythosCode-Setup-<version>.exe, siehe build-apps.yml).
+// Geladen und installiert wird erst, wenn der Nutzer auf „Jetzt updaten“ klickt.
+let updater = null, updState = { state: "idle", current: app.getVersion() };
+const updSend = (s) => { updState = Object.assign({ current: app.getVersion() }, s); send("update-status", updState); };
+function initUpdater() {
+  if (!app.isPackaged) return;
+  try { updater = require("electron-updater").autoUpdater; } catch (e) { logError(e); return; }
+  updater.autoDownload = false;
+  updater.autoInstallOnAppQuit = false;
+  updater.on("checking-for-update", () => { if (updState.state !== "available") updSend({ state: "checking" }); });
+  updater.on("update-available", (i) => {
+    const first = updState.version !== i.version;
+    updSend({ state: "available", version: i.version });
+    if (first && Notification.isSupported() && !(w && w.isVisible())) new Notification({ title: "Mythos Code " + i.version + " ist da", body: "Öffne Mythos Code und klick auf „Jetzt updaten“." }).show();
+  });
+  updater.on("update-not-available", () => updSend({ state: "latest" }));
+  updater.on("download-progress", (p) => updSend({ state: "downloading", version: updState.version, percent: Math.round(p.percent || 0) }));
+  updater.on("update-downloaded", (i) => updSend({ state: "ready", version: i.version }));
+  updater.on("error", (e) => { logError(e); updSend({ state: "error", version: updState.version, error: String((e && e.message) || e).slice(0, 200) }); });
+  const check = () => updater.checkForUpdates().catch(logError);
+  setTimeout(check, 5000);
+  setInterval(() => { if (!["downloading", "ready"].includes(updState.state)) check(); }, 60 * 60 * 1000);
+}
+ipcMain.handle("update:state", () => updState);
+ipcMain.handle("update:check", async () => {
+  if (!updater) return Object.assign({}, updState, { state: "unavailable" });
+  try { await updater.checkForUpdates(); } catch (e) { logError(e); }
+  return updState;
+});
+ipcMain.handle("update:install", async () => {
+  if (!updater) return false;
+  if (updState.state === "ready") { quitting = true; setImmediate(() => updater.quitAndInstall(true, true)); return true; }
+  if (updState.state === "downloading") return true;
+  updSend({ state: "downloading", version: updState.version, percent: 0 });
+  try { await updater.downloadUpdate(); } catch (e) { logError(e); updSend({ state: "error", version: updState.version, error: String((e && e.message) || e).slice(0, 200) }); return false; }
+  quitting = true; setImmediate(() => updater.quitAndInstall(true, true));
+  return true;
+});
 app.on("window-all-closed", () => app.quit());
 
 // ---------- Browser-Plugin: sichere lokale Brücke (nur dieser PC) ----------

@@ -215,6 +215,12 @@ body.light .todo .th{color:#0369a1}body.light .todo .tbar{background:rgba(0,0,0,
 body.busy .t.done .regen{display:none}
 body.light #btnImprove{background:rgba(0,0,0,.05)}
 /* Helles Design */
+#updBar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;border-radius:999px;background:var(--panel);border:1px solid var(--line2);box-shadow:0 10px 40px rgba(0,0,0,.45);font-size:13px;max-width:calc(100vw - 32px)}
+#updBar button{border-radius:999px;font-size:13px;cursor:pointer}
+#updBtn{background:#fff;color:#0a0a0a;font-weight:600;padding:7px 16px;border:0}#updBtn:disabled{opacity:.6;cursor:default}
+#updX{background:none;border:0;color:var(--muted);padding:4px 8px}
+#updChip{border-color:rgba(124,58,237,.6);color:#c4b5fd}
+body.light #updBtn{background:#141414;color:#fff}
 body.light{--bg:#f6f6f7;--fg:#141414;--muted:#6b6b6b;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.16);--panel:#ffffff}
 body.light .blob{opacity:.12}
 body.light .grad{background:linear-gradient(180deg,#141414,#555);-webkit-background-clip:text;background-clip:text}
@@ -314,6 +320,7 @@ body.light .composer{background:#fff}
     <span class="chip mono" id="timer">⏱ 0s</span>
     <button class="chip mono" id="tokens" title="Geschätzte Tokens in diesem Chat">≈ 0 Tokens</button>
     <span class="chip" id="usage">Usage …</span>
+    <button class="chip" id="updChip" style="display:none" title="Neue Version installieren">⬆ Update</button>
     <button class="chip icon" id="btnTheme" title="Helles / dunkles Design">☀</button>
     <button class="chip" id="btnOut">Abmelden</button>
   </header>
@@ -408,4 +415,5 @@ body.light .composer{background:#fff}
   </div>
 </div>
 <div id="drop"><div class="glass">⬇ Dateien oder Bilder hier ablegen</div></div>
+<div id="updBar" style="display:none"><span id="updText"></span><button id="updBtn">Jetzt updaten</button><button id="updX" title="Später">✕</button></div>
 <script src="markdown.js"></script><script src="voice.js"></script><script src="renderer.js"></script></body></html>

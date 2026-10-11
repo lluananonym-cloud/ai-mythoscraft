@@ -9,7 +9,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-import { APPS, AppDownload, ReleaseInfo, downloadUrl, fetchReleases } from "@/lib/downloads";
+import { APPS, AppDownload, ReleaseInfo, downloadUrl, fetchReleases, pickAsset } from "@/lib/downloads";
 
 const fmtSize = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(0)} MB` : `${Math.round(b / 1024)} KB`);
 const fmtDate = (s: string) => new Date(s).toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" });
@@ -76,7 +76,7 @@ const AppCard = ({ app, release, releasesLoaded, canDownload, onLocked, extVersi
   extVersion: string | null;
 }) => {
   const [showSteps, setShowSteps] = useState(false);
-  const asset = release?.assets.find((a) => (app.asset ? a.name === app.asset : true));
+  const asset = pickAsset(app, release);
   // Dateien direkt auf der Website sind immer da; sonst zählt das GitHub-Release (bis es geladen ist, der feste Link).
   const available = !!app.directUrl || (releasesLoaded ? !!asset : !!app.asset);
   const href = app.directUrl ?? asset?.url ?? downloadUrl(app);

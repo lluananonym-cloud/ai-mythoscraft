@@ -732,6 +732,7 @@ const COMMANDS = [
   ["/befehle", "", "Eigene Befehle anzeigen (.mythos/commands)"],
   ["/befehl-neu", "<name>", "Eigenen Befehl anlegen"],
   ["/tasten", "", "Tastenkürzel anzeigen"],
+  ["/update", "", "Nach einer neuen Version von Mythos Code suchen"],
   ["/goal", "<ziel>", "Mythos arbeitet ohne Schrittlimit selbstständig, bis das Ziel erreicht ist (Stopp jederzeit) – danach Zusammenfassung"],
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
@@ -1016,6 +1017,7 @@ async function command(q) {
     cfg.voice = v.id; window.mythos.setCfg(cfg); $("vvoice").value = v.id; window.MythosVoice.speaker.setVoice(v.id);
     return note("🔊 Stimme: " + v.label);
   }
+  if (cmd === "/update" || cmd === "/version") return checkUpdate();
   if (cmd === "/sicherheit") return securityReport();
   if (cmd === "/vertrauen") { if (needFolder()) return; const on = !/^(aus|off|nein)$/i.test(arg); setTrust(cfg.folder, on); return note(on ? "🛡 Du vertraust „" + base(cfg.folder) + "“ – eigene Hooks und MCP-Server sind aktiv." : "🛡 Hooks und MCP-Server aus „" + base(cfg.folder) + "“ sind gesperrt."); }
   if (cmd === "/besser") return improvePrompt(arg);
@@ -1533,6 +1535,38 @@ window.mythos.term.onOutput((p) => { if (p.id === "term") termWrite(stripAnsi(p.
 // Status live nachziehen – auch in der offenen Connector-Liste, sonst bleibt dort „Verbinde …“ stehen.
 window.mythos.mcp.onChange((s) => { mcpStatus = s; renderMcp(); if ($("connections").classList.contains("open")) renderConnections(); });
 window.mythos.browser.onEvent((ev) => { const r = runOf(chat); if (r) activityPush(r, ev.kind === "error" ? "⚠" : ev.kind === "action" ? "↗" : "◎", ev.text || "Browser-Aktivität"); else note("◎ Browser: " + (ev.text || ev.kind)); refreshBrowser(); });
+// ---------- Updates: Hinweis oben + Knopf „Jetzt updaten“ (main.js lädt und installiert) ----------
+let upd = { state: "idle" }, updHidden = "";
+function renderUpdate() {
+  const s = upd, has = ["available", "downloading", "ready"].includes(s.state) || (s.state === "error" && s.version);
+  $("updChip").style.display = has ? "" : "none";
+  $("updBar").style.display = has && updHidden !== s.version ? "flex" : "none";
+  if (!has) return;
+  const btn = $("updBtn");
+  if (s.state === "downloading") { $("updText").textContent = "⬇ Mythos Code " + s.version + " wird geladen … " + (s.percent || 0) + " %"; btn.textContent = "Lädt …"; btn.disabled = true; }
+  else if (s.state === "ready") { $("updText").textContent = "✓ Mythos Code " + s.version + " ist bereit"; btn.textContent = "Neu starten"; btn.disabled = false; }
+  else if (s.state === "error") { $("updText").textContent = "⚠ Update fehlgeschlagen: " + (s.error || "unbekannter Fehler"); btn.textContent = "Nochmal"; btn.disabled = false; }
+  else { $("updText").textContent = "✦ Neue Version: Mythos Code " + s.version + " (du hast " + s.current + ")"; btn.textContent = "Jetzt updaten"; btn.disabled = false; }
+}
+async function installUpdate() {
+  if (runs.size && !confirm("Mythos arbeitet gerade. Trotzdem jetzt updaten und neu starten?")) return;
+  updHidden = ""; upd = Object.assign({}, upd, { state: "downloading", percent: 0 }); renderUpdate();
+  await window.mythos.update.install();
+}
+window.mythos.update.onStatus((s) => { upd = s; renderUpdate(); });
+window.mythos.update.state().then((s) => { upd = s; renderUpdate(); });
+$("updBtn").onclick = installUpdate;
+$("updChip").onclick = installUpdate;
+$("updX").onclick = () => { updHidden = upd.version || ""; renderUpdate(); };
+async function checkUpdate() {
+  note("🔄 Suche nach Updates …");
+  const s = await window.mythos.update.check(); upd = s; renderUpdate();
+  if (s.state === "unavailable") return note("Updates gibt es nur in der installierten App (Setup-EXE von der Website).");
+  if (s.state === "available") return note("✦ Mythos Code **" + s.version + "** ist da. Klick oben auf **Jetzt updaten**.");
+  if (s.state === "error") return note("⚠ Update-Suche fehlgeschlagen: " + (s.error || "unbekannt"));
+  note("✓ Du hast die neueste Version (" + s.current + ").");
+}
+
 $("btnLogin").onclick = login;
 $("btnSend").onclick = () => (isBusy(chat) ? stop(chat) : send());
 $("inp").oninput = () => { grow(); renderSlash(); };

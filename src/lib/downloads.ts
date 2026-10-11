@@ -11,6 +11,8 @@ export type AppDownload = {
   tag: string;
   /** Dateiname im Release; null = erstes Asset nehmen */
   asset: string | null;
+  /** Bevorzugte Datei mit Versionsnummer im Namen (z. B. MythosCode-Setup-2.10.2.exe); sonst gilt `asset` */
+  assetMatch?: RegExp;
   platform: string;
   /** true = für alle kostenlos, sonst nur mit Pro */
   free?: boolean;
@@ -34,6 +36,7 @@ export const APPS: AppDownload[] = [
     description: "Projekt wählen, sagen was gebaut werden soll, fertig. Mythos liest, schreibt und testet deinen Code selbstständig, auch per Sprache.",
     tag: "code-latest",
     asset: "MythosCode-Setup.exe",
+    assetMatch: /^MythosCode-Setup-\d+\.\d+\.\d+.*\.exe$/,
     platform: "Windows",
     screenshot: "/screenshots/mythos-code.webp",
     highlights: ["Projekte, Chats und Aufgabenlisten", "Live-Vorschau, Dateibaum und Terminal", "Sprachmodus: einfach mit Mythos reden"],
@@ -119,4 +122,17 @@ export async function fetchReleases(): Promise<Record<string, ReleaseInfo>> {
     };
   }
   return out;
+}
+
+/** Die Datei, die heruntergeladen werden soll: bevorzugt die mit Versionsnummer im Namen. */
+export const pickAsset = (app: AppDownload, release?: ReleaseInfo) => {
+  const assets = release?.assets ?? [];
+  return (app.assetMatch && assets.find((a) => app.assetMatch!.test(a.name)))
+    || assets.find((a) => (app.asset ? a.name === app.asset : true));
+};
+
+/** Aktueller Download-Link (mit Versionsnummer im Dateinamen, falls vorhanden); fällt auf den festen Namen zurück. */
+export async function latestDownloadUrl(app: AppDownload): Promise<string> {
+  try { return pickAsset(app, (await fetchReleases())[app.tag])?.url ?? downloadUrl(app); }
+  catch { return downloadUrl(app); }
 }

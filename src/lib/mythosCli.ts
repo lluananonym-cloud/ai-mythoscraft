@@ -119,7 +119,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "2.10.1";
+export const APP_VERSION = "2.10.2";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -135,9 +135,9 @@ export function toDirectDownloadUrl(input: string): string | null {
 
 export const APP_USER_GUIDE = (url: string) => `## ✦ Mythos Code App
 
-Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier klicken](${url}).
+Der Download von **${decodeURIComponent(url.split("/").pop() || "MythosCode-Setup.exe")}** startet gleich. Falls nicht: [hier klicken](${url}).
 
-1. **MythosCode-Setup.exe** ausführen. Falls Windows „Der Computer wurde durch Windows geschützt“ zeigt: **Weitere Informationen → Trotzdem ausführen**.
+1. Die heruntergeladene **Setup-EXE** ausführen. Falls Windows „Der Computer wurde durch Windows geschützt“ zeigt: **Weitere Informationen → Trotzdem ausführen**.
 2. App öffnen → **Mit MythosAI anmelden** → im Browser auf **Authentifizieren** klicken.
 3. Ordner wählen, optional **Vollzugriff** einschalten – fertig. Mit 📎 kannst du Dateien hochladen, oben siehst du Laufzeit und Usage (Pro = unbegrenzt).
 4. Links findest du deine **Projekte** und **gespeicherten Chats**. Mit ✎ bearbeitest du eine Nachricht, mit ■ (oder Esc) stoppst du Mythos.
@@ -147,7 +147,8 @@ Der Download von **MythosCode-Setup.exe** startet gleich. Falls nicht: [hier kli
 8. Oben: Modell wählen, 👁 Live-Vorschau, 🗂 Dateibaum mit Editor, ⌨ Terminal, ☀ helles Design. Mehrere Chats können gleichzeitig arbeiten. **Automatisch testen** unten einschalten – Mythos repariert fehlschlagende Tests selbst. \`/mcp\` und \`/hooks\` richten MCP-Server und Hooks ein.
 9. 🎙 **Sprachmodus**: einfach mit Mythos reden – er hört zu (Whisper), arbeitet und antwortet mit natürlicher Stimme (Piper). Beides läuft lokal, beim ersten Mal werden die Sprachmodelle geladen. „Hey Mythos“, 📷 Kamera und 🖥 Bildschirm lassen sich dazuschalten.
 10. Mythos plant größere Aufgaben als **📋 Aufgabenliste**. \`/review\` prüft deine Änderungen, \`/pr\` erstellt einen Pull Request, \`/stats\` zeigt Projektzahlen, \`/export\` speichert den Chat. Eigene Befehle legst du mit \`/befehl-neu\` an. Tastenkürzel: \`/tasten\`.
-11. Mit **@** erwähnst du Dateien (ihr Inhalt geht mit), **✨** formuliert deine Aufgabe präziser, **📌** pinnt Chats an, **↻** generiert die letzte Antwort neu. \`/später 22:00 <aufgabe>\` plant Aufgaben, \`/kompakt\` fasst lange Chats zusammen, \`/ton aus\` schaltet den Fertig-Ton ab.`;
+11. Mit **@** erwähnst du Dateien (ihr Inhalt geht mit), **✨** formuliert deine Aufgabe präziser, **📌** pinnt Chats an, **↻** generiert die letzte Antwort neu. \`/später 22:00 <aufgabe>\` plant Aufgaben, \`/kompakt\` fasst lange Chats zusammen, \`/ton aus\` schaltet den Fertig-Ton ab.
+12. **Updates**: Gibt es eine neue Version, zeigt die App oben einen Hinweis. Ein Klick auf **Jetzt updaten** lädt und installiert sie, danach startet Mythos Code neu. \`/update\` sucht sofort.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({
@@ -159,13 +160,15 @@ const appPkg = () => JSON.stringify({
   author: "Mythoscraft",
   license: "MIT",
   scripts: { start: "electron .", dist: "electron-builder --win nsis --publish never" },
+  dependencies: { "electron-updater": "^6.1.8" },
   devDependencies: { electron: "^31.0.0", "electron-builder": "^24.13.3" },
   build: {
     appId: "online.mythoscraft.mythoscode",
     productName: "Mythos Code",
+    publish: { provider: "generic", url: "https://github.com/lluananonym-cloud/ai-mythoscraft/releases/download/code-latest" },
     files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "voice.js", "tts-worker.js", "stt-worker.js", "renderer.js", "config.json", "icon.png"],
     win: { target: "nsis", icon: "icon.png" },
-    nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup.exe" },
+    nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup-${version}.exe" },
   },
 }, null, 2);
 

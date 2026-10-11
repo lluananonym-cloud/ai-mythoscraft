@@ -53,15 +53,16 @@ write(app, "package.json", JSON.stringify({
   author: "Mythoscraft",
   license: "MIT",
   scripts: { start: "electron .", dist: "electron-builder --win nsis --publish never" },
+  dependencies: { "electron-updater": "^6.1.8" },
   devDependencies: { electron: "^31.0.0", "electron-builder": "^24.13.3" },
   build: {
     appId: "online.mythoscraft.mythoscode",
     productName: "Mythos Code",
-    // Kein electron-updater: ohne das sucht electron-builder ein Update-Ziel und bricht ab ("reading 'channel'").
-    publish: null,
+    // Update-Quelle für electron-updater: das Release "code-latest" (latest.yml + versionierte Setup-EXE).
+    publish: { provider: "generic", url: "https://github.com/lluananonym-cloud/ai-mythoscraft/releases/download/code-latest" },
     files: ["main.js", "preload.js", "index.html", "markdown.js", "mcp.js", "voice.js", "tts-worker.js", "stt-worker.js", "renderer.js", "config.json", "icon.png"],
     win: { target: "nsis", icon: "icon.png" },
-    nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup.exe" },
+    nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, shortcutName: "Mythos Code", artifactName: "MythosCode-Setup-${version}.exe" },
   },
 }, null, 2));
 fs.copyFileSync(path.join(root, "public/icon.png"), path.join(app, "icon.png"));
