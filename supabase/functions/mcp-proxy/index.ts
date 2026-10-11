@@ -15,6 +15,27 @@ const json = (body: unknown, status = 200) =>
 // Diese Header nie weiterreichen; alle anderen (auch eigene Request-Header der Connectoren) schon.
 const DROP = ["host", "cookie", "connection", "content-length", "transfer-encoding", "upgrade", "te", "keep-alive", "proxy-authorization", "x-forwarded-for"];
 
+/** Liest die Antwort. Bei MCP über SSE nur bis zur passenden JSON-RPC-Antwort: manche Server halten
+ *  den Stream offen, sonst hinge die Anfrage bis zur Zeitgrenze. Benachrichtigungen brauchen keinen Inhalt. */
+async function readBody(r: Response, rpc: any): Promise<string> {
+  const type = r.headers.get("content-type") || "";
+  if (rpc && (rpc.id === undefined || !rpc.method)) { await r.body?.cancel().catch(() => {}); return ""; }
+  if (!rpc || !type.includes("text/event-stream") || !r.body) return r.text();
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let text = "";
+  while (text.length < 2_000_000) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += dec.decode(value, { stream: true });
+    const hit = text.replace(/\r\n/g, "\n").split("\n\n").some((b) => {
+      const d = b.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("\n");
+      try { const m = JSON.parse(d); return m?.id === rpc.id && !m.method; } catch { return false; }
+    });
+    if (hit) { await reader.cancel().catch(() => {}); break; }
+  }
+  return text;
+}
+
 function blockedHost(host: string) {
   const h = host.toLowerCase().replace(/^\[|\]$/g, "");
   return h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local") ||
@@ -45,7 +66,7 @@ Deno.serve(async (req) => {
   const payload = method === "GET" ? undefined : typeof body?.rawBody === "string" ? body.rawBody : JSON.stringify(body.payload);
   try {
     const r = await fetch(url, { method, headers, body: payload, redirect: "error", signal: AbortSignal.timeout(60_000) });
-    const text = (await r.text()).slice(0, 2_000_000);
+    const text = (await readBody(r, method === "POST" && typeof body?.rawBody !== "string" ? body?.payload : undefined)).slice(0, 2_000_000);
     return json({ status: r.status, contentType: r.headers.get("content-type"), sessionId: r.headers.get("mcp-session-id"), wwwAuthenticate: r.headers.get("www-authenticate"), body: text });
   } catch (e) {
     return json({ error: "Connector nicht erreichbar: " + (e instanceof Error ? e.message : String(e)) });

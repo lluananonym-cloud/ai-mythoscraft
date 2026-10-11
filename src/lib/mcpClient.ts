@@ -15,9 +15,25 @@ const sessions = new Map<string, Session>();
 let rpcId = 1;
 
 function parseSse(text: string): any[] {
-  return text.split(/\n\n/).map(block => block.split("\n")
+  return text.replace(/\r\n/g, "\n").split(/\n\n/).map(block => block.split("\n")
     .filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("\n"))
     .filter(Boolean).map(d => { try { return JSON.parse(d); } catch { return null; } }).filter(Boolean);
+}
+
+/** Liest die Antwort; bei SSE nur bis zur passenden Antwort – manche Server halten den Stream offen. */
+async function readBody(r: Response, msg: any): Promise<string> {
+  const type = r.headers.get("content-type") || "";
+  if (msg.id === undefined || !msg.method) { r.body?.cancel().catch(() => {}); return ""; }
+  if (!type.includes("text/event-stream") || !r.body) return r.text();
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += dec.decode(value, { stream: true });
+    if (parseSse(text).some((m: any) => m?.id === msg.id && !m.method)) { reader.cancel().catch(() => {}); break; }
+  }
+  return text;
 }
 
 /** Aktuelle Daten des Connectors (Token kann inzwischen erneuert worden sein). */
@@ -53,7 +69,7 @@ async function post(server: McpServer, s: Session, msg: any, retried = false): P
     try {
       const r = await fetch(server.url, { method: "POST", headers, body: JSON.stringify(msg) });
       status = r.status; type = r.headers.get("content-type") || ""; sid = r.headers.get("mcp-session-id");
-      body = await r.text();
+      body = r.ok ? await readBody(r, msg) : await r.text();
     } catch {
       // Netzwerk/CORS-Fehler -> ab jetzt über den Server
       s.viaProxy = true;
@@ -80,10 +96,10 @@ async function post(server: McpServer, s: Session, msg: any, retried = false): P
   return reply.result;
 }
 
-async function session(server: McpServer): Promise<Session> {
+async function session(server: McpServer, viaProxy = false): Promise<Session> {
   let s = sessions.get(server.id);
-  if (s?.ready) return s;
-  s = { viaProxy: false, ready: false };
+  if (s?.ready && (!viaProxy || s.viaProxy)) return s;
+  s = { viaProxy, ready: false };
   sessions.set(server.id, s);
   await post(server, s, { jsonrpc: "2.0", id: rpcId++, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: CLIENT } });
   await post(server, s, { jsonrpc: "2.0", method: "notifications/initialized" });
@@ -92,11 +108,17 @@ async function session(server: McpServer): Promise<Session> {
 }
 
 async function rpc(server: McpServer, method: string, params: unknown) {
+  const run = async (viaProxy: boolean) => post(server, await session(server, viaProxy), { jsonrpc: "2.0", id: rpcId++, method, params });
   try {
-    const s = await session(server);
-    return await post(server, s, { jsonrpc: "2.0", id: rpcId++, method, params });
+    return await run(false);
   } catch (e) {
+    const s = sessions.get(server.id);
     sessions.delete(server.id); // beim nächsten Mal neu verbinden
+    // Direkt verbunden, aber der Server lehnt danach ab (z. B. Sitzungs-ID für den Browser nicht lesbar):
+    // einmal über den Mythos-Server versuchen.
+    if (!(e as { auth?: boolean })?.auth && s && !s.viaProxy && /^HTTP 4\d\d/.test((e as Error)?.message || "")) {
+      try { return await run(true); } catch (e2) { sessions.delete(server.id); throw e2; }
+    }
     throw e;
   }
 }
@@ -129,7 +151,7 @@ export async function collectTools(servers: McpServer[]) {
   await Promise.all(servers.filter(s => s.enabled).map(async server => {
     try {
       const hit = toolCache.get(server.url);
-      const tools = hit && Date.now() - hit.at < TOOL_TTL ? hit.tools : await withTimeout(listTools(server), 4000);
+      const tools = hit && Date.now() - hit.at < TOOL_TTL ? hit.tools : await withTimeout(listTools(server), 12000);
       toolCache.set(server.url, { at: hit && hit.tools === tools ? hit.at : Date.now(), tools });
       const prefix = server.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "mcp";
       for (const tool of tools) out.push({ key: `${prefix}__${tool.name}`, server, tool });
