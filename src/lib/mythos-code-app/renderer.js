@@ -1,7 +1,7 @@
 const CFG = { site: "__SITE__", fn: "__FN__" };
 const $ = (id) => document.getElementById(id);
 let cfg = {}, chat = null, attach = [], editing = null, gitInfo = null, searchQ = "", mcpStatus = [], browserStatus = { running: false, paired: false, connected: false };
-let remotePair = null, remoteTimer = null; // Fernsteuerung vom Handy (siehe /handy)
+// Fernsteuerung vom Handy: siehe /koppeln (relay*)
 let prompts = { nudge: "", summary: "", memoryFile: "MYTHOS.md", models: [] };
 // Laufende Aufgaben je Chat – mehrere Chats können gleichzeitig arbeiten.
 const runs = new Map();
@@ -90,7 +90,7 @@ function draw(it, i) {
   const box = $("col").querySelector(":scope > .runbox"); if (box) $("col").insertBefore(d, box); else $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
-const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai.lovable.app/werbung)_";
+const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai.lovable.app/werbung)_";
 let adCache = null;
 async function pickAd() {
   try { if (!adCache || Date.now() - adCache.at > 6e5) { const j = await (await post("ad-review", { action: "list" })).json(); adCache = { at: Date.now(), ads: j.ads || [] }; } } catch (e) { adCache = { at: Date.now(), ads: [] }; }
@@ -98,7 +98,7 @@ async function pickAd() {
   let ad = pool[0]; for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
   if (ad.house) return AD_MD;
   const s = (x) => String(x || "").replace(/[\[\]()<>*_`]/g, ""); const link = /^https?:\/\//.test(ad.link) ? ad.link : "https://" + ad.link;
-  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai.lovable.app/werbung)_";
+  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai.lovable.app/werbung)_";
 }
 function adDue(tier) {
   const today = new Date().toDateString();
@@ -476,7 +476,7 @@ async function runAgent(c, opts) {
   const title = run.stopped ? "■ Gestoppt nach " + took : reached ? "🎯 Ziel erreicht" : finished ? "✓ Fertig nach " + took : "⚠ Unterbrochen – Mythos braucht dich";
   window.mythos.notify("Mythos Code – " + c.title, title);
   if (cfg.notify && (goal || Date.now() - run.t0 > 60000)) window.mythos.push(cfg.notify, "Mythos Code – " + (run.folder ? base(run.folder) : c.title), title + (summary ? "\n\n" + summary.slice(0, 1500) : "") +
-    (remotePair && remotePair.claimed ? "\n\n💬 Antworten: " + remoteLink("") : "\n\n💬 Vom Handy antworten: am PC einmal /koppeln eingeben"));
+    (cfg.relayKey ? "\n\n💬 Antworten: " + remoteLink(true) : "\n\n💬 Vom Handy antworten: am PC einmal /koppeln eingeben"));
   if (typeof voiceReply === "function") voiceReply(c, run.lastText || (run.stopped ? "Gestoppt." : "Fertig."));
   if (!run.stopped) playDone(finished);
   if (!run.stopped) processQueue(c); else if (c === chat) renderQueue();
@@ -719,7 +719,7 @@ const COMMANDS = [
   ["/discord", "[token]|neu|aus", "💬 Mythos über Discord Aufgaben geben (eigener Bot, antwortet dort)"],
   ["/handy", "<url>|test|aus", "Handy-Benachrichtigung (ntfy.sh-Thema oder Discord-Webhook)"],
   ["/bild", "<beschreibung>", "Bild generieren (wie /image auf der Website)"],
-  ["/koppeln", "[aus]", "📱 Mythos vom Handy schreiben: Link zum Antippen (auch per Discord/ntfy), kein Konto nötig"],
+  ["/koppeln", "[neu|aus]", "📱 Mythos vom Handy schreiben: Link zum Antippen (auch per Discord/ntfy), kein Konto nötig"],
   ["/warteschlange", "[leeren]", "Warteschlange anzeigen oder leeren"],
   ["/suche", "<text>", "Alle Chats durchsuchen"],
   ["/tokens", "", "Geschätzten Token-Verbrauch dieses Chats anzeigen"],
@@ -731,57 +731,82 @@ const COMMANDS = [
 const needFolder = () => { if (!cfg.folder) { note("Wähle zuerst einen Projektordner."); return true; } return false; };
 
 // ---------- Fernsteuerung vom Handy (/koppeln) ----------
-// Wie beim Koppeln einer Smart-TV-App: PC zeigt einen 6-stelligen Code, das Handy gibt ihn ein.
-// Aufgaben vom Handy laufen im gerade geöffneten Chat, wie normal eingetippt – Mythos merkt keinen Unterschied.
-function remoteStop() { remotePair = null; clearTimeout(remoteTimer); remoteTimer = null; if (cfg.remotePair) { delete cfg.remotePair; window.mythos.setCfg(cfg); } }
-const remoteLink = (code) => CFG.site.replace(/\/$/, "") + "/code" + (code ? "?code=" + code : "");
-// Gekoppeltes Handy bleibt nach einem Neustart der App verbunden.
-function remoteResume() {
-  if (remotePair || !cfg.remotePair || !cfg.remotePair.id || !cfg.key) return;
-  remotePair = { id: cfg.remotePair.id, code: "", claimed: true, device: cfg.remotePair.device || "" };
-  remotePollLoop();
+// Ohne eigenen Server: Nachrichten laufen verschlüsselt (AES-GCM) über ntfy.sh. Der Schlüssel steckt nur im
+// Link (#k=…), den das Handy einmal antippt; daraus werden auch die geheimen Themen-Namen abgeleitet.
+// Aufgaben vom Handy laufen im gerade geöffneten Chat, wie normal eingetippt.
+const RELAY = "https://ntfy.sh/";
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+async function relayKeys(key) {
+  const raw = unb64u(key);
+  const hex = (b) => Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, "0")).join("");
+  const h = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("mythos-relay:" + key))).slice(0, 40);
+  return { aes: await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]), inbox: "mythos-" + h + "-pc", outbox: "mythos-" + h + "-handy" };
 }
-async function remotePairStart() {
+async function relaySeal(aes, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aes, new TextEncoder().encode(JSON.stringify(obj))));
+  const all = new Uint8Array(12 + ct.length); all.set(iv); all.set(ct, 12);
+  return b64u(all);
+}
+async function relayOpen(aes, text) {
+  const all = unb64u(String(text || "").trim());
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, aes, all.slice(12))));
+}
+let relay = null; // { keys, es, seen, queue, busy }
+const remoteLink = (withKey) => CFG.site.replace(/\/$/, "") + "/code" + (withKey && cfg.relayKey ? "#k=" + cfg.relayKey : "");
+async function relaySend(obj) {
+  if (!relay) return;
+  try { await fetch(RELAY + relay.keys.outbox, { method: "POST", body: await relaySeal(relay.keys.aes, obj) }); } catch { /* Handy fragt erneut */ }
+}
+function relayStop() { if (relay && relay.es) relay.es.close(); relay = null; }
+async function relayStart() {
+  if (!cfg.relayKey) return;
+  relayStop();
+  const me = { keys: await relayKeys(cfg.relayKey), es: null, seen: new Set(), queue: [], busy: false };
+  relay = me;
+  // Verpasste Aufgaben (PC war aus) nachholen: ntfy hält Nachrichten 12 Stunden.
+  const es = new EventSource(RELAY + me.keys.inbox + "/sse?since=" + (cfg.relaySince || "12h"));
+  me.es = es;
+  es.onmessage = async (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.event !== "message" || relay !== me || me.seen.has(m.id)) return;
+    me.seen.add(m.id);
+    let msg; try { msg = await relayOpen(me.keys.aes, m.message); } catch { return; } // fremde/kaputte Nachricht
+    if (cfg.relaySince !== m.id) { cfg.relaySince = m.id; window.mythos.setCfg(cfg); }
+    if (msg.t === "hello") { relaySend({ t: "online", device: "Windows-PC" }); if (!msg.quiet) note("📱 Handy verbunden – Aufgaben von dort laufen jetzt in diesem Chat."); return; }
+    if (msg.t !== "task" || !msg.id || me.seen.has(msg.id)) return;
+    me.seen.add(msg.id);
+    me.queue.push(msg);
+    relayWork(me);
+  };
+}
+async function relayWork(me) {
+  if (me.busy) return;
+  me.busy = true;
   try {
-    const r = await (await post("remote", { kind: "create", api_key: cfg.key, device_name: "Windows-PC" })).json();
-    if (r.error || !r.pair_id) { note("⚠ Kopplung fehlgeschlagen: " + (r.error || "unbekannt")); return; }
-    remotePair = { id: r.pair_id, code: r.code, claimed: false, device: "" };
-    const link = remoteLink(r.code);
-    const sent = cfg.notify ? await window.mythos.push(cfg.notify, "Mythos Code", "📱 Tippe hier, um Mythos vom Handy aus Aufgaben zu schicken (Link gilt 10 Minuten):\n" + link) : false;
-    note("📱 **Mythos vom Handy schreiben:** Öffne auf dem Handy diesen Link (oder scanne ihn ab):\n\n[" + link + "](" + link + ")\n\n" +
-      (sent ? "Den Link habe ich dir auch dorthin geschickt, wo deine Benachrichtigungen ankommen (z. B. Discord). Einfach antippen.\n\n" : "") +
-      "Oder in der Mythos-Handy-App im „Code“-Tab diesen Code eingeben:\n\n## " + r.code + "\n\nGültig 10 Minuten. Mit **/koppeln aus** abbrechen.");
-    remotePollLoop();
-  } catch (e) { note("⚠ Kopplung fehlgeschlagen: " + e.message); }
+    while (me.queue.length && relay === me) {
+      const task = me.queue.shift();
+      await relaySend({ t: "ack", id: task.id });
+      let text, status = "done";
+      try { text = await runRemoteText(task.text, "Handy"); } catch (e) { text = "⚠ " + e.message; status = "error"; }
+      // ntfy-Nachrichten sind auf 4 KB begrenzt → lange Antworten in Teilen schicken.
+      const parts = []; for (let i = 0; i < text.length; i += 700) parts.push(text.slice(i, i + 700));
+      if (!parts.length) parts.push("");
+      for (let i = 0; i < parts.length; i++) await relaySend({ t: "result", id: task.id, status, part: i, of: parts.length, text: parts[i] });
+    }
+  } finally { me.busy = false; }
 }
-function remotePollLoop() {
-  clearTimeout(remoteTimer);
-  remoteTimer = setTimeout(async () => {
-    if (!remotePair) return;
-    try {
-      if (!remotePair.claimed) {
-        const r = await (await post("remote", { kind: "status", pair_id: remotePair.id, api_key: cfg.key })).json();
-        if (r.claimed) {
-          remotePair.claimed = true; remotePair.device = r.device_name || "";
-          cfg.remotePair = { id: remotePair.id, device: remotePair.device }; window.mythos.setCfg(cfg);
-          note("📱 Handy verbunden" + (remotePair.device ? " (" + remotePair.device + ")" : "") + " – Aufgaben von dort laufen jetzt in diesem Chat. Die Verbindung bleibt auch nach einem Neustart bestehen.");
-        }
-      } else {
-        const res = await post("remote", { kind: "poll", pair_id: remotePair.id, api_key: cfg.key });
-        const r = await res.json();
-        if (res.status === 404 && /Kopplung/.test(r.error || "")) { note("📱 Das Handy hat die Verbindung getrennt."); remoteStop(); return; }
-        if (r.task) await remoteRunTask(r.task);
-      }
-    } catch (e) { /* nächster Versuch reicht */ }
-    remotePollLoop();
-  }, remotePair && remotePair.claimed ? 3000 : 2500);
+async function remotePairStart(fresh) {
+  if (fresh || !cfg.relayKey) { cfg.relayKey = b64u(crypto.getRandomValues(new Uint8Array(32))); delete cfg.relaySince; window.mythos.setCfg(cfg); }
+  await relayStart();
+  const link = remoteLink(true);
+  const sent = cfg.notify ? await window.mythos.push(cfg.notify, "Mythos Code", "📱 Tippe hier, um Mythos vom Handy aus Aufgaben zu schicken:\n" + link) : false;
+  note("📱 **Mythos vom Handy schreiben:** Öffne auf dem Handy diesen Link:\n\n[" + link + "](" + link + ")\n\n" +
+    (sent ? "Den Link habe ich dir auch dorthin geschickt, wo deine Benachrichtigungen ankommen (z. B. Discord). Einfach antippen.\n\n" : "Tipp: Mit **/handy <Discord-Webhook>** schickt Mythos dir den Link direkt aufs Handy.\n\n") +
+    "Der Link ist dein persönlicher Schlüssel, gib ihn nicht weiter. Neuer Link (alter wird ungültig): **/koppeln neu** · Trennen: **/koppeln aus**");
 }
-async function remoteRunTask(task) {
-  const pairId = remotePair.id;
-  let result, status = "done";
-  try { result = await runRemoteText(task.prompt, "Handy"); } catch (e) { result = "⚠ " + e.message; status = "error"; }
-  await post("remote", { kind: "result", pair_id: pairId, api_key: cfg.key, task_id: task.id, status, result });
-}
+
 /** Aufgabe von unterwegs (Handy-Seite, Discord) im aktuellen Chat ausführen und die Antwort als Text zurückgeben. */
 async function runRemoteText(text, from) {
   const c = chat;
@@ -932,14 +957,10 @@ async function command(q) {
   if (cmd === "/bild" || cmd === "/image") return generateImage(arg);
   if (cmd === "/discord") return dcCommand(arg);
   if (cmd === "/koppeln") {
-    if (/^(aus|stop|trennen)$/i.test(arg)) { remoteStop(); note("📱 Kopplung getrennt."); return; }
-    if (remotePair && remotePair.claimed) { note("📱 Handy ist schon gekoppelt" + (remotePair.device ? " (" + remotePair.device + ")" : "") + ". Mit **/koppeln aus** trennen."); return; }
-    if (!cfg.key) { note("Erst anmelden, dann koppeln."); return; }
-    if (remotePair) { note("📱 Code: **" + remotePair.code + "** – gib ihn in der Mythos-Handy-App im „Code“-Tab ein. Gültig 10 Minuten."); return; }
-    note("📱 Verbinde …");
-    remotePairStart();
-    return;
+    if (/^(aus|stop|trennen)$/i.test(arg)) { relayStop(); delete cfg.relayKey; delete cfg.relaySince; window.mythos.setCfg(cfg); note("📱 Kopplung getrennt. Der alte Link funktioniert nicht mehr."); return; }
+    return remotePairStart(/^(neu|new)$/i.test(arg));
   }
+
   if (cmd === "/goal" || cmd === "/ziel") {
     if (!arg) return note(chat.goal ? "🎯 Aktuelles Ziel: " + chat.goal + "\nBeenden mit /goal stop" : "So geht's: /goal <was Mythos erreichen soll>\nMythos arbeitet dann ohne Rückfragen, bis das Ziel erreicht ist, und fasst am Ende zusammen.");
     if (/^(stop|aus|ende|beenden)$/i.test(arg)) return endGoal();
@@ -1456,7 +1477,7 @@ function show() {
   renderHeader(); refreshGit(); configureMcp(); renderModels(); loadCustomCommands(); setTimeout(() => checkTrust(cfg.folder), 600);
   renderSched(); setTimeout(checkSchedule, 1500);
   if (cfg.discordToken && !dc) dcConnect();
-  remoteResume();
+  if (cfg.relayKey && !relay) relayStart();
   $("multi").checked = !!cfg.multi; $("wake").checked = !!cfg.wake; if (cfg.wake) setTimeout(wakeOn, 800);
   if (cfg.treeOpen && cfg.folder) { document.body.classList.add("tree-open"); renderTree(); }
   if (cfg.termOpen) { document.body.classList.add("term-open"); termCwd = cfg.folder || ""; renderTermPrompt(); }

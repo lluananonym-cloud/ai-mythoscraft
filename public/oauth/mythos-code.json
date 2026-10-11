@@ -1,8 +1,8 @@
 {
-  "client_id": "https://mythos-core-ai.lovable.app/oauth/mythos-code.json",
+  "client_id": "https://mythos-core-ai-ai.lovable.app/oauth/mythos-code.json",
   "client_name": "Mythos Code",
-  "client_uri": "https://mythos-core-ai.lovable.app",
-  "logo_uri": "https://mythos-core-ai.lovable.app/icon-192.png",
+  "client_uri": "https://mythos-core-ai-ai.lovable.app",
+  "logo_uri": "https://mythos-core-ai-ai.lovable.app/icon-192.png",
   "redirect_uris": ["http://127.0.0.1:33418/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
