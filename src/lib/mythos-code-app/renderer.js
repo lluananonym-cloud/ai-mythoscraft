@@ -698,6 +698,7 @@ const COMMANDS = [
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
   ["/projekt", "", "Projektordner wählen"],
+  ["/cloudpc", "[aufgabe]", "🖥 Mythos Cloud-PC öffnen: Agent mit eigenem Computer, du schaust live zu"],
   ["/modell", "[name]", "Modell anzeigen oder wechseln"],
   ["/vorschau", "[url|datei]", "Live-Vorschau öffnen (lädt bei Änderungen neu)"],
   ["/dateien", "", "Dateibaum ein-/ausblenden"],
@@ -830,6 +831,7 @@ async function command(q) {
   if (cmd === "/weiter") return chat.history.length ? continueChat() : note("Hier gibt es noch nichts zum Weitermachen.");
   if (cmd === "/neu") return newChat();
   if (cmd === "/projekt") return pickProject();
+  if (cmd === "/cloudpc" || cmd === "/cloud-pc" || cmd === "/pc" || cmd === "/computer") return openCloudPc(arg);
   if (cmd === "/modell" || cmd === "/model") {
     if (!arg) return note("🧠 Modelle:\n" + prompts.models.map((m) => (m.id === (cfg.model || "mythos-code") ? "● " : "○ ") + m.label + " – " + m.desc).join("\n") + "\nWechseln: oben im Auswahlfeld oder /modell <name>");
     const m = prompts.models.find((x) => x.id === arg.toLowerCase() || x.label.toLowerCase() === arg.toLowerCase());
@@ -1336,7 +1338,13 @@ $("mcp").onclick = () => command("/mcp");
 $("modelBtn").onclick = (e) => { e.stopPropagation(); toggleModelMenu(); };
 document.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest(".mpick")) $("modelMenu").style.display = "none"; });
 $("navProj").onclick = (e) => { if (e.target.id !== "btnAddProj") pickProject(); };
-$("navPc").onclick = async () => { const r = await window.mythos.cloudPc(CFG.site.replace(/\/$/, "") + "/cloud-pc"); if (r && r.error) alert(r.error); };
+async function openCloudPc(task) {
+  const url = CFG.site.replace(/\/$/, "") + "/cloud-pc" + (task ? "?task=" + encodeURIComponent(task) : "");
+  const r = await window.mythos.cloudPc(url);
+  if (r && r.error) note("⚠ Cloud-PC: " + r.error);
+  else note("🖥 Cloud-PC geöffnet" + (task ? " – Mythos legt mit deiner Aufgabe los." : "."));
+}
+$("navPc").onclick = () => openCloudPc("");
 $("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
 $("artClose").onclick = () => $("artifacts").classList.remove("open");
 $("artifacts").onclick = (e) => { if (e.target === $("artifacts")) $("artifacts").classList.remove("open"); };
