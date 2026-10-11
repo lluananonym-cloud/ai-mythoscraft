@@ -843,7 +843,11 @@ const Chat = () => {
         tools.map(t => `- ${t.key}: ${(t.tool.description || "").slice(0, 300)}\n  Parameter: ${JSON.stringify(t.tool.inputSchema ?? {}).slice(0, 600)}`).join("\n") +
         "\n\nEs gibt NUR diese Werkzeuge. Erfinde keine anderen (z. B. todo, run, write) – fehlt etwas, sag es dem Nutzer.",
       );
-    } else {
+    }
+    // Eingeschaltete, aber gerade nicht erreichbare Connectoren nennen, damit die KI nicht so tut, als gäbe es sie nicht.
+    const offline = getMcpServers().filter(s => s.enabled && !tools.some(t => t.server.id === s.id)).map(s => s.name);
+    if (offline.length) parts.push(`## Nicht verbundene Connectoren\n${offline.join(", ")} – gerade nicht erreichbar oder Anmeldung nötig. Braucht die Aufgabe einen davon, sag dem Nutzer, dass er ihn unter Anpassungen → Connectoren anmelden bzw. prüfen soll.`);
+    if (!tools.length) {
       parts.push("## Werkzeuge\nIn diesem Chat sind keine Werkzeuge verbunden. Schreibe nie <tool>- oder <tool_call>-Blöcke, sondern antworte direkt als normaler Text.");
     }
     parts.push(FILE_PROMPT);

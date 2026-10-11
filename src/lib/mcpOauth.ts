@@ -15,24 +15,34 @@ export class McpAuthError extends Error {
 
 type Res = { status: number; text: string; headers: Record<string, string> };
 
-/** Anfrage direkt aus dem Browser, bei CORS-Sperre über den Proxy. */
-export async function rawFetch(url: string, init: { method?: string; headers?: Record<string, string>; body?: string } = {}): Promise<Res> {
+// Server, die den Browser per CORS blockieren: danach gleich über den Proxy.
+const proxyOnly = new Set<string>();
+
+/** Anfrage direkt aus dem Browser, bei CORS-Sperre über den Proxy.
+ *  rpc: JSON-RPC-Nachricht statt body – dann wird bei SSE nur bis zur Antwort gelesen (manche Server halten den Stream offen).
+ *  headOnly: nur Status und Header, Inhalt wird verworfen. */
+export async function rawFetch(url: string, init: { method?: string; headers?: Record<string, string>; body?: string; rpc?: unknown; headOnly?: boolean } = {}): Promise<Res> {
   const method = init.method || "GET";
-  try {
-    const r = await fetch(url, { method, headers: init.headers, body: init.body });
-    const headers: Record<string, string> = {};
-    r.headers.forEach((v, k) => { headers[k] = v; });
-    return { status: r.status, text: await r.text(), headers };
-  } catch {
-    const { data, error } = await supabase.functions.invoke("mcp-proxy", {
-      body: { url, method, headers: init.headers || {}, rawBody: init.body },
-    });
-    if (error || data?.error) throw new Error(data?.error || error?.message || "Proxy-Fehler");
-    return {
-      status: data.status, text: data.body || "",
-      headers: { "content-type": data.contentType || "", "mcp-session-id": data.sessionId || "", "www-authenticate": data.wwwAuthenticate || "" },
-    };
+  const origin = new URL(url).origin;
+  if (!proxyOnly.has(origin)) {
+    try {
+      const r = await fetch(url, { method, headers: init.headers, body: init.rpc !== undefined ? JSON.stringify(init.rpc) : init.body });
+      const headers: Record<string, string> = {};
+      r.headers.forEach((v, k) => { headers[k] = v; });
+      if (init.headOnly) { r.body?.cancel().catch(() => {}); return { status: r.status, text: "", headers }; }
+      return { status: r.status, text: await r.text(), headers };
+    } catch {
+      proxyOnly.add(origin);
+    }
   }
+  const { data, error } = await supabase.functions.invoke("mcp-proxy", {
+    body: init.rpc !== undefined ? { url, method, headers: init.headers || {}, payload: init.rpc } : { url, method, headers: init.headers || {}, rawBody: init.body },
+  });
+  if (error || data?.error) throw new Error(data?.error || error?.message || "Proxy-Fehler");
+  return {
+    status: data.status, text: data.body || "",
+    headers: { "content-type": data.contentType || "", "mcp-session-id": data.sessionId || "", "www-authenticate": data.wwwAuthenticate || "" },
+  };
 }
 
 async function getJson(url: string) {
@@ -58,7 +68,7 @@ async function discover(mcpUrl: string, wwwAuth?: string) {
   }
   const found = !!(meta || prm);
   if (!meta) meta = { authorization_endpoint: `${iss.origin}/authorize`, token_endpoint: `${iss.origin}/token`, registration_endpoint: `${iss.origin}/register` };
-  return { meta, found, resource: (prm?.resource as string) || mcpUrl, scope: Array.isArray(prm?.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
+  return { meta, found, prm: !!prm, resource: (prm?.resource as string) || mcpUrl, scope: Array.isArray(prm?.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
 }
 
 export type ProbeResult = { auth: "now" | "ondemand" | "none"; client: "cimd" | "dcr" | "custom"; oauth: boolean };
@@ -70,14 +80,17 @@ export async function probe(url: string, headers: Record<string, string> = {}): 
     r = await rawFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": PROTOCOL, ...headers },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "mythos-web", version: "1" } } }),
+      rpc: { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "mythos-web", version: "1" } } },
+      headOnly: true,
     });
   } catch (e) { throw new Error("Server nicht erreichbar: " + (e instanceof Error ? e.message : String(e))); }
   const needsAuth = r.status === 401 || r.status === 403;
   if (!needsAuth && (r.status < 200 || r.status >= 300)) throw new Error(`Server antwortet mit HTTP ${r.status}`);
   const d = await discover(url, r.headers["www-authenticate"]).catch(() => null);
-  const oauth = !!d?.found;
-  const client = !oauth ? "dcr" : d!.meta.client_id_metadata_document_supported ? "cimd" : d!.meta.registration_endpoint ? "dcr" : "custom";
+  // Ohne 401 gilt ein Server nur als „Anmeldung möglich“, wenn er sich selbst als geschützte Ressource beschreibt.
+  const oauth = !!(d && (needsAuth ? d.found : d.prm));
+  // Wie Claude: automatisch registrieren, wo es geht (CIMD braucht unsere veröffentlichte Client-Datei).
+  const client = !oauth ? "dcr" : d!.meta.registration_endpoint ? "dcr" : d!.meta.client_id_metadata_document_supported ? "cimd" : "custom";
   return { auth: needsAuth ? "now" : oauth ? "ondemand" : "none", client, oauth };
 }
 
@@ -85,10 +98,12 @@ const b64url = (buf: ArrayBuffer | Uint8Array) =>
   btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const random = (n: number) => b64url(crypto.getRandomValues(new Uint8Array(n)));
 
+// Der eigene Header erzwingt eine CORS-Vorabfrage: Ohne sie schickt der Browser das Formular ab, liest nur die Antwort
+// nicht – der Code wäre verbraucht und der Weg über den Proxy liefe in "invalid_grant".
 async function tokenRequest(o: Omit<McpToken, "accessToken">, params: Record<string, string>): Promise<Pick<McpToken, "accessToken" | "refreshToken" | "expiresAt">> {
   const form = new URLSearchParams({ ...params, client_id: o.clientId, resource: o.resource });
   if (o.clientSecret) form.set("client_secret", o.clientSecret);
-  const r = await rawFetch(o.tokenEndpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" }, body: form.toString() });
+  const r = await rawFetch(o.tokenEndpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json", "MCP-Protocol-Version": PROTOCOL }, body: form.toString() });
   let j: any = {};
   try { j = JSON.parse(r.text); } catch { j = Object.fromEntries(new URLSearchParams(r.text)); }
   if (r.status < 200 || r.status >= 300 || !j.access_token) throw new Error(j.error_description || j.error || `Token-Fehler (HTTP ${r.status})`);

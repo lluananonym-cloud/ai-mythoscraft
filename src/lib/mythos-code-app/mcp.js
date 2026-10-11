@@ -46,7 +46,7 @@ async function discover(mcpUrl, wwwAuth) {
   }
   const found = !!(meta || prm);
   if (!meta) meta = { authorization_endpoint: `${iss.origin}/authorize`, token_endpoint: `${iss.origin}/token`, registration_endpoint: `${iss.origin}/register` };
-  return { meta, found, resource: (prm && prm.resource) || mcpUrl, scope: prm && Array.isArray(prm.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
+  return { meta, found, prm: !!prm, resource: (prm && prm.resource) || mcpUrl, scope: prm && Array.isArray(prm.scopes_supported) ? prm.scopes_supported.join(" ") : undefined };
 }
 /** Verbindet sich einmal mit dem Server (wie Claude beim Hinzufügen) und erkennt, welche Anmeldung er braucht. */
 async function probe(mcpUrl, headers) {
@@ -62,8 +62,10 @@ async function probe(mcpUrl, headers) {
   const needsAuth = r.status === 401 || r.status === 403;
   if (!needsAuth && !r.ok && r.status !== 202) throw new Error("Server antwortet mit HTTP " + r.status);
   const d = await discover(mcpUrl, r.headers.get("www-authenticate")).catch(() => null);
-  const oauth = !!(d && d.found);
-  const client = !oauth ? "dcr" : d.meta.client_id_metadata_document_supported ? "cimd" : d.meta.registration_endpoint ? "dcr" : "custom";
+  // Ohne 401 gilt ein Server nur als „Anmeldung möglich“, wenn er sich selbst als geschützte Ressource beschreibt.
+  const oauth = !!(d && (needsAuth ? d.found : d.prm));
+  // Wie Claude: automatisch registrieren, wo es geht (CIMD braucht unsere veröffentlichte Client-Datei).
+  const client = !oauth ? "dcr" : d.meta.registration_endpoint ? "dcr" : d.meta.client_id_metadata_document_supported ? "cimd" : "custom";
   return { auth: needsAuth ? "now" : oauth ? "ondemand" : "none", client, oauth };
 }
 // Öffentliche Client-Beschreibung (CIMD) von Mythos Code und feste Rückleitungsadresse für eigene OAuth-Clients.
@@ -188,17 +190,24 @@ class HttpTransport {
     const sid = r.headers.get("mcp-session-id"); if (sid) this.session = sid;
     if (r.status === 202 || r.status === 204) return;
     if (!r.ok) throw new Error("HTTP " + r.status + ": " + (await r.text()).slice(0, 300));
+    // Benachrichtigungen und Antworten erwarten nichts zurück. Manche Server (z. B. DeepWiki) halten den
+    // Stream trotzdem offen – darauf zu warten ließ den Connector ewig bei „Verbinde …“ hängen.
+    if (msg.id === undefined || !msg.method) { try { if (r.body) await r.body.cancel(); } catch { /* egal */ } return; }
     const type = r.headers.get("content-type") || "";
     if (type.includes("text/event-stream")) {
       const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
       for (;;) {
         const { done, value } = await reader.read(); if (done) break;
-        buf += dec.decode(value, { stream: true });
+        buf = (buf + dec.decode(value, { stream: true })).replace(/\r\n/g, "\n");
         let i;
         while ((i = buf.indexOf("\n\n")) !== -1) {
           const block = buf.slice(0, i); buf = buf.slice(i + 2);
           const data = block.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("\n");
-          if (data) { try { this.onMessage(JSON.parse(data)); } catch { /* ignorieren */ } }
+          if (!data) continue;
+          let m; try { m = JSON.parse(data); } catch { continue; }
+          this.onMessage(m);
+          // Antwort da: Stream schließen, statt auf ein Ende zu warten, das evtl. nie kommt.
+          if (m && m.id === msg.id && !m.method) { reader.cancel().catch(() => {}); return; }
         }
       }
     } else {
