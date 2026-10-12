@@ -146,6 +146,12 @@ const TOOL_TTL = 5 * 60_000;
 const withTimeout = <T,>(p: Promise<T>, ms: number) =>
   Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error("Zeitüberschreitung")), ms))]);
 
+/** Stand jedes Connectors beim letzten Laden – damit Mythos im Chat genau weiß, womit er verbunden ist. */
+export type McpState = { name: string; state: "verbunden" | "Anmeldung nötig" | "nicht erreichbar" | "ausgeschaltet"; tools: string[] };
+const lastState = new Map<string, McpState>();
+export const connectorStates = (servers: McpServer[]): McpState[] =>
+  servers.map(s => !s.enabled ? { name: s.name, state: "ausgeschaltet", tools: [] } : lastState.get(s.id) || { name: s.name, state: "nicht erreichbar", tools: [] });
+
 export async function collectTools(servers: McpServer[]) {
   const out: { key: string; server: McpServer; tool: McpTool }[] = [];
   await Promise.all(servers.filter(s => s.enabled).map(async server => {
@@ -155,7 +161,11 @@ export async function collectTools(servers: McpServer[]) {
       toolCache.set(server.url, { at: hit && hit.tools === tools ? hit.at : Date.now(), tools });
       const prefix = server.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "mcp";
       for (const tool of tools) out.push({ key: `${prefix}__${tool.name}`, server, tool });
-    } catch { /* Server nicht erreichbar – einfach weglassen */ }
+      lastState.set(server.id, { name: server.name, state: "verbunden", tools: tools.map(t => t.name) });
+    } catch (e) {
+      // Server nicht erreichbar oder nicht angemeldet – Werkzeuge weglassen, aber den Grund merken.
+      lastState.set(server.id, { name: server.name, state: (e as { auth?: boolean })?.auth ? "Anmeldung nötig" : "nicht erreichbar", tools: [] });
+    }
   }));
   return out;
 }
