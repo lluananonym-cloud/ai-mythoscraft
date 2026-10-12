@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode, clientImageFallback, build } = await req.json();
+    const { messages, mode = "support", conversationId, personaId, userId: clientUserId, model: requestedModel, mythos, voice: voiceMode, build } = await req.json();
     const resolved = resolveMythos(mythos);
     const ALLOWED_MODELS = new Set([
       "openai/gpt-5.5-pro",
@@ -205,22 +205,17 @@ Deno.serve(async (req) => {
             c.enqueue(sse({ imagePending: { prompt: classified ?? request } }));
             const prompt = classified ?? (needsContext ? await resolveImagePrompt(request, messages, LOVABLE_API_KEY) : request);
             c.enqueue(sse({ tool: `🎨 Generiere Bild: ${prompt}`, imagePending: { prompt } }));
-            const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY, { browserFallback: !!clientImageFallback });
+            const { url, provider, error } = await generateImage(prompt, LOVABLE_API_KEY);
             if (url) {
               c.enqueue(sse({ image: { url, prompt } }));
               c.enqueue(sse({ choices: [{ delta: { content: `\n*Generiert mit ${PROVIDER_LABEL[provider ?? "nano-banana"]} — ${prompt}*` } }] }));
             } else {
               console.error("[/image] failed:", error);
               const reasons = explainErrors(error);
-              if (clientImageFallback) {
-                // Die Web-App versucht es dann direkt aus dem Browser (andere IP, eigenes Limit).
-                c.enqueue(sse({ imageFailed: { prompt, reasons } }));
-              } else {
-                const hint = /safety|blocked/i.test(error || "")
-                  ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch eine neutralere Beschreibung."
-                  : "Alle Bild-Anbieter sind gerade nicht erreichbar.";
-                c.enqueue(sse({ imageFailed: { prompt, reasons }, choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen. ${hint}\n\n${reasons.map((r) => `- ${r}`).join("\n")}` } }] }));
-              }
+              const hint = /safety|blocked|filter/i.test(error || "")
+                ? "Das Modell hat den Prompt abgelehnt (Safety-Filter). Versuch eine neutralere Beschreibung."
+                : "Nano Banana und FLUX sind gerade nicht erreichbar.";
+              c.enqueue(sse({ imageFailed: { prompt, reasons }, choices: [{ delta: { content: `❌ Bild-Generierung fehlgeschlagen. ${hint}\n\n${reasons.map((r) => `- ${r}`).join("\n")}` } }] }));
             }
           } finally {
             clearInterval(ping);
@@ -426,7 +421,10 @@ Wenn etwas weder oben noch in den Artikeln steht: ehrlich sagen und auf Discord 
 Du hast diese Slash-Commands zur Verfügung (sag dem User Bescheid wenn passend):
 - \`/identity <name>\` — wechselt deine Persona in diesem Chat
 - \`/image <beschreibung>\` — generiert ein Bild. Der User kann auch einfach schreiben „generiere mir das als Bild“, das wird automatisch erkannt und aus dem Verlauf aufgelöst.
-- \`/music <stil/vibe>\` — komponiert einen Funk-Groove
+- \`/music <stil/vibe>\` — erzeugt einen Song
+
+Du KANNST Bilder erzeugen: Bild-Wünsche erledigt die App automatisch. Sag nie, dass du keine Bilder anzeigen oder erstellen kannst, und schick den User nicht zu /image.
+Die App schickt dir oft eine vollständige Liste deiner Befehle und Bereiche mit; nutze sie, wenn der User fragt, was du kannst.
 - \`/research <thema>\` — Deep Research mit Web-Suche
 
 Bilder & PDFs: Du kannst hochgeladene Bilder direkt sehen und analysieren.${memoryBlock}`;

@@ -1,7 +1,7 @@
 // Mythos Filmstudio: Zeitplan, Tonmischung und Bild für Bild zeichnen. Alles läuft im Browser:
 // Bilder mit Kamerafahrt auf einem Canvas, Sprecher (Piper) und Musik (Synth) über Web Audio,
 // Export als Video über MediaRecorder. Kein Server, keine Kosten.
-import { loadVoice } from "@/lib/mythosVoice";
+import { cloudAudio, loadVoice } from "@/lib/mythosVoice";
 import { renderSong, type MusicSpec } from "@/lib/synthSong";
 import type { Camera, Film, Scene } from "./script";
 import { speechSeconds } from "./script";
@@ -75,13 +75,17 @@ export function decodeAudio(buf: ArrayBuffer): Promise<AudioBuffer> {
 
 const voices = new Map<string, Promise<AudioBuffer | null>>();
 const failedVoices = new Set<string>();
-/** Sprechertext mit der gewählten Mythos-Stimme (Piper) vertonen. Ohne Piper-Stimme: null (dann nur Untertitel). */
+/** Sprechertext mit der gewählten Mythos-Stimme (Server oder Piper) vertonen. Ohne Stimme: null (dann nur Untertitel). */
 export function narrate(text: string, voiceId: string): Promise<AudioBuffer | null> {
   const key = voiceId + "|" + text;
   let p = voices.get(key);
   if (!p) {
     p = (async () => {
       if (!text.trim() || failedVoices.has(voiceId)) return null;
+      if (voiceId.startsWith("cloud:")) {
+        const ab = await cloudAudio(text, voiceId.slice(6));
+        return ab ? decodeAudio(ab) : null;
+      }
       const v = loadVoice();
       if (!v) return null;
       const piper = await v.catch((e) => { failedVoices.add(voiceId); throw e; });

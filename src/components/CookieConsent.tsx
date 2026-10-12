@@ -1,6 +1,5 @@
 // Hinweis-Banner zu Speicher und externen Diensten. Erscheint beim ersten Besuch, bis "Verstanden" gewählt ist.
-// Es gibt kein Tracking, darum braucht es keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG). Das Bild-Backup aus dem
-// Browser gehört zur angeforderten Bild-Erzeugung (Art. 6 Abs. 1 lit. b DSGVO) und lässt sich hier ausschalten.
+// Es gibt kein Tracking, darum braucht es keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG).
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
@@ -9,17 +8,16 @@ import { OPEN_CONSENT_EVENT, CONSENT_EVENT, getConsent, setConsent } from "@/lib
 export default function CookieConsent() {
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState(false);
-  const [external, setExternal] = useState(true);
 
   useEffect(() => {
     if (!getConsent()) setOpen(true);
-    const reopen = () => { setExternal(getConsent()?.external ?? true); setDetails(true); setOpen(true); };
+    const reopen = () => { setDetails(true); setOpen(true); };
     window.addEventListener(OPEN_CONSENT_EVENT, reopen);
     return () => window.removeEventListener(OPEN_CONSENT_EVENT, reopen);
   }, []);
 
   if (!open) return null;
-  const save = () => { setConsent(external); setOpen(false); setDetails(false); };
+  const save = () => { setConsent(false); setOpen(false); setDetails(false); };
 
   return (
     <div role="dialog" aria-modal="false" aria-labelledby="consent-title" className="fixed inset-x-0 bottom-0 z-[100] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -27,8 +25,7 @@ export default function CookieConsent() {
         <h2 id="consent-title" className="mb-1.5 font-sans text-base font-semibold text-foreground">Cookies und Datenschutz</h2>
         <p className="text-muted-foreground leading-relaxed">
           Wir speichern nur, was für Anmeldung, Einstellungen und Sicherheit nötig ist. Kein Tracking, keine Werbe-Cookies.
-          Wenn unsere Server gerade kein Bild erzeugen können, lädt dein Browser es direkt bei einem externen KI-Dienst. Dabei sieht der
-          Anbieter deine IP-Adresse. Das kannst du in den Einstellungen ausschalten. Mehr dazu in der{" "}
+          Mehr dazu in der{" "}
           <Link to="/datenschutz" className="underline text-foreground">Datenschutzerklärung</Link> und im{" "}
           <Link to="/cookie" className="underline text-foreground">Cookie-Hinweis</Link>.
         </p>
@@ -41,13 +38,6 @@ export default function CookieConsent() {
                 <div className="text-xs text-muted-foreground">Anmeldung, Sitzung, Einstellungen, Sicherheit. Immer aktiv.</div>
               </div>
               <Switch checked disabled aria-label="Notwendig (immer aktiv)" />
-            </div>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="font-medium text-foreground">Bild-Backup im Browser</div>
-                <div className="text-xs text-muted-foreground">Pollinations.ai und AI Horde, nur wenn du ein Bild anforderst und unsere Server ausgelastet sind. Ausgeschaltet erzeugen nur unsere Server Bilder.</div>
-              </div>
-              <Switch checked={external} onCheckedChange={setExternal} aria-label="Bild-Backup im Browser" />
             </div>
           </div>
         )}
