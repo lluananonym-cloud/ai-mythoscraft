@@ -1,5 +1,5 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><title>Mythos Code</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https: data: blob: wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' data: blob:; media-src blob: data:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https: data: blob: wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' data: blob:; media-src blob: data:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; frame-src https: http: file:">
 <style>
 :root{--bg:#0a0a0a;--fg:#fafafa;--muted:#8a8a8a;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--panel:#171717}
 *{box-sizing:border-box}html,body{height:100%}
@@ -56,6 +56,20 @@ textarea::placeholder{color:#737373}
 #files .chip{margin-right:4px}
 .main2{flex:1;display:flex;min-height:0}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
+.main{position:relative}
+#inapp{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;background:var(--bg)}
+body.inapp-open #inapp{display:flex}
+#inapp .ibar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}
+#itabs{display:flex;gap:4px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+.itab{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid transparent}
+.itab.on{color:var(--fg);background:var(--panel);border-color:var(--line)}
+.itab .ix{opacity:.55;padding:0 2px;font-size:12px}.itab .ix:hover{opacity:1}
+.itab.loading .il{animation:ipulse 1s ease-in-out infinite}@keyframes ipulse{50%{opacity:.35}}
+#iwrap{flex:1;position:relative;min-height:0}
+#iwrap webview{position:absolute;inset:0;width:100%;height:100%;border:0;visibility:hidden}
+#iwrap webview.on{visibility:visible}
+.nav.on{background:rgba(255,255,255,.06);color:var(--fg)}
+body.light .nav.on{background:rgba(0,0,0,.05)}
 aside{width:250px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
 .nav{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;font-size:14px;color:#e5e5e5;text-align:left;cursor:pointer}
 .nav:hover{background:rgba(255,255,255,.05)}.nav .ic{width:20px;text-align:center;opacity:.85}
@@ -341,16 +355,23 @@ body.light .composer{background:#fff}
     <div id="clist"></div>
   </aside>
   <div class="main">
+  <section id="inapp">
+    <div class="ibar">
+      <button class="chip" id="iChat" title="Zurück zum Chat (Esc)">💬 Chat</button>
+      <div id="itabs"></div>
+      <button class="chip icon" id="iBack" title="Zurück">←</button>
+      <button class="chip icon" id="iFwd" title="Vor">→</button>
+      <button class="chip icon" id="iReload" title="Neu laden">⟳</button>
+      <button class="chip icon" id="iExt" title="Im Browser öffnen">↗</button>
+    </div>
+    <div id="iwrap"></div>
+  </section>
   <div id="log"><div class="col" id="col">
     <div id="empty">
       <img src="icon.png" alt="">
       <h2 class="serif grad">Was bauen wir heute?</h2>
       <p>Wähle links ein Projekt und beschreibe deine Aufgabe. Tippe <b>/</b> für Befehle, zieh Dateien oder Bilder einfach ins Fenster.</p>
-      <div class="sugg">
-        <button class="chip" data-s="Erkläre mir die Struktur dieses Projekts.">Projekt erklären</button>
-        <button class="chip" data-s="Finde und behebe Fehler in diesem Projekt.">Fehler finden</button>
-        <button class="chip" data-s="Erstelle eine kleine Webseite mit index.html, style.css und script.js.">Webseite bauen</button>
-      </div>
+      <div class="sugg"></div>
     </div>
   </div></div>
   <footer>

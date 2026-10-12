@@ -49,6 +49,7 @@ import { nvidiaChat, nvidiaLLM } from "@/lib/nvidiaApi";
 import CustomizeDialog from "@/components/chat/CustomizeDialog";
 import ArtifactsDialog from "@/components/chat/ArtifactsDialog";
 import ProjectsDialog from "@/components/chat/ProjectsDialog";
+import StarterPrompts from "@/components/chat/StarterPrompts";
 import { getInstructions, getMcpServers, getProjects, projectOfChat, setProjects, type Project } from "@/lib/chatPrefs";
 import { callTool, collectTools } from "@/lib/mcpClient";
 import { FILE_PROMPT } from "@/lib/chatFiles";
@@ -1397,23 +1398,7 @@ const Chat = () => {
                 <p className="text-muted-foreground text-sm text-center max-w-md mb-8">
                   Frag mich alles. Tippe <code className="font-mono bg-white/5 px-1.5 py-0.5 rounded text-[11px]">/</code> für alle Commands.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
-                  {[
-                    { icon: HelpCircle, label: "Wie verbinde ich mich mit dem Server?" },
-                    { icon: Film,       label: "/video epische Drohnenaufnahme über einer Burg" },
-                    { icon: ImageIcon,  label: "/image ein epischer Drache über mythoscraft" },
-                    { icon: Target,     label: "/goal Erstelle mir einen kompletten Lernplan für die Matheprüfung" },
-                  ].map(({ icon: Icon, label }) => (
-                    <button
-                      key={label}
-                      onClick={() => setInput(label)}
-                      className="border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-2xl p-4 text-sm text-left transition-colors flex items-start gap-3"
-                    >
-                      <Icon className="h-4 w-4 text-foreground/60 mt-0.5 shrink-0" />
-                      <span className="text-foreground/90">{label}</span>
-                    </button>
-                  ))}
-                </div>
+                <StarterPrompts titles={convs.map(c => c.title)} onPick={setInput} />
               </div>
             ) : (
               <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 space-y-6">
