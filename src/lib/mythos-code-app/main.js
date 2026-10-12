@@ -242,13 +242,17 @@ app.on("will-quit", () => { mcp.stopAll(); killAll(); stopAllBackground(); });
 // System-Prompt: Werkzeuge + verbundene MCP-Werkzeuge + Gedächtnis + Ziel.
 function mcpPrompt() {
   const all = mcp.status(), tools = all.filter((s) => s.status === "connected").flatMap((s) => s.tools.map((t) => ({ server: s.name, ...t })));
-  const off = all.filter((s) => s.status !== "connected").map((s) => s.name);
-  if (!tools.length) return "\n\nEs sind keine MCP-Connectoren verbunden" + (off.length ? " (eingerichtet, aber nicht verbunden: " + off.join(", ") + ")" : "") + " – nutze kein mcp-Werkzeug. Braucht die Aufgabe einen Connector, sag dem Nutzer, dass er ihn unter 🔌 verbinden soll.";
+  const label = { connected: "verbunden", auth: "Anmeldung nötig", error: "nicht erreichbar", connecting: "verbindet gerade" };
+  // Aktueller Stand aller Connectoren – sonst hält sich Mythos an alte Chats (z. B. „nur Higgsfield“).
+  const list = "\n\nDEINE CONNECTOREN (MCP) – aktueller Stand, nur diese Liste gilt:\n" +
+    (all.length ? all.map((s) => "- " + s.name + ": " + (label[s.status] || s.status) + (s.status === "connected" ? " (" + s.tools.length + " Werkzeuge: " + s.tools.slice(0, 15).map((t) => t.name).join(", ") + (s.tools.length > 15 ? ", …" : "") + ")" : "")).join("\n") : "- Keine Connectoren eingerichtet.") +
+    "\nFragt der Nutzer, womit du verbunden bist oder welche MCPs du hast, nenne genau diese Liste mit Stand. Ältere Aussagen im Chat über Connectoren können veraltet sein." +
+    (all.some((s) => s.status !== "connected") ? " Nicht verbundene kannst du nicht benutzen – sag dem Nutzer, dass er sie unter 🔌 anmelden oder prüfen kann." : "");
+  if (!tools.length) return list + "\nNutze kein mcp-Werkzeug.";
   const args = (t) => (t.inputSchema && t.inputSchema.properties
     ? " · args: " + JSON.stringify(Object.fromEntries(Object.entries(t.inputSchema.properties).map(([k, v]) => [k, (v && v.type) || "any"]))).slice(0, 200) : "");
-  return '\n\nMCP-Werkzeuge (externe Server) – Aufruf: <tool>{"name":"mcp","server":"...","tool":"...","args":{...}}</tool>\n' +
-    tools.slice(0, 60).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n") +
-    (off.length ? "\nNicht verbunden (nicht nutzen): " + off.join(", ") : "");
+  return list + '\n\nMCP-Werkzeuge – Aufruf: <tool>{"name":"mcp","server":"<Connector-Name>","tool":"...","args":{...}}</tool>\n' +
+    tools.slice(0, 80).map((t) => "- " + t.server + " / " + t.name + ": " + (t.description || "").replace(/\s+/g, " ").slice(0, 160) + args(t)).join("\n");
 }
 function browserPrompt() {
   if (!bridgeState().connected) return "";

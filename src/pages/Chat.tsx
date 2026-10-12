@@ -51,7 +51,7 @@ import ArtifactsDialog from "@/components/chat/ArtifactsDialog";
 import ProjectsDialog from "@/components/chat/ProjectsDialog";
 import StarterPrompts from "@/components/chat/StarterPrompts";
 import { getInstructions, getMcpServers, getProjects, projectOfChat, setProjects, type Project } from "@/lib/chatPrefs";
-import { callTool, collectTools } from "@/lib/mcpClient";
+import { callTool, collectTools, connectorStates } from "@/lib/mcpClient";
 import { FILE_PROMPT } from "@/lib/chatFiles";
 import { capabilitiesPrompt } from "@/lib/mythosCapabilities";
 
@@ -830,6 +830,18 @@ const Chat = () => {
     }
   };
 
+  /** Welche Connectoren es gerade wirklich gibt – sonst hält sich Mythos an alte Chats oder Erinnerungen (z. B. „nur Higgsfield“). */
+  const connectorsHint = () => {
+    const states = connectorStates(getMcpServers());
+    const line = (s: { name: string; state: string; tools: string[] }) =>
+      `- ${s.name}: ${s.state}` + (s.tools.length ? ` (${s.tools.length} Werkzeuge: ${s.tools.slice(0, 15).join(", ")}${s.tools.length > 15 ? ", …" : ""})` : "");
+    return "## Deine Connectoren (MCP) – aktueller Stand, nur diese Liste gilt\n" +
+      (states.length ? states.map(line).join("\n") : "- Keine Connectoren eingerichtet.") +
+      "\nFragt der Nutzer, womit du verbunden bist oder welche MCPs du hast, nenne genau diese Liste mit Stand. " +
+      "Was in früheren Nachrichten oder Erinnerungen über Connectoren steht, kann veraltet sein – verlass dich nur hierauf. " +
+      "Nicht verbundene Connectoren kannst du nicht benutzen; sag dem Nutzer, dass er sie unter Anpassungen → Connectoren anmelden oder prüfen kann.";
+  };
+
   /** Zusätzliche Hinweise fürs Modell: eigene Anweisungen, Projekt, Werkzeuge und /goal. */
   const buildHints = (
     tools: Awaited<ReturnType<typeof collectTools>>,
@@ -852,9 +864,7 @@ const Chat = () => {
         "\n\nEs gibt NUR diese Werkzeuge. Erfinde keine anderen (z. B. todo, run, write) – fehlt etwas, sag es dem Nutzer.",
       );
     }
-    // Eingeschaltete, aber gerade nicht erreichbare Connectoren nennen, damit die KI nicht so tut, als gäbe es sie nicht.
-    const offline = getMcpServers().filter(s => s.enabled && !tools.some(t => t.server.id === s.id)).map(s => s.name);
-    if (offline.length) parts.push(`## Nicht verbundene Connectoren\n${offline.join(", ")} – gerade nicht erreichbar oder Anmeldung nötig. Braucht die Aufgabe einen davon, sag dem Nutzer, dass er ihn unter Anpassungen → Connectoren anmelden bzw. prüfen soll.`);
+    parts.push(connectorsHint());
     if (!tools.length) {
       parts.push("## Werkzeuge\nIn diesem Chat sind keine Werkzeuge verbunden. Schreibe nie <tool>- oder <tool_call>-Blöcke, sondern antworte direkt als normaler Text.");
     }
