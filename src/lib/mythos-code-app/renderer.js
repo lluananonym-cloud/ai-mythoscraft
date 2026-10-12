@@ -1561,14 +1561,21 @@ function setStatus(text, code) {
   if (code) { s.appendChild(document.createElement("br")); s.appendChild(el("span", "code mono glass", code)); }
 }
 async function login() {
-  $("btnLogin").disabled = true; setStatus("Browser öffnet sich …");
+  $("btnLogin").disabled = true; setStatus("Anmeldung wird geöffnet …");
   let s; try { s = await (await post("cli-auth", { action: "start", client: "app" })).json(); } catch (e) { s = null; }
   if (!s || !s.code) { setStatus("Anmeldung gerade nicht möglich – bitte nochmal versuchen."); $("btnLogin").disabled = false; return; }
-  window.mythos.open(CFG.site + "/cli-auth?code=" + s.code);
-  setStatus("Klicke im Browser auf „Authentifizieren“. Dein Code:", s.code);
+  // Anmeldung direkt in der App, in derselben Sitzung wie Räume, Cloud-PC und Filmstudio:
+  // so ist man dort danach schon angemeldet und muss es nicht nochmal tun.
+  const authUrl = CFG.site + "/cli-auth?code=" + s.code;
+  const lw = $("lweb"); lw.textContent = "";
+  const wv = document.createElement("webview");
+  wv.setAttribute("partition", "persist:mythos-cloudpc"); wv.setAttribute("src", authUrl);
+  lw.appendChild(wv); lw.style.display = "block";
+  $("lext").style.display = ""; $("lext").onclick = () => window.mythos.open(authUrl);
+  setStatus("Melde dich hier an und klicke auf „Authentifizieren“. Dein Code:", s.code);
   const iv = setInterval(async () => {
     let p; try { p = await (await post("cli-auth", { action: "poll", code: s.code, poll_secret: s.poll_secret })).json(); } catch (e) { return; }
-    if (p.status === "ok") { clearInterval(iv); cfg.key = p.api_key; cfg.name = p.name; window.MythosVoice.cloud.key = cfg.key; await window.mythos.setCfg(cfg); show(); }
+    if (p.status === "ok") { clearInterval(iv); $("lweb").textContent = ""; $("lweb").style.display = "none"; $("lext").style.display = "none"; cfg.key = p.api_key; cfg.name = p.name; window.MythosVoice.cloud.key = cfg.key; await window.mythos.setCfg(cfg); show(); }
     if (p.status === "expired") { clearInterval(iv); setStatus("Abgelaufen – bitte nochmal versuchen."); $("btnLogin").disabled = false; }
   }, 2000);
 }

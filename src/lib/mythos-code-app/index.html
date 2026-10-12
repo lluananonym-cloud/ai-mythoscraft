@@ -19,10 +19,11 @@ button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
 button.chip:hover{background:rgba(255,255,255,.09)}
 .mono{font-family:"JetBrains Mono",Consolas,monospace}
 .screen{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;min-height:0}
-#login{align-items:center;justify-content:center;text-align:center;padding:24px}
+#login{align-items:center;justify-content:center;text-align:center;padding:24px;overflow:auto}
 .logo-xl{width:132px;height:132px;animation:bob 6s ease-in-out infinite;filter:drop-shadow(0 0 40px rgba(124,58,237,.45))}
 #login h1{font-size:56px;margin:18px 0 6px;line-height:1}
 #login p{color:var(--muted);margin:0 0 30px;font-size:15px}
+#lweb{width:min(620px,92vw);height:min(620px,62vh);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:14px;display:none}#lweb webview{width:100%;height:100%;border:0}
 #lstat{margin-top:22px;min-height:60px;color:var(--muted);font-size:13px}
 #lstat .code{display:inline-block;margin-top:10px;font-size:22px;letter-spacing:.3em;padding:10px 18px;border-radius:14px;color:var(--fg)}
 header{display:flex;gap:8px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line)}
@@ -315,6 +316,8 @@ body.light .composer{background:#fff}
   <p>Dein KI-Coding-Agent von Mythoscraft</p>
   <button class="btn" id="btnLogin">Mit MythosAI anmelden</button>
   <div id="lstat"></div>
+  <div id="lweb"></div>
+  <button class="chip" id="lext" style="display:none;margin-top:10px">Lieber im Browser anmelden</button>
 </div>
 <div id="app" class="screen" style="display:none">
   <header>
