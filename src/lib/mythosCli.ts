@@ -119,7 +119,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "2.11.0";
+export const APP_VERSION = "2.11.1";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {
@@ -148,7 +148,7 @@ Der Download von **${decodeURIComponent(url.split("/").pop() || "MythosCode-Setu
 9. 🎙 **Sprachmodus**: einfach mit Mythos reden – er hört zu (Whisper), arbeitet und antwortet mit natürlicher Stimme (Piper). Beides läuft lokal, beim ersten Mal werden die Sprachmodelle geladen. „Hey Mythos“, 📷 Kamera und 🖥 Bildschirm lassen sich dazuschalten.
 10. Mythos plant größere Aufgaben als **📋 Aufgabenliste**. \`/review\` prüft deine Änderungen, \`/pr\` erstellt einen Pull Request, \`/stats\` zeigt Projektzahlen, \`/export\` speichert den Chat. Eigene Befehle legst du mit \`/befehl-neu\` an. Tastenkürzel: \`/tasten\`.
 11. Mit **@** erwähnst du Dateien (ihr Inhalt geht mit), **✨** formuliert deine Aufgabe präziser, **📌** pinnt Chats an, **↻** generiert die letzte Antwort neu. \`/später 22:00 <aufgabe>\` plant Aufgaben, \`/kompakt\` fasst lange Chats zusammen, \`/ton aus\` schaltet den Fertig-Ton ab.
-12. **Updates**: Gibt es eine neue Version, zeigt die App oben einen Hinweis. Ein Klick auf **Jetzt updaten** lädt und installiert sie, danach startet Mythos Code neu. \`/update\` sucht sofort.`;
+12. **Updates**: Beim ersten Öffnen am Tag zeigt die App oben, ob sie aktuell ist. Gibt es eine neue Version, bleibt der Hinweis stehen. Ein Klick auf **Jetzt updaten** lädt und installiert sie, danach startet Mythos Code neu. \`/update\` sucht sofort.`;
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 
 const appPkg = () => JSON.stringify({

@@ -1538,13 +1538,26 @@ window.mythos.term.onOutput((p) => { if (p.id === "term") termWrite(stripAnsi(p.
 window.mythos.mcp.onChange((s) => { mcpStatus = s; renderMcp(); if ($("connections").classList.contains("open")) renderConnections(); });
 window.mythos.browser.onEvent((ev) => { const r = runOf(chat); if (r) activityPush(r, ev.kind === "error" ? "⚠" : ev.kind === "action" ? "↗" : "◎", ev.text || "Browser-Aktivität"); else note("◎ Browser: " + (ev.text || ev.kind)); refreshBrowser(); });
 // ---------- Updates: Hinweis oben + Knopf „Jetzt updaten“ (main.js lädt und installiert) ----------
-let upd = { state: "idle" }, updHidden = "";
+let upd = { state: "idle" }, updHidden = "", updDaily = null;
+// Beim ersten Öffnen am Tag immer zeigen, was die Update-Suche ergeben hat – auch „aktuell“.
+const updDay = new Date().toISOString().slice(0, 10);
+try { if (localStorage.getItem("mythos_upd_day") !== updDay) updDaily = "wait"; } catch { /* egal */ }
 function renderUpdate() {
   const s = upd, has = ["available", "downloading", "ready"].includes(s.state) || (s.state === "error" && s.version);
+  if (updDaily === "wait" && ["latest", "available", "error"].includes(s.state)) {
+    updDaily = has ? null : s.state;
+    try { localStorage.setItem("mythos_upd_day", updDay); } catch { /* egal */ }
+    if (updDaily) setTimeout(() => { updDaily = null; renderUpdate(); }, 8000);
+  }
   $("updChip").style.display = has ? "" : "none";
+  const btn = $("updBtn");
+  if (!has && updDaily && updDaily !== "wait") {
+    $("updText").textContent = updDaily === "latest" ? "✓ Mythos Code ist aktuell (Version " + s.current + ")" : "⚠ Konnte nicht nach Updates suchen – später nochmal mit /update";
+    btn.style.display = "none"; $("updBar").style.display = "flex"; return;
+  }
+  btn.style.display = "";
   $("updBar").style.display = has && updHidden !== s.version ? "flex" : "none";
   if (!has) return;
-  const btn = $("updBtn");
   if (s.state === "downloading") { $("updText").textContent = "⬇ Mythos Code " + s.version + " wird geladen … " + (s.percent || 0) + " %"; btn.textContent = "Lädt …"; btn.disabled = true; }
   else if (s.state === "ready") { $("updText").textContent = "✓ Mythos Code " + s.version + " ist bereit"; btn.textContent = "Neu starten"; btn.disabled = false; }
   else if (s.state === "error") { $("updText").textContent = "⚠ Update fehlgeschlagen: " + (s.error || "unbekannter Fehler"); btn.textContent = "Nochmal"; btn.disabled = false; }
@@ -1559,7 +1572,7 @@ window.mythos.update.onStatus((s) => { upd = s; renderUpdate(); });
 window.mythos.update.state().then((s) => { upd = s; renderUpdate(); });
 $("updBtn").onclick = installUpdate;
 $("updChip").onclick = installUpdate;
-$("updX").onclick = () => { updHidden = upd.version || ""; renderUpdate(); };
+$("updX").onclick = () => { updHidden = upd.version || ""; if (updDaily !== "wait") updDaily = null; renderUpdate(); };
 async function checkUpdate() {
   note("🔄 Suche nach Updates …");
   const s = await window.mythos.update.check(); upd = s; renderUpdate();
