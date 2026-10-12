@@ -32,7 +32,7 @@ const showWin = () => { if (w) { w.show(); w.focus(); } };
 function win() {
   w = new BrowserWindow({ width: 1200, height: 820, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Code",
     icon: path.join(__dirname, "icon.png"),
-    autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false } });
+    autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false, webviewTag: true } });
   w.webContents.setWindowOpenHandler(({ url }) => { if (safeUrl(url)) shell.openExternal(url); return { action: "deny" }; });
   w.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (safeUrl(url)) shell.openExternal(url); } });
   w.loadFile("index.html");
@@ -476,64 +476,28 @@ ipcMain.handle("config:open", (_e, which, cwd) => {
   return file;
 });
 
-// ---------- Live-Vorschau: eigenes Fenster, lädt bei Dateiänderungen neu ----------
-let preview = null, watcher = null, reloadTimer = null;
-// Mythos Cloud-PC: eigenes Fenster mit der Cloud-PC-Seite der Website. Der Rechner läuft dort im Browser,
-// die Anmeldung bleibt in einer eigenen, dauerhaften Sitzung gespeichert.
-let cloudPc = null;
-ipcMain.handle("cloudpc:open", (_e, url) => {
-  url = String(url || "");
-  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
-  if (!cloudPc || cloudPc.isDestroyed()) {
-    cloudPc = new BrowserWindow({ width: 1320, height: 860, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Cloud-PC",
-      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
-    cloudPc.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
-    // Anmeldung (z. B. Google) darf im Fenster weiterleiten; nur Nicht-Web-Adressen gehen nach draußen.
-    cloudPc.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
-    cloudPc.on("closed", () => { cloudPc = null; });
+// ---------- Seiten in der App (Cloud-PC, Filmstudio, Räume, Vorschau) ----------
+// Statt eigener Fenster zeigt die App diese Seiten als Tab im Hauptfenster (<webview>).
+// Jede eingebettete Seite läuft abgeschottet: ohne Preload, ohne Node, in der Sandbox.
+const WEB_PARTITIONS = new Set(["persist:mythos-cloudpc", "mythos-preview"]);
+app.on("web-contents-created", (_e, contents) => {
+  contents.on("will-attach-webview", (e, wp, params) => {
+    delete wp.preload; delete wp.preloadURL;
+    wp.nodeIntegration = false; wp.nodeIntegrationInSubFrames = false; wp.contextIsolation = true; wp.sandbox = true; wp.webSecurity = true;
+    const okSrc = /^https:\/\//i.test(params.src || "") || (params.partition === "mythos-preview" && /^(https?|file):/i.test(params.src || ""));
+    if (!w || contents !== w.webContents || !okSrc || !WEB_PARTITIONS.has(params.partition)) e.preventDefault();
+  });
+  if (contents.getType() === "webview") {
+    // Neue Fenster aus eingebetteten Seiten gehen in den normalen Browser.
+    contents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
+    // Anmeldung (z. B. Google) darf im Tab weiterleiten; Nicht-Web-Adressen gehen nach draußen.
+    contents.on("will-navigate", (e, u) => { if (!/^(https?|file):/i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
   }
-  // Neue Aufgabe oder erneutes Öffnen: Seite (neu) laden, damit eine mitgegebene Aufgabe startet.
-  if (url.includes("?task=") || !cloudPc.webContents.getURL()) cloudPc.loadURL(url);
-  cloudPc.show(); cloudPc.focus();
-  return { ok: true };
 });
-// Mythos Filmstudio: eigenes Fenster mit der Filmstudio-Seite. Gleiche Sitzung wie der Cloud-PC, damit man nur einmal angemeldet sein muss.
-let filmStudio = null;
-ipcMain.handle("filmstudio:open", (_e, url) => {
-  url = String(url || "");
-  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
-  if (!filmStudio || filmStudio.isDestroyed()) {
-    filmStudio = new BrowserWindow({ width: 1320, height: 900, minWidth: 720, minHeight: 520, backgroundColor: "#0a0a0a", title: "Mythos Filmstudio",
-      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
-    filmStudio.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
-    filmStudio.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
-    filmStudio.on("closed", () => { filmStudio = null; });
-  }
-  // Neue Idee oder erstes Öffnen: Seite laden, damit eine mitgegebene Idee sofort gedreht wird.
-  if (url.includes("?idee=") || !filmStudio.webContents.getURL()) filmStudio.loadURL(url);
-  filmStudio.show(); filmStudio.focus();
-  return { ok: true };
-});
-// Gemeinsame Räume: eigenes Fenster mit der Räume-Seite (gleiche Sitzung wie Cloud-PC und Filmstudio).
-let raeume = null;
-ipcMain.handle("raeume:open", (_e, url) => {
-  url = String(url || "");
-  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
-  if (!raeume || raeume.isDestroyed()) {
-    raeume = new BrowserWindow({ width: 1280, height: 860, minWidth: 640, minHeight: 480, backgroundColor: "#0a0a0a", title: "Mythos Räume",
-      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
-    raeume.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
-    raeume.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
-    raeume.on("closed", () => { raeume = null; });
-  }
-  // Mit Einladungslink oder beim ersten Öffnen: Seite laden.
-  if (url.includes("?join=") || !raeume.webContents.getURL()) raeume.loadURL(url);
-  raeume.show(); raeume.focus();
-  return { ok: true };
-});
+// Live-Vorschau: lädt bei Dateiänderungen im Projekt neu (der Tab in der App bekommt "preview-reload").
+let watcher = null, reloadTimer = null;
+const stopWatch = () => { if (watcher) { watcher.close(); watcher = null; } };
+ipcMain.handle("preview:close", () => { stopWatch(); return true; });
 ipcMain.handle("preview:open", (_e, target, cwd) => {
   let url = String(target || "").trim();
   if (!url) {
@@ -545,25 +509,19 @@ ipcMain.handle("preview:open", (_e, target, cwd) => {
     if (!fs.existsSync(f)) return { error: "Nicht gefunden: " + url };
     url = f;
   }
-  if (!preview || preview.isDestroyed()) {
-    preview = new BrowserWindow({ width: 1024, height: 768, title: "Mythos Code – Vorschau", icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-      webPreferences: { contextIsolation: true, sandbox: true } });
-    preview.webContents.setWindowOpenHandler(({ url: u }) => { shell.openExternal(u); return { action: "deny" }; });
-    preview.on("closed", () => { preview = null; if (watcher) { watcher.close(); watcher = null; } });
-  }
-  if (/^https?:/i.test(url)) preview.loadURL(url); else preview.loadFile(url);
-  preview.show(); preview.focus();
-  if (watcher) { watcher.close(); watcher = null; }
+  const shown = url;
+  if (!/^https?:/i.test(url)) url = require("url").pathToFileURL(url).href;
+  stopWatch();
   if (cwd) {
     try {
       watcher = fs.watch(cwd, { recursive: true }, (_ev, f) => {
         if (!f || /(^|[\\/])(node_modules|\.git)([\\/]|$)/.test(f)) return;
         clearTimeout(reloadTimer);
-        reloadTimer = setTimeout(() => { if (preview && !preview.isDestroyed()) preview.webContents.reloadIgnoringCache(); }, 400);
+        reloadTimer = setTimeout(() => send("preview-reload"), 400);
       });
     } catch {}
   }
-  return { ok: true, url };
+  return { ok: true, url, shown };
 });
 
 // ---------- Dateibaum & Editor ----------

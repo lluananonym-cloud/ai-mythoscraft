@@ -129,11 +129,57 @@ const add = (cls, text, extra) => addTo(chat, cls, text, extra);
 const noteTo = (c, text) => addTo(c, "note", text);
 const note = (text) => noteTo(chat, text);
 const flash = (text) => draw({ cls: "note", text: text }, -1); // nur anzeigen, nicht speichern
+// ---------- Vorschläge auf der Startseite: jedes Mal andere, passend zu deinen letzten Chats ----------
+const SUGG = [
+  ["Projekt erklären", "Erkläre mir die Struktur dieses Projekts.", "projekt"],
+  ["Fehler finden", "Finde und behebe Fehler in diesem Projekt.", "fehler bug"],
+  ["Webseite bauen", "Erstelle eine kleine Webseite mit index.html, style.css und script.js.", "web html css seite"],
+  ["Tests schreiben", "Schreib sinnvolle Tests für die wichtigsten Funktionen in diesem Projekt und lass sie laufen.", "test"],
+  ["Code aufräumen", "Räum den Code in diesem Projekt auf: doppelten Code zusammenfassen, Namen verbessern, nichts am Verhalten ändern.", "refactor aufräumen"],
+  ["README schreiben", "Schreib eine verständliche README.md für dieses Projekt mit Installation und Nutzung.", "doku readme"],
+  ["Spiel programmieren", "Programmier ein kleines Browser-Spiel (z. B. Snake) mit HTML, CSS und JavaScript.", "spiel game"],
+  ["Design verschönern", "Mach das Design dieses Projekts moderner: Farben, Abstände, Schrift und ein dunkles Design.", "design css ui"],
+  ["Sicherheit prüfen", "Prüf dieses Projekt auf Sicherheitslücken (Eingaben, Passwörter, Abhängigkeiten) und behebe, was du findest.", "sicherheit security"],
+  ["Schneller machen", "Finde die langsamsten Stellen in diesem Projekt und mach sie schneller.", "performance speed"],
+  ["Discord-Bot bauen", "Bau mir einen einfachen Discord-Bot in Node.js mit einem /ping-Befehl.", "discord bot"],
+  ["Minecraft-Plugin", "Erstelle ein kleines Minecraft-Plugin (Paper, Java) mit einem eigenen Befehl.", "minecraft plugin java"],
+  ["Python-Skript", "Schreib ein Python-Skript, das alle Dateien in einem Ordner nach Typ sortiert.", "python skript"],
+  ["API bauen", "Bau eine kleine REST-API mit Node.js und Express mit Beispiel-Endpunkten.", "api server backend node"],
+  ["Abhängigkeiten updaten", "Prüf die Abhängigkeiten dieses Projekts, aktualisiere veraltete und stell sicher, dass alles noch läuft.", "npm paket update"],
+  ["Kommentare ergänzen", "Ergänze kurze, hilfreiche Kommentare an den schwierigen Stellen in diesem Projekt.", "doku kommentar"],
+  ["Neue Idee umsetzen", "Schlag mir drei sinnvolle neue Funktionen für dieses Projekt vor und setz die beste um.", "idee feature"],
+  ["Handy-tauglich machen", "Mach dieses Projekt auf dem Handy gut bedienbar (responsive Layout).", "handy mobil responsive web"],
+  ["Git-Änderungen prüfen", "Schau dir meine aktuellen Änderungen an (/review) und sag mir, was ich verbessern sollte.", "git review"],
+  ["Landingpage", "Bau eine schicke Landingpage für ein Produkt mit Hero-Bereich, Vorteilen und Preisen.", "web seite landing"],
+  ["Datenbank anbinden", "Bind eine SQLite-Datenbank an dieses Projekt an und zeig mir ein Beispiel zum Speichern und Laden.", "datenbank sql"],
+  ["Rechner-App", "Programmier einen schönen Taschenrechner als Web-App.", "web app"],
+  ["TypeScript einführen", "Stell dieses JavaScript-Projekt Schritt für Schritt auf TypeScript um.", "typescript js"],
+  ["To-do-App", "Bau eine To-do-App mit Speichern im Browser (localStorage).", "web app"],
+];
+let suggFor = null, recentTitles = [];
+function pickSugg(n) {
+  const words = recentTitles.join(" ").toLowerCase();
+  // Passend zu deinen letzten Chats zuerst, dann zufällig auffüllen – bei jedem neuen Chat anders.
+  const shuffled = SUGG.slice().sort(() => Math.random() - 0.5);
+  const hit = shuffled.filter((x) => x[2].split(" ").some((k) => k.length > 2 && words.includes(k)));
+  const out = hit.slice(0, 2);
+  for (const x of shuffled) { if (out.length >= n) break; if (!out.includes(x)) out.push(x); }
+  const t = recentTitles.find((x) => x && x !== "Neuer Chat");
+  if (t && Math.random() < 0.7) out[out.length - 1] = ["↪ " + (t.length > 28 ? t.slice(0, 27) + "…" : t), "Mach da weiter, wo wir bei „" + t + "“ aufgehört haben: schau dir den aktuellen Stand im Projekt an und setz den nächsten sinnvollen Schritt um.", ""];
+  return out;
+}
+function fillSugg(box, again) {
+  if (!box) return;
+  if (again || !suggFor || suggFor.id !== chat.id) suggFor = { id: chat.id, items: pickSugg(4), personal: recentTitles.length > 0 };
+  box.textContent = "";
+  suggFor.items.forEach(([label, text]) => { const b = el("button", "chip", label); b.title = text; b.onclick = () => { $("inp").value = text; grow(); $("inp").focus(); }; box.appendChild(b); });
+  const r = el("button", "chip icon", "↻"); r.title = "Andere Vorschläge"; r.onclick = () => fillSugg(box, true); box.appendChild(r);
+}
 function renderChat() { follow = true;
   const col = $("col"); col.textContent = "";
   if (!chat.view.length && !isBusy(chat)) {
     const e = EMPTY.cloneNode(true);
-    e.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { $("inp").value = b.dataset.s; grow(); $("inp").focus(); });
+    fillSugg(e.querySelector(".sugg"));
     col.appendChild(e);
   }
   chat.view.forEach(draw);
@@ -1058,7 +1104,7 @@ async function command(q) {
     if (!m) return note("Unbekanntes Modell. Verfügbar: " + prompts.models.map((x) => x.label).join(", "));
     return setModel(m.id);
   }
-  if (cmd === "/vorschau") { if (!arg && needFolder()) return; const r = await window.mythos.preview(arg, cfg.folder); return r.error ? note("👁 " + r.error) : note("👁 Vorschau geöffnet: " + r.url + "\nSie lädt automatisch neu, wenn sich Dateien im Projekt ändern."); }
+  if (cmd === "/vorschau") { if (!arg && needFolder()) return; const r = await window.mythos.preview(arg, cfg.folder); if (r.error) return note("👁 " + r.error); inappOpen("preview", "👁 Vorschau", r.url, true, "mythos-preview"); return note("👁 Vorschau geöffnet: " + r.shown + "\nSie lädt automatisch neu, wenn sich Dateien im Projekt ändern."); }
   if (cmd === "/dateien") return toggleTree();
   if (cmd === "/terminal") return toggleTerm();
   if (cmd === "/tests") {
@@ -1264,6 +1310,7 @@ function cancelEdit() {
 // ---------- Gespeicherte Chats ----------
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 function newChat() {
+  inappHide();
   chat = { id: newId(), title: "Neuer Chat", folder: cfg.folder || "", created: Date.now(), updated: Date.now(), history: [], view: [] };
   cancelEdit(); renderChat(); renderSide(); $("inp").focus();
 }
@@ -1274,6 +1321,7 @@ async function saveChat(c) {
   await window.mythos.chats.save(copy); renderSide();
 }
 async function openChat(id) {
+  inappHide();
   if (chat && chat.id === id) return;
   let c = runs.has(id) ? runs.get(id).chat : await window.mythos.chats.get(id);
   if (!c) return renderSide();
@@ -1362,6 +1410,11 @@ async function renderSide() {
   let list = [];
   try { list = q ? await window.mythos.chats.search(q) : (await window.mythos.chats.list()).filter((c) => (c.folder || "") === (cfg.folder || "")); } catch (e) {}
   if (q !== searchQ.trim()) return; // inzwischen neue Suche
+  if (!q) {
+    recentTitles = list.slice(0, 8).map((c) => c.title || "");
+    // Erste Vorschläge kamen vor der Chatliste: jetzt einmal passend zu deinen Chats neu wählen.
+    if (recentTitles.length && suggFor && !suggFor.personal && suggFor.id === chat.id) fillSugg(document.querySelector("#col .sugg"), true);
+  }
   const cl = $("clist"); cl.textContent = "";
   if (!q) list.sort((a, b) => (pinned().includes(b.id) ? 1 : 0) - (pinned().includes(a.id) ? 1 : 0));
   list.forEach((c) => cl.appendChild(chatRow(runs.has(c.id) ? runs.get(c.id).chat : c, q ? c.snippet : null)));
@@ -1605,27 +1658,64 @@ $("mcp").onclick = () => command("/mcp");
 $("modelBtn").onclick = (e) => { e.stopPropagation(); toggleModelMenu(); };
 document.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest(".mpick")) $("modelMenu").style.display = "none"; });
 $("navProj").onclick = (e) => { if (e.target.id !== "btnAddProj") pickProject(); };
-async function openCloudPc(task) {
-  const url = CFG.site.replace(/\/$/, "") + "/cloud-pc" + (task ? "?task=" + encodeURIComponent(task) : "");
-  const r = await window.mythos.cloudPc(url);
-  if (r && r.error) note("⚠ Cloud-PC: " + r.error);
-  else note("🖥 Cloud-PC geöffnet" + (task ? " – Mythos legt mit deiner Aufgabe los." : "."));
+// ---------- Seiten in der App: Cloud-PC, Filmstudio, Räume und Vorschau als Tabs statt eigener Fenster ----------
+const itabs = new Map(); let iActive = null;
+const NAV_OF = { cloudpc: "navPc", film: "navFilm", raeume: "navRaum" };
+function inappShow(key) {
+  iActive = key; document.body.classList.add("inapp-open");
+  itabs.forEach((t, k) => { t.wv.classList.toggle("on", k === key); t.tab.classList.toggle("on", k === key); });
+  Object.entries(NAV_OF).forEach(([k, id]) => $(id) && $(id).classList.toggle("on", k === key));
+}
+function inappHide() {
+  document.body.classList.remove("inapp-open");
+  document.querySelectorAll("#side .nav.on").forEach((b) => b.classList.remove("on"));
+}
+function inappClose(key) {
+  const t = itabs.get(key); if (!t) return;
+  t.wv.remove(); t.tab.remove(); itabs.delete(key);
+  if (key === "preview") window.mythos.previewClose();
+  if (iActive === key) { const next = [...itabs.keys()].pop(); if (next) inappShow(next); else inappHide(); }
+}
+/** Öffnet eine Seite als Tab in der App. reload: Seite neu laden (z. B. mit neuer Aufgabe). */
+function inappOpen(key, title, url, reload, partition) {
+  let t = itabs.get(key);
+  if (!t) {
+    const wv = document.createElement("webview");
+    wv.setAttribute("partition", partition || "persist:mythos-cloudpc");
+    wv.setAttribute("allowpopups", "");
+    wv.setAttribute("src", url);
+    const tab = el("div", "itab"), lab = el("span", "il", title), x = el("span", "ix", "✕");
+    x.title = "Schließen"; x.onclick = (e) => { e.stopPropagation(); inappClose(key); };
+    tab.append(lab, x); tab.onclick = () => inappShow(key);
+    wv.addEventListener("did-start-loading", () => tab.classList.add("loading"));
+    wv.addEventListener("did-stop-loading", () => tab.classList.remove("loading"));
+    $("itabs").appendChild(tab); $("iwrap").appendChild(wv);
+    t = { wv, tab, url }; itabs.set(key, t);
+  } else if (reload || t.url !== url) { t.url = url; t.wv.loadURL(url).catch(() => {}); }
+  inappShow(key);
+}
+const curWv = () => itabs.get(iActive) && itabs.get(iActive).wv;
+const wvTry = (fn) => { const v = curWv(); if (v) try { fn(v); } catch (e) { /* Seite lädt noch */ } };
+$("iChat").onclick = inappHide;
+$("iBack").onclick = () => wvTry((v) => v.canGoBack() && v.goBack());
+$("iFwd").onclick = () => wvTry((v) => v.canGoForward() && v.goForward());
+$("iReload").onclick = () => wvTry((v) => v.reload());
+$("iExt").onclick = () => wvTry((v) => { const u = v.getURL(); if (/^https?:/i.test(u)) window.mythos.open(u); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("inapp-open") && !document.querySelector(".connect-modal.open")) inappHide(); });
+window.mythos.onPreviewReload(() => { const t = itabs.get("preview"); if (t) try { t.wv.reloadIgnoringCache(); } catch (e) { /* lädt noch */ } });
+const siteUrl = (p) => CFG.site.replace(/\/$/, "") + p;
+function openCloudPc(task) {
+  inappOpen("cloudpc", "🖥 Cloud-PC", siteUrl("/cloud-pc" + (task ? "?task=" + encodeURIComponent(task) : "")), !!task);
 }
 $("navPc").onclick = () => openCloudPc("");
-async function openFilmStudio(idea) {
-  const url = CFG.site.replace(/\/$/, "") + "/filmstudio" + (idea ? "?idee=" + encodeURIComponent(idea) : "");
-  const r = await window.mythos.filmStudio(url);
-  if (r && r.error) note("⚠ Filmstudio: " + r.error);
-  else note("🎬 Filmstudio geöffnet" + (idea ? " – Mythos dreht deinen Film." : "."));
+function openFilmStudio(idea) {
+  inappOpen("film", "🎬 Filmstudio", siteUrl("/filmstudio" + (idea ? "?idee=" + encodeURIComponent(idea) : "")), !!idea);
 }
 $("navFilm").onclick = () => openFilmStudio("");
-async function openRaeume(invite) {
+function openRaeume(invite) {
   // Einladungslink oder "<raum-id>.<code>" direkt übernehmen, sonst die Raumliste öffnen.
   const m = String(invite || "").match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.:_-][a-z0-9]+/i);
-  const url = CFG.site.replace(/\/$/, "") + "/raeume" + (m ? "?join=" + encodeURIComponent(m[0]) : "");
-  const r = await window.mythos.raeume(url);
-  if (r && r.error) note("⚠ Räume: " + r.error);
-  else note("👥 Gemeinsame Räume geöffnet" + (m ? " – du trittst dem Raum bei." : ". Erstell einen Raum und teile den Einladungslink."));
+  inappOpen("raeume", "👥 Räume", siteUrl("/raeume" + (m ? "?join=" + encodeURIComponent(m[0]) : "")), !!m);
 }
 $("navRaum").onclick = () => openRaeume("");
 $("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
