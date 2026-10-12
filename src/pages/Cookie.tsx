@@ -1,5 +1,4 @@
 import LegalPage, { H } from "@/components/LegalPage";
-import { openConsent } from "@/lib/consent";
 
 // Cookie-Hinweis: was im Browser gespeichert wird und wofür (§ 25 TDDDG).
 const ROWS: [string, string, string][] = [
@@ -29,18 +28,6 @@ const Cookie = () => (
         </tbody>
       </table>
     </div>
-
-    <H>Bild-Backup über externe KI-Dienste</H>
-    <p>
-      Wenn unsere Server gerade kein Bild erzeugen können, kann dein Browser es direkt bei Pollinations.ai oder AI Horde laden. Dabei erfahren
-      diese Anbieter deine IP-Adresse und den Bild-Wunsch. Das passiert nur, wenn du selbst ein Bild anforderst, und es wird dabei nichts in
-      deinem Browser gespeichert. Du kannst das Bild-Backup jederzeit ausschalten.
-    </p>
-    <p>
-      <button onClick={openConsent} className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-foreground hover:bg-white/[0.12]">
-        Cookie-Einstellungen ändern
-      </button>
-    </p>
 
     <H>Löschen</H>
     <p>Du kannst alle gespeicherten Daten jederzeit in den Einstellungen deines Browsers löschen („Website-Daten löschen“). Danach musst du dich neu anmelden.</p>

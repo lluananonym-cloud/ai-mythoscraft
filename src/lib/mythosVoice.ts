@@ -1,21 +1,28 @@
 /**
- * Mythos-Stimme: natürlich klingende Sprachausgabe mit Piper (Open Source, MIT, rhasspy/piper),
- * läuft komplett lokal im Browser (WebAssembly + ONNX). Die Stimme wird beim ersten Mal
- * geladen (~60 MB) und danach im Browser gespeichert. Bis dahin spricht die Browser-Stimme.
+ * Mythos-Stimme. Standard: Gemini-Stimmen über den Server (Function "tts", sehr natürlich).
+ * Ist deren Kontingent leer oder man ist nicht angemeldet, spricht die beste Stimme im Gerät
+ * (z. B. „Natural“-Stimmen in Edge). Alternativ lokal mit Piper (Open Source, MIT, rhasspy/piper),
+ * komplett im Browser (WebAssembly + ONNX); die Stimme wird einmal geladen und gespeichert.
  *
  * Wiedergabe über Web Audio mit Analyser → der Logo-Orb bewegt sich zur echten Stimme.
  */
 
 export type VoiceOption = { id: string; label: string };
 export const VOICES: VoiceOption[] = [
-  { id: "de_DE-thorsten-medium", label: "Thorsten – natürlich (empfohlen)" },
-  { id: "de_DE-thorsten_emotional-medium", label: "Thorsten – lebendig" },
-  { id: "de_DE-kerstin-low", label: "Kerstin – weiblich" },
-  { id: "de_DE-ramona-low", label: "Ramona – weiblich" },
-  { id: "browser", label: "Browser-Stimme (ohne Download)" },
+  { id: "cloud:Charon", label: "Charon – männlich, natürlich (empfohlen)" },
+  { id: "cloud:Kore", label: "Kore – weiblich, natürlich" },
+  { id: "cloud:Puck", label: "Puck – männlich, lebendig" },
+  { id: "cloud:Aoede", label: "Aoede – weiblich, warm" },
+  { id: "cloud:Fenrir", label: "Fenrir – männlich, kräftig" },
+  { id: "de_DE-thorsten-high", label: "Thorsten HD – offline (110 MB Download)" },
+  { id: "de_DE-thorsten-medium", label: "Thorsten – offline (60 MB Download)" },
+  { id: "de_DE-thorsten_emotional-medium", label: "Thorsten – lebendig, offline" },
+  { id: "de_DE-kerstin-low", label: "Kerstin – weiblich, offline" },
+  { id: "browser", label: "Stimme des Geräts (ohne Download)" },
 ];
 const DEFAULT_VOICE = VOICES[0].id;
-const VOICE_KEY = "mythos.voice";
+// Neuer Schlüssel: alle bekommen einmal die neue Standard-Stimme statt der alten Piper-Wahl.
+const VOICE_KEY = "mythos.voice.v2";
 // Muss zur installierten onnxruntime-web-Version passen (package.json).
 const ORT_WASM = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/";
 
@@ -24,6 +31,35 @@ export type LoadState = { status: "idle" | "loading" | "ready" | "error"; pct: n
 export function getVoice(): string {
   try { return localStorage.getItem(VOICE_KEY) || DEFAULT_VOICE; } catch { return DEFAULT_VOICE; }
 }
+/** Name der Gemini-Stimme, wenn eine Server-Stimme gewählt ist. */
+export function cloudVoice(): string | null {
+  const v = getVoice();
+  return v.startsWith("cloud:") ? v.slice(6) : null;
+}
+
+// ---------- Server-Stimme (Function "tts") ----------
+let cloudDownUntil = 0;
+/** Satz über den Server vertonen. null = gerade nicht verfügbar (dann übernimmt die Gerätestimme). */
+export async function cloudAudio(text: string, voice = cloudVoice() || "Charon"): Promise<ArrayBuffer | null> {
+  if (Date.now() < cloudDownUntil) return null;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      body: JSON.stringify({ text, voice }),
+      signal: AbortSignal.timeout(40_000),
+    });
+    if (!r.ok) { cloudDownUntil = Date.now() + (r.status === 429 ? 15 * 60_000 : 2 * 60_000); return null; }
+    return await r.arrayBuffer();
+  } catch {
+    cloudDownUntil = Date.now() + 60_000;
+    return null;
+  }
+}
+
 export function setVoice(id: string) {
   try { localStorage.setItem(VOICE_KEY, id); } catch { /* egal */ }
   loaded = null; loadedVoice = "";
@@ -69,7 +105,7 @@ const PIPER_WASM_BASE = "https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-was
 /** Piper-Stimme laden (oder die laufende Ladung zurückgeben). */
 export function loadVoice(): Promise<PiperVoice> | null {
   const voiceId = getVoice();
-  if (voiceId === "browser") return null;
+  if (voiceId === "browser" || voiceId.startsWith("cloud:")) return null;
   if (loaded && loadedVoice === voiceId) return loaded;
   loadedVoice = voiceId;
   worker?.terminate();
@@ -210,34 +246,44 @@ export class MythosSpeaker {
     const my = ++this.token;
     const text = cleanForSpeech(raw);
     if (!text) { opts.onEnd?.(); return; }
-    const sentences = splitSentences(text);
-    const session = loadVoice();
-    // Piper noch nicht fertig geladen (erstes Mal) → Browser-Stimme, Piper lädt im Hintergrund weiter.
+    const cloud = cloudVoice();
+    const session = cloud ? null : loadVoice();
+    // Piper noch nicht fertig geladen (erstes Mal) → Gerätestimme, Piper lädt im Hintergrund weiter.
     const ready = session && state.status === "ready" ? await session.catch(() => null) : null;
-    if (my !== this.token) return;    if (!ready) return this.speakBrowser(sentences, opts, my);
+    if (my !== this.token) return;
+    if (!cloud && !ready) return this.speakBrowser(splitSentences(text), opts, my);
 
     // Satz-Pipeline: nächster Satz wird berechnet, während der aktuelle läuft.
+    // Server-Stimme in größeren Stücken (weniger Anfragen, natürlichere Betonung).
     const ctx = this.audio();
-    const synth = (s: string) => ready.predict(s).then((ab) => ctx.decodeAudioData(ab)).catch(() => null);
-    let next = synth(sentences[0]);
+    const sentences = splitSentences(text, cloud ? 420 : 220);
+    const synth = (s: string) => (cloud ? cloudAudio(s, cloud) : ready!.predict(s))
+      .then((ab) => (ab ? ctx.decodeAudioData(ab) : null)).catch(() => null);
+    const lang = opts.lang || "de-DE";
     let started = false;
+    const begin = () => { if (!started) { started = true; opts.onStart?.(); } };
+    let next = synth(sentences[0]);
     for (let i = 0; i < sentences.length; i++) {
       const buf = await next;
       if (my !== this.token) return;
       if (i + 1 < sentences.length) next = synth(sentences[i + 1]);
-      if (!buf) continue;
-      if (!started) { started = true; opts.onStart?.(); }
-      await new Promise<void>((res) => {
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(this.analyser as AnalyserNode);
-        src.onended = () => res();
-        this.source = src;
-        src.start();
-      });
+      if (buf) {
+        begin();
+        await new Promise<void>((res) => {
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(this.analyser as AnalyserNode);
+          src.onended = () => res();
+          this.source = src;
+          src.start();
+        });
+        this.source = null;
+      } else {
+        await this.sayBrowser(sentences[i], lang, my, begin);
+      }
       if (my !== this.token) return;
     }
-    this.source = null;
+    this.source = null; this.fakeUntil = 0;
     if (my === this.token) opts.onEnd?.();
   }
 
@@ -271,7 +317,13 @@ export class MythosSpeaker {
     };
     const begin = () => { if (!started) { started = true; opts.onStart?.(); } };
     const piper = () => (state.status === "ready" ? loaded : null);
+    const cloud = cloudVoice();
     const synth = (item: { text: string; buf?: Promise<AudioBuffer | null> }) => {
+      if (cloud && !item.buf) {
+        const ctx = this.audio();
+        item.buf = cloudAudio(item.text, cloud).then((ab) => (ab ? ctx.decodeAudioData(ab) : null)).catch(() => null);
+        return item.buf;
+      }
       const p = piper();
       if (p && !item.buf) {
         const ctx = this.audio();

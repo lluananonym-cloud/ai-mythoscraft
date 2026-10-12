@@ -2,7 +2,6 @@ import { copyText } from "@/lib/copyText";
 import { MAX_CONTINUE, CONTINUE_PROMPT, looksCut, stitch } from "@/lib/codeContinue";
 import { useState, useEffect, useRef } from "react";
 import ImageGeneration, { type GeneratedImage } from "@/components/chat/ImageGeneration";
-import { generateImageInBrowser } from "@/lib/browserImage";
 import { isImageRequest } from "@/lib/imageIntent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +52,7 @@ import ProjectsDialog from "@/components/chat/ProjectsDialog";
 import { getInstructions, getMcpServers, getProjects, projectOfChat, setProjects, type Project } from "@/lib/chatPrefs";
 import { callTool, collectTools } from "@/lib/mcpClient";
 import { FILE_PROMPT } from "@/lib/chatFiles";
+import { capabilitiesPrompt } from "@/lib/mythosCapabilities";
 
 const SLASH_COMMANDS = [
   { cmd: "/goal",      args: "<ziel>",          icon: Target,    desc: "Ziel setzen – Mythos arbeitet selbstständig Schritt für Schritt, bis es erreicht ist" },
@@ -680,6 +680,10 @@ const Chat = () => {
     const lastUserText = typeof lastUser?.content === "string" ? lastUser.content
       : Array.isArray(lastUser?.content) ? (lastUser!.content as { type?: string; text?: string }[]).find(p => p.type === "text")?.text ?? "" : "";
     const toChat = /^\/image\b/i.test(lastUserText) || isImageRequest(lastUserText);
+    // Bild-Wunsch erkannt: Text vom Sprachmodell erst zeigen, wenn der Server das Bild übernommen hat.
+    // Sonst antwortet eine alte Server-Version „nutze /image“, obwohl das Bild trotzdem kommt.
+    const hasPicture = Array.isArray(lastUser?.content) && (lastUser!.content as { type?: string }[]).some(p => p.type === "image_url");
+    const expectImage = !hasPicture && (/^\/image\s+\S/i.test(lastUserText) || isImageRequest(lastUserText));
     const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${mode === "agent" && !toChat ? "agent" : "chat"}`;
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -699,7 +703,6 @@ const Chat = () => {
         model: modelForCall,
         mythos: mythosId,
         messages: apiMessages,
-        clientImageFallback: true,
         mode,
       }),
     });
@@ -762,10 +765,10 @@ const Chat = () => {
             const p = JSON.parse(json);
             if (p.imagePending) { pendingImage = p.imagePending.prompt; setLast({ imagePending: p.imagePending }); continue; }
             if (p.imageFailed) {
-              // Server-Kette erschöpft: gleich danach direkt aus dem Browser versuchen (eigene IP, eigenes Limit).
               const { prompt, reasons } = p.imageFailed as { prompt: string; reasons?: string[] };
-              pendingImage = prompt; serverReasons = reasons ?? [];
-              setLast({ imagePending: { prompt } });
+              pendingImage = null; serverReasons = reasons ?? [];
+              imageData = { url: "", prompt, reasons: serverReasons.length ? serverReasons : ["Kein Anbieter hat ein Bild geliefert."] };
+              setLast({ image: imageData, imagePending: undefined });
               continue;
             }
             if (p.tool) {
@@ -790,24 +793,28 @@ const Chat = () => {
             const c = d?.content;
             if (c) {
               if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
-              full += c; setLast({ content: prefix + stitch(prefix, full) });
+              full += c;
+              if (!expectImage || pendingImage || imageData) setLast({ content: prefix + stitch(prefix, full) });
             }
           } catch { buf = line + "\n" + buf; break; }
         }
       }
       if (thinkStart && !thinkingMs) { thinkingMs = Date.now() - thinkStart; setLast({ thinkingMs }); }
-      // Kein Bild vom Server (Fehler oder Verbindung abgebrochen): der Browser erzeugt es selbst.
-      // Auch wenn der Server (noch alte Version) gar kein Bild-Signal schickt: Bild-Wunsch erkannt -> Browser übernimmt.
-      if (!pendingImage && !imageData && (/^\/image\s+\S/i.test(lastUserText) || isImageRequest(lastUserText)) && !/data:image|!\[/.test(full)) {
+      // Bild-Wunsch, aber der Server hat nur Text geschickt (alte Server-Version) oder die Verbindung brach ab:
+      // den Text verwerfen und das Bild direkt über image-gen holen (gleiche Kette: Nano Banana, dann FLUX).
+      if (expectImage && !pendingImage && !imageData) {
+        full = "";
         pendingImage = lastUserText.replace(/^\/image\s+/i, "").trim();
-        setLast({ imagePending: { prompt: pendingImage } });
+        setLast({ content: prefix, imagePending: { prompt: pendingImage } });
       }
       if (pendingImage && !imageData) {
         const prompt = pendingImage;
-        const { url, reasons } = await generateImageInBrowser(prompt, ctrl.signal);
-        imageData = url
-          ? { url, prompt, fallback: true }
-          : { url: "", prompt, fallback: true, reasons: [...serverReasons, ...reasons] };
+        const { data, error } = await supabase.functions.invoke("image-gen", { body: { prompt } });
+        let body = data as { url?: string; reasons?: string[]; error?: string } | null;
+        if (!body && error) body = await (error as { context?: Response }).context?.json?.().catch(() => null) ?? null;
+        imageData = body?.url
+          ? { url: body.url, prompt }
+          : { url: "", prompt, reasons: [...serverReasons, ...(body?.reasons ?? []), ...(body?.reasons?.length ? [] : [body?.error || error?.message || "Kein Anbieter hat ein Bild geliefert."])] };
         setLast({ image: imageData, imagePending: undefined });
       }
       return { full, image: imageData, music: musicData, agents: agentsData, thinking, thinkingMs, steps, aborted: false };
@@ -851,6 +858,7 @@ const Chat = () => {
       parts.push("## Werkzeuge\nIn diesem Chat sind keine Werkzeuge verbunden. Schreibe nie <tool>- oder <tool_call>-Blöcke, sondern antworte direkt als normaler Text.");
     }
     parts.push(FILE_PROMPT);
+    parts.push(capabilitiesPrompt(SLASH_COMMANDS, isAdmin));
     if (goalNow) {
       parts.push(
         `## /goal-Modus – Schritt ${goalNow.step} von höchstens ${GOAL_MAX_STEPS}\n` +

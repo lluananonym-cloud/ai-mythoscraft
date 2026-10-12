@@ -100,8 +100,8 @@ export default function FilmStudio() {
       let url = await makeImage(prompt, { width: 1280, height: 720 });
       let pic = await loadPicture(url);
       if (!pic) {
-        // Bild ließ sich nicht in den Film laden (z. B. gesperrte Adresse): direkt im Browser erzeugen.
-        url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 800))}?model=flux&width=1280&height=720&nologo=true&referrer=mythoscraft&seed=${Math.floor(Math.random() * 1e6)}`;
+        // Bild ließ sich nicht in den Film laden: einmal neu erzeugen.
+        url = await makeImage(prompt, { width: 1280, height: 720 });
         pic = await loadPicture(url);
       }
       if (!pic) throw new Error("Bild konnte nicht geladen werden");

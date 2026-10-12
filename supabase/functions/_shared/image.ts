@@ -1,8 +1,8 @@
 // Gemeinsame Bildgenerierung für Chat (/image), image-gen (Video, Code-App /bild).
-// Reihenfolge: Lovable-Gateway (mit Google-Fallback aus ai.ts) -> NVIDIA -> Pollinations (gratis) -> AI Horde (gratis, anonym).
+// Reihenfolge: Nano Banana über das Lovable-Gateway (mit Google-Fallback aus ai.ts) -> FLUX.1 über NVIDIA.
+// Nur hochwertige Modelle: Pollinations und AI Horde sind bewusst raus (sahen zu schlecht aus).
 // Sind die Lovable-Credits aufgebraucht (402), springt die Kette sofort weiter, statt jedes
-// Lovable-Modell einzeln durchzuprobieren. Pollinations läuft ohne Schlüssel; mit dem optionalen
-// Secret POLLINATIONS_API_KEY (kostenlos auf enter.pollinations.ai) gibt es höhere Limits.
+// Lovable-Modell einzeln durchzuprobieren.
 // Daten-URLs werden in den öffentlichen Bucket "chat-uploads" hochgeladen, damit Chats keine
 // riesigen base64-Strings speichern und Bilder überall angezeigt werden können.
 import { createClient } from "npm:@supabase/supabase-js@2.103.3";
@@ -58,96 +58,53 @@ async function viaGateway(prompt: string, lovableKey: string | undefined, errors
   return null;
 }
 
-async function viaNvidia(prompt: string, errors: string[]): Promise<string | null> {
-  let key = Deno.env.get("NVIDIA_IMAGE_API_KEY") || Deno.env.get("NVIDIA_API_KEY") || "";
-  if (!key) {
-    try {
-      const { data } = await admin()!.from("app_secrets").select("name, value").in("name", ["NVIDIA_IMAGE_API_KEY", "NVIDIA_API_KEY"]);
-      const s: Record<string, string> = {}; for (const r of data ?? []) s[r.name] = r.value;
-      key = s.NVIDIA_IMAGE_API_KEY || s.NVIDIA_API_KEY || "";
-    } catch { /* Tabelle fehlt -> kein NVIDIA */ }
-  }
-  if (!key) { errors.push("nvidia: kein Schlüssel hinterlegt"); return null; }
-  try {
-    const r = await fetch("https://integrate.api.nvidia.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: "qwen-image", prompt: prompt.slice(0, 2000), n: 1 }),
-    });
-    if (!r.ok) { errors.push(`nvidia: HTTP ${r.status}`); return null; }
-    const img = (await r.json()).data?.[0];
-    return img?.url ?? (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
-  } catch (e) { errors.push(`nvidia: ${e instanceof Error ? e.message : String(e)}`); return null; }
-}
-
-async function pollinationsKey(): Promise<string> {
-  const env = Deno.env.get("POLLINATIONS_API_KEY");
+async function nvidiaKey(): Promise<string> {
+  const env = Deno.env.get("NVIDIA_IMAGE_API_KEY") || Deno.env.get("NVIDIA_API_KEY") || "";
   if (env) return env;
   try {
-    const { data } = await admin()!.from("app_secrets").select("value").eq("name", "POLLINATIONS_API_KEY").maybeSingle();
-    return (data as { value?: string } | null)?.value ?? "";
-  } catch { return ""; }
+    const { data } = await admin()!.from("app_secrets").select("name, value").in("name", ["NVIDIA_IMAGE_API_KEY", "NVIDIA_API_KEY"]);
+    const s: Record<string, string> = {}; for (const r of data ?? []) s[r.name] = r.value;
+    return s.NVIDIA_IMAGE_API_KEY || s.NVIDIA_API_KEY || "";
+  } catch { return ""; /* Tabelle fehlt -> kein NVIDIA */ }
 }
 
-async function viaPollinations(prompt: string, errors: string[]): Promise<string | null> {
-  const p = encodeURIComponent(prompt.slice(0, 800));
-  const seed = Math.floor(Math.random() * 1e6);
-  const key = await pollinationsKey();
-  // Mit Schlüssel die neue API, sonst (und als zweiter Versuch) der freie Endpunkt ohne Anmeldung.
-  const tries: { url: string; headers?: Record<string, string> }[] = [];
-  if (key) tries.push({ url: `https://gen.pollinations.ai/image/${p}?model=flux&width=1024&height=1024&nologo=true&seed=${seed}`, headers: { Authorization: `Bearer ${key}` } });
-  tries.push({ url: `https://image.pollinations.ai/prompt/${p}?model=flux&width=1024&height=1024&nologo=true&private=true&referrer=mythoscraft&seed=${seed}` });
-  for (const t of tries) {
+// NVIDIA-Bildmodelle (build.nvidia.com, Gratis-Credits). Antwort: { artifacts: [{ base64 }] } oder { image }.
+const NVIDIA_MODELS: { name: string; path: string; body: (p: string) => Record<string, unknown> }[] = [
+  { name: "flux.1-dev", path: "black-forest-labs/flux.1-dev", body: (prompt) => ({ prompt, mode: "base", cfg_scale: 3.5, width: 1024, height: 1024, seed: 0, steps: 50 }) },
+  { name: "flux.1-schnell", path: "black-forest-labs/flux.1-schnell", body: (prompt) => ({ prompt, width: 1024, height: 1024, seed: 0, steps: 4 }) },
+  { name: "sd3.5-large", path: "stabilityai/stable-diffusion-3-5-large", body: (prompt) => ({ prompt, cfg_scale: 5, aspect_ratio: "1:1", seed: 0, steps: 40, negative_prompt: "" }) },
+];
+
+async function viaNvidia(prompt: string, errors: string[]): Promise<string | null> {
+  const key = await nvidiaKey();
+  if (!key) { errors.push("nvidia: kein Schlüssel hinterlegt (/nvidiakeyadmin bild nvapi-…)"); return null; }
+  for (const m of NVIDIA_MODELS) {
     try {
-      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(25_000) });
-      const mime = (r.headers.get("content-type") || "").split(";")[0];
-      if (!r.ok || !mime.startsWith("image/")) { errors.push(`pollinations: HTTP ${r.status}`); continue; }
-      const bytes = new Uint8Array(await r.arrayBuffer());
-      return (await storeBytes(bytes, mime)) ?? (t.headers ? null : t.url);
-    } catch (e) { errors.push(`pollinations: ${e instanceof Error ? e.message : String(e)}`); }
+      const r = await fetch(`https://ai.api.nvidia.com/v1/genai/${m.path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ ...m.body(prompt.slice(0, 2000)), seed: Math.floor(Math.random() * 1e9) }),
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!r.ok) {
+        errors.push(`nvidia: ${m.name} HTTP ${r.status}`);
+        if (r.status === 401 || r.status === 403) return null; // Schlüssel ungültig -> andere Modelle scheitern genauso
+        continue;
+      }
+      const j = await r.json();
+      const b64 = j.artifacts?.[0]?.base64 ?? j.image ?? j.data?.[0]?.b64_json;
+      if (j.artifacts?.[0]?.finishReason === "CONTENT_FILTERED") { errors.push(`nvidia: ${m.name} Inhalt gefiltert`); continue; }
+      if (b64) return `data:image/${j.artifacts ? "jpeg" : "png"};base64,${b64}`;
+      errors.push(`nvidia: ${m.name} kein Bild`);
+    } catch (e) { errors.push(`nvidia: ${m.name} ${e instanceof Error ? e.message : String(e)}`); }
   }
   return null;
 }
 
-// AI Horde: freies, community-betriebenes Netz. Anonym (Schlüssel 0000000000) ohne Anmeldung,
-// dafür manchmal langsam. Optional mit eigenem Schlüssel (AI_HORDE_API_KEY) schneller.
-async function viaHorde(prompt: string, errors: string[], deadline: number): Promise<string | null> {
-  const key = Deno.env.get("AI_HORDE_API_KEY") || "0000000000";
-  const H = { "Content-Type": "application/json", apikey: key, "Client-Agent": "mythoscraft:1.0:mythoscraft.online" };
-  try {
-    const r = await fetch("https://aihorde.net/api/v2/generate/async", {
-      method: "POST", headers: H, signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({ prompt: prompt.slice(0, 900), params: { width: 512, height: 512, steps: 20, n: 1 }, nsfw: false, censor_nsfw: true, r2: true, shared: true }),
-    });
-    if (!r.ok) { errors.push(`horde: HTTP ${r.status} ${(await r.text()).slice(0, 120)}`); return null; }
-    const { id } = await r.json();
-    if (!id) { errors.push("horde: keine Auftrags-ID"); return null; }
-    while (Date.now() < deadline) {
-      await new Promise((res) => setTimeout(res, 3000));
-      const c = await fetch(`https://aihorde.net/api/v2/generate/check/${id}`, { headers: H, signal: AbortSignal.timeout(10_000) }).then((x) => x.json()).catch(() => null);
-      if (c?.faulted) { errors.push("horde: Auftrag fehlgeschlagen"); return null; }
-      if (!c?.done) continue;
-      const st = await fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { headers: H, signal: AbortSignal.timeout(15_000) }).then((x) => x.json());
-      const img = st?.generations?.[0]?.img as string | undefined;
-      if (!img) { errors.push("horde: kein Bild"); return null; }
-      if (!/^https?:/i.test(img)) return `data:image/webp;base64,${img}`;
-      // Horde-Links laufen ab -> ins eigene Storage kopieren.
-      const g = await fetch(img, { signal: AbortSignal.timeout(20_000) });
-      const mime = (g.headers.get("content-type") || "image/webp").split(";")[0];
-      return (await storeBytes(new Uint8Array(await g.arrayBuffer()), mime)) ?? img;
-    }
-    fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { method: "DELETE", headers: H }).catch(() => {});
-    errors.push("horde: zu langsam (Warteschlange)");
-  } catch (e) { errors.push(`horde: ${e instanceof Error ? e.message : String(e)}`); }
-  return null;
-}
-
-export type ImageProvider = "nano-banana" | "nvidia" | "pollinations" | "horde";
+export type ImageProvider = "nano-banana" | "nvidia";
 export const PROVIDER_LABEL: Record<ImageProvider, string> = {
   "nano-banana": "Nano Banana",
-  nvidia: "Qwen-Image (NVIDIA)",
-  pollinations: "Flux (Pollinations)",
-  horde: "Stable Diffusion (AI Horde)",
+  nvidia: "FLUX.1 (NVIDIA)",
 };
 
 /** Kurze Gründe pro Anbieter (eine Zeile je Anbieter) für die Fehlermeldung im Chat. */
@@ -170,15 +127,12 @@ export async function generateImage(
   opts: { browserFallback?: boolean } = {},
 ): Promise<{ url: string | null; provider?: ImageProvider; error?: string }> {
   const errors: string[] = [];
-  // Kann der Browser selbst weitermachen (Web-App), gibt der Server nach ~50 s ab, statt den Nutzer
-  // minutenlang auf AI Horde warten zu lassen. Sonst bekommt Horde die restliche Laufzeit.
+  lovableKey = lovableKey ?? Deno.env.get("LOVABLE_API_KEY");
   const deadline = Date.now() + (opts.browserFallback ? 50_000 : 130_000);
   const chain: [ImageProvider, () => Promise<string | null>][] = [
     ["nano-banana", () => viaGateway(prompt, lovableKey, errors)],
     ["nvidia", () => viaNvidia(prompt, errors)],
-    ["pollinations", () => viaPollinations(prompt, errors)],
   ];
-  if (!opts.browserFallback) chain.push(["horde", () => viaHorde(prompt, errors, deadline)]);
   for (const [provider, run] of chain) {
     if (Date.now() > deadline - 10_000) { errors.push(`${provider}: keine Zeit mehr`); break; }
     const url = await run();

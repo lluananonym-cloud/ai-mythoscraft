@@ -1,5 +1,6 @@
 // Mythos Code – Sprachmodus der App.
-// Stimme: Piper (Open Source, MIT) im Worker tts-worker.js. Erkennung: Whisper (Open Source) im Worker stt-worker.js.
+// Stimme: Standard sind die natürlichen Gemini-Stimmen über den Mythos-Server (Function "tts", braucht Anmeldung).
+// Ist deren Kontingent leer, spricht die beste Windows-Stimme. Offline: Piper (Open Source, MIT) im Worker tts-worker.js. Erkennung: Whisper (Open Source) im Worker stt-worker.js.
 // Beides läuft lokal; Modelle werden beim ersten Mal geladen und danach im Browser-Speicher gehalten.
 // Die Worker werden aus src/lib/mythosVoice.worker.ts und src/lib/mythosStt.worker.ts gebündelt (npm run build:app-voice).
 (function () {
@@ -9,12 +10,32 @@
   const PIPER_WASM = "https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize";
 
   const VOICES = [
-    { id: "de_DE-thorsten-medium", label: "Thorsten – natürlich" },
-    { id: "de_DE-thorsten_emotional-medium", label: "Thorsten – lebendig" },
-    { id: "de_DE-kerstin-low", label: "Kerstin – weiblich" },
-    { id: "de_DE-ramona-low", label: "Ramona – weiblich" },
+    { id: "cloud:Charon", label: "Charon – männlich, natürlich (empfohlen)" },
+    { id: "cloud:Kore", label: "Kore – weiblich, natürlich" },
+    { id: "cloud:Puck", label: "Puck – männlich, lebendig" },
+    { id: "cloud:Aoede", label: "Aoede – weiblich, warm" },
+    { id: "cloud:Fenrir", label: "Fenrir – männlich, kräftig" },
+    { id: "de_DE-thorsten-high", label: "Thorsten HD – offline" },
+    { id: "de_DE-thorsten-medium", label: "Thorsten – offline" },
+    { id: "de_DE-thorsten_emotional-medium", label: "Thorsten – lebendig, offline" },
+    { id: "de_DE-kerstin-low", label: "Kerstin – weiblich, offline" },
     { id: "system", label: "Windows-Stimme (ohne Download)" },
   ];
+  // Server-Stimme: Adresse und Mythos-Schlüssel setzt renderer.js (MythosVoice.cloud).
+  const cloud = { url: "", key: "" };
+  let cloudDownUntil = 0;
+  async function cloudAudio(text, voice) {
+    if (!cloud.url || !cloud.key || Date.now() < cloudDownUntil) return null;
+    try {
+      const r = await fetch(cloud.url, {
+        method: "POST", signal: AbortSignal.timeout(40000),
+        headers: { "content-type": "application/json", "x-api-key": cloud.key },
+        body: JSON.stringify({ text, voice }),
+      });
+      if (!r.ok) { cloudDownUntil = Date.now() + (r.status === 429 ? 15 * 60000 : 2 * 60000); return null; }
+      return await r.arrayBuffer();
+    } catch (e) { cloudDownUntil = Date.now() + 60000; return null; }
+  }
 
   // Große Dateien einmal holen, im Cache ablegen und als Blob-URL weitergeben.
   const blobUrls = new Map();
@@ -86,7 +107,7 @@
   const ttsSubs = new Set();
   const setTts = (s) => { ttsState = s; ttsSubs.forEach((f) => f(s)); };
   function loadTts(voiceId) {
-    if (voiceId === "system") return null;
+    if (voiceId === "system" || /^cloud:/.test(voiceId)) return null;
     if (ttsClient && ttsVoice === voiceId) return ttsClient;
     if (ttsClient) ttsClient.terminate();
     ttsVoice = voiceId; setTts({ status: "loading", pct: 0 });
@@ -100,7 +121,7 @@
   }
 
   class Speaker {
-    constructor() { this.ctx = null; this.analyser = null; this.source = null; this.token = 0; this.fakeUntil = 0; this.voice = "de_DE-thorsten-medium"; }
+    constructor() { this.ctx = null; this.analyser = null; this.source = null; this.token = 0; this.fakeUntil = 0; this.voice = VOICES[0].id; }
     audio() {
       if (!this.ctx) {
         this.ctx = new AudioContext();
@@ -129,27 +150,49 @@
       const my = ++this.token;
       const text = cleanForSpeech(raw);
       if (!text) { opts.onEnd && opts.onEnd(); return; }
-      const parts = splitSentences(text);
+      const cloudVoice = /^cloud:/.test(this.voice) ? this.voice.slice(6) : "";
+      const parts = splitSentences(text, cloudVoice ? 420 : 220);
       const c = loadTts(this.voice);
-      if (!c || ttsState.status !== "ready") return this.speakSystem(parts, opts, my);
+      if (!cloudVoice && (!c || ttsState.status !== "ready")) return this.speakSystem(parts, opts, my);
       const ctx = this.audio();
-      const synth = (s) => c.request({ type: "predict", text: s }).then((m) => ctx.decodeAudioData(m.wav)).catch(() => null);
+      const synth = (s) => (cloudVoice ? cloudAudio(s, cloudVoice) : c.request({ type: "predict", text: s }).then((m) => m.wav))
+        .then((ab) => (ab ? ctx.decodeAudioData(ab) : null)).catch(() => null);
       let next = synth(parts[0]), started = false;
+      const begin = () => { if (!started) { started = true; opts.onStart && opts.onStart(); } };
       for (let i = 0; i < parts.length; i++) {
         const buf = await next;
         if (my !== this.token) return;
         if (i + 1 < parts.length) next = synth(parts[i + 1]);
-        if (!buf) continue;
-        if (!started) { started = true; opts.onStart && opts.onStart(); }
-        await new Promise((res) => { const s = ctx.createBufferSource(); s.buffer = buf; s.connect(this.analyser); s.onended = res; this.source = s; s.start(); });
+        if (buf) {
+          begin();
+          await new Promise((res) => { const s = ctx.createBufferSource(); s.buffer = buf; s.connect(this.analyser); s.onended = res; this.source = s; s.start(); });
+          this.source = null;
+        } else {
+          // Server-Stimme gerade nicht da: diesen Teil spricht die Windows-Stimme.
+          await this.saySystem(parts[i], my, begin);
+        }
         if (my !== this.token) return;
       }
-      this.source = null;
+      this.source = null; this.fakeUntil = 0;
       if (my === this.token) opts.onEnd && opts.onEnd();
     }
-    speakSystem(parts, opts, my) {
+    systemVoice() {
       const voices = speechSynthesis.getVoices().filter((v) => /^de/i.test(v.lang));
-      const v = voices.find((x) => /natural|neural|online/i.test(x.name)) || voices[0];
+      return voices.find((x) => /natural|neural|online/i.test(x.name)) || voices[0];
+    }
+    saySystem(text, my, onStart) {
+      return new Promise((res) => {
+        const u = new SpeechSynthesisUtterance(text); u.lang = "de-DE";
+        const v = this.systemVoice(); if (v) u.voice = v;
+        const timer = setTimeout(() => finish(), 4000 + text.length * 110);
+        const finish = () => { clearTimeout(timer); this.fakeUntil = 0; res(); };
+        u.onstart = () => { if (my !== this.token) return; this.fakeUntil = Date.now() + 60000; onStart(); };
+        u.onend = finish; u.onerror = finish;
+        speechSynthesis.speak(u);
+      });
+    }
+    speakSystem(parts, opts, my) {
+      const v = this.systemVoice();
       parts.forEach((s, i) => {
         const u = new SpeechSynthesisUtterance(s); u.lang = "de-DE"; if (v) u.voice = v;
         u.onstart = () => { if (my !== this.token) return; this.fakeUntil = Date.now() + 60000; if (i === 0 && opts.onStart) opts.onStart(); };
@@ -349,7 +392,7 @@
   }
 
   const api = window.MythosVoice = {
-    VOICES, speaker: new Speaker(), loadStt, transcribe, record, createOrb, cleanForSpeech, wakeListener, matchWake, grabFrame,
+    VOICES, cloud, speaker: new Speaker(), loadStt, transcribe, record, createOrb, cleanForSpeech, wakeListener, matchWake, grabFrame,
     onTtsState: (f) => { ttsSubs.add(f); f(ttsState); }, onSttState: (f) => { sttSubs.add(f); f(sttState); },
   };
 })();

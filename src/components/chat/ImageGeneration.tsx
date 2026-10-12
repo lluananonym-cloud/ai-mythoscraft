@@ -23,8 +23,6 @@ const STARS = Array.from({ length: 14 }, (_, i) => ({
 
 export type GeneratedImage = { url: string; prompt: string; fallback?: boolean; reasons?: string[] };
 
-export { pollinationsUrl as browserImageUrl } from "@/lib/browserImage";
-import { openConsent } from "@/lib/consent";
 
 type Props = {
   /** Gesetzt, solange der Server das Bild noch erzeugt. */
@@ -37,7 +35,7 @@ export default function ImageGeneration({ pending, image }: Props) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
-  // Bild vorladen: die Animation bleibt stehen, bis es wirklich da ist (Browser-Backup kann dauern).
+  // Bild vorladen: die Animation bleibt stehen, bis es wirklich da ist (große Modelle brauchen etwas).
   useEffect(() => {
     if (!image) return;
     if (!image.url) { setStatus("error"); return; }
@@ -75,16 +73,11 @@ export default function ImageGeneration({ pending, image }: Props) {
         <PendingCard prompt={pending?.prompt ?? image!.prompt} onPlay={() => setPlaying(true)} />
       ) : image && status === "error" ? (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-          Das Bild konnte gerade nicht erstellt werden. Alle Bild-Dienste sind ausgelastet, bitte in einer Minute noch einmal versuchen.
+          Das Bild konnte gerade nicht erstellt werden. Nano Banana und FLUX sind ausgelastet, bitte in einer Minute noch einmal versuchen.
           {!!image.reasons?.length && (
             <ul className="mt-2 list-disc pl-5 text-xs text-red-200/70">
               {image.reasons.map((r) => <li key={r}>{r}</li>)}
             </ul>
-          )}
-          {image.reasons?.some((r) => r.startsWith("Browser-Backup ist aus")) && (
-            <button onClick={openConsent} className="mt-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white hover:bg-white/10">
-              Cookie-Einstellungen öffnen
-            </button>
           )}
         </div>
       ) : null}

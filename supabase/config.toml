@@ -78,3 +78,6 @@ verify_jwt = false
 
 [functions.mcc]
 verify_jwt = false
+
+[functions.tts]
+verify_jwt = false

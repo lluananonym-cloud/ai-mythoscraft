@@ -184,7 +184,14 @@ const estTokens = (system, msgs) => {
 };
 async function systemPrompt(run) {
   return "Du bist Mythos Code, ein autonomer Coding-Agent als Desktop-App (Windows). Arbeitsordner: " + (run.folder || "(keiner)") +
-    (run.git ? " · Git-Branch: " + run.git.branch : "") + ". Pfade relativ zum Arbeitsordner.\n" + await window.mythos.systemPrompt(run.folder, run.chat.goal || "");
+    (run.git ? " · Git-Branch: " + run.git.branch : "") + ". Pfade relativ zum Arbeitsordner.\n" + await window.mythos.systemPrompt(run.folder, run.chat.goal || "") +
+    "\n\n" + appCommandsPrompt();
+}
+// Mythos soll seine eigenen Befehle kennen und sie dem Nutzer empfehlen können (statt zu raten).
+function appCommandsPrompt() {
+  return "DEINE APP-BEFEHLE (der Nutzer tippt sie in die Eingabe; du kannst sie selbst nicht ausführen, aber empfehlen, wenn sie passen. " +
+    "Erfinde keine anderen Befehle):\n" + COMMANDS.map((c) => c[0] + (c[1] ? " " + c[1] : "") + " – " + c[2]).join("\n") +
+    "\nAuf der Website (" + CFG.site + ") gibt es außerdem den Chat mit Bildern (Nano Banana), Musik, Live-Anruf (/voice), Filmstudio, Cloud-PC, Räume und Downloads.";
 }
 const shorten = (s, max) => s.length <= max ? s : s.slice(0, Math.floor(max * 0.7)) + "\n…[gekürzt]…\n" + s.slice(s.length - Math.floor(max * 0.3));
 const withImages = (m, content) => m.images && m.images.length
@@ -1508,7 +1515,7 @@ async function login() {
   setStatus("Klicke im Browser auf „Authentifizieren“. Dein Code:", s.code);
   const iv = setInterval(async () => {
     let p; try { p = await (await post("cli-auth", { action: "poll", code: s.code, poll_secret: s.poll_secret })).json(); } catch (e) { return; }
-    if (p.status === "ok") { clearInterval(iv); cfg.key = p.api_key; cfg.name = p.name; await window.mythos.setCfg(cfg); show(); }
+    if (p.status === "ok") { clearInterval(iv); cfg.key = p.api_key; cfg.name = p.name; window.MythosVoice.cloud.key = cfg.key; await window.mythos.setCfg(cfg); show(); }
     if (p.status === "expired") { clearInterval(iv); setStatus("Abgelaufen – bitte nochmal versuchen."); $("btnLogin").disabled = false; }
   }, 2000);
 }
@@ -1676,7 +1683,11 @@ $("btnOut").onclick = async () => {
   await window.mythos.setCfg(cfg); location.reload();
 };
 Promise.all([window.mythos.prompts(), window.mythos.getCfg()]).then(([p, c]) => {
-  prompts = p; cfg = c || {}; $("auto").checked = !!cfg.auto; paintModePill(); $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme(); $("vbarge").classList.toggle("on", cfg.bargeIn !== false);
+  prompts = p; cfg = c || {};
+  // 2.13: neue Standard-Stimme (Server) einmal für alle, die noch die alte Piper-Vorgabe hatten.
+  if (!cfg.voiceV2) { cfg.voiceV2 = true; if (cfg.voice && cfg.voice !== "system") delete cfg.voice; window.mythos.setCfg(cfg); }
+  window.MythosVoice.cloud.url = CFG.fn + "/tts"; window.MythosVoice.cloud.key = cfg.key || "";
+  $("auto").checked = !!cfg.auto; paintModePill(); $("vvoice").value = cfg.voice || window.MythosVoice.VOICES[0].id; addProject(cfg.folder); applyTheme(); $("vbarge").classList.toggle("on", cfg.bargeIn !== false);
   if (cfg.key) show();
 });
 

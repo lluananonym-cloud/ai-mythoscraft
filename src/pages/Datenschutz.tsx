@@ -1,5 +1,4 @@
 import LegalPage, { H, V } from "@/components/LegalPage";
-import { openConsent } from "@/lib/consent";
 
 // Datenschutzerklärung nach Art. 13/14 DSGVO, BDSG und § 25 TDDDG (Deutschland).
 const Datenschutz = () => (
@@ -58,10 +57,9 @@ const Datenschutz = () => (
     <ul>
       <li><strong>Lovable</strong> (Lovable Labs Incorporated / Lovable AB, Schweden): Hosting der Website und KI-Schnittstelle (AI Gateway).</li>
       <li><strong>Supabase</strong> (Supabase Inc., USA): Datenbank, Anmeldung, Dateispeicher und Server-Funktionen („Lovable Cloud“).</li>
-      <li><strong>Google</strong> (Google Ireland Ltd. / Google LLC, USA): KI-Modelle Gemini und Lyria (Text, Bild, Musik) sowie optional die Anmeldung mit Google.</li>
+      <li><strong>Google</strong> (Google Ireland Ltd. / Google LLC, USA): KI-Modelle Gemini und Lyria (Text, Bild, Musik, Sprachausgabe beim Vorlesen) sowie optional die Anmeldung mit Google.</li>
       <li><strong>OpenAI</strong> (OpenAI Ireland Ltd. / OpenAI LLC, USA): KI-Modelle, sofern du ein solches Modell wählst (über das AI Gateway).</li>
-      <li><strong>NVIDIA</strong> (NVIDIA Corporation, USA): Ausweich-KI-Modelle für Text und Bild.</li>
-      <li><strong>Pollinations.ai</strong> und <strong>AI Horde</strong> (Haidra, Niederlande): kostenlose Bild-Backups, wenn die anderen Anbieter ausgelastet sind.</li>
+      <li><strong>NVIDIA</strong> (NVIDIA Corporation, USA): Ausweich-KI-Modelle für Text und Bild (FLUX).</li>
       <li><strong>ElevenLabs</strong> (Eleven Labs Inc., USA): nur, falls für Songs freigeschaltet.</li>
       <li><strong>Suche und Webseiten-Abruf</strong> für die Recherche-Funktion: DuckDuckGo und Jina AI (der Suchbegriff bzw. die aufgerufene Adresse wird übermittelt).</li>
       <li><strong>PayPal</strong> (PayPal (Europe) S.à r.l. et Cie, S.C.A., Luxemburg): Abwicklung bezahlter Abos. PayPal ist dabei eigener Verantwortlicher. Wir erhalten nur die Abo-ID, den Status und das Datum der nächsten Abbuchung, keine Bank- oder Kartendaten. Die PayPal-Knöpfe werden erst geladen, wenn du ein Abo abschließen willst, und PayPal setzt dann eigene, für die Zahlung nötige Cookies.</li>
@@ -83,10 +81,7 @@ const Datenschutz = () => (
       Einstellungen (z. B. gewähltes Modell, Seitenleiste) und deine Cookie-Entscheidung. Dafür ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).
     </p>
     <p>
-      <strong>Bild-Backup:</strong> Wenn du ein Bild anforderst und unsere Server gerade keines erzeugen können, lädt dein Browser es direkt bei Pollinations.ai
-      oder AI Horde. Dabei erhält der Anbieter deine IP-Adresse und den Bild-Wunsch. Das dient der Erfüllung deiner Anfrage (Art. 6 Abs. 1 lit. b DSGVO).
-      Du kannst das Bild-Backup jederzeit ausschalten:{" "}
-      <button onClick={openConsent} className="text-foreground underline">Cookie-Einstellungen öffnen</button>.
+      Bilder werden nur auf unseren Servern erzeugt; dein Browser lädt dafür nichts bei Drittanbietern.
       Schriftarten werden von unserem eigenen Server geladen, nicht von Google.
     </p>
     <p>
