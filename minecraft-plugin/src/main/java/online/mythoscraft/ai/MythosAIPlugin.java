@@ -47,7 +47,7 @@ public class MythosAIPlugin extends JavaPlugin implements Listener {
 
     private void loadCfg() {
         reloadConfig();
-        this.website = getConfig().getString("website", "https://mythos-core-ai-ai-ai.lovable.app").replaceAll("/+$", "");
+        this.website = getConfig().getString("website", "https://mythos-ai-final-version.lovable.app").replaceAll("/+$", "");
         this.apiKey = getConfig().getString("api_key", "191306");
         this.chatTrigger = getConfig().getString("chat_trigger", "!ai");
         this.enableEvents = getConfig().getBoolean("enable_events", true);

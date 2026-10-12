@@ -100,7 +100,7 @@ function draw(it, i) {
   const box = $("col").querySelector(":scope > .runbox"); if (box) $("col").insertBefore(d, box); else $("col").appendChild(d); scrollDown(); return d;
 }
 /* Werbung: Free gelegentlich, Plus seltener, Pro nie, Admin 1x/Tag (erste Antwort) – immer NACH der Antwort. */
-const AD_MD = "**📣 Werbung** · ![at](https://mythos-core-ai-ai-ai.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai-ai.lovable.app/werbung)_";
+const AD_MD = "**📣 Werbung** · ![at](https://mythos-ai-final-version.lovable.app/at-logo.png)\n\n**at** – dein Feed voller Vibes. Entdecke jetzt: [at-feed-vibes.lovable.app](https://at-feed-vibes.lovable.app/)\n\n_[Buche deine eigene Werbung](https://mythos-ai-final-version.lovable.app/werbung)_";
 let adCache = null;
 async function pickAd() {
   try { if (!adCache || Date.now() - adCache.at > 6e5) { const j = await (await post("ad-review", { action: "list" })).json(); adCache = { at: Date.now(), ads: j.ads || [] }; } } catch (e) { adCache = { at: Date.now(), ads: [] }; }
@@ -108,7 +108,7 @@ async function pickAd() {
   let ad = pool[0]; for (const a of pool) { r -= Math.max(1, a.weight); if (r <= 0) { ad = a; break; } }
   if (ad.house) return AD_MD;
   const s = (x) => String(x || "").replace(/[\[\]()<>*_`]/g, ""); const link = /^https?:\/\//.test(ad.link) ? ad.link : "https://" + ad.link;
-  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-core-ai-ai-ai.lovable.app/werbung)_";
+  return "**📣 Werbung**\n\n**" + s(ad.product) + "** – " + s(ad.ad_text) + "\n\n[" + s(link.replace(/^https?:\/\//, "")) + "](" + link + ")\n\n_[Buche deine eigene Werbung](https://mythos-ai-final-version.lovable.app/werbung)_";
 }
 function adDue(tier) {
   const today = new Date().toDateString();

@@ -8,7 +8,7 @@
   <version>1.0.0</version>
   <packaging>jar</packaging>
   <name>MythosAI</name>
-  <description>Verbindet Minecraft-Server mit der Mythos AI Website (mythos-core-ai-ai-ai.lovable.app).</description>
+  <description>Verbindet Minecraft-Server mit der Mythos AI Website (mythos-ai-final-version.lovable.app).</description>
 
   <properties>
     <maven.compiler.source>17</maven.compiler.source>

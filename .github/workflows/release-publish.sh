@@ -3,7 +3,7 @@
 # Eingabe (env): TAG, TITLE, VER, HASH, GITHUB_REPOSITORY, optional PRUNE (Muster alter Dateien, z. B. 'MythosCode-Setup-*')
 # Argumente: Dateien – in dieser Reihenfolge hochgeladen (Update-Feed latest.yml also zuletzt angeben).
 set -euo pipefail
-NOTES="Automatisch gebaut. Download über https://mythos-core-ai-ai-ai.lovable.app/downloads
+NOTES="Automatisch gebaut. Download über https://mythos-ai-final-version.lovable.app/downloads
 
 <!-- version: $VER -->
 <!-- source: $HASH -->"

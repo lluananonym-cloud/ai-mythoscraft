@@ -1,9 +1,9 @@
 {
-  "client_id": "https://mythos-core-ai-ai-ai.lovable.app/oauth/mythos-web.json",
+  "client_id": "https://mythos-ai-final-version.lovable.app/oauth/mythos-web.json",
   "client_name": "Mythos",
-  "client_uri": "https://mythos-core-ai-ai-ai.lovable.app",
-  "logo_uri": "https://mythos-core-ai-ai-ai.lovable.app/icon-192.png",
-  "redirect_uris": ["https://mythos-core-ai-ai-ai.lovable.app/mcp-callback"],
+  "client_uri": "https://mythos-ai-final-version.lovable.app",
+  "logo_uri": "https://mythos-ai-final-version.lovable.app/icon-192.png",
+  "redirect_uris": ["https://mythos-ai-final-version.lovable.app/mcp-callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "token_endpoint_auth_method": "none"
