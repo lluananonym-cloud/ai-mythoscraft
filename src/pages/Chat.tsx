@@ -1199,7 +1199,7 @@ const Chat = () => {
             <DropdownMenuItem onClick={() => nav("/twin")}><Crown className="h-4 w-4 mr-2 text-fuchsia-400" /> AI Twin <span className="ml-auto text-[9px] uppercase text-fuchsia-400">Pro</span></DropdownMenuItem>
             <DropdownMenuItem onClick={() => nav("/games")}><Gamepad2 className="h-4 w-4 mr-2 text-fuchsia-400" /> Game Coder <span className="ml-auto text-[9px] uppercase text-fuchsia-400">Pro</span></DropdownMenuItem>
             <DropdownMenuItem onClick={() => nav("/agents")}><Bot className="h-4 w-4 mr-2" /> Auto-Agents</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => nav("/groups")}><Users className="h-4 w-4 mr-2" /> Freunde-Chats</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav("/raeume")}><Users className="h-4 w-4 mr-2" /> Gemeinsame Räume</DropdownMenuItem>
             <DropdownMenuItem onClick={() => nav("/analytics")}><BarChart3 className="h-4 w-4 mr-2" /> Analytics</DropdownMenuItem>
             <DropdownMenuItem onClick={() => nav("/mc-servers")}><Server className="h-4 w-4 mr-2" /> Minecraft-Server</DropdownMenuItem>
             <DropdownMenuItem onClick={() => nav("/redeem")}><Ticket className="h-4 w-4 mr-2" /> Boost Code einlösen</DropdownMenuItem>

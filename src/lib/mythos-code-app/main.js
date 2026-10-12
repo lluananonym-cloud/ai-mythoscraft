@@ -516,6 +516,24 @@ ipcMain.handle("filmstudio:open", (_e, url) => {
   filmStudio.show(); filmStudio.focus();
   return { ok: true };
 });
+// Gemeinsame Räume: eigenes Fenster mit der Räume-Seite (gleiche Sitzung wie Cloud-PC und Filmstudio).
+let raeume = null;
+ipcMain.handle("raeume:open", (_e, url) => {
+  url = String(url || "");
+  if (!/^https:\/\//i.test(url)) return { error: "Ungültige Adresse" };
+  if (!raeume || raeume.isDestroyed()) {
+    raeume = new BrowserWindow({ width: 1280, height: 860, minWidth: 640, minHeight: 480, backgroundColor: "#0a0a0a", title: "Mythos Räume",
+      icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, partition: "persist:mythos-cloudpc" } });
+    raeume.webContents.setWindowOpenHandler(({ url: u }) => { if (safeUrl(u)) shell.openExternal(u); return { action: "deny" }; });
+    raeume.webContents.on("will-navigate", (e, u) => { if (!/^https:\/\//i.test(u)) { e.preventDefault(); if (safeUrl(u)) shell.openExternal(u); } });
+    raeume.on("closed", () => { raeume = null; });
+  }
+  // Mit Einladungslink oder beim ersten Öffnen: Seite laden.
+  if (url.includes("?join=") || !raeume.webContents.getURL()) raeume.loadURL(url);
+  raeume.show(); raeume.focus();
+  return { ok: true };
+});
 ipcMain.handle("preview:open", (_e, target, cwd) => {
   let url = String(target || "").trim();
   if (!url) {

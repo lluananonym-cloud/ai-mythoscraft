@@ -119,7 +119,7 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 export const APP_PKG = "mythos-code-app";
 export const APP_DOWNLOAD_SETTING = "codeprogram_download_url";
 export const APP_UPDATE_SETTING = "codeprogram_update";
-export const APP_VERSION = "2.10.2";
+export const APP_VERSION = "2.11.0";
 
 /** Google-Drive-Freigabelink -> direkter Download-Link (andere https-Links bleiben unverändert). */
 export function toDirectDownloadUrl(input: string): string | null {

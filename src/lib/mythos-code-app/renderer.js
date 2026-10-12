@@ -737,6 +737,7 @@ const COMMANDS = [
   ["/weiter", "", "Unterbrochene oder gestoppte Arbeit fortsetzen"],
   ["/neu", "", "Neuen Chat starten (auch während ein anderer arbeitet)"],
   ["/projekt", "", "Projektordner wählen"],
+  ["/raum", "[einladungslink]", "👥 Gemeinsame Räume: mit anderen im selben Chat mit Mythos arbeiten (Live-Cursor, Notiz, Dateien)"],
   ["/film", "[idee]", "🎬 Mythos Filmstudio: aus einer Idee einen Kurzfilm mit Sprecher, Musik und Schnitt drehen"],
   ["/cloudpc", "[aufgabe]", "🖥 Mythos Cloud-PC öffnen: Agent mit eigenem Computer, du schaust live zu"],
   ["/modell", "[name]", "Modell anzeigen oder wechseln"],
@@ -1048,6 +1049,7 @@ async function command(q) {
   if (cmd === "/weiter") return chat.history.length ? continueChat() : note("Hier gibt es noch nichts zum Weitermachen.");
   if (cmd === "/neu") return newChat();
   if (cmd === "/projekt") return pickProject();
+  if (cmd === "/raum" || cmd === "/raeume" || cmd === "/räume") return openRaeume(arg);
   if (cmd === "/film" || cmd === "/filmstudio" || cmd === "/kurzfilm") return openFilmStudio(arg);
   if (cmd === "/cloudpc" || cmd === "/cloud-pc" || cmd === "/pc" || cmd === "/computer") return openCloudPc(arg);
   if (cmd === "/modell" || cmd === "/model") {
@@ -1604,6 +1606,15 @@ async function openFilmStudio(idea) {
   else note("🎬 Filmstudio geöffnet" + (idea ? " – Mythos dreht deinen Film." : "."));
 }
 $("navFilm").onclick = () => openFilmStudio("");
+async function openRaeume(invite) {
+  // Einladungslink oder "<raum-id>.<code>" direkt übernehmen, sonst die Raumliste öffnen.
+  const m = String(invite || "").match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.:_-][a-z0-9]+/i);
+  const url = CFG.site.replace(/\/$/, "") + "/raeume" + (m ? "?join=" + encodeURIComponent(m[0]) : "");
+  const r = await window.mythos.raeume(url);
+  if (r && r.error) note("⚠ Räume: " + r.error);
+  else note("👥 Gemeinsame Räume geöffnet" + (m ? " – du trittst dem Raum bei." : ". Erstell einen Raum und teile den Einladungslink."));
+}
+$("navRaum").onclick = () => openRaeume("");
 $("navArt").onclick = openArtifacts; $("navRout").onclick = () => command("/geplant"); $("navCust").onclick = openConnections;
 $("artClose").onclick = () => $("artifacts").classList.remove("open");
 $("artifacts").onclick = (e) => { if (e.target === $("artifacts")) $("artifacts").classList.remove("open"); };

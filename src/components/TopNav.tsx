@@ -68,10 +68,10 @@ const TopNav = () => {
               <Globe className="h-4 w-4 mr-1.5" />Browser-Agent
             </Button>
           </Link>
-          {/* Community – groups */}
-          <Link to="/groups" onClick={() => setOpen(false)}>
+          {/* Gemeinsame Räume (früher Gruppen) */}
+          <Link to="/raeume" onClick={() => setOpen(false)}>
             <Button variant="ghost" size="sm" className="w-full justify-start md:w-auto">
-              <Users className="h-4 w-4 mr-1.5" />Community
+              <Users className="h-4 w-4 mr-1.5" />Räume
             </Button>
           </Link>
           {/* Auf mittleren Bildschirmen steckt "Entdecken" im Mehr-Menü, damit die Leiste nicht überläuft */}
