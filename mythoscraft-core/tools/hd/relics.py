@@ -218,17 +218,16 @@ def dwarf_hat():
     m = SwatchModel('dwarf_hat', 'hat')
     red, dark, white, gold = '#c0282f', '#7e1720', '#f4f1ea', '#e0a628'
     m.add((-0.8, 15.6, -0.8), (16.8, 17.6, 16.8), white, name='fur brim')
-    y = 17.6
-    rings = ((0.6, 15.4, 2.6), (2.2, 13.8, 2.6), (3.6, 12.4, 2.6), (4.8, 11.2, 2.6), (5.8, 10.2, 2.4), (6.6, 9.4, 2.2))
+    y = 17.4
+    rings = ((0.6, 15.4, 2.2), (2.2, 13.8, 2.2), (3.6, 12.4, 2.1), (4.8, 11.2, 2.0), (5.8, 10.2, 1.9), (6.6, 9.4, 1.8))
     for i, (a, b, h) in enumerate(rings):
-        # every ring smaller and leaning back – a soft, floppy gnome cone
+        # every ring smaller and leaning back – a soft, floppy gnome cone (all inside Minecraft's -16…32 limit)
         m.add((a, y, a + 0.7 * i), (b, y + h, b + 0.7 * i), red if i % 2 == 0 else tone(red, 0.1), name='cone')
         y += h
-    # the floppy tip hangs to the back
-    m.add((7.0, 32.0, 10.4), (9.0, 33.6, 14.4), dark, name='tip')
-    m.add((7.2, 30.4, 14.2), (8.8, 32.6, 15.8), dark, name='tip end')
-    m.add((7.0, 28.8, 15.0), (9.0, 30.6, 17.0), gold, 'metal', name='bell')
-    m.add((7.6, 28.2, 15.6), (8.4, 29.0, 16.4), tone(gold, -0.3), 'metal', name='bell clapper')
+    m.add((7.0, 29.6, 10.4), (9.0, 31.0, 14.4), dark, name='tip')
+    m.add((7.2, 28.2, 14.2), (8.8, 30.0, 15.8), dark, name='tip end')
+    m.add((7.0, 26.6, 15.0), (9.0, 28.4, 17.0), gold, 'metal', name='bell')
+    m.add((7.6, 26.0, 15.6), (8.4, 26.8, 16.4), tone(gold, -0.3), 'metal', name='bell clapper')
     return m
 
 
@@ -254,8 +253,25 @@ def growth_totem():
 
 
 # ====================================================================== V4
+class Mirrored:
+    """BoxItem with v flipped (the other side faces forward in the hand)."""
+
+    def __init__(self, it):
+        self.it = it
+
+    def bar(self, p0, p1, w, d, color, style='matte', z=0.0, glow=False, name=''):
+        return self.it.bar((p0[0], -p0[1]), (p1[0], -p1[1]), w, d, color, style, z, glow, name)
+
+    def block(self, u, v, s, color, style='matte', d=None, z=0.0, glow=False, name=''):
+        return self.it.block(u, -v, s, color, style, d, z, glow, name)
+
+    def model(self):
+        return self.it.model()
+
+
 def power_drill():
-    it = BoxItem('power_drill')
+    # built with +v towards the bit, mirrored: in the hand the bit points forward, away from the player
+    it = Mirrored(BoxItem('power_drill'))
     body, dark, batt = '#f07a1c', '#22232b', '#3a3f4c'
     # pistol grip along the item axis, battery at the bottom
     it.bar((0.0, 0), (2.6, 0), 4.4, 4.0, batt, 'metal', name='battery')
@@ -460,11 +476,71 @@ def companion_shadow():
     return m
 
 
-BOX = {f.__name__: f for f in (sort_wand, infinite_bucket, vein_pickaxe, repair_charm, paint_brush, concrete_mixer, soul_sword,
+# ====================================================================== zap tools (drawn by the server owner)
+# white blade/head, dark violet lightning zig-zags, grey handle, a green spark – like data/sprites/*.png, but as clean
+# swatch cubes (same look as the crystal pickaxe) instead of converted pixels
+ZAP_WHITE, ZAP_EDGE, ZAP_DARK, ZAP_GREY, ZAP_GREEN = '#f4f2ff', '#cdbcff', '#2c1d55', '#a3a8b4', '#7dff6a'
+
+
+def _zigzag(it, pts, w=0.9, d=None, z=0.0, col=ZAP_DARK, name='lightning'):
+    for a, b in zip(pts, pts[1:]):
+        it.bar(a, b, w, d if d is not None else 2.2, col, 'matte', z=z, name=name)
+
+
+def zap_pickaxe():
+    from items_box import shaft
+    it = BoxItem('zap_pickaxe')
+    shaft(it, 16.6, ZAP_GREY, ZAP_DARK, every=1.6)
+    socket(it, 16.9, 2.6, 2.8, ZAP_DARK)
+    # crescent head of white crystal plates
+    pick_head(it, 17.4, 8.6, 2.8, ZAP_WHITE, ZAP_EDGE, d=2.0, droop=2.6)
+    for sgn in (-1, 1):
+        # a lightning bolt runs along each arm
+        _zigzag(it, [(17.9, sgn * 1.6), (16.8, sgn * 3.4), (17.9, sgn * 4.6), (16.4, sgn * 6.6), (15.5, sgn * 8.2)], w=0.7, d=2.3)
+        it.bar((16.0, sgn * 7.6), (14.9, sgn * 9.2), 0.9, 1.6, ZAP_EDGE, 'glow', glow=True, name='point glow')
+    gem(it, 17.4, 0, 1.6, ZAP_GREEN)
+    return it
+
+
+def zap_sword():
+    it = BoxItem('zap_sword')
+    pommel(it, 0.9, 2.0, ZAP_GREY)
+    handle(it, 1.6, 6.4, G, ZAP_GREY, ZAP_DARK, every=1.3, band=0.5)
+    guard(it, 7.0, 4.2, 1.8, ZAP_DARK, d=2.4, curl=1.4)
+    gem(it, 7.0, 0, 1.5, ZAP_GREEN)
+    blade(it, 7.8, 22.0, 4.2, ZAP_WHITE, edge=ZAP_EDGE, ridge='#e2dcff', d=BD, tip=3.4, glow_edge=True)
+    # the jagged lightning edge of the drawing: a dark bolt along the blade with spikes to the side
+    _zigzag(it, [(8.2, 1.2), (10.6, -1.0), (12.6, 1.4), (14.8, -0.8), (16.8, 1.2), (18.8, -0.6), (20.6, 0.4)], w=0.75, d=BD + 0.3)
+    for (u, sgn) in ((10.6, -1), (12.6, 1), (14.8, -1), (16.8, 1), (18.8, -1)):
+        it.bar((u, sgn * 1.6), (u + 1.2, sgn * 3.4), 0.7, 1.2, ZAP_DARK, name='bolt spike')
+    return it
+
+
+def zap_rod():
+    """fishing rod – grey grip with reel, white rod wrapped by a dark lightning bolt, green spark at the tip"""
+    it = BoxItem('zap_rod')
+    handle(it, 0.4, 6.2, 2.0, ZAP_GREY, ZAP_DARK, every=1.2, band=0.5)
+    it.block(4.8, 1.8, 1.8, ZAP_DARK, 'metal', d=2.0, name='reel')
+    it.block(4.8, 1.8, 0.9, ZAP_GREEN, 'glow', d=2.2, glow=True, name='reel spark')
+    it.bar((6.2, 0), (22.0, 0), 0.9, 0.9, ZAP_WHITE, 'metal', name='rod')
+    _zigzag(it, [(7.0, 0.8), (9.0, -0.8), (11.0, 0.8), (13.0, -0.8), (15.0, 0.8), (17.0, -0.8), (19.0, 0.7), (21.0, -0.5)],
+            w=0.45, d=1.2)
+    for u in (9.5, 14.5, 19.0):
+        it.bar((u, 0), (u + 0.5, 0), 1.4, 1.4, ZAP_EDGE, 'metal', name='line guide')
+    it.block(21.9, 0, 1.0, ZAP_GREEN, 'glow', d=1.1, glow=True, name='tip spark')
+    return it
+
+
+def zap_rod_cast():
+    m = zap_rod().model()
+    m.name = 'zap_rod_cast'
+    return m
+
+
+BOX = {f.__name__: f for f in (zap_pickaxe, zap_sword, zap_rod, zap_rod_cast, sort_wand, infinite_bucket, vein_pickaxe, repair_charm, paint_brush, concrete_mixer, soul_sword,
                                 dwarf_hat, growth_totem, power_drill, mega_chainsaw, blossom_crown, bark_hand, minepro_totem,
                                 spawner_booster, companion_shadow)}
-SPRITES = {'zap_pickaxe': 'minecraft:item/handheld', 'zap_sword': 'minecraft:item/handheld',
-           'zap_rod': 'minecraft:item/handheld_rod', 'zap_rod_cast': 'minecraft:item/handheld_rod'}
+SPRITES = {}   # the zap tools are box models now (see above); data/sprites keeps the drawings as reference
 
 
 def reduce_keep_lines(img):
@@ -514,7 +590,9 @@ def build(out, prev=None, render=None):
     done = set()
     for name, fn in BOX.items():
         r = fn()
-        m = r.model() if isinstance(r, BoxItem) else r
+        m = r.model() if isinstance(r, (BoxItem, Mirrored)) else r
+        if name.startswith('zap_rod'):
+            m.extra_display = sprite3d.DISPLAY['minecraft:item/handheld_rod']
         m.save(out, 'hd')
         done.add(name)
         if render and prev:
