@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 23
+config-version: 24
 config-reset:
   22: [intro]
   21: [items.minepro_totem.lore]
@@ -29,6 +29,7 @@ general:
 help:
   header: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>v{version} – Befehle"
   mythos:
+    npcs: '<#e9d5ff>/mythos npcs [here]</#e9d5ff> <gray>– respawn the helper NPCs at spawn (here = around you)'
     help: "<dark_gray>• <#e9d5ff>/mythos help <gray>– diese Hilfe"
     status: "<dark_gray>• <#e9d5ff>/mythos status <gray>– Zustand aller Systeme"
     reload: "<dark_gray>• <#e9d5ff>/mythos reload <gray>– Config, Texte, Regionen, Events neu laden"

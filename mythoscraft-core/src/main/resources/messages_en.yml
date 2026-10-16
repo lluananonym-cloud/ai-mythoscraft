@@ -1,4 +1,4 @@
-config-version: 23
+config-version: 24
 config-reset:
   22: [intro]
   21: [items.minepro_totem.lore]
@@ -23,6 +23,7 @@ general:
 help:
   header: <gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>v{version} – Commands
   mythos:
+    npcs: '<#e9d5ff>/mythos npcs [here]</#e9d5ff> <gray>– respawn the helper NPCs at spawn (here = around you)'
     help: <dark_gray>• <#e9d5ff>/mythos help <gray>– this help
     status: <dark_gray>• <#e9d5ff>/mythos status <gray>– status of all systems
     reload: <dark_gray>• <#e9d5ff>/mythos reload <gray>– reload config, texts, regions, events

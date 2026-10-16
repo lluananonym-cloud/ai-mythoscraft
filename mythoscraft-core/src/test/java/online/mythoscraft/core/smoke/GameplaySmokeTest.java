@@ -391,6 +391,7 @@ class GameplaySmokeTest {
         fake.start();
         try {
             plugin.getConfig().set("newbies.auto-daily-on-join", false);   // the login reward would change the coins too
+            plugin.saveConfig();
             plugin.reloadAll();
             PlayerMock fan = join("Relayfan");
             online.mythoscraft.core.player.PlayerData d = plugin.playerData().get(fan);
@@ -876,6 +877,23 @@ class GameplaySmokeTest {
         }
         assertTrue(chat.toString().contains("Lia"), "Lia talks: " + chat);
         assertTrue(chat.toString().contains("/starter"), "starting steps mention the starter kit");
+    }
+
+    @Test
+    void helperNpcsStandOnTheStarterSquare() {
+        org.bukkit.World w = server.addSimpleWorld("npcs");
+        java.util.Map<String, List<org.bukkit.Location>> pts = new java.util.HashMap<>();
+        pts.put("mentor", List.of(new org.bukkit.Location(w, 0.5, 65, 0.5)));
+        String[] markers = {"npc_rtp", "npc_plot", "npc_jobs", "npc_crates", "npc_idle"};
+        for (int i = 0; i < markers.length; i++) {
+            pts.put(markers[i], List.of(new org.bukkit.Location(w, 3.5 + i * 2, 65, 3.5)));
+        }
+        plugin.attractionStore().define(new org.bukkit.Location(w, 0, 64, 0), 128, pts);
+        w.getChunkAt(0, 0).load();
+        plugin.attractions().rebuild();
+        long npcs = w.getEntities().stream().filter(e -> "spawn_npc".equals(e.getPersistentDataContainer()
+                .get(online.mythoscraft.core.util.Keys.ENTITY, org.bukkit.persistence.PersistentDataType.STRING))).count();
+        assertEquals(markers.length, npcs, "helper NPCs");
     }
 
     @Test

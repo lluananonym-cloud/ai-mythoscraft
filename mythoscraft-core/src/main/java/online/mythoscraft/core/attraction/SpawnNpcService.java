@@ -54,13 +54,52 @@ public final class SpawnNpcService {
         this.plugin = plugin;
     }
 
-    void spawn() {
+    /** @return how many NPCs stand now */
+    int spawn() {
         clear();
+        int missingMarkers = 0;
         for (Npc n : NPCS) {
             Location at = plugin.attractionStore().first(n.marker());
-            if (at == null || at.getWorld() == null || !at.isChunkLoaded()) {
+            if (at == null || at.getWorld() == null) {
+                missingMarkers++;
                 continue;
             }
+            if (!at.isChunkLoaded()) {
+                at.getChunk().load();
+            }
+            try {
+                spawnOne(n, at);
+            } catch (RuntimeException ex) {
+                plugin.getLogger().warning("Helper NPC " + n.key() + " could not be spawned: " + ex);
+            }
+        }
+        if (missingMarkers == NPCS.size()) {
+            plugin.getLogger().warning("No helper NPC spots stored – rebuild the spawn once with /spawn place confirm "
+                    + "(or /mythos npcs here to place them around you).");
+        } else {
+            plugin.getLogger().info("Helper NPCs at spawn: " + spawned.size() + "/" + NPCS.size());
+        }
+        return spawned.size();
+    }
+
+    /** Puts the five NPC spots in a half circle in front of the player (for spawns built before the NPCs existed). */
+    void placeAround(Player p) {
+        Location c = p.getLocation();
+        double yaw = Math.toRadians(c.getYaw());
+        for (int i = 0; i < NPCS.size(); i++) {
+            double a = yaw + Math.toRadians(-60 + i * 30);
+            Location l = c.clone().add(-Math.sin(a) * 4, 0, Math.cos(a) * 4);
+            l.setX(l.getBlockX() + 0.5);
+            l.setZ(l.getBlockZ() + 0.5);
+            l.setY(l.getBlockY());
+            l.setYaw((float) Math.toDegrees(Math.atan2(c.getX() - l.getX(), -(c.getZ() - l.getZ()))) * -1);
+            l.setDirection(c.toVector().subtract(l.toVector()).setY(0));
+            plugin.attractionStore().put(NPCS.get(i).marker(), List.of(l));
+        }
+    }
+
+    private void spawnOne(Npc n, Location at) {
+        {
             Mannequin m = at.getWorld().spawn(at, Mannequin.class, e -> {
                 e.setPersistent(false);
                 e.setInvulnerable(true);
@@ -83,6 +122,19 @@ public final class SpawnNpcService {
         }
     }
 
+    /** NPC spots exist but some figure is gone (chunk was unloaded …)? */
+    boolean missing() {
+        int expected = 0;
+        for (Npc n : NPCS) {
+            Location at = plugin.attractionStore().first(n.marker());
+            if (at != null && at.isChunkLoaded()) {
+                expected++;
+            }
+        }
+        long alive = spawned.stream().filter(Entity::isValid).count();
+        return alive < expected;
+    }
+
     /** Skin of a player name (looked up once, async). */
     private void skin(Mannequin m, String name) {
         PlayerProfile known = skins.get(name);
@@ -102,6 +154,10 @@ public final class SpawnNpcService {
                 }
             });
         });
+    }
+
+    long count() {
+        return spawned.stream().filter(Entity::isValid).count();
     }
 
     boolean present() {

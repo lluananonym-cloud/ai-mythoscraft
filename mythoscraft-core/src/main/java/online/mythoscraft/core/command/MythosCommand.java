@@ -42,6 +42,35 @@ public final class MythosCommand extends BaseCommand {
         register(new BoostSub(plugin));
         register(new HologramSub(plugin));
         register(new TournamentSub(plugin));
+        register(new SubCommand() {
+            @Override
+            public String name() {
+                return "npcs";
+            }
+
+            @Override
+            public String permission() {
+                return "mythos.admin";
+            }
+
+            /** /mythos npcs [here] – respawn the helper NPCs at spawn; "here" puts their spots around you */
+            @Override
+            public void execute(CommandSender sender, String[] args) {
+                boolean here = args.length > 0 && args[0].equalsIgnoreCase("here");
+                org.bukkit.entity.Player p = sender instanceof org.bukkit.entity.Player pl ? pl : null;
+                int n = plugin.attractions().respawnNpcs(p, here && p != null);
+                sender.sendMessage(net.kyori.adventure.text.Component.text("Helper NPCs standing: " + n + "/5"
+                        + (n == 0 ? " – no spots stored: rebuild the spawn (/spawn place confirm) or use /mythos npcs here" : "")
+                        + " · plot server: " + plugin.getConfig().getString("plot-server.host", "mythoscraftsmpplot.minekeep.gg")
+                        + ":" + plugin.getConfig().getInt("plot-server.port", 25565),
+                        n == 0 ? net.kyori.adventure.text.format.NamedTextColor.RED : net.kyori.adventure.text.format.NamedTextColor.GREEN));
+            }
+
+            @Override
+            public List<String> complete(CommandSender sender, String[] args) {
+                return args.length == 1 ? List.of("here") : List.of();
+            }
+        });
     }
 
     private void register(SubCommand sub) {

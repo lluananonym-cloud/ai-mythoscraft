@@ -54,6 +54,11 @@ public final class Attractions implements Listener {
             }
         });
         mentor.clear();
+        // the helper NPCs don't depend on Lia's chunk
+        if (npcs == null) {
+            npcs = new SpawnNpcService(plugin);
+        }
+        npcs.spawn();
         Location at = plugin.attractionStore().first("mentor");
         if (at == null || !at.isChunkLoaded()) {
             return;
@@ -70,10 +75,6 @@ public final class Attractions implements Listener {
             v.setCustomNameVisible(true);
             v.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, "mentor");
         }));
-        if (npcs == null) {
-            npcs = new SpawnNpcService(plugin);
-        }
-        npcs.spawn();
         // the old text board with commands is replaced by the helper NPCs; it only stays on spawns built before them
         Location board = npcs.any() ? null : plugin.attractionStore().first("starter_board");
         if (board != null) {
@@ -86,6 +87,18 @@ public final class Attractions implements Listener {
                 t.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, "mentor");
             }));
         }
+    }
+
+    /** /mythos npcs [here] – respawn the helper NPCs (here = put their spots around the player). */
+    public int respawnNpcs(Player p, boolean here) {
+        if (npcs == null) {
+            npcs = new SpawnNpcService(plugin);
+        }
+        if (here && p != null) {
+            npcs.placeAround(p);
+        }
+        spawnMentor();
+        return npcs.present() ? (int) npcs.count() : 0;
     }
 
     private boolean mentorPresent() {
@@ -173,6 +186,9 @@ public final class Attractions implements Listener {
                 || (plugin.attractionStore().first("well") != null && plugin.attractionStore().first("well").isChunkLoaded() && !well.present())
                 || (!plugin.attractionStore().all("merchant").isEmpty() && plugin.attractionStore().all("merchant").get(0).isChunkLoaded()
                 && !merchants.present());
+        if (npcs != null && npcs.missing()) {
+            spawnMentor();
+        }
         if (missing || (!plugin.attractionStore().all("statue").isEmpty() && plugin.attractionStore().all("statue").get(0).isChunkLoaded()
                 && !statues.present())) {
             rebuild(false);
