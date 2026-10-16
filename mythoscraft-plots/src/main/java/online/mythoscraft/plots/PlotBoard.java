@@ -140,13 +140,14 @@ final class PlotBoard implements Listener {
         RankLimits.Info i = r.info(p.getUniqueId());
         Component arrow = Component.text(" » ", NamedTextColor.DARK_GRAY);
         Component line = Component.text("                         ", NamedTextColor.DARK_GRAY).decorate(TextDecoration.STRIKETHROUGH);
+        // every line starts from an empty component: text appended to an icon would take over its icon font (boxes)
         List<Component> lines = new ArrayList<>();
         lines.add(line);
-        lines.add(r.icon(p, "rank").append(Component.text(" Rank", NamedTextColor.GRAY)).append(arrow)
+        lines.add(Component.empty().append(r.icon(p, "rank")).append(Component.text(" Rank", NamedTextColor.GRAY)).append(arrow)
                 .append(i == null ? Component.text("…", NamedTextColor.GRAY) : i.rankDisplay()));
-        lines.add(r.icon(p, "coin").append(Component.text(" Coins", NamedTextColor.GRAY)).append(arrow)
+        lines.add(Component.empty().append(r.icon(p, "coin")).append(Component.text(" Coins", NamedTextColor.GRAY)).append(arrow)
                 .append(Component.text(i == null ? "…" : number(i.coins()), NamedTextColor.GOLD)));
-        lines.add(r.icon(p, "gem").append(Component.text(" Gems", NamedTextColor.GRAY)).append(arrow)
+        lines.add(Component.empty().append(r.icon(p, "gem")).append(Component.text(" Gems", NamedTextColor.GRAY)).append(arrow)
                 .append(Component.text(i == null ? "…" : number(i.gems()), NamedTextColor.LIGHT_PURPLE)));
         lines.add(Component.empty());
         PlotId here = plugin.plotAt(p.getLocation());
@@ -154,11 +155,11 @@ final class PlotBoard implements Listener {
         Component where = here == null ? Component.text("Road", NamedTextColor.WHITE)
                 : plot == null ? Component.text(here + " · free", NamedTextColor.GREEN)
                 : Component.text(plot.ownerName(), plot.owner().equals(p.getUniqueId()) ? NamedTextColor.GREEN : NamedTextColor.WHITE);
-        lines.add(r.icon(p, "key").append(Component.text(" Plot", NamedTextColor.GRAY)).append(arrow).append(where));
+        lines.add(Component.empty().append(r.icon(p, "key")).append(Component.text(" Plot", NamedTextColor.GRAY)).append(arrow).append(where));
         int max = plugin.maxPlots(p);
-        lines.add(r.icon(p, "event").append(Component.text(" Your plots", NamedTextColor.GRAY)).append(arrow)
+        lines.add(Component.empty().append(r.icon(p, "event")).append(Component.text(" Your plots", NamedTextColor.GRAY)).append(arrow)
                 .append(Component.text(plugin.store().of(p.getUniqueId()).size() + "/" + (max == Integer.MAX_VALUE ? "∞" : max), NamedTextColor.WHITE)));
-        lines.add(r.icon(p, "time").append(Component.text(" Online", NamedTextColor.GRAY)).append(arrow)
+        lines.add(Component.empty().append(r.icon(p, "time")).append(Component.text(" Online", NamedTextColor.GRAY)).append(arrow)
                 .append(Component.text(Bukkit.getOnlinePlayers().size(), NamedTextColor.WHITE)));
         lines.add(line.append(Component.space()));
         lines.add(MM.deserialize(plugin.getConfig().getString("scoreboard.footer", "<gradient:#c084fc:#f59e0b>mythoscraft.online</gradient>")));
