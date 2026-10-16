@@ -4,8 +4,39 @@
     {
       "name": "vite-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 8080
+    },
+    {
+      "name": "panel-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "mythoscraft-core/tools/panel_preview.py"
+      ],
+      "port": 8099
+    },
+    {
+      "name": "hd-files",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "mythoscraft-core/tools/hd/serve.py"
+      ],
+      "port": 8098
+    },
+    {
+      "name": "wiki-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "mythoscraft-core/tools/netlify-relay/public"
+      ],
+      "port": 8765
     }
   ]
 }
