@@ -106,6 +106,10 @@ $('#btn-login').addEventListener('click', async () => {
       if (p.state === 'ok') {
         clearInterval(pollTimer);
         start();
+      } else if (p.state === 'denied') {
+        clearInterval(pollTimer);
+        showLogin();
+        $('#login-error').textContent = 'No access to the team panel. Players: use the wiki for daily rewards.';
       } else if (p.state === 'expired' || left <= 0) {
         clearInterval(pollTimer);
         showLogin();

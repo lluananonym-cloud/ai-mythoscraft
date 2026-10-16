@@ -26,7 +26,18 @@ NAMED = {'black': '#000000', 'dark_blue': '#0000aa', 'dark_green': '#00aa00', 'd
 
 def _hex(c):
     c = c.strip()
-    return NAMED.get(c, c if c.startswith('#') else '#ffffff')
+    h = NAMED.get(c, c if c.startswith('#') else '#ffffff')
+    # the website is dark: very dark text colours are lifted so they stay readable
+    try:
+        r, g, b = (int(h[i:i + 2], 16) for i in (1, 3, 5))
+    except ValueError:
+        return h
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    if lum < 95:
+        f = (95 - lum) / 95 * 0.75
+        r, g, b = (round(v + (235 - v) * f) for v in (r, g, b))
+        h = '#%02x%02x%02x' % (r, g, b)
+    return h
 
 
 def mm_html(text):
@@ -96,7 +107,58 @@ def items_from_java():
         iid, base, rarity, kind, coll, rest = m.groups()
         out.append({'id': iid, 'base': base.lower(), 'rarity': rarity.lower(), 'kind': kind.lower(),
                     'collection': coll.lower(), 'hat': '.hat()' in rest})
+    # armour pieces: armor("set", EquipmentSlot.HEAD, COLLECTION, RARITY, …) → set_helmet …
+    piece = {'HEAD': 'helmet', 'CHEST': 'chestplate', 'LEGS': 'leggings', 'FEET': 'boots'}
+    for m in re.finditer(r'armor\("([a-z0-9_]+)",\s*EquipmentSlot\.([A-Z]+),\s*(\w+),\s*(\w+)', src):
+        aset, slot, coll, rarity = m.groups()
+        out.append({'id': f'{aset}_{piece.get(slot, "boots")}', 'base': 'netherite_' + piece.get(slot, 'boots'),
+                    'rarity': rarity.lower(), 'kind': 'armor', 'collection': coll.lower(), 'hat': False})
     return out
+
+
+def english_map():
+    """German config texts → English (src/main/resources/lang/config_en.yml)"""
+    f = os.path.join(RES, 'lang', 'config_en.yml')
+    if not os.path.exists(f):
+        return {}
+    y = yaml.safe_load(open(f, encoding='utf-8')) or {}
+    return {str(t['de']): str(t['en']) for t in y.get('texts', []) if 'de' in t and 'en' in t}
+
+
+def nice(material):
+    return ' '.join(w.capitalize() for w in str(material).lower().split('_'))
+
+
+def reward_info(rew, en_items, crate_keys):
+    """English text (HTML) + optional item id for a crate reward line"""
+    parts = str(rew).split()
+    kind = parts[0] if parts else ''
+    num = lambda i, d=1: int(float(parts[i])) if len(parts) > i and re.fullmatch(r'[0-9.]+', parts[i]) else d
+    if kind == 'coins':
+        return f'<span style="color:#facc15">{num(1):,} Coins</span>', None, 'coins'
+    if kind == 'gems':
+        return f'<span style="color:#e879f9">{num(1)} Gems</span>', None, 'gems'
+    if kind == 'xp':
+        return f'<span style="color:#a3e635">{num(1):,} XP</span>', None, 'xp'
+    if kind == 'tool' and len(parts) > 1:
+        n = num(2)
+        name = en_items.get(parts[1], parts[1])
+        return (f'{n}× ' if n > 1 else '') + name, parts[1], 'item'
+    if kind == 'key' and len(parts) > 1:
+        n = num(2)
+        return (f'{n}× ' if n > 1 else '') + crate_keys.get(parts[1], nice(parts[1]) + ' Key'), None, 'key'
+    if kind == 'item' and len(parts) > 1:
+        n = num(2)
+        return (f'{n}× ' if n > 1 else '') + nice(parts[1]), None, 'vanilla'
+    if kind == 'book' and len(parts) > 1:
+        lvl = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][min(7, num(2))]
+        return f'<span style="color:#c4b5fd">Book: {nice(parts[1])} {lvl}</span>', None, 'book'
+    if kind == 'voucher' and len(parts) > 1:
+        dur = parts[2] if len(parts) > 2 else ''
+        return f'<span style="color:#fbbf24">Rank voucher: {parts[1]} {dur}</span>', None, 'voucher'
+    if kind == 'spawner' and len(parts) > 1:
+        return f'{nice(parts[1])} Spawner', None, 'spawner'
+    return html.escape(str(rew)), None, 'other'
 
 
 def tex_url(ref, copied):
@@ -183,11 +245,13 @@ def main():
     crate_defs = crates.get('crates', crates)
     crate_names = {}
     coll_names = {}
+    tr = english_map()
     for cid, c in (crate_defs or {}).items():
         if not isinstance(c, dict):
             continue
-        crate_names[cid] = mm_html(c.get('name', cid))
-        coll_names[cid] = mm_html(re.sub(r'[- ]?(Kiste|Crate)', '', str(c.get('name', cid))))
+        name_en = tr.get(str(c.get('name', cid)), str(c.get('name', cid)))
+        crate_names[cid] = mm_html(name_en)
+        coll_names[cid] = mm_html(re.sub(r'[- ]?(Kiste|Crate)', '', name_en))
         for r in c.get('rewards', []) or []:
             rew = r.get('reward', '') if isinstance(r, dict) else str(r)
             mm = re.match(r'tool ([a-z0-9_]+)', str(rew))
@@ -222,7 +286,26 @@ def main():
     for cid in dict.fromkeys(i['collection'] for i in items):
         colls.append({'id': cid, 'name': coll_names.get(cid, cid.capitalize()), 'season': season_of.get(cid),
                       'count': sum(1 for i in items if i['collection'] == cid)})
-    data = {'items': items, 'collections': colls, 'crates': crate_names,
+    # crate simulator: every crate with its reward table (same weights as in game)
+    en_items = {i['id']: i['name']['en'] for i in items}
+    crate_keys = {cid: mm_html(tr.get(str(c.get('key-name', '')), str(c.get('key-name', cid)))) for cid, c in crate_defs.items()
+                  if isinstance(c, dict)}
+    sim = []
+    for cid, c in crate_defs.items():
+        if not isinstance(c, dict) or not c.get('rewards'):
+            continue
+        rows = []
+        total = sum(float(r.get('weight', 1)) for r in c['rewards'] if isinstance(r, dict))
+        for r in c['rewards']:
+            if not isinstance(r, dict):
+                continue
+            text, item, kind = reward_info(r.get('reward', ''), en_items, crate_keys)
+            w = float(r.get('weight', 1))
+            rows.append({'text': text, 'item': item, 'kind': kind, 'weight': w, 'chance': round(w / total * 100, 3),
+                         'rarity': str(r.get('rarity', 'COMMON')).lower()})
+        sim.append({'id': cid, 'name': crate_names[cid], 'color': str(c.get('color', '#a855f7')),
+                    'lore': [mm_html(tr.get(str(l), str(l))) for l in c.get('key-lore', []) or []], 'rewards': rows})
+    data = {'items': items, 'collections': colls, 'crates': crate_names, 'crateSim': sim,
             'seasons': [{'id': k, 'name': mm_html(v.get('name', k)), 'start': v.get('start'), 'end': v.get('end'),
                          'crate': v.get('crate')} for k, v in seasons.items() if isinstance(v, dict)],
             'tournaments': {k: {'time': v.get('time'), 'day': v.get('day'), 'date': v.get('day-of-month')}

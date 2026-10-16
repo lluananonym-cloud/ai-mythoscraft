@@ -232,9 +232,7 @@ public final class WebPanelService {
     public String confirm(Player p, String code) {
         String c = code.trim().toUpperCase(Locale.ROOT).replace("MC-", "");
         if (relay != null) {
-            if (role(p.getUniqueId()) == null) {
-                return "denied";
-            }
+            // every player may sign in on the website (daily rewards); the panel itself still checks the access role
             relay.confirm(p, c);
             audit(p.getName(), "Login-Code an die Website geschickt");
             return "sent";

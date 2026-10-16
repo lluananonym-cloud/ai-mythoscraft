@@ -8,6 +8,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 export const config = { path: '/api/*' };
 
 const COOKIE = 'mcpanel';
+const PCOOKIE = 'mcplayer';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROLES = ['view', 'edit', 'admin', 'owner'];
 
@@ -26,13 +27,65 @@ function secretOk(req) {
   return timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
 
-function cookie(req) {
+function cookie(req, name = COOKIE) {
   const raw = req.headers.get('cookie') || '';
   for (const part of raw.split(';')) {
     const [k, v] = part.trim().split('=');
-    if (k === COOKIE && v) return v;
+    if (k === name && v) return v;
   }
   return null;
+}
+
+// ---- players: sign in with the Minecraft account, daily login rewards ------------------------------------------
+const berlinDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(d); // YYYY-MM-DD
+function msToBerlinMidnight(now = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(now).map((x) => [x.type, x.value]));
+  const passed = ((+parts.hour % 24) * 3600 + +parts.minute * 60 + +parts.second) * 1000;
+  return 864e5 - passed;
+}
+function yesterday(day) {
+  const d = new Date(day + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+async function playerSession(req, s) {
+  const token = cookie(req, PCOOKIE);
+  if (!token) return null;
+  const sess = await s.get('psessions/' + sha(token), { type: 'json' });
+  if (!sess || sess.expires < Date.now()) return null;
+  return sess;
+}
+async function dailyState(s, uuid) {
+  const d = (await s.get('daily/' + uuid, { type: 'json' })) || { last: null, streak: 0, total: 0 };
+  const today = berlinDay();
+  const canClaim = d.last !== today;
+  // streak shown on the page: the one the next claim would give
+  const next = !canClaim ? d.streak : (d.last === yesterday(today) ? d.streak + 1 : 1);
+  return { ...d, today, canClaim, nextStreak: next, resetIn: msToBerlinMidnight() };
+}
+async function playerApi(req, s, path, post) {
+  if (path === '/api/player/logout') {
+    const token = cookie(req, PCOOKIE);
+    if (token) await s.delete('psessions/' + sha(token));
+    return json({ ok: true }, 200, { 'Set-Cookie': `${PCOOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax` });
+  }
+  const me = await playerSession(req, s);
+  if (!me) return json({ error: 'login' }, 401);
+  if (path === '/api/player/me') {
+    return json({ name: me.name, uuid: me.uuid, daily: await dailyState(s, me.uuid) });
+  }
+  if (path === '/api/player/claim') {
+    if (!post) return json({ error: 'method' }, 405);
+    const st = await dailyState(s, me.uuid);
+    if (!st.canClaim) return json({ error: 'already', daily: st }, 409);
+    const streak = st.nextStreak;
+    await s.setJSON('daily/' + me.uuid, { last: st.today, streak, total: (st.total || 0) + 1 });
+    const id = Date.now().toString(36) + rand(6);
+    await s.setJSON('rewards/' + id, { id, uuid: me.uuid, name: me.name, streak, at: Date.now() });
+    return json({ ok: true, streak, daily: await dailyState(s, me.uuid) });
+  }
+  return json({ error: 'unknown' }, 404);
 }
 
 /** The current role of a session – always taken from the latest access list the server uploaded. */
@@ -72,6 +125,14 @@ async function bridge(req, s) {
   if (body.public) await s.setJSON('public', { ...body.public, relayAt: Date.now() });
   if (body.log) await s.setJSON('log', body.log);
   for (const r of body.results || []) await s.setJSON('results/' + r.id, r);
+  // daily rewards claimed on the website → handed to the server (kept until it fetches them)
+  const rewards = [];
+  const { blobs: rw } = await s.list({ prefix: 'rewards/' });
+  for (const b of rw.slice(0, 50)) {
+    const r = await s.get(b.key, { type: 'json' });
+    await s.delete(b.key);
+    if (r) rewards.push(r);
+  }
   // logins confirmed in game (/website login <code>)
   for (const c of body.confirmed || []) {
     const ch = await s.get('codes/' + c.code, { type: 'json' });
@@ -84,7 +145,7 @@ async function bridge(req, s) {
     await s.delete(b.key);
     if (j && Date.now() - j.at < 15000) jobs.push(j);
   }
-  return json({ jobs });
+  return json({ jobs, rewards });
 }
 
 export default async (req) => {
@@ -103,12 +164,14 @@ export default async (req) => {
       'Cache-Control': 'public, max-age=15', 'Access-Control-Allow-Origin': '*' } });
   }
   if (post && req.headers.get('x-panel') !== '1') return json({ error: 'csrf' }, 403);
+  if (path.startsWith('/api/player/')) return playerApi(req, s, path, post);
 
   if (path === '/api/login/start') {
     let code = '';
     for (let i = 0; i < 6; i++) code += CODE_CHARS[randomBytes(1)[0] % CODE_CHARS.length];
     const id = rand(24);
-    await s.setJSON('codes/' + code, { id, expires: Date.now() + 180000 });
+    const kind = url.searchParams.get('kind') === 'player' ? 'player' : 'panel';
+    await s.setJSON('codes/' + code, { id, kind, expires: Date.now() + 180000 });
     await s.setJSON('challenge/' + id, { code, expires: Date.now() + 180000 });
     return json({ id, code, expires: 180 });
   }
@@ -121,6 +184,14 @@ export default async (req) => {
     await s.delete('codes/' + ch.code);
     await s.delete('challenge/' + id);
     const token = rand(32);
+    if (c.kind === 'player') {
+      // wiki / daily rewards: every player may sign in, own cookie, 30 days
+      await s.setJSON('psessions/' + sha(token), { uuid: c.uuid, name: c.name, expires: Date.now() + 30 * 864e5 });
+      return json({ state: 'ok', name: c.name, uuid: c.uuid }, 200,
+        { 'Set-Cookie': `${PCOOKIE}=${token}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax` });
+    }
+    const access = (await s.get('access', { type: 'json' })) || {};
+    if (!access[c.uuid]) return json({ state: 'denied' });
     await s.setJSON('sessions/' + sha(token), { uuid: c.uuid, name: c.name, expires: Date.now() + 7 * 864e5 });
     return json({ state: 'ok', name: c.name }, 200,
       { 'Set-Cookie': `${COOKIE}=${token}; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Strict` });

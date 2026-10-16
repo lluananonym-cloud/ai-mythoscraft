@@ -102,6 +102,9 @@ public final class PublicWikiData {
             b.put(s.id(), boards.getOrDefault(s, List.of()));
         }
         m.put("leaderboards", b);
+        if (plugin.webDaily() != null && plugin.webDaily().enabled()) {
+            m.put("daily", plugin.webDaily().table());
+        }
         return m;
     }
 }

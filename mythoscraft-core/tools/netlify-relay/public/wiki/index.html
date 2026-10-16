@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,8 @@
     <a class="brand" href="#top">✦ <b>Mythos</b>Craft <span>Wiki</span></a>
     <div class="links">
       <a href="#items" data-i18n="nav.items">Items</a>
+      <a href="#crates" data-i18n="nav.crates">Crates</a>
+      <a href="#daily" data-i18n="nav.daily">Daily reward</a>
       <a href="#collections" data-i18n="nav.collections">Kollektionen</a>
       <a href="#calendar" data-i18n="nav.calendar">Kalender</a>
       <a href="#tournaments" data-i18n="nav.tournaments">Turniere</a>
@@ -59,6 +61,37 @@
     </div>
     <div class="chips coll-chips reveal" id="coll-chips"></div>
     <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="crates" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="sim.title">Crate simulator</h2>
+      <p data-i18n="sim.sub">Open every crate as often as you like – same rewards and chances as in game. Just for fun, nothing is given.</p>
+    </div>
+    <div class="chips sim-chips reveal" id="sim-chips"></div>
+    <div class="sim reveal">
+      <div class="sim-head" id="sim-head"></div>
+      <div class="roller" id="roller"><div class="strip" id="strip"></div><div class="marker"></div></div>
+      <div class="sim-actions">
+        <button class="btn-open" id="open1" data-i18n="sim.open">Open</button>
+        <button class="btn-open alt" id="open10" data-i18n="sim.open10">Open 10×</button>
+        <button class="btn-open ghost" id="simreset" data-i18n="sim.reset">Reset</button>
+        <span class="sim-stats" id="sim-stats"></span>
+      </div>
+      <div class="sim-result" id="sim-result"></div>
+      <details class="sim-table">
+        <summary data-i18n="sim.chances">All rewards &amp; chances</summary>
+        <div id="sim-table"></div>
+      </details>
+    </div>
+  </section>
+
+  <section id="daily" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="daily.title">Daily reward</h2>
+      <p data-i18n="daily.sub">Sign in with your Minecraft account and claim a reward every day – it lands in game, even when you are offline. Don't miss a day to keep your streak!</p>
+    </div>
+    <div class="daily reveal" id="daily-box"></div>
   </section>
 
   <section id="collections" class="section">

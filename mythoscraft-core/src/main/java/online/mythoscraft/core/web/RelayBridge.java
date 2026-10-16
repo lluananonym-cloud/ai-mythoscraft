@@ -143,6 +143,18 @@ final class RelayBridge {
             connected = true;
             warned = false;
             JsonObject answer = JsonParser.parseString(resp.body()).getAsJsonObject();
+            if (answer.has("rewards") && answer.get("rewards").isJsonArray()) {
+                // daily rewards claimed on the website
+                for (JsonElement e : answer.getAsJsonArray("rewards")) {
+                    JsonObject rw = e.getAsJsonObject();
+                    try {
+                        plugin.webDaily().claimed(java.util.UUID.fromString(str(rw, "uuid")), str(rw, "name"),
+                                rw.has("streak") ? rw.get("streak").getAsInt() : 1);
+                    } catch (IllegalArgumentException ex) {
+                        plugin.getLogger().warning("Web daily reward skipped: " + ex.getMessage());
+                    }
+                }
+            }
             for (JsonElement e : answer.getAsJsonArray("jobs")) {
                 JsonObject job = e.getAsJsonObject();
                 results.add(handle(job));

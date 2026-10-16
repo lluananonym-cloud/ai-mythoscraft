@@ -218,7 +218,7 @@ commands:
     usage: /verlosung [item [Minuten]|start|stop]
     aliases: [giveaway, gewinnspiel]
   website:
-    description: Admin-Website – Link, Login per Code (/website login <Code>), Zugriff verwalten (nur MinePro641).
+    description: Website – Login per Code (/website login <Code>) für Tagesbelohnungen und Team-Panel, Zugriff verwalten (nur MinePro641).
     usage: /website [login <Code>|allow <Spieler> <view|edit|admin>|deny <Spieler>]
     aliases: [web, panel]
   snowman:

@@ -2514,6 +2514,7 @@ giveaway:
   already: <red>Es läuft schon eine Verlosung.
   bad-reward: '<red>Ungültige Belohnung: {error}'
 web:
+  daily-received: '<gold>🎁 Website-Belohnung (Tag {day}): <green>abgeholt! <gray>Serie: <white>{streak}</white> Tage – morgen wieder auf der Website!'
   login-sent: <green>✔ Code gesendet – die Website meldet dich in 1–2 Sekunden an.
   relay-connected: '<green>✔ Website-Verbindung steht: <white>{url}'
   relay-offline: <red>✖ Keine Verbindung zur Website ({url}). <gray>Stimmt PANEL_SECRET bei Netlify?

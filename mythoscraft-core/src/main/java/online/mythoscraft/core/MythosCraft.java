@@ -163,6 +163,7 @@ public class MythosCraft extends JavaPlugin {
     private online.mythoscraft.core.item.RelicListener relics;
     private online.mythoscraft.core.cosmetic.CompanionService companions;
     private online.mythoscraft.core.cosmetic.CompanionFarmService companionFarms;
+    private online.mythoscraft.core.web.WebDailyRewards webDaily;
 
     public online.mythoscraft.core.cosmetic.CompanionService companions() {
         return companions;
@@ -244,6 +245,7 @@ public class MythosCraft extends JavaPlugin {
             relics = new online.mythoscraft.core.item.RelicListener(this, abilitySupport);
             companions = new online.mythoscraft.core.cosmetic.CompanionService(this);
             companionFarms = new online.mythoscraft.core.cosmetic.CompanionFarmService(this);
+            webDaily = new online.mythoscraft.core.web.WebDailyRewards(this);
             rtp = new RtpService(this, cooldowns);
             vouchers = new RankVouchers(this);
             armorSets = new ArmorSetService(this);
@@ -367,6 +369,7 @@ public class MythosCraft extends JavaPlugin {
         waveEight.reload(root);
         relics.reload(root);
         companionFarms.reload(root);
+        webDaily.reload(root);
         rtp.reload(root);
         armorSets.start();
         seasons.reload(root);
@@ -437,7 +440,7 @@ public class MythosCraft extends JavaPlugin {
                 clans, upgrades, floorGames, boosters, magic, creatures, rankPerks, giveaways,
                 new online.mythoscraft.core.item.HelmetUpgradeListener(this),
                 new online.mythoscraft.core.teleport.SpawnItemListener(this),
-                companions, companionFarms,
+                companions, companionFarms, webDaily,
                 trophies,
                 new online.mythoscraft.core.display.ServerLinksService(this),
                 new online.mythoscraft.core.config.LocaleContextListener(messages)
@@ -631,6 +634,7 @@ public class MythosCraft extends JavaPlugin {
         safe("planets", () -> waveEight.shutdown());
         safe("relic items", () -> relics.shutdown());
         safe("companion farms", () -> companionFarms.shutdown());
+        safe("web daily", () -> webDaily.shutdown());
         safe("companions", () -> companions.shutdown());
         safe("clans", () -> clans.shutdown());
         safe("bets", () -> bets.shutdown());
@@ -859,6 +863,10 @@ public class MythosCraft extends JavaPlugin {
         return intro;
     }
 
+
+    public online.mythoscraft.core.web.WebDailyRewards webDaily() {
+        return webDaily;
+    }
 
     /** Public data for the wiki website (created on first use, refreshes leaderboards every minute). */
     public online.mythoscraft.core.web.PublicWikiData wiki() {

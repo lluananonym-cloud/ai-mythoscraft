@@ -25,6 +25,15 @@ const T = {
     months: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
     weekdays: { MONDAY: 'Montag', TUESDAY: 'Dienstag', WEDNESDAY: 'Mittwoch', THURSDAY: 'Donnerstag', FRIDAY: 'Freitag', SATURDAY: 'Samstag', SUNDAY: 'Sonntag' },
     hours: 'Std.', noData: 'Noch keine Einträge.', ofMonth: '. des Monats',
+    'nav.crates': 'Kisten', 'nav.daily': 'Tagesbelohnung',
+    'sim.title': 'Kisten-Simulator', 'sim.sub': 'Öffne jede Kiste so oft du willst – gleiche Gewinne und Chancen wie im Spiel. Nur zum Spaß, es wird nichts vergeben.',
+    'sim.open': 'Öffnen', 'sim.open10': '10× öffnen', 'sim.reset': 'Zurücksetzen', 'sim.chances': 'Alle Gewinne & Chancen',
+    opened: 'geöffnet', best: 'Bester Fund', won: 'Gewonnen',
+    'daily.title': 'Tagesbelohnung', 'daily.sub': 'Melde dich mit deinem Minecraft-Konto an und hol dir jeden Tag eine Belohnung – sie landet im Spiel, auch wenn du offline bist. Verpasse keinen Tag, sonst startet die Serie neu!',
+    signIn: 'Mit Minecraft anmelden', typeIngame: 'Gib im Spiel ein:', copy: 'Kopieren', waiting: 'warte auf Bestätigung', expired: 'Code abgelaufen – nochmal versuchen.',
+    claim: 'Belohnung abholen', claimed: 'Heute abgeholt ✓', nextIn: 'Nächste in', streak: 'Serie', day: 'Tag', logout: 'Abmelden',
+    delivered: 'Abgeholt! Die Belohnung kommt im Spiel an (beim nächsten Join, falls du offline bist).', relayDown: 'Website gerade nicht erreichbar.',
+    rr: { common: 'Gewöhnlich', uncommon: 'Ungewöhnlich', rare: 'Selten', epic: 'Episch', legendary: 'Legendär', mythic: 'Mythisch' },
   },
   en: {
     'nav.items': 'Items', 'nav.collections': 'Collections', 'nav.calendar': 'Calendar', 'nav.tournaments': 'Tournaments', 'nav.leaderboards': 'Leaderboards',
@@ -47,9 +56,18 @@ const T = {
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     weekdays: { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday', SATURDAY: 'Saturday', SUNDAY: 'Sunday' },
     hours: 'h', noData: 'No entries yet.', ofMonth: ' of the month',
+    'nav.crates': 'Crates', 'nav.daily': 'Daily reward',
+    'sim.title': 'Crate simulator', 'sim.sub': 'Open every crate as often as you like – same rewards and chances as in game. Just for fun, nothing is given.',
+    'sim.open': 'Open', 'sim.open10': 'Open 10×', 'sim.reset': 'Reset', 'sim.chances': 'All rewards & chances',
+    opened: 'opened', best: 'Best drop', won: 'You got',
+    'daily.title': 'Daily reward', 'daily.sub': "Sign in with your Minecraft account and claim a reward every day – it lands in game, even when you are offline. Don't miss a day to keep your streak!",
+    signIn: 'Sign in with Minecraft', typeIngame: 'Type in game:', copy: 'Copy', waiting: 'waiting for confirmation', expired: 'Code expired – try again.',
+    claim: 'Claim reward', claimed: 'Claimed today ✓', nextIn: 'Next in', streak: 'Streak', day: 'Day', logout: 'Sign out',
+    delivered: 'Claimed! The reward arrives in game (on your next join if you are offline).', relayDown: 'Website not reachable right now.',
+    rr: { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' },
   },
 };
-let lang = (localStorage.getItem('wiki.lang') || (navigator.language || 'de')).startsWith('de') ? 'de' : 'en';
+let lang = localStorage.getItem('wiki.lang') === 'de' ? 'de' : 'en';
 const t = (k) => T[lang][k] ?? k;
 const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -520,13 +538,209 @@ async function loadLive() {
   const on = $('#online');
   if (live && !live.offline) { on.classList.remove('off'); on.querySelector('b').textContent = live.online + ' / ' + live.max; }
   else { on.classList.add('off'); on.querySelector('b').textContent = '–'; }
-  renderEvent(); renderTours(); renderBoards(); tickCountdowns();
+  renderEvent(); renderTours(); renderBoards(); tickCountdowns(); renderDaily();
 }
+
+// ------------------------------------------------------------------ crate simulator
+const RAR_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const KIND_ICON = { coins: '🪙', gems: '💎', xp: '✨', key: '🔑', vanilla: '📦', book: '📖', voucher: '🎟️', spawner: '🧱', other: '🎁' };
+const sims = data.crateSim || [];
+let simCrate = sims[0] ? sims[0].id : null;
+const simStats = {};
+let rolling = false;
+function pick(crate) {
+  const total = crate.rewards.reduce((a, r) => a + r.weight, 0);
+  let x = Math.random() * total;
+  for (const r of crate.rewards) { x -= r.weight; if (x < 0) return r; }
+  return crate.rewards[crate.rewards.length - 1];
+}
+function rewardTile(r, cls = 'tile') {
+  const d = el('div', `${cls} rr-${r.rarity}`);
+  const icon = el('div', 'ticon');
+  const it = r.item && byId[r.item];
+  if (it) { const img = el('img'); img.alt = ''; icon.append(img); if (it._thumb) img.src = it._thumb; else thumb(it, img); }
+  else icon.textContent = KIND_ICON[r.kind] || '🎁';
+  d.append(icon, el('div', 'tname', r.text));
+  return d;
+}
+function stats(id) { return (simStats[id] ||= { opened: 0, best: null, counts: {} }); }
+function renderSimStats() {
+  const st = stats(simCrate);
+  $('#sim-stats').innerHTML = `${st.opened} ${t('opened')}${st.best ? ` · ${t('best')}: <b class="rt-${st.best.rarity}">${st.best.text}</b>` : ''}`;
+}
+function renderSim() {
+  const host = $('#sim-chips');
+  if (!host) return;
+  host.innerHTML = '';
+  for (const c of sims) {
+    const b = el('button', 'chip' + (c.id === simCrate ? ' on' : ''), c.name);
+    b.onclick = () => { if (rolling) return; simCrate = c.id; renderSim(); };
+    host.append(b);
+  }
+  const crate = sims.find((c) => c.id === simCrate);
+  if (!crate) return;
+  $('#sim-head').innerHTML = `<h3>${crate.name}</h3><div class="sim-lore">${crate.lore.join('<br>')}</div>`;
+  $('#sim-head').style.setProperty('--crate', crate.color);
+  // idle strip
+  const strip = $('#strip');
+  strip.style.transition = 'none'; strip.style.transform = 'translateX(0)';
+  strip.innerHTML = '';
+  for (let i = 0; i < 14; i++) strip.append(rewardTile(pick(crate)));
+  $('#sim-result').innerHTML = '';
+  // chance table
+  const rows = [...crate.rewards].sort((a, b) => b.chance - a.chance);
+  $('#sim-table').innerHTML = `<div class="ctable">${rows.map((r) => `<div class="crow rr-${r.rarity}"><span class="cic">${r.item && byId[r.item] ? '' : (KIND_ICON[r.kind] || '🎁')}</span><span class="ctext">${r.text}</span><span class="crar">${T[lang].rr[r.rarity] || r.rarity}</span><span class="cch">${r.chance < 0.1 ? r.chance.toFixed(3) : r.chance.toFixed(r.chance < 1 ? 2 : 1)}%</span></div>`).join('')}</div>`;
+  renderSimStats();
+}
+function record(crate, r) {
+  const st = stats(crate.id);
+  st.opened++;
+  if (!st.best || RAR_ORDER.indexOf(r.rarity) > RAR_ORDER.indexOf(st.best.rarity) || (r.rarity === st.best.rarity && r.chance < st.best.chance)) st.best = r;
+}
+function openOne() {
+  const crate = sims.find((c) => c.id === simCrate);
+  if (!crate || rolling) return;
+  rolling = true;
+  const win = pick(crate);
+  const strip = $('#strip');
+  strip.style.transition = 'none'; strip.style.transform = 'translateX(0)';
+  strip.innerHTML = '';
+  const N = 46, W = 46 - 6;          // winner at index W
+  for (let i = 0; i < N; i++) strip.append(rewardTile(i === W ? win : pick(crate)));
+  const tile = strip.children[W];
+  const roller = $('#roller');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const jitter = (Math.random() - 0.5) * tile.offsetWidth * 0.7;
+    const target = tile.offsetLeft + tile.offsetWidth / 2 - roller.clientWidth / 2 + jitter;
+    strip.style.transition = 'transform 5.2s cubic-bezier(.08,.6,.12,1)';
+    strip.style.transform = `translateX(${-target}px)`;
+  }));
+  setTimeout(() => {
+    rolling = false;
+    tile.classList.add('win');
+    record(crate, win);
+    const res = $('#sim-result');
+    res.innerHTML = '';
+    const box = el('div', `won rr-${win.rarity}`);
+    box.append(el('span', 'wl', t('won')), rewardTile(win, 'tile big'), el('span', `wr rt-${win.rarity}`, `${T[lang].rr[win.rarity] || win.rarity} · ${win.chance}%`));
+    res.append(box);
+    renderSimStats();
+  }, 5400);
+}
+function openTen() {
+  const crate = sims.find((c) => c.id === simCrate);
+  if (!crate || rolling) return;
+  const res = $('#sim-result');
+  res.innerHTML = '';
+  const grid = el('div', 'ten');
+  for (let i = 0; i < 10; i++) {
+    const r = pick(crate);
+    record(crate, r);
+    const tl = rewardTile(r);
+    tl.style.animationDelay = i * 70 + 'ms';
+    grid.append(tl);
+  }
+  res.append(grid);
+  renderSimStats();
+}
+$('#open1').onclick = openOne;
+$('#open10').onclick = openTen;
+$('#simreset').onclick = () => { delete simStats[simCrate]; renderSim(); };
+
+// ------------------------------------------------------------------ daily reward (sign in with the Minecraft account)
+const post = (url) => fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'X-Panel': '1', 'Content-Type': 'application/json' }, body: '{}' });
+let me = undefined;          // undefined = loading, null = signed out
+let signing = null;          // { code, left }
+let dailyMsg = '';
+let pollT = null;
+async function loadMe() {
+  try {
+    const r = await fetch('/api/player/me', { credentials: 'same-origin', cache: 'no-store' });
+    me = r.ok ? await r.json() : null;
+  } catch { me = null; }
+  renderDaily();
+}
+async function signIn() {
+  dailyMsg = '';
+  try {
+    const r = await (await post('/api/login/start?kind=player')).json();
+    signing = { code: r.code, left: r.expires };
+    renderDaily();
+    clearInterval(pollT);
+    pollT = setInterval(async () => {
+      signing.left -= 2;
+      const p = await fetch('/api/login/poll?id=' + encodeURIComponent(r.id), { credentials: 'same-origin' }).then((x) => x.json()).catch(() => ({}));
+      if (p.state === 'ok') { clearInterval(pollT); signing = null; loadMe(); }
+      else if (p.state === 'expired' || signing.left <= 0) { clearInterval(pollT); signing = null; dailyMsg = t('expired'); renderDaily(); }
+      else renderDaily();
+    }, 2000);
+  } catch { dailyMsg = t('relayDown'); renderDaily(); }
+}
+async function claim() {
+  try {
+    const r = await post('/api/player/claim');
+    const j = await r.json();
+    if (j.daily) me.daily = j.daily;
+    dailyMsg = r.ok ? t('delivered') : '';
+  } catch { dailyMsg = t('relayDown'); }
+  renderDaily();
+  if (dailyMsg === t('delivered')) burst();
+}
+function burst() {
+  const box = $('#daily-box');
+  for (let i = 0; i < 26; i++) {
+    const s = el('i', 'confetti');
+    s.style.left = 50 + (Math.random() - 0.5) * 30 + '%';
+    s.style.setProperty('--dx', (Math.random() - 0.5) * 420 + 'px');
+    s.style.setProperty('--dy', -120 - Math.random() * 220 + 'px');
+    s.style.background = ['#f6c23c', '#b25cf0', '#22d3ee', '#5ef0a0', '#ff6ad5'][i % 5];
+    box.append(s);
+    setTimeout(() => s.remove(), 1400);
+  }
+}
+function renderDaily() {
+  const box = $('#daily-box');
+  if (!box) return;
+  const table = (live && live.daily) || [];
+  if (me === undefined) { box.innerHTML = '<p class="muted">…</p>'; return; }
+  if (!me) {
+    box.innerHTML = signing
+      ? `<div class="signin"><p>${t('typeIngame')}</p><div class="codebox"><span>/website login </span><b>${signing.code}</b></div>
+         <button class="btn-open ghost" id="cp">${t('copy')}</button><p class="muted">${t('waiting')} … ${Math.max(0, signing.left)}s</p></div>`
+      : `<div class="signin"><button class="btn-open" id="si">⛏ ${t('signIn')}</button>${dailyMsg ? `<p class="muted">${dailyMsg}</p>` : ''}</div>`
+        + (table.length ? `<div class="ddays">${table.map((row) => `<div class="dday"><b>${t('day')} ${row.day}</b><span>${row.rewards.join('<br>')}</span></div>`).join('')}</div>` : '');
+    const si = $('#si'); if (si) si.onclick = signIn;
+    const cp = $('#cp'); if (cp) cp.onclick = () => navigator.clipboard.writeText('/website login ' + signing.code).catch(() => {});
+  } else {
+    const d = me.daily || {};
+    const cur = d.canClaim ? d.nextStreak : d.streak;
+    const len = table.length || 7;
+    const pos = ((Math.max(1, cur) - 1) % len) + 1;
+    const days = Array.from({ length: len }, (_, i) => {
+      const row = table[i];
+      const done = d.canClaim ? i + 1 < pos : i + 1 <= pos;
+      const now = d.canClaim && i + 1 === pos;
+      return `<div class="dday${done ? ' done' : ''}${now ? ' now' : ''}"><b>${t('day')} ${i + 1}</b><span>${row ? row.rewards.join('<br>') : '🎁'}</span></div>`;
+    }).join('');
+    box.innerHTML = `<div class="dme"><img alt="" src="https://mc-heads.net/avatar/${encodeURIComponent(me.uuid)}/48"><div><b></b><small>${t('streak')}: ${d.streak || 0} 🔥</small></div>
+      <button class="btn-open ghost small" id="lo">${t('logout')}</button></div>
+      <div class="ddays">${days}</div>
+      <div class="dclaim">${d.canClaim ? `<button class="btn-open big" id="cl">🎁 ${t('claim')}</button>`
+        : `<button class="btn-open big" disabled>${t('claimed')}</button><span class="muted">${t('nextIn')} <b class="count" data-at="${Date.now() + (d.resetIn || 0)}"></b></span>`}</div>
+      ${dailyMsg ? `<p class="muted">${dailyMsg}</p>` : ''}`;
+    box.querySelector('.dme b').textContent = me.name;
+    const cl = $('#cl'); if (cl) cl.onclick = claim;
+    $('#lo').onclick = async () => { await post('/api/player/logout'); me = null; renderDaily(); };
+    tickCountdowns();
+  }
+}
+loadMe();
 
 // ------------------------------------------------------------------ scroll reveal & init
 const revealObs = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); } }), { threshold: 0.12 });
 function renderAll() {
   applyI18n(); renderFilters(); renderGrid(); renderCollections(); renderCalendar(); renderEvent(); renderTours(); renderBoards(); tickCountdowns();
+  renderSim(); renderDaily();
   document.querySelectorAll('.reveal').forEach((e) => revealObs.observe(e));
 }
 $('#lang').onclick = () => { lang = lang === 'de' ? 'en' : 'de'; localStorage.setItem('wiki.lang', lang); renderAll(); };

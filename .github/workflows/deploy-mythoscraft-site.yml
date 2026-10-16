@@ -1,0 +1,40 @@
+name: Deploy MythosCraft website (Netlify)
+
+# Deploys mythoscraft-core/tools/netlify-relay (wiki, crate simulator, daily rewards, team panel + relay function)
+# to the Netlify site on every push that changes it. Needs two repository secrets (Settings → Secrets → Actions):
+#   NETLIFY_AUTH_TOKEN  – Netlify: User settings → Applications → Personal access tokens
+#   NETLIFY_SITE_ID     – Netlify: Site configuration → Site details → Site ID
+on:
+  push:
+    branches: [neu-rmfujn, main]
+    paths:
+      - 'mythoscraft-core/tools/netlify-relay/**'
+      - '.github/workflows/deploy-mythoscraft-site.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install function dependencies
+        working-directory: mythoscraft-core/tools/netlify-relay
+        run: npm ci
+
+      - name: Deploy to Netlify (production)
+        working-directory: mythoscraft-core/tools/netlify-relay
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo "::warning::NETLIFY_AUTH_TOKEN / NETLIFY_SITE_ID secrets missing – skipping deploy"
+            exit 0
+          fi
+          npx --yes netlify-cli@17.38.1 deploy --prod --dir=public --functions=functions \
+            --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" --message="${GITHUB_SHA::7} ${GITHUB_REF_NAME}"

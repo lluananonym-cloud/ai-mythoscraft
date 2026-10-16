@@ -1626,6 +1626,19 @@ crate-carousel:
       relic2: 0.03
       relic1: 0.06
 
+# Tägliche Belohnung auf der Website: mit dem Minecraft-Konto anmelden (/website login <Code>) und 1× am Tag abholen.
+# Die Serie zählt Tag 1 … 7 (danach wieder Tag 1, wer einen Tag auslässt, fängt neu an). Mehrere Belohnungen mit ";" trennen.
+web-daily:
+  enabled: true
+  days:
+    - "coins 500"
+    - "coins 1000"
+    - "key common 1"
+    - "coins 2000; xp 300"
+    - "gems 2"
+    - "key vip 1; coins 1500"
+    - "gems 5; key elite 1"
+
 # Farm-Begleiter: Schleichen + Rechtsklick mit einem Begleiter auf den Boden → er farmt dort (Menü: Dauer & Radius)
 # Biene = Felder, Pinguin = Angeln, Schneemann = Bäume, Geist = Zuckerrohr/Kaktus/Melonen, Drache = Erze, Schattenwürfel = Monster
 companion-farm:

@@ -3665,6 +3665,7 @@ web:
   denied: <gray>{player} no longer has website access.
   not-allowed: <gray>{player} didn't have website access.
   owner-only: <red>Only MinePro641 can manage website access.
+  daily-received: '<gold>🎁 Website reward (day {day}): <green>claimed! <gray>Streak: <white>{streak}</white> days – come back tomorrow!'
   login-sent: <green>✔ Code sent – the website signs you in within 1–2 seconds.
   relay-connected: '<green>✔ Website connection is up: <white>{url}'
   relay-offline: <red>✖ No connection to the website ({url}). <gray>Does PANEL_SECRET at Netlify match?
