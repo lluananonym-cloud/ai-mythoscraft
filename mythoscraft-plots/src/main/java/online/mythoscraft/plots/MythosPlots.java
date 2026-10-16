@@ -45,6 +45,10 @@ public final class MythosPlots extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // settings added in newer versions are written into the existing config.yml (otherwise e.g. the
+        // address of the survival server would be missing and the sync could not connect)
+        getConfig().options().copyDefaults(true);
+        saveConfig();
         // config of an older version: survival + same inventory as on MythosCraft from now on
         if (getConfig().getInt("config-version", 1) < 2) {
             getConfig().set("world.gamemode", "SURVIVAL");

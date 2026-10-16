@@ -122,6 +122,9 @@ final class SyncClient implements Listener {
     }
 
     private CompletableFuture<JsonObject> post(String path, JsonObject body, List<String> bases, int i) {
+        if (bases.isEmpty()) {
+            lastStatus = "no address of the survival server – set main-server.api-url in config.yml";
+        }
         if (i >= bases.size()) {
             return CompletableFuture.failedFuture(new IllegalStateException("main server not reachable – " + lastStatus));
         }
