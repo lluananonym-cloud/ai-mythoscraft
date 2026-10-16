@@ -59,6 +59,7 @@ public class PackGenerator {
         waveSixHats();
         armor();
         crates();
+        relicPlaceholders();
         itemDefinitions();
         hdOverlay();
         System.out.println("Resource pack generated in " + out.toAbsolutePath());
@@ -1294,7 +1295,12 @@ public class PackGenerator {
             new CrateTheme("begleiter", 0xfde68a, 0xf9a8d4, 0xf472b6, 0x9d174d, 0xffffff, 0xfbcfe8, true, 0xfff1f2),
             new CrateTheme("space", 0x1e1b4b, 0x0f172a, 0x94a3b8, 0x334155, 0x818cf8, 0x6366f1, true, 0xe0e7ff),
             new CrateTheme("spawner", 0x1f2937, 0x111827, 0x4b5563, 0x1f2937, 0xa3e635, 0x7c3aed, true, 0xa3e635),
-            new CrateTheme("silvester", 0x1e1b4b, 0x0f172a, 0xfde047, 0xb45309, 0xa855f7, 0xfde047, true, 0xfef3c7)
+            new CrateTheme("silvester", 0x1e1b4b, 0x0f172a, 0xfde047, 0xb45309, 0xa855f7, 0xfde047, true, 0xfef3c7),
+            // relic crates V1–V4 (bronze, silver, arcane, ruby-gold)
+            new CrateTheme("relic1", 0x6b4a2b, 0x4a321c, 0xc8743c, 0x7a3f12, 0xf6c58a, 0xd6a35c, true, 0xf59e0b),
+            new CrateTheme("relic2", 0x475569, 0x334155, 0xe2e8f0, 0x64748b, 0xffffff, 0xcbd5e1, true, 0xf8fafc),
+            new CrateTheme("relic3", 0x1e1b4b, 0x13112e, 0x22d3ee, 0x0e7490, 0xa855f7, 0x7c3aed, true, 0x67e8f9),
+            new CrateTheme("relic4", 0x3f0d12, 0x24070a, 0xfde047, 0xb45309, 0xf43f5e, 0xf59e0b, true, 0xfde68a)
     };
 
     /** Atlas regions in pixels (128x128 texture, 8 px per uv unit, 2 px per model unit). */
@@ -1496,14 +1502,16 @@ public class PackGenerator {
 
     static void itemDefinitions() throws IOException {
         Map<String, List<String>> plain = new LinkedHashMap<>();
-        plain.put("netherite_pickaxe", List.of("mythos_hammer", "smelter_pickaxe", "ore_pickaxe", "crystal_pickaxe", "spawner_pickaxe", "newyear_pickaxe"));
+        plain.put("netherite_pickaxe", List.of("mythos_hammer", "smelter_pickaxe", "ore_pickaxe", "crystal_pickaxe", "spawner_pickaxe", "newyear_pickaxe",
+                "vein_pickaxe", "power_drill", "zap_pickaxe"));
         plain.put("netherite_shovel", List.of("excavator"));
-        plain.put("netherite_axe", List.of("timber_axe", "inferno_axe", "thunder_hammer", "chainsaw", "newyear_axe"));
+        plain.put("netherite_axe", List.of("timber_axe", "inferno_axe", "thunder_hammer", "chainsaw", "newyear_axe", "mega_chainsaw"));
         plain.put("netherite_sword", List.of("warden_blade", "bat_blade", "frost_blade", "candy_cane", "star_saber", "wind_blade",
-                "dragon_blade", "carrot_blade", "coral_blade", "cloud_sword", "khopesh", "nutcracker_sword", "newyear_sword"));
+                "dragon_blade", "carrot_blade", "coral_blade", "cloud_sword", "khopesh", "nutcracker_sword", "newyear_sword",
+                "soul_sword", "zap_sword"));
         plain.put("netherite_hoe", List.of("pumpkin_scythe", "harvest_sickle", "newyear_hoe"));
         plain.put("blaze_rod", List.of("mythos_wand", "meteor_staff", "region_wand", "witch_broom", "ice_wand", "void_scepter", "ember_wand",
-                "dragon_staff", "builder_wand", "blossom_wand", "witch_broom_ride", "light_staff", "firework_wand", "tide_staff", "druid_staff", "crystal_wand", "pharaoh_staff", "laser_gun"));
+                "dragon_staff", "builder_wand", "blossom_wand", "sort_wand", "witch_broom_ride", "light_staff", "firework_wand", "tide_staff", "druid_staff", "crystal_wand", "pharaoh_staff", "laser_gun"));
         plain.put("paper", List.of("mythos_backpack", "healing_totem", "magnet_charm", "miner_lantern", "xp_tome", "return_feather",
                 "lucky_clover", "coin_booster", "gem_booster", "xp_booster", "find_booster", "mutation_serum", "meteor_shower", "spell_scroll", "mana_elixir", "haste_rune", "ghost_lantern", "candy_bucket", "snow_cannon", "gift_box", "phoenix_feather",
                 "nebula_orb", "trophy_daily", "trophy_weekly", "trophy_monthly", "watering_can", "seed_bag", "compost_charm",
@@ -1519,7 +1527,10 @@ public class PackGenerator {
                 "bunny_ears", "heart_glasses", "sun_hat", "leaf_crown", "new_year_glasses", "star_halo", "top_hat", "cat_ears",
                 "rocket_booster", "mars_orb", "moon_orb", "saturn_orb", "earth_orb", "star_dust", "snow_globe", "present_launcher",
                 "mistletoe", "reindeer_bell", "newyear_trowel", "fortune_charm", "lucky_rocket",
-                "companion_snowman", "companion_penguin", "companion_ghost", "companion_dragon", "companion_bee"));
+                "companion_snowman", "companion_penguin", "companion_ghost", "companion_dragon", "companion_bee", "companion_shadow",
+                "spawner_booster", "repair_charm", "paint_brush", "concrete_mixer", "dwarf_hat", "growth_totem", "blossom_crown", "bark_hand"));
+        plain.put("water_bucket", List.of("infinite_bucket"));
+        plain.put("totem_of_undying", List.of("minepro_totem"));
         plain.put("elytra", List.of("loan_elytra"));
         plain.put("snowball", List.of("pumpkin_bomb", "frost_bomb", "kraken_ink", "acorn_bomb", "thunder_bottle", "shard_bomb", "sand_bomb", "ornament_bomb"));
         plain.put("cookie", List.of("candy_corn", "lollipop", "fortune_cookie", "sushi", "berry_pie", "sky_cookie", "gingerbread"));
@@ -1564,7 +1575,7 @@ public class PackGenerator {
         }
         definition("bow", bows);
         Map<String, String> rods = new LinkedHashMap<>();
-        for (String id : new String[]{"grappling_hook", "lucky_rod", "newyear_rod"}) {
+        for (String id : new String[]{"grappling_hook", "lucky_rod", "newyear_rod", "zap_rod"}) {
             rods.put(id, vanillaModel("fishing_rod").replace("minecraft:item/fishing_rod", "mythoscraft:item/" + id));
         }
         definition("fishing_rod", rods);
@@ -2374,7 +2385,7 @@ public class PackGenerator {
     static boolean animatedCrate(CrateTheme t) {
         return switch (t.id) {
             case "halloween", "frostfest", "celestial", "inferno", "storm", "dragon", "rang", "ocean", "forest", "sky", "crystal", "millennium", "cosmetic", "begleiter", "space",
-                    "spawner", "silvester" -> true;
+                    "spawner", "silvester", "relic1", "relic2", "relic3", "relic4" -> true;
             default -> false;
         };
     }
@@ -3649,6 +3660,23 @@ public class PackGenerator {
             }
             sparkle(img, 25, 6, rgb(0xffffff));
         });
+    }
+
+    /**
+     * Relic crate items, spawner booster and shadow companion only exist as HD models (tools/hd/relics.py). Without
+     * the HD overlay they fall back to a plain sprite of their base item, so the pack is always complete.
+     */
+    static void relicPlaceholders() throws IOException {
+        String[][] items = {{"sort_wand", "blaze_rod"}, {"infinite_bucket", "water_bucket"}, {"vein_pickaxe", "netherite_pickaxe"},
+                {"repair_charm", "iron_ingot"}, {"paint_brush", "brush"}, {"concrete_mixer", "cauldron"}, {"soul_sword", "netherite_sword"},
+                {"dwarf_hat", "red_dye"}, {"growth_totem", "totem_of_undying"}, {"power_drill", "netherite_pickaxe"},
+                {"mega_chainsaw", "netherite_axe"}, {"minepro_totem", "totem_of_undying"}, {"blossom_crown", "pink_petals"},
+                {"bark_hand", "stick"}, {"zap_pickaxe", "netherite_pickaxe"}, {"zap_sword", "netherite_sword"},
+                {"zap_rod", "fishing_rod"}, {"zap_rod_cast", "fishing_rod_cast"}, {"spawner_booster", "trial_key"},
+                {"companion_shadow", "black_dye"}};
+        for (String[] it : items) {
+            spriteModel(it[0], "minecraft:item/" + it[1]);
+        }
     }
 
     /** HD models made with tools/hd (python tools/hd/build.py) are copied over the generated ones. */

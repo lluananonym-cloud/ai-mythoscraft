@@ -110,6 +110,13 @@ public final class CrateSub implements SubCommand {
                 plugin.messages().broadcast("crates.keyall", "amount", amount, "key", Text.parse(type.keyName()),
                         "player", sender.getName());
             }
+            case "relic" -> {
+                // lets a relic crate appear on its pedestal right now (testing / events)
+                CrateType type = type(args, 1);
+                if (!plugin.crateCarousel().spawnRelic(type.id())) {
+                    throw new CommandFail("crates.relic.not-possible");
+                }
+            }
             default -> plugin.messages().sendRaw(sender, "help.crate");
         }
     }
@@ -156,12 +163,13 @@ public final class CrateSub implements SubCommand {
         List<String> types = new ArrayList<>();
         plugin.crates().types().forEach(t -> types.add(t.id()));
         if (args.length == 1) {
-            return List.of("place", "remove", "list", "types", "key", "keyall");
+            return List.of("place", "remove", "list", "types", "key", "keyall", "relic");
         }
         String action = args[0].toLowerCase();
         if (args.length == 2) {
             return switch (action) {
                 case "place", "keyall" -> types;
+                case "relic" -> types.stream().filter(plugin.crateCarousel()::isRelic).toList();
                 case "key" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
                 default -> List.of();
             };

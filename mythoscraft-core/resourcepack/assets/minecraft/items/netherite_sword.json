@@ -14,9 +14,11 @@
       {"when": "khopesh", "model": {"type": "minecraft:model", "model": "mythoscraft:item/khopesh"}},
       {"when": "newyear_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_sword"}},
       {"when": "nutcracker_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/nutcracker_sword"}},
+      {"when": "soul_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/soul_sword"}},
       {"when": "star_saber", "model": {"type": "minecraft:model", "model": "mythoscraft:item/star_saber"}},
       {"when": "warden_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/warden_blade"}},
-      {"when": "wind_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/wind_blade"}}
+      {"when": "wind_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/wind_blade"}},
+      {"when": "zap_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/zap_sword"}}
     ],
     "fallback": {
     "type": "minecraft:model",

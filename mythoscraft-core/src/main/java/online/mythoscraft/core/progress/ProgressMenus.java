@@ -33,7 +33,7 @@ public final class ProgressMenus {
             for (int i = 0; i < 36; i++) {
                 getInventory().setItem(i, MenuItems.filler());
             }
-            int[] slots = {10, 12, 14, 16, 20, 24};
+            int[] slots = {11, 12, 13, 14, 15, 20, 21, 22, 23, 24};
             Job[] jobs = Job.values();
             for (int i = 0; i < jobs.length; i++) {
                 Job job = jobs[i];

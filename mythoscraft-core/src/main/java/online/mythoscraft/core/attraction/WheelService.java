@@ -32,18 +32,24 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Wheel of fortune: twelve coloured segments (item displays) on a vertical circle. Right-click spins (once a day free,
- * afterwards for coins), left-click lists the prizes. The prize is picked by weight first, the wheel then eases out
- * exactly onto that segment.
+ * Wheel of fortune: coloured segments (item displays) on a vertical circle. Right-click spins (the main wheel once a
+ * day free, afterwards for coins), left-click lists the prizes. The prize is picked by weight first, the wheel then
+ * eases out exactly onto that segment. The spawn has two of them: "wheel" (coins, daily free spin) and "wheel2", the
+ * bigger Mythos wheel (gems, better prizes) – each with its own anchor, config section and prize table.
  */
 public final class WheelService {
 
     static final String TAG = "wheel";
+    static final String TAG2 = "wheel2";
 
     record Segment(Reward reward, double weight, Material block) {
     }
 
     private final MythosCraft plugin;
+    /** "wheel" or "wheel2": anchor marker, config section (attractions.&lt;id&gt;), entity tag and progress keys */
+    private final String id;
+    private boolean freeDaily = true;
+    private float scale = 1.2f;
     private final List<Segment> segments = new ArrayList<>();
     private final List<ItemDisplay> parts = new ArrayList<>();
     private final List<Entity> spawned = new ArrayList<>();
@@ -56,12 +62,19 @@ public final class WheelService {
     private Currency currency = Currency.COINS;
     private double radius = 3.4;
 
-    public WheelService(MythosCraft plugin) {
+    public WheelService(MythosCraft plugin, String id) {
         this.plugin = plugin;
+        this.id = id;
+    }
+
+    public String id() {
+        return id;
     }
 
     public void reload(ConfigReader root) {
-        ConfigReader cfg = root.sub("attractions.wheel");
+        ConfigReader cfg = root.sub("attractions." + id);
+        freeDaily = cfg.bool("free-daily", id.equals(TAG));
+        scale = (float) cfg.decimal("segment-size", 1.25, 0.6, 2.5);
         price = cfg.longValue("price", 2500, 0, 1_000_000_000);
         Currency c = Currency.byId(cfg.string("currency", "coins"));
         currency = c == null ? Currency.COINS : c;
@@ -90,7 +103,7 @@ public final class WheelService {
 
     public void rebuild() {
         clear();
-        center = plugin.attractionStore().first("wheel");
+        center = plugin.attractionStore().first(id);
         if (center != null) {
             center = center.clone();
             center.setPitch(0);
@@ -99,17 +112,17 @@ public final class WheelService {
             return;
         }
         // enough room for every field (about 1.5 blocks per field on the rim)
-        radius = Math.max(radius, segments.size() * 1.5 / (2 * Math.PI));
+        radius = Math.max(radius, segments.size() * (scale + 0.55) / (2 * Math.PI));
         for (Segment s : segments) {
             ItemDisplay d = center.getWorld().spawn(center, ItemDisplay.class, e -> {
                 e.setPersistent(false);
                 e.setItemStack(new ItemStack(s.block()));
                 e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
-                e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.95f, 0.95f, 0.35f), new AxisAngle4f()));
+                e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(scale, scale, 0.35f), new AxisAngle4f()));
                 e.setTeleportDuration(2);
                 e.setBrightness(new Display.Brightness(15, 15));
                 e.setRotation(center.getYaw(), 0);
-                e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+                e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
             });
             parts.add(d);
             spawned.add(d);
@@ -117,10 +130,10 @@ public final class WheelService {
         spawned.add(center.getWorld().spawn(center, ItemDisplay.class, e -> {
             e.setPersistent(false);
             e.setItemStack(new ItemStack(Material.GOLD_BLOCK));
-            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.3f, 1.3f, 0.5f), new AxisAngle4f()));
+            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.3f * scale, 1.3f * scale, 0.5f), new AxisAngle4f()));
             e.setRotation(center.getYaw(), 0);
             e.setBrightness(new Display.Brightness(15, 15));
-            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         }));
         Location face = center.clone().add(new Vector(-Math.sin(Math.toRadians(center.getYaw())), 0, Math.cos(Math.toRadians(center.getYaw())))
                 .multiply(0.32));
@@ -128,36 +141,36 @@ public final class WheelService {
             e.setPersistent(false);
             e.setItemStack(new online.mythoscraft.core.util.ItemBuilder(Material.PAPER).model("wheel_hub").build());
             e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.8f, 1.8f, 1.8f), new AxisAngle4f()));
+            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.8f * scale, 1.8f * scale, 1.8f * scale), new AxisAngle4f()));
             e.setRotation(center.getYaw() + 180, 0);
             e.setBrightness(new Display.Brightness(15, 15));
-            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         }));
-        Location pointer = center.clone().add(0, radius + 1.0, 0);
+        Location pointer = center.clone().add(0, radius + 0.6 + scale * 0.5, 0);
         spawned.add(center.getWorld().spawn(pointer, ItemDisplay.class, e -> {
             e.setPersistent(false);
             e.setItemStack(new online.mythoscraft.core.util.ItemBuilder(Material.PAPER).model("wheel_pointer").build());
             e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.6f, 1.6f, 1.6f), new AxisAngle4f()));
+            e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.6f * scale, 1.6f * scale, 1.6f * scale), new AxisAngle4f()));
             e.setRotation(center.getYaw(), 0);
             e.setBrightness(new Display.Brightness(15, 15));
-            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+            e.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         }));
-        spawned.add(center.getWorld().spawn(center.clone().add(0, radius + 2.6, 0), TextDisplay.class, t -> {
+        spawned.add(center.getWorld().spawn(center.clone().add(0, radius + 2.2 + scale, 0), TextDisplay.class, t -> {
             t.setPersistent(false);
             t.setBillboard(Display.Billboard.CENTER);
             t.setShadowed(true);
             t.setBackgroundColor(Color.fromARGB(0x70, 0x1b, 0x10, 0x22));
-            t.text(plugin.messages().get("attractions.wheel.hologram", "price", price,
+            t.text(plugin.messages().get("attractions." + id + ".hologram", "price", price,
                     "currency", plugin.messages().get("economy.names." + currency.id())));
-            t.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+            t.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         }));
         Interaction hit = center.getWorld().spawn(center.clone().add(0, -radius - 0.6, 0), Interaction.class, i -> {
             i.setPersistent(false);
             i.setInteractionWidth((float) (radius * 2 + 1));
             i.setInteractionHeight((float) (radius * 2 + 1.2));
             i.setResponsive(true);
-            i.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, TAG);
+            i.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         });
         spawned.add(hit);
         layout();
@@ -182,11 +195,11 @@ public final class WheelService {
     }
 
     public boolean isPart(Entity e) {
-        return TAG.equals(e.getPersistentDataContainer().get(Keys.ENTITY, PersistentDataType.STRING));
+        return id.equals(e.getPersistentDataContainer().get(Keys.ENTITY, PersistentDataType.STRING));
     }
 
     public void showPrizes(Player p) {
-        plugin.messages().send(p, "attractions.wheel.prizes-header");
+        plugin.messages().send(p, "attractions." + id + ".prizes-header");
         WeightedRandom<Segment> table = new WeightedRandom<>(segments, Segment::weight);
         for (int i = 0; i < segments.size(); i++) {
             plugin.messages().sendRaw(p, "attractions.wheel.prize-line", "reward", segments.get(i).reward().describe(plugin, 1.0),
@@ -203,19 +216,20 @@ public final class WheelService {
             return;
         }
         long today = plugin.multipliers().today().toEpochDay();
-        long usedToday = plugin.progress().get(p, "wheel.day") == today ? Math.max(1, plugin.progress().get(p, "wheel.free-used")) : 0;
-        if (plugin.progress().get(p, "wheel.day") == today && plugin.progress().get(p, "wheel.free-used") == 0) {
+        long usedToday = plugin.progress().get(p, id + ".day") == today ? Math.max(1, plugin.progress().get(p, id + ".free-used")) : 0;
+        if (plugin.progress().get(p, id + ".day") == today && plugin.progress().get(p, id + ".free-used") == 0) {
             usedToday = 1; // spun before the extra rank spins existed
         }
-        boolean free = usedToday < 1 + plugin.rankPerks().extraSpins(p);
+        boolean free = freeDaily && usedToday < 1 + plugin.rankPerks().extraSpins(p);
         if (!free && !plugin.attractions().charge(p, currency, price)) {
             return;
         }
         if (free) {
-            plugin.progress().set(p, "wheel.day", today);
-            plugin.progress().set(p, "wheel.free-used", usedToday + 1);
+            plugin.progress().set(p, id + ".day", today);
+            plugin.progress().set(p, id + ".free-used", usedToday + 1);
         }
-        plugin.progress().add(p, "wheel.spins", 1);
+        plugin.progress().add(p, id + ".spins", 1);
+        plugin.jobs().gamble(p, free ? 0 : price, currency);
         int n = segments.size();
         int win = pickIndex();
         // segment i sits at angle + i*step; it must end at the top (90°)

@@ -10,7 +10,7 @@
 # model/key-model = Modell-ID im Resource Pack (Standard: crate_<id> / key_<id>)
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 16
+config-version: 17
 
 # Hologramm über jeder Kiste
 hologram:
@@ -826,6 +826,7 @@ crates:
     - {reward: "tool companion_snowman", weight: 18, rarity: EPIC}
     - {reward: "tool companion_ghost", weight: 14, rarity: EPIC}
     - {reward: "tool companion_dragon", weight: 6, rarity: LEGENDARY}
+    - {reward: "tool companion_shadow", weight: 5, rarity: LEGENDARY}
     - {reward: "coins 1500", weight: 14, rarity: COMMON}
     - {reward: "gems 3", weight: 8, rarity: COMMON}
   space:
@@ -948,6 +949,12 @@ crates:
     - reward: spawner BREEZE
       weight: 0.6
       rarity: LEGENDARY
+    - reward: tool spawner_booster
+      weight: 7
+      rarity: EPIC
+    - reward: tool spawner_booster 3
+      weight: 1.5
+      rarity: LEGENDARY
     - reward: tool spawner_pickaxe
       weight: 0.4
       rarity: MYTHIC
@@ -999,3 +1006,82 @@ crates:
     - reward: gems 30
       weight: 1
       rarity: MYTHIC
+  # ───────────── Relikt-Kisten: erscheinen nur selten auf ihrem eigenen Sockel am Spawn (bei jedem Kistenwechsel) ─────────────
+  relic1:
+    name: <gradient:#d6a35c:#f59e0b><bold>Relikt-Kiste V1</bold></gradient>
+    key-name: <gradient:#d6a35c:#f59e0b><bold>Relikt-Schlüssel V1</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <gold>Relikt-Kiste V1</gold>.
+    - <dark_gray>Erscheint nur selten auf dem Relikt-Sockel am Spawn
+    - <dark_gray>Nützliche Werkzeuge, Coins und Gems
+    color: '#D6A35C'
+    broadcast-from: EPIC
+    rotation-size: 0
+    rewards:
+    - {reward: "tool sort_wand", weight: 18, rarity: EPIC}
+    - {reward: "tool infinite_bucket", weight: 18, rarity: EPIC}
+    - {reward: "tool magnet_charm", weight: 12, rarity: RARE}
+    - {reward: "tool return_feather 4", weight: 12, rarity: RARE}
+    - {reward: "coins 4000", weight: 22, rarity: COMMON}
+    - {reward: "gems 6", weight: 14, rarity: RARE}
+    - {reward: "key elite 2", weight: 10, rarity: RARE}
+    - {reward: "key relic2 1", weight: 2, rarity: LEGENDARY}
+  relic2:
+    name: <gradient:#94a3b8:#e2e8f0><bold>Relikt-Kiste V2</bold></gradient>
+    key-name: <gradient:#94a3b8:#e2e8f0><bold>Relikt-Schlüssel V2</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <white>Relikt-Kiste V2</white>.
+    - <dark_gray>Erscheint nur selten auf dem Relikt-Sockel am Spawn
+    - <dark_gray>Starke Werkzeuge, mehr Coins und Gems
+    color: '#CBD5E1'
+    broadcast-from: EPIC
+    rotation-size: 0
+    rewards:
+    - {reward: "tool vein_pickaxe", weight: 16, rarity: EPIC}
+    - {reward: "tool repair_charm", weight: 16, rarity: EPIC}
+    - {reward: "tool sort_wand", weight: 8, rarity: RARE}
+    - {reward: "tool infinite_bucket", weight: 8, rarity: RARE}
+    - {reward: "coins 10000", weight: 22, rarity: COMMON}
+    - {reward: "gems 12", weight: 16, rarity: RARE}
+    - {reward: "key mythos 1", weight: 8, rarity: RARE}
+    - {reward: "key relic3 1", weight: 2, rarity: LEGENDARY}
+  relic3:
+    name: <gradient:#22d3ee:#a855f7><bold>Relikt-Kiste V3</bold></gradient>
+    key-name: <gradient:#22d3ee:#a855f7><bold>Relikt-Schlüssel V3</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <aqua>Relikt-Kiste V3</aqua>.
+    - <dark_gray>Erscheint sehr selten auf dem Relikt-Sockel am Spawn
+    - <dark_gray>Pinsel, Betonmischer, Seelenschwert & mehr
+    color: '#7C3AED'
+    broadcast-from: EPIC
+    rotation-size: 0
+    rewards:
+    - {reward: "tool paint_brush", weight: 14, rarity: EPIC}
+    - {reward: "tool concrete_mixer", weight: 14, rarity: EPIC}
+    - {reward: "tool dwarf_hat", weight: 12, rarity: EPIC}
+    - {reward: "tool growth_totem", weight: 12, rarity: EPIC}
+    - {reward: "tool soul_sword", weight: 7, rarity: LEGENDARY}
+    - {reward: "coins 25000", weight: 18, rarity: RARE}
+    - {reward: "gems 25", weight: 14, rarity: RARE}
+    - {reward: "key relic4 1", weight: 1.5, rarity: MYTHIC}
+  relic4:
+    name: <gradient:#f43f5e:#f59e0b:#fde047><bold>Relikt-Kiste V4</bold></gradient>
+    key-name: <gradient:#f43f5e:#f59e0b:#fde047><bold>Relikt-Schlüssel V4</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <red>Relikt-Kiste V4</red>.
+    - <dark_gray>Die seltenste Kiste am Spawn
+    - <dark_gray>Bohrer, Kettensäge, Blitz-Werkzeuge & MinePro641-Totem
+    color: '#F43F5E'
+    broadcast-from: LEGENDARY
+    rotation-size: 0
+    rewards:
+    - {reward: "tool power_drill", weight: 10, rarity: LEGENDARY}
+    - {reward: "tool mega_chainsaw", weight: 10, rarity: LEGENDARY}
+    - {reward: "tool bark_hand", weight: 10, rarity: LEGENDARY}
+    - {reward: "tool blossom_crown", weight: 9, rarity: LEGENDARY}
+    - {reward: "tool zap_pickaxe", weight: 7, rarity: MYTHIC}
+    - {reward: "tool zap_sword", weight: 7, rarity: MYTHIC}
+    - {reward: "tool zap_rod", weight: 7, rarity: MYTHIC}
+    - {reward: "tool minepro_totem", weight: 3, rarity: MYTHIC}
+    - {reward: "coins 60000", weight: 18, rarity: RARE}
+    - {reward: "gems 60", weight: 14, rarity: EPIC}

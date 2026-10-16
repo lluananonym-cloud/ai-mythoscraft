@@ -2,3 +2,5 @@ target/
 release/
 *.tmp
 node_modules/
+__pycache__/
+tools/hd/out_sprites_tmp/

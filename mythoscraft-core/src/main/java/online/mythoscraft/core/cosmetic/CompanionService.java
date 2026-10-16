@@ -75,6 +75,9 @@ public final class CompanionService implements Listener {
         if (!isCompanion(type)) {
             return;
         }
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getPlayer().isSneaking()) {
+            return;     // sneak + right-click on a block places it as a farming companion (CompanionFarmService)
+        }
         event.setCancelled(true);
         Player p = event.getPlayer();
         if (type.id().equals(active(p))) {

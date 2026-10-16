@@ -574,6 +574,8 @@ public final class CrateManager {
                 plugin.messages().send(player, "crates.need-key-buy", "key", Text.parse(type.keyName()));
             } else if (type.id().equals("silvester")) {
                 plugin.messages().send(player, "crates.need-key-wheel", "key", Text.parse(type.keyName()));
+            } else if (plugin.crateCarousel().isRelic(type.id())) {
+                plugin.messages().send(player, "crates.need-key-relic", "key", Text.parse(type.keyName()));
             } else {
                 plugin.messages().send(player, "crates.need-key", "key", Text.parse(type.keyName()));
             }
@@ -647,6 +649,7 @@ public final class CrateManager {
             return;
         }
         plugin.quests().count(player, online.mythoscraft.core.progress.QuestService.Type.CRATES, 1);
+        plugin.jobs().crateOpened(player, reward.rarity());
         reward.reward().give(plugin, player, 1.0);
         online.mythoscraft.core.player.PlayerData data = plugin.playerData().get(player);
         if (data != null) {

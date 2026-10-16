@@ -363,6 +363,84 @@ public final class JobsService implements Listener {
         }
     }
 
+    // ---- gambler, enchanter, brewer, cook ----------------------------------------------------------------------
+
+    /** Gambler: every wheel spin – paid spins (and gem spins even more) give more XP and a little coin cashback. */
+    public void gamble(Player p, long paid, Currency currency) {
+        int xp = paid <= 0 ? 12 : currency == Currency.GEMS ? 30 + (int) Math.min(60, paid * 3) : 20 + (int) Math.min(60, paid / 250);
+        reward(p, Job.GAMBLER, new Pay(xp, paid <= 0 ? 2 : currency == Currency.COINS ? paid * 0.04 : 15), p.getLocation());
+    }
+
+    /** Gambler: every crate prize – rarer prizes count more. */
+    public void crateOpened(Player p, online.mythoscraft.core.crate.Rarity rarity) {
+        int r = rarity.ordinal();
+        reward(p, Job.GAMBLER, new Pay(8 + r * 6, 2 + r * 2), p.getLocation());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEnchant(org.bukkit.event.enchantment.EnchantItemEvent event) {
+        int cost = event.getExpLevelCost();
+        reward(event.getEnchanter(), Job.ENCHANTER, new Pay(6 + cost * 3, 1 + cost * 0.6), event.getEnchantBlock().getLocation());
+    }
+
+    /** Anvil results taken out (repairs, combined enchantments, renames) also count for the enchanter. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onAnvil(org.bukkit.event.inventory.InventoryClickEvent event) {
+        if (event.getInventory() instanceof org.bukkit.inventory.AnvilInventory anvil && event.getRawSlot() == 2
+                && event.getWhoClicked() instanceof Player p && event.getCurrentItem() != null && !event.getCurrentItem().getType().isAir()) {
+            int cost = event.getView() instanceof org.bukkit.inventory.view.AnvilView view ? view.getRepairCost() : 1;
+            if (cost > 0 && p.getLevel() >= cost) {
+                reward(p, Job.ENCHANTER, new Pay(3 + cost * 2, 0.5 + cost * 0.3), anvil.getLocation() == null ? p.getLocation() : anvil.getLocation());
+            }
+        }
+    }
+
+    /** Potions brewed per brewing stand that are still waiting to be taken out (only those pay brewer XP). */
+    private final Map<Long, Integer> brewed = new HashMap<>();
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBrew(org.bukkit.event.inventory.BrewEvent event) {
+        int n = 0;
+        for (int i = 0; i < 3; i++) {
+            org.bukkit.inventory.ItemStack it = event.getContents().getItem(i);
+            if (it != null && !it.getType().isAir()) {
+                n++;
+            }
+        }
+        brewed.merge(key(event.getBlock()), n, (a, b) -> Math.min(3, a + b));
+        if (brewed.size() > 20_000) {
+            brewed.clear();
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPotionTaken(org.bukkit.event.inventory.InventoryClickEvent event) {
+        if (!(event.getInventory() instanceof org.bukkit.inventory.BrewerInventory inv) || event.getRawSlot() > 2
+                || !(event.getWhoClicked() instanceof Player p) || event.getCurrentItem() == null || event.getCurrentItem().getType().isAir()
+                || inv.getHolder() == null) {
+            return;
+        }
+        long k = key(inv.getHolder().getBlock());
+        Integer left = brewed.get(k);
+        if (left == null || left <= 0) {
+            return;
+        }
+        brewed.put(k, left - 1);
+        boolean strong = event.getCurrentItem().getType() != Material.POTION;
+        reward(p, Job.BREWER, new Pay(strong ? 14 : 10, strong ? 4 : 3), inv.getHolder().getLocation());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onFurnace(org.bukkit.event.inventory.FurnaceExtractEvent event) {
+        int amount = event.getItemAmount();
+        if (amount <= 0) {
+            return;
+        }
+        boolean food = event.getItemType().isEdible();
+        reward(event.getPlayer(), Job.COOK, new Pay(Math.min(400, amount * (food ? 3 : 1)), amount * (food ? 0.8 : 0.25)),
+                event.getBlock().getLocation());
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();

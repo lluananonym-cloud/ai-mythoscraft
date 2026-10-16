@@ -36,6 +36,7 @@ import static online.mythoscraft.core.item.ItemCollection.COSMETIC;
 import static online.mythoscraft.core.item.ItemCollection.SPACE;
 import static online.mythoscraft.core.item.ItemCollection.SPAWNER;
 import static online.mythoscraft.core.item.ItemCollection.SILVESTER;
+import static online.mythoscraft.core.item.ItemCollection.RELIC;
 import static org.bukkit.inventory.ItemRarity.EPIC;
 import static org.bukkit.inventory.ItemRarity.RARE;
 import static org.bukkit.inventory.ItemRarity.UNCOMMON;
@@ -254,6 +255,7 @@ public enum CustomItem {
     COMPANION_GHOST(spec("companion_ghost", Material.PAPER, EPIC, TOOL, BEGLEITER).stack(1)),
     COMPANION_DRAGON(spec("companion_dragon", Material.PAPER, EPIC, TOOL, BEGLEITER).stack(1)),
     COMPANION_BEE(spec("companion_bee", Material.PAPER, EPIC, TOOL, BEGLEITER).stack(1)),
+    COMPANION_SHADOW(spec("companion_shadow", Material.PAPER, EPIC, TOOL, BEGLEITER).stack(1)),
     SANTA_HAT(spec("santa_hat", Material.PAPER, RARE, TOOL, COSMETIC).stack(1).hat()),
     REINDEER_ANTLERS(spec("reindeer_antlers", Material.PAPER, EPIC, TOOL, COSMETIC).stack(1).hat()),
     SNOWMAN_HEAD(spec("snowman_head", Material.PAPER, RARE, TOOL, COSMETIC).stack(1).hat()),
@@ -381,6 +383,28 @@ public enum CustomItem {
     ASTRONAUT_LEGGINGS(armor("astronaut", EquipmentSlot.LEGS, SPACE, EPIC, 6, 3.5, 0.2, 2, 0.0, -0.01)),
     ASTRONAUT_BOOTS(armor("astronaut", EquipmentSlot.FEET, SPACE, EPIC, 3, 3.5, 0.2, 2, 0.0, -0.01)),
 
+    // ---- spawner crate extra ------------------------------------------------------------------------------
+    SPAWNER_BOOSTER(spec("spawner_booster", Material.PAPER, EPIC, CONSUMABLE, SPAWNER).stack(16).glint()),
+
+    // ---- relic crates V1–V4 (rare crates on their own spawn pedestal) -------------------------------------
+    SORT_WAND(spec("sort_wand", Material.BLAZE_ROD, RARE, TOOL, RELIC).stack(1)),
+    INFINITE_BUCKET(spec("infinite_bucket", Material.WATER_BUCKET, RARE, TOOL, RELIC).stack(1)),
+    VEIN_PICKAXE(spec("vein_pickaxe", Material.NETHERITE_PICKAXE, EPIC, TOOL, RELIC)),
+    REPAIR_CHARM(spec("repair_charm", Material.PAPER, EPIC, CHARM, RELIC).stack(1)),
+    PAINT_BRUSH(spec("paint_brush", Material.PAPER, EPIC, TOOL, RELIC).stack(1)),
+    CONCRETE_MIXER(spec("concrete_mixer", Material.PAPER, EPIC, TOOL, RELIC).stack(1)),
+    SOUL_SWORD(spec("soul_sword", Material.NETHERITE_SWORD, EPIC, WEAPON, RELIC).weapon(9, 1.6).glint()),
+    DWARF_HAT(spec("dwarf_hat", Material.PAPER, EPIC, CHARM, RELIC).stack(1).hat().scale(-0.45, org.bukkit.inventory.EquipmentSlotGroup.HEAD)),
+    GROWTH_TOTEM(spec("growth_totem", Material.PAPER, EPIC, CHARM, RELIC).stack(1).scale(0.6, org.bukkit.inventory.EquipmentSlotGroup.OFFHAND)),
+    POWER_DRILL(spec("power_drill", Material.NETHERITE_PICKAXE, EPIC, TOOL, RELIC).glint()),
+    MEGA_CHAINSAW(spec("mega_chainsaw", Material.NETHERITE_AXE, EPIC, TOOL, RELIC).glint()),
+    MINEPRO_TOTEM(spec("minepro_totem", Material.TOTEM_OF_UNDYING, EPIC, CHARM, RELIC).stack(1).glint()),
+    BLOSSOM_CROWN(spec("blossom_crown", Material.PAPER, EPIC, CHARM, RELIC).stack(1).hat()),
+    BARK_HAND(spec("bark_hand", Material.PAPER, EPIC, TOOL, RELIC).stack(1)),
+    ZAP_PICKAXE(spec("zap_pickaxe", Material.NETHERITE_PICKAXE, EPIC, TOOL, RELIC).glint()),
+    ZAP_SWORD(spec("zap_sword", Material.NETHERITE_SWORD, EPIC, WEAPON, RELIC).weapon(10, 1.7).glint()),
+    ZAP_ROD(spec("zap_rod", Material.FISHING_ROD, EPIC, TOOL, RELIC).glint()),
+
     // ---- visuals (event objects, currency icons) ----------------------------------------------------------
     MYTHOS_COIN(spec("mythos_coin", Material.GOLD_NUGGET, UNCOMMON, VISUAL, CORE).glint()),
     GEM_SHARD(spec("mythos_gem", Material.AMETHYST_SHARD, RARE, VISUAL, CORE).glint()),
@@ -413,6 +437,9 @@ public enum CustomItem {
         EquipmentSlot slot;
         Integer nutrition;
         float saturation;
+        /** size change (attribute scale, e.g. -0.45 = 55 % size) while the item sits in {@link #scaleSlot} */
+        double scale;
+        org.bukkit.inventory.EquipmentSlotGroup scaleSlot;
 
         Spec(String id, Material base, ItemRarity rarity, Kind kind, ItemCollection collection) {
             this.id = id;
@@ -446,6 +473,12 @@ public enum CustomItem {
         Spec weapon(double damage, double speed) {
             this.damage = damage;
             this.attackSpeed = speed;
+            return this;
+        }
+
+        Spec scale(double amount, org.bukkit.inventory.EquipmentSlotGroup slot) {
+            this.scale = amount;
+            this.scaleSlot = slot;
             return this;
         }
 

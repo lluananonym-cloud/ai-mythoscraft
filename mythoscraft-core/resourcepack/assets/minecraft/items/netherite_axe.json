@@ -6,6 +6,7 @@
     "cases": [
       {"when": "chainsaw", "model": {"type": "minecraft:model", "model": "mythoscraft:item/chainsaw"}},
       {"when": "inferno_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/inferno_axe"}},
+      {"when": "mega_chainsaw", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mega_chainsaw"}},
       {"when": "newyear_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_axe"}},
       {"when": "thunder_hammer", "model": {"type": "minecraft:model", "model": "mythoscraft:item/thunder_hammer"}},
       {"when": "timber_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/timber_axe"}}

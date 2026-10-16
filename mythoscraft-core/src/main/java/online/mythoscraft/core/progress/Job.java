@@ -11,7 +11,12 @@ public enum Job {
     FARMER("farmer", Material.GOLDEN_HOE),
     HUNTER("hunter", Material.BOW),
     FISHER("fisher", Material.FISHING_ROD),
-    BUILDER("builder", Material.BRICKS);
+    BUILDER("builder", Material.BRICKS),
+    /** wheel spins and crate openings */
+    GAMBLER("gambler", Material.TRIAL_KEY),
+    ENCHANTER("enchanter", Material.ENCHANTING_TABLE),
+    BREWER("brewer", Material.BREWING_STAND),
+    COOK("cook", Material.COOKED_BEEF);
 
     private final String id;
     private final Material icon;

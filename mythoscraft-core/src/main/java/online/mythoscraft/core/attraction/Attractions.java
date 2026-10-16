@@ -32,6 +32,7 @@ public final class Attractions implements Listener {
     private final MythosCraft plugin;
     private final StatueService statues;
     private final WheelService wheel;
+    private final WheelService wheel2;
     private final RingService rings;
     private final WellService well;
     private final MerchantService merchants;
@@ -88,7 +89,8 @@ public final class Attractions implements Listener {
     public Attractions(MythosCraft plugin) {
         this.plugin = plugin;
         this.statues = new StatueService(plugin);
-        this.wheel = new WheelService(plugin);
+        this.wheel = new WheelService(plugin, WheelService.TAG);
+        this.wheel2 = new WheelService(plugin, WheelService.TAG2);
         this.rings = new RingService(plugin);
         this.well = new WellService(plugin);
         this.merchants = new MerchantService(plugin);
@@ -107,6 +109,7 @@ public final class Attractions implements Listener {
     public void reload(ConfigReader root) {
         statues.reload(root);
         wheel.reload(root);
+        wheel2.reload(root);
         rings.reload(root);
         well.reload(root);
         merchants.reload(root);
@@ -132,6 +135,9 @@ public final class Attractions implements Listener {
         if (force || !wheel.present()) {
             wheel.rebuild();
         }
+        if (force || !wheel2.present()) {
+            wheel2.rebuild();
+        }
         if (force || !well.present()) {
             well.rebuild();
         }
@@ -155,7 +161,9 @@ public final class Attractions implements Listener {
             return;
         }
         Location w = plugin.attractionStore().first("wheel");
+        Location w2 = plugin.attractionStore().first(WheelService.TAG2);
         boolean missing = (w != null && w.isChunkLoaded() && !wheel.present())
+                || (w2 != null && w2.isChunkLoaded() && !wheel2.present())
                 || (plugin.attractionStore().first("well") != null && plugin.attractionStore().first("well").isChunkLoaded() && !well.present())
                 || (!plugin.attractionStore().all("merchant").isEmpty() && plugin.attractionStore().all("merchant").get(0).isChunkLoaded()
                 && !merchants.present());
@@ -202,6 +210,10 @@ public final class Attractions implements Listener {
                 event.setCancelled(true);
                 wheel.use(p);
             }
+            case WheelService.TAG2 -> {
+                event.setCancelled(true);
+                wheel2.use(p);
+            }
             case WellService.TAG -> {
                 event.setCancelled(true);
                 well.open(p);
@@ -239,10 +251,12 @@ public final class Attractions implements Listener {
             return;
         }
         switch (tag) {
-            case WheelService.TAG, WellService.TAG, MerchantService.TAG, StatueService.TAG, "season_bat", "mentor" -> {
+            case WheelService.TAG, WheelService.TAG2, WellService.TAG, MerchantService.TAG, StatueService.TAG, "season_bat", "mentor" -> {
                 event.setCancelled(true);
                 if (tag.equals(WheelService.TAG) && event.getDamager() instanceof Player p) {
                     wheel.showPrizes(p);
+                } else if (tag.equals(WheelService.TAG2) && event.getDamager() instanceof Player p) {
+                    wheel2.showPrizes(p);
                 }
             }
             default -> {
@@ -277,6 +291,10 @@ public final class Attractions implements Listener {
 
     public WheelService wheel() {
         return wheel;
+    }
+
+    public WheelService wheel2() {
+        return wheel2;
     }
 
     public RingService rings() {
@@ -316,6 +334,7 @@ public final class Attractions implements Listener {
         });
         statues.shutdown();
         wheel.shutdown();
+        wheel2.shutdown();
         rings.shutdown();
         well.shutdown();
         merchants.shutdown();

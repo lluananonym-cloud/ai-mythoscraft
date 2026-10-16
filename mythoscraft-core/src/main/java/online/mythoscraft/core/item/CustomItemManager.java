@@ -102,6 +102,17 @@ public final class CustomItemManager {
             eq.setEquipSound(org.bukkit.Sound.ITEM_ARMOR_EQUIP_LEATHER);
             meta.setEquippable(eq);
         }
+        if (s.scaleSlot != null) {
+            meta.addAttributeModifier(Attribute.SCALE, new AttributeModifier(Keys.key(type.id() + "_scale"),
+                    s.scale, AttributeModifier.Operation.ADD_SCALAR, s.scaleSlot));
+            if (s.scale > 0) {
+                // bigger also means longer steps and reach, like a real giant
+                meta.addAttributeModifier(Attribute.STEP_HEIGHT, new AttributeModifier(Keys.key(type.id() + "_step"),
+                        0.5, AttributeModifier.Operation.ADD_NUMBER, s.scaleSlot));
+                meta.addAttributeModifier(Attribute.BLOCK_INTERACTION_RANGE, new AttributeModifier(Keys.key(type.id() + "_reach"),
+                        1.5, AttributeModifier.Operation.ADD_NUMBER, s.scaleSlot));
+            }
+        }
         if (s.nutrition != null) {
             FoodComponent food = meta.getFood();
             food.setNutrition(s.nutrition);

@@ -19,6 +19,10 @@ commands:
     description: Spielmodus wechseln (freigegebene Creator)
     usage: /gm <c|s|sp>
     aliases: [gamemode2]
+  guide:
+    description: Leucht-Spur für die ersten Schritte (Starter-Kit, Glücksrad, Spiele, Kisten, RTP). /guide skip|stop
+    usage: /guide [skip|stop]
+    aliases: [weg, fuehrung, firststeps]
   intro:
     description: Einführung mit Kamerafahrt nochmal ansehen (/intro skip beendet sie)
     usage: /intro [skip]

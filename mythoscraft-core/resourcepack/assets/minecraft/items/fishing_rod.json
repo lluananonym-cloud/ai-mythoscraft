@@ -39,6 +39,18 @@
       "model": "mythoscraft:item/newyear_rod_cast"
     },
     "property": "minecraft:fishing_rod/cast"
+  }},
+      {"when": "zap_rod", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/zap_rod"
+    },
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/zap_rod_cast"
+    },
+    "property": "minecraft:fishing_rod/cast"
   }}
     ],
     "fallback": {

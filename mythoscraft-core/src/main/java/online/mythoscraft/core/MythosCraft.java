@@ -160,6 +160,13 @@ public class MythosCraft extends JavaPlugin {
     private WaveSevenListener waveSeven;
     private WaveEightListener waveEight;
     private online.mythoscraft.core.item.SilvesterListener silvester;
+    private online.mythoscraft.core.item.RelicListener relics;
+    private online.mythoscraft.core.cosmetic.CompanionService companions;
+    private online.mythoscraft.core.cosmetic.CompanionFarmService companionFarms;
+
+    public online.mythoscraft.core.cosmetic.CompanionService companions() {
+        return companions;
+    }
     private ButtonManager buttons;
     private ProgressService progress;
     private JobsService jobs;
@@ -234,6 +241,9 @@ public class MythosCraft extends JavaPlugin {
             waveSeven = new WaveSevenListener(this, abilitySupport);
             waveEight = new WaveEightListener(this, abilitySupport);
             silvester = new online.mythoscraft.core.item.SilvesterListener(this, abilitySupport);
+            relics = new online.mythoscraft.core.item.RelicListener(this, abilitySupport);
+            companions = new online.mythoscraft.core.cosmetic.CompanionService(this);
+            companionFarms = new online.mythoscraft.core.cosmetic.CompanionFarmService(this);
             rtp = new RtpService(this, cooldowns);
             vouchers = new RankVouchers(this);
             armorSets = new ArmorSetService(this);
@@ -355,6 +365,8 @@ public class MythosCraft extends JavaPlugin {
         waveSix.reload(root);
         waveSeven.reload(root);
         waveEight.reload(root);
+        relics.reload(root);
+        companionFarms.reload(root);
         rtp.reload(root);
         armorSets.start();
         seasons.reload(root);
@@ -419,13 +431,13 @@ public class MythosCraft extends JavaPlugin {
                 new ItemGuardListener(this),
                 new CrateListener(this, crates),
                 new MenuListener(),
-                itemAbilities, extraAbilities, waveThree, waveFour, waveFive, waveSix, waveSeven, waveEight, silvester, broom, vouchers, buttons, jobs, parkour, seasons,
+                itemAbilities, extraAbilities, waveThree, waveFour, waveFive, waveSix, waveSeven, waveEight, silvester, relics, broom, vouchers, buttons, jobs, parkour, seasons,
                 new TournamentListener(this, tournaments),
                 new SessionListener(),
                 clans, upgrades, floorGames, boosters, magic, creatures, rankPerks, giveaways,
                 new online.mythoscraft.core.item.HelmetUpgradeListener(this),
                 new online.mythoscraft.core.teleport.SpawnItemListener(this),
-                new online.mythoscraft.core.cosmetic.CompanionService(this),
+                companions, companionFarms,
                 trophies,
                 new online.mythoscraft.core.display.ServerLinksService(this),
                 new online.mythoscraft.core.config.LocaleContextListener(messages)
@@ -494,6 +506,9 @@ public class MythosCraft extends JavaPlugin {
         intro = new online.mythoscraft.core.attraction.IntroService(this);
         getServer().getPluginManager().registerEvents(intro, this);
         command("intro", intro);
+        guide = new online.mythoscraft.core.attraction.GuideService(this);
+        getServer().getPluginManager().registerEvents(guide, this);
+        command("guide", guide);
         online.mythoscraft.core.command.ModerationService moderation = new online.mythoscraft.core.command.ModerationService(this);
         getServer().getPluginManager().registerEvents(moderation, this);
         for (String c : new String[]{"mute", "unmute", "kick", "tempban", "ban", "unban", "warn", "warns", "goto", "modlog", "testkey"}) {
@@ -547,6 +562,9 @@ public class MythosCraft extends JavaPlugin {
         progress.load(player, () -> {
             achievements.check(player);
             jobs.backPay(player);
+            if (guide != null) {
+                guide.resume(player);
+            }
             display.refresh(player);
         });
         tasks.later(80, "market reminders", () -> {
@@ -588,6 +606,9 @@ public class MythosCraft extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (guide != null) {
+            guide.shutdown();
+        }
         if (intro != null) {
             intro.shutdown();
         }
@@ -608,6 +629,9 @@ public class MythosCraft extends JavaPlugin {
         safe("buttons", () -> buttons.shutdown());
         safe("attractions", () -> attractions.shutdown());
         safe("planets", () -> waveEight.shutdown());
+        safe("relic items", () -> relics.shutdown());
+        safe("companion farms", () -> companionFarms.shutdown());
+        safe("companions", () -> companions.shutdown());
         safe("clans", () -> clans.shutdown());
         safe("bets", () -> bets.shutdown());
         safe("display", () -> display.shutdown());
@@ -825,6 +849,11 @@ public class MythosCraft extends JavaPlugin {
 
     private online.mythoscraft.core.web.PublicWikiData wiki;
     private online.mythoscraft.core.attraction.IntroService intro;
+    private online.mythoscraft.core.attraction.GuideService guide;
+
+    public online.mythoscraft.core.attraction.GuideService guide() {
+        return guide;
+    }
 
     public online.mythoscraft.core.attraction.IntroService intro() {
         return intro;

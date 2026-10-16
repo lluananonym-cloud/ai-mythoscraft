@@ -16,7 +16,7 @@ public final class SpawnStructure {
 
     public static final int RADIUS = 128;
     /** Version of the layout (data/builds.yml) – used to remove the right old spawn on a rebuild. */
-    public static final int VERSION = 10;
+    public static final int VERSION = 11;
     /** Number of crate pedestals (all crates of the plugin fit). */
     public static final int PEDESTALS = 22;
     /** Number of rings of the elytra course. */
@@ -29,6 +29,8 @@ public final class SpawnStructure {
 
     static final int[] STATUES = {48, 48};
     static final int[] WHEEL = {-48, 48};
+    /** the second (Mythos) wheel stands 17 blocks beside the first one */
+    static final int[] WHEEL2 = {-62, 38};
     static final int[] TOWER = {50, -50};
     static final int TOWER_TOP = 56;
     static final int RING_RADIUS = 84;
@@ -61,6 +63,7 @@ public final class SpawnStructure {
         obelisk(p);
         arches(p);
         pedestals(p);
+        relicPedestal(p);
         garden(p, rnd);
         statueHall(p);
         wheelPlaza(p);
@@ -154,7 +157,7 @@ public final class SpawnStructure {
     }
 
     private static void floor(BlockPlan p, Random rnd) {
-        int[][] bigPlazas = {STATUES, WHEEL, {PK_X, PK_Z}, TOWER};
+        int[][] bigPlazas = {STATUES, WHEEL, WHEEL2, {PK_X, PK_Z}, TOWER};
         int[][] smallPlazas = {WELL, MARKET, SEASON, STARTER};
         int[][] bigExtra = {PLAYGROUND, PARTY, SPLEEF, RANGE};
         for (int x = -RADIUS; x <= RADIUS; x++) {
@@ -358,6 +361,34 @@ public final class SpawnStructure {
         }
     }
 
+    /**
+     * Relic pedestal right in front of the spawn point (between spawn and fountain): a raised gold / crying obsidian
+     * platform with four lantern pillars. Relic crates V1–V4 appear here only rarely (at a crate swap).
+     */
+    private static void relicPedestal(BlockPlan p) {
+        int cx = 0;
+        int cz = 12;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                boolean rim = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                p.set(cx + dx, 0, cz + dz, rim ? ((dx + dz) % 2 == 0 ? "amethyst_block" : "gilded_blackstone") : "polished_blackstone");
+                p.set(cx + dx, 1, cz + dz, "air");
+            }
+        }
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                p.set(cx + dx, 1, cz + dz, dx == 0 && dz == 0 ? "crying_obsidian" : Math.abs(dx) == 1 && Math.abs(dz) == 1 ? "gold_block"
+                        : "polished_blackstone_bricks");
+            }
+        }
+        for (int[] c : new int[][]{{-3, -3}, {3, -3}, {-3, 3}, {3, 3}}) {
+            p.set(cx + c[0], 1, cz + c[1], "chiseled_polished_blackstone");
+            p.set(cx + c[0], 2, cz + c[1], "polished_blackstone_wall");
+            p.set(cx + c[0], 3, cz + c[1], "soul_lantern");
+        }
+        p.marker("relic_crate", cx, 2, cz, 0f);
+    }
+
     /** Statue hall: three podiums (1st in the middle and highest) with a colonnade behind. */
     private static void statueHall(BlockPlan p) {
         double fx = -STATUES[0];
@@ -396,6 +427,10 @@ public final class SpawnStructure {
     }
 
     /** Wheel of fortune: frame and base; the wheel itself is made of item displays. */
+    /**
+     * Twin wheel plaza: the coin wheel (daily free spin) and the bigger Mythos wheel (gems) side by side, framed by
+     * three tall pillars, on a dark brick floor with a gold inlay under each wheel.
+     */
     private static void wheelPlaza(BlockPlan p) {
         double fx = -WHEEL[0];
         double fz = -WHEEL[1];
@@ -406,19 +441,34 @@ public final class SpawnStructure {
         double sz = fx;
         int cx = WHEEL[0] - (int) Math.round(fx * 3);
         int cz = WHEEL[1] - (int) Math.round(fz * 3);
-        for (int side = -1; side <= 1; side += 2) {
-            int px = cx + (int) Math.round(sx * 6 * side);
-            int pz = cz + (int) Math.round(sz * 6 * side);
-            for (int y = 1; y <= 12; y++) {
-                p.set(px, y, pz, y == 12 ? "gold_block" : y % 4 == 0 ? "chiseled_polished_blackstone" : "polished_blackstone_bricks");
+        // floor strip under both wheels (side offsets -26 … +10, 7 deep)
+        for (int s = -28; s <= 11; s++) {
+            for (int d = -4; d <= 3; d++) {
+                int x = cx + (int) Math.round(sx * s + fx * d);
+                int z = cz + (int) Math.round(sz * s + fz * d);
+                boolean edge = s == -28 || s == 11 || d == -4 || d == 3;
+                p.set(x, 0, z, edge ? "polished_blackstone_bricks" : (s + d) % 2 == 0 ? "polished_deepslate" : "deepslate_tiles");
+                p.set(x, 1, z, "air");
             }
-            p.set(px, 13, pz, "lantern");
         }
-        for (int s = -6; s <= 6; s++) {
-            p.set(cx + (int) Math.round(sx * s), 1, cz + (int) Math.round(sz * s), "polished_blackstone_brick_slab[type=bottom]");
+        // on the diagonal every offset is rounded – these keep 8.5 blocks to each wheel centre
+        for (int side : new int[]{9, -8, -26}) {
+            int px = cx + (int) Math.round(sx * side);
+            int pz = cz + (int) Math.round(sz * side);
+            for (int y = 1; y <= 15; y++) {
+                p.set(px, y, pz, y == 15 ? "gold_block" : y % 4 == 0 ? "chiseled_polished_blackstone" : "polished_blackstone_bricks");
+            }
+            p.set(px, 16, pz, "lantern");
         }
-        p.set(cx, 1, cz, "gold_block");
-        p.marker("wheel", cx + 0.5, 7.5, cz + 0.5, yaw(fx, fz));
+        for (int[] w : new int[][]{{0, 0}, {-17, 1}}) {
+            int wx = cx + (int) Math.round(sx * w[0]);
+            int wz = cz + (int) Math.round(sz * w[0]);
+            for (int s = -6; s <= 6; s++) {
+                p.set(wx + (int) Math.round(sx * s), 1, wz + (int) Math.round(sz * s), "polished_blackstone_brick_slab[type=bottom]");
+            }
+            p.set(wx, 1, wz, w[1] == 0 ? "gold_block" : "amethyst_block");
+            p.marker(w[1] == 0 ? "wheel" : "wheel2", wx + 0.5, 8.5, wz + 0.5, yaw(fx, fz));
+        }
     }
 
     /**
@@ -754,10 +804,42 @@ public final class SpawnStructure {
         }
         p.marker("mentor", cx + 0.5, 1, cz + 0.5, yaw(0, -1));
         p.marker("starter_board", cx + 0.5, 4.3, cz + 4.5, 0f);
+        rtpPortal(p, cx, cz + 12);
+    }
+
+    /**
+     * Wilderness portal behind the starter square: a tall purpur/crying-obsidian arch, walking over one of the
+     * pressure plates inside starts a random teleport (last goal of the newcomer guide).
+     */
+    private static void rtpPortal(BlockPlan p, int cx, int cz) {
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                boolean rim = Math.abs(dx) == 4 || Math.abs(dz) == 3;
+                p.set(cx + dx, 0, cz + dz, rim ? "polished_blackstone_bricks" : (dx + dz) % 2 == 0 ? "purpur_block" : "amethyst_block");
+                p.set(cx + dx, 1, cz + dz, "air");
+            }
+        }
+        for (int y = 1; y <= 8; y++) {
+            for (int dx : new int[]{-3, 3}) {
+                p.set(cx + dx, y, cz, y % 3 == 0 ? "crying_obsidian" : "purpur_pillar");
+                p.set(cx + dx, y, cz - 1, y == 8 ? "purpur_stairs[facing=south]" : "air");
+            }
+        }
+        for (int dx = -3; dx <= 3; dx++) {
+            p.set(cx + dx, 9, cz, Math.abs(dx) == 3 ? "crying_obsidian" : dx == 0 ? "beacon" : "purpur_block");
+            p.set(cx + dx, 10, cz, Math.abs(dx) <= 1 ? "purpur_slab[type=bottom]" : "air");
+        }
+        p.set(cx, 8, cz, "end_rod[facing=down]");
+        for (int dx = -2; dx <= 2; dx++) {
+            p.set(cx + dx, 1, cz, "heavy_weighted_pressure_plate");
+            p.marker("rtp_portal", cx + dx, 1, cz, 180f);
+        }
+        p.set(cx - 4, 1, cz - 2, "lantern");
+        p.set(cx + 4, 1, cz - 2, "lantern");
     }
 
     private static boolean nearAnything(int x, int z, double extra) {
-        for (int[] c : new int[][]{STATUES, WHEEL, {PK_X, PK_Z}, TOWER, WELL, MARKET, SEASON, DROPPER, MAZE, STARTER, PLAYGROUND, PARTY, SPLEEF, RANGE}) {
+        for (int[] c : new int[][]{STATUES, WHEEL, WHEEL2, {PK_X, PK_Z}, TOWER, WELL, MARKET, SEASON, DROPPER, MAZE, STARTER, PLAYGROUND, PARTY, SPLEEF, RANGE}) {
             if (dist(x - c[0], z - c[1]) < 14 + extra) {
                 return true;
             }
@@ -1099,7 +1181,7 @@ public final class SpawnStructure {
             int x = (int) Math.round(Math.cos(a) * r);
             int z = (int) Math.round(Math.sin(a) * r);
             boolean blocked = false;
-            for (int[] c : new int[][]{STATUES, WHEEL, {PK_X, PK_Z}, TOWER, WELL, MARKET, SEASON, DROPPER, MAZE, STARTER, PLAYGROUND, PARTY, SPLEEF, RANGE}) {
+            for (int[] c : new int[][]{STATUES, WHEEL, WHEEL2, {PK_X, PK_Z}, TOWER, WELL, MARKET, SEASON, DROPPER, MAZE, STARTER, PLAYGROUND, PARTY, SPLEEF, RANGE}) {
                 blocked |= dist(x - c[0], z - c[1]) < 18;
             }
             for (int[] c : PONDS) {
@@ -1181,6 +1263,8 @@ public final class SpawnStructure {
             double a = Math.toRadians(i * 22.5 + 11.25);
             spots.add(new int[]{(int) Math.round(Math.cos(a) * 17), (int) Math.round(Math.sin(a) * 17)});
         }
+        // nothing may stand in front of or under the second wheel
+        spots.removeIf(c -> dist(c[0] - WHEEL2[0], c[1] - WHEEL2[1]) < 11);
         // a grid of ground spots on the meadows (season plants: petals, leaf litter, pumpkins …)
         for (int x = -RADIUS; x <= RADIUS; x += 6) {
             for (int z = -RADIUS; z <= RADIUS; z += 6) {

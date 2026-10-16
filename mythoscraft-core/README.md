@@ -57,6 +57,12 @@ Paper **1.21.11** (läuft auch auf neueren Paper-Versionen), **Java 21**, Maven,
 | Auktionshaus | `/ah`: Item in der Hand für Coins oder Gems verkaufen, Angebote durchsuchen und sortieren, Kauf mit Bestätigung, Verkäufer bekommt das Geld auch offline (5 % Steuer), abgelaufene Items abholen, Limit je Rang, Team kann Angebote entfernen. Kauf ist atomar, ein Item kann nie doppelt verkauft werden |
 | Farmaufträge | `/auftrag`: Spieler bestellen z. B. 640 Weizen für 2 Coins pro Stück. Die Coins werden vorab hinterlegt, andere liefern per Klick und werden sofort pro Stück bezahlt, der Auftraggeber holt die Items ab. Abbrechen oder Ablauf erstattet den Rest |
 | Bestenlisten | `/top <stat>` (12 Statistiken), schwebende Hologramm-Bestenlisten |
+| Erste Schritte | Nach dem Intro führt eine Leucht-Spur (Bossbar + Actionbar, in der Spielsprache) zu: `/starter` → Glücksrad → Dropper → Kisten (mit Erklärung) → Wildnis-Portal (RTP). `/guide`, `/guide skip`, `/guide stop` |
+| Glücksräder | Zwei Räder am Spawn: das Coin-Rad (1× täglich gratis, Hauptgewinn Silvester-Schlüssel) und das größere Mythos-Rad (Gems, bessere Preise, Relikt-Schlüssel). Einstellungen unter `attractions.wheel` / `attractions.wheel2` |
+| Relikt-Kisten | Eigener Sockel vor dem Spawnpunkt: bei jedem Kistenwechsel eine kleine Chance auf V1 (6 %), V2 (3 %), V3 (1,2 %) oder V4 (0,4 %), sie bleibt 20 Min. Sonst zeigt das Schild „Relikt-Kisten erscheinen hier“. V1/V2: Sortier-Stab, endloser Eimer, Ader-Spitzhacke, Reparatur-Amulett; V3: Pinsel, Betonmischer, Seelenschwert, Zwergenmütze, Wachstums-Totem; V4: Akku-Bohrer, Mega-Kettensäge (animiert), MinePro641-Totem, Blütenkrone, Rinden-Hand, Blitz-Spitzhacke/-Klinge/-Angel. Test: `/mythos crate relic <relic1-4>` |
+| Spawner-Booster | Aus der Spawner-Kiste: Rechtsklick auf einen Spawner, stapelbar bis Stufe 10 (je +40 % Tempo, ab Stufe 4 mehr Mobs) |
+| Farm-Begleiter | Schleichen + Rechtsklick mit einem Begleiter auf den Boden: Menü mit Dauer (10 Min.–2 Std.) und Radius (4–16). Biene = Felder, Pinguin = Angeln, Schneemann = Bäume, Geist = Zuckerrohr/Kaktus/Melonen, Drache = Erze, Schattenwürfel = Monster. Beute und XP im Lager des Begleiters |
+| Berufe | Bergarbeiter, Holzfäller, Farmer, Jäger, Fischer, Baumeister, Glücksspieler (Glücksräder und Kisten), Verzauberer, Brauer, Koch |
 | Sonstiges | `/helpop` mit klickbarem Namen und Log-Datei, `/stats`, Willkommensnachricht mit Spielernummer, Status-Übersicht, Config-Prüfung |
 
 ## Befehle
@@ -81,7 +87,7 @@ Paper **1.21.11** (läuft auch auf neueren Paper-Versionen), **Java 21**, Maven,
 | `tournament stop`, `tournament info`, `tournament setarena <Stufe> <Arena>` | Turniere verwalten |
 | `event list/start <id> [Countdown]/stop/info/reload/spawnboss` | Events. IDs: `coinrain gemrush ancienthunt meteor ancientwarden` |
 | `eco give/take/set <Spieler> <coins\|gems> <Betrag>` | Economy |
-| `crate place <Typ>/remove/list/types/key <Spieler> <Typ> [Anz]/keyall <Typ> [Anz]` | Kisten. Typen: `common vip elite mythos ancient halloween frostfest celestial inferno` |
+| `crate place <Typ>/remove/list/types/key <Spieler> <Typ> [Anz]/keyall <Typ> [Anz]/relic <relic1-4>` | Kisten. Typen: `common vip elite mythos ancient halloween frostfest celestial inferno` |
 | `item give <Spieler> <Item> [Anzahl]` | Custom Items und Rüstungen (Tab-Vervollständigung zeigt alle IDs) |
 | `boost <coins\|gems\|events> <Faktor> <Dauer>`, `boost stop <Typ>`, `boost info` | Booster |
 | `holo create <Name> <Statistik>/delete/list` | Hologramm-Bestenlisten |
@@ -118,7 +124,8 @@ cd mythoscraft-core
 mvn clean package        # baut, testet, packt das Resource Pack in die JAR
 ```
 
-Resource Pack neu generieren (Texturen und 3D-Modelle werden per Code erzeugt):
+Resource Pack neu generieren (Texturen und 3D-Modelle werden per Code erzeugt; HD-Modelle zuerst mit
+`python tools/hd/build.py`, nur die Relikt-Items schnell mit `python tools/hd/relics.py`):
 
 ```bash
 java tools/PackGenerator.java resourcepack

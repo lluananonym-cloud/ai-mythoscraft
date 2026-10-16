@@ -32,6 +32,13 @@ public final class CrateCarouselService {
     private final List<String> queue = new ArrayList<>();
     private int nextSlot;
     private long nextSwap;
+    /** relic crates (rarest first) with their chance per crate swap */
+    private final Map<String, Double> relicChances = new LinkedHashMap<>();
+    private boolean relicEnabled = true;
+    private int relicMinutes = 20;
+    /** relic crate standing on the relic pedestal right now (null = none) and until when */
+    private String relicNow;
+    private long relicUntil;
 
     public CrateCarouselService(MythosCraft plugin) {
         this.plugin = plugin;
@@ -56,6 +63,20 @@ public final class CrateCarouselService {
             eventCrates.put("silvester", "neujahr");
         }
         never = lower(cfg.strings("never"));
+        ConfigReader relic = cfg.sub("relic");
+        relicEnabled = relic.bool("enabled", true);
+        relicMinutes = relic.integer("minutes", 20, 1, 24 * 60);
+        relicChances.clear();
+        ConfigReader ch = relic.sub("chances");
+        for (String crate : ch.keys()) {
+            relicChances.put(crate.toLowerCase(Locale.ROOT), ch.decimal(crate, 0, 0, 1));
+        }
+        if (relicChances.isEmpty() && !relic.has("chances")) {
+            relicChances.put("relic4", 0.004);
+            relicChances.put("relic3", 0.012);
+            relicChances.put("relic2", 0.03);
+            relicChances.put("relic1", 0.06);
+        }
         queue.clear();
         removeSigns();
         nextSwap = System.currentTimeMillis() + swapSeconds * 1000L;
@@ -114,7 +135,7 @@ public final class CrateCarouselService {
         List<String> out = new ArrayList<>();
         for (CrateType t : plugin.crates().types()) {
             String id = t.id().toLowerCase(Locale.ROOT);
-            if (!fixed.contains(id) && !eventCrates.containsKey(id) && !never.contains(id)) {
+            if (!fixed.contains(id) && !eventCrates.containsKey(id) && !never.contains(id) && !isRelic(id)) {
                 out.add(id);
             }
         }
@@ -182,11 +203,19 @@ public final class CrateCarouselService {
         if (ev != null) {
             show(ev, currentEventCrate(), false);
         }
+        Location rs = relicSpot();
+        if (rs != null) {
+            show(rs, relicActive() ? relicNow : null, false);
+        }
         // event crates never stand anywhere else on the spawn
         for (PlacedCrate c : new ArrayList<>(plugin.crates().placed())) {
             String id = c.type().toLowerCase(Locale.ROOT);
             if (eventCrates.containsKey(id) && plugin.attractionStore().inside(c.location(), 0)
                     && (ev == null || c.location().distanceSquared(ev) > 1 || !eventActive(id))) {
+                plugin.crates().remove(c);
+            }
+            if (isRelic(id) && plugin.attractionStore().inside(c.location(), 0)
+                    && (rs == null || c.location().distanceSquared(rs) > 1 || !relicActive() || !id.equals(relicNow))) {
                 plugin.crates().remove(c);
             }
         }
@@ -220,7 +249,16 @@ public final class CrateCarouselService {
             nextSwap = System.currentTimeMillis() + swapSeconds * 1000L;
             swap();
         }
+        if (relicNow != null && !relicActive()) {
+            Location rs = relicSpot();
+            relicNow = null;
+            if (rs != null) {
+                show(rs, null, true);
+            }
+        }
         updateSigns();
+        updateRelicSign();
+        relicGlow();
     }
 
     /** Crates currently standing on the carousel pedestals. */
@@ -284,6 +322,7 @@ public final class CrateCarouselService {
         Location spot = spots.get(fixed.size() + nextSlot);
         nextSlot++;
         show(spot, next, true);
+        rollRelic();
         CrateType t = plugin.crates().type(next);
         if (t != null) {
             for (Player p : plugin.getServer().getOnlinePlayers()) {
@@ -360,6 +399,7 @@ public final class CrateCarouselService {
     }
 
     public void removeSigns() {
+        removeRelicSign();
         signs.forEach(org.bukkit.entity.Entity::remove);
         signs.clear();
         for (org.bukkit.World w : plugin.getServer().getWorlds()) {
@@ -379,6 +419,9 @@ public final class CrateCarouselService {
     /** Rough minutes until a crate is back on the spawn, -1 if never (event crate outside its event). */
     public long minutesUntil(String crate) {
         crate = crate.toLowerCase(Locale.ROOT);
+        if (isRelic(crate)) {
+            return crate.equals(relicNow) && relicActive() ? 0 : -1;
+        }
         if (eventCrates.containsKey(crate)) {
             return eventActive(crate) ? 0 : -1;
         }
@@ -407,7 +450,9 @@ public final class CrateCarouselService {
         if (t == null || m == 0) {
             return;
         }
-        if (m < 0) {
+        if (m < 0 && isRelic(crate)) {
+            plugin.messages().send(player, "crates.relic.hint", "crate", Text.parse(t.name()));
+        } else if (m < 0) {
             plugin.messages().send(player, "crates.carousel.event-only", "crate", Text.parse(t.name()));
         } else {
             plugin.messages().send(player, "crates.carousel.comes-back", "crate", Text.parse(t.name()), "minutes", m);
@@ -436,6 +481,9 @@ public final class CrateCarouselService {
                     "next", upT == null ? net.kyori.adventure.text.Component.text("-") : Text.parse(upT.name()),
                     "time", clock(secondsUntilSlot(slot, rotatingSlots)));
         }
+        CrateType relicType = relicActive() ? plugin.crates().type(relicNow) : null;
+        plugin.messages().sendRaw(sender, "crates.relic.info-line", "crate", relicType == null ? plugin.messages().get("crates.relic.none")
+                : Text.parse(relicType.name()), "time", clock(relicType == null ? 0 : Math.max(0, (relicUntil - System.currentTimeMillis()) / 1000)));
         String ev = currentEventCrate();
         plugin.messages().sendRaw(sender, "crates.carousel.event-line", "event", ev == null ? plugin.messages().get("crates.carousel.no-event")
                 : Text.parse(plugin.crates().type(ev).name()));
@@ -449,6 +497,130 @@ public final class CrateCarouselService {
                 }
             }
             plugin.messages().sendRaw(sender, "crates.carousel.later", "crates", Text.parse(String.join("<gray>, ", names)));
+        }
+    }
+
+    // ---- relic pedestal ---------------------------------------------------------------------------------------
+
+    public boolean isRelic(String crate) {
+        return crate != null && relicChances.containsKey(crate.toLowerCase(Locale.ROOT));
+    }
+
+    private Location relicSpot() {
+        return plugin.attractionStore().first("relic_crate");
+    }
+
+    private boolean relicActive() {
+        return relicNow != null && System.currentTimeMillis() < relicUntil;
+    }
+
+    /** One roll per crate swap, the rarest tier first. A rarer relic may replace a weaker one that still stands. */
+    void rollRelic() {
+        Location spot = relicSpot();
+        if (!relicEnabled || spot == null) {
+            return;
+        }
+        java.util.concurrent.ThreadLocalRandom r = java.util.concurrent.ThreadLocalRandom.current();
+        List<String> order = new ArrayList<>(relicChances.keySet());
+        for (String crate : order) {
+            if (plugin.crates().type(crate) == null || r.nextDouble() >= relicChances.get(crate)) {
+                continue;
+            }
+            if (relicActive() && order.indexOf(relicNow) <= order.indexOf(crate)) {
+                return;      // an equal or rarer relic is already there
+            }
+            spawnRelic(crate);
+            return;
+        }
+    }
+
+    /** Puts a relic crate on the relic pedestal (also /mythos crate relic &lt;id&gt; for admins). */
+    public boolean spawnRelic(String crate) {
+        Location spot = relicSpot();
+        CrateType t = plugin.crates().type(crate);
+        if (spot == null || t == null || !isRelic(crate)) {
+            return false;
+        }
+        relicNow = crate.toLowerCase(Locale.ROOT);
+        relicUntil = System.currentTimeMillis() + relicMinutes * 60_000L;
+        show(spot, relicNow, true);
+        if (spot.isChunkLoaded()) {
+            Location c = spot.clone().add(0.5, 1, 0.5);
+            c.getWorld().strikeLightningEffect(c);
+            c.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, c, 120, 0.6, 1.2, 0.6, 0.5);
+            c.getWorld().spawnParticle(Particle.END_ROD, c, 60, 0.3, 3, 0.3, 0.08);
+        }
+        plugin.messages().broadcast("crates.relic.appeared", "crate", Text.parse(t.name()), "minutes", relicMinutes);
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            SoundSpec.of("ui.toast.challenge_complete", 0.8f, 0.9f).play(p);
+        }
+        return true;
+    }
+
+    private org.bukkit.entity.TextDisplay relicSign;
+    private int relicTick;
+
+    private void updateRelicSign() {
+        Location spot = relicSpot();
+        if (spot == null || !spot.isChunkLoaded()) {
+            return;
+        }
+        Location at = spot.clone().add(0.5, 3.6, 0.5);
+        if (relicSign == null || !relicSign.isValid()) {
+            for (org.bukkit.entity.Entity e : at.getWorld().getNearbyEntities(at, 1, 1, 1)) {
+                if ("relic_sign".equals(e.getPersistentDataContainer().get(online.mythoscraft.core.util.Keys.ENTITY,
+                        org.bukkit.persistence.PersistentDataType.STRING))) {
+                    e.remove();
+                }
+            }
+            relicSign = at.getWorld().spawn(at, org.bukkit.entity.TextDisplay.class, d -> {
+                d.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+                d.setPersistent(false);
+                d.setShadowed(true);
+                d.setBackgroundColor(org.bukkit.Color.fromARGB(130, 30, 10, 20));
+                d.getPersistentDataContainer().set(online.mythoscraft.core.util.Keys.ENTITY,
+                        org.bukkit.persistence.PersistentDataType.STRING, "relic_sign");
+            });
+        }
+        if (relicActive()) {
+            CrateType t = plugin.crates().type(relicNow);
+            relicSign.text(plugin.messages().get("crates.relic.sign-active", "crate", t == null ? net.kyori.adventure.text.Component.text(relicNow)
+                    : Text.parse(t.name()), "time", clock(Math.max(0, (relicUntil - System.currentTimeMillis()) / 1000))));
+        } else {
+            relicSign.text(plugin.messages().get("crates.relic.sign-empty",
+                    "v1", percent("relic1"), "v2", percent("relic2"), "v3", percent("relic3"), "v4", percent("relic4")));
+        }
+    }
+
+    private String percent(String crate) {
+        double c = relicChances.getOrDefault(crate, 0.0) * 100;
+        return String.format(Locale.ROOT, c < 1 ? "%.1f" : "%.0f", c);
+    }
+
+    /** A slowly turning ring of light around the relic pedestal (brighter while a relic stands there). */
+    private void relicGlow() {
+        Location spot = relicSpot();
+        if (spot == null || !spot.isChunkLoaded() || spot.getWorld().getNearbyPlayers(spot, 40).isEmpty()) {
+            return;
+        }
+        relicTick++;
+        Location c = spot.clone().add(0.5, 0.3, 0.5);
+        boolean active = relicActive();
+        int points = active ? 16 : 6;
+        for (int i = 0; i < points; i++) {
+            double a = relicTick * 0.25 + i * Math.PI * 2 / points;
+            c.getWorld().spawnParticle(active ? Particle.END_ROD : Particle.WAX_ON, c.clone().add(Math.cos(a) * 2.2, 0, Math.sin(a) * 2.2),
+                    1, 0, 0.1, 0, 0);
+        }
+        if (active) {
+            c.getWorld().spawnParticle(Particle.FIREWORK, c.clone().add(0, 2.4, 0), 6, 0.4, 0.4, 0.4, 0.03);
+        }
+    }
+
+    public void removeRelicSign() {
+        if (relicSign != null) {
+            relicSign.remove();
+            relicSign = null;
         }
     }
 }

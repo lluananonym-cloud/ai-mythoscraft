@@ -110,10 +110,43 @@ public final class SpawnGamesService implements Listener {
     }
 
     private final Map<UUID, Long> stuckSince = new HashMap<>();
+    private final Map<UUID, Long> portalCooldown = new HashMap<>();
+    private org.bukkit.entity.TextDisplay portalLabel;
+    private int portalTick;
+
+    /** Swirling portal particles inside the wilderness arch and a floating label above it. */
+    private void portalGlow() {
+        List<Location> plates = plugin.attractionStore().all("rtp_portal");
+        if (plates.isEmpty()) {
+            return;
+        }
+        Location mid = plates.get(plates.size() / 2).clone().add(0.5, 0, 0.5);
+        if (!mid.isChunkLoaded() || mid.getWorld().getNearbyPlayers(mid, 48).isEmpty()) {
+            return;
+        }
+        portalTick++;
+        for (int i = 0; i < 6; i++) {
+            double a = portalTick * 0.4 + i * Math.PI / 3;
+            double r = 1.6 + Math.sin(portalTick * 0.15 + i) * 0.4;
+            mid.getWorld().spawnParticle(Particle.PORTAL, mid.clone().add(Math.cos(a) * r, 3.5 + Math.sin(a) * r * 1.4, 0), 3, 0.05, 0.05, 0.05, 0.4);
+        }
+        mid.getWorld().spawnParticle(Particle.REVERSE_PORTAL, mid.clone().add(0, 3.5, 0), 6, 1.2, 2.2, 0.15, 0.01);
+        mid.getWorld().spawnParticle(Particle.WITCH, mid.clone().add(0, 0.2, 0), 2, 1.5, 0.05, 0.3, 0.005);
+        if (portalLabel == null || !portalLabel.isValid()) {
+            portalLabel = mid.getWorld().spawn(mid.clone().add(0, 11.2, 0), org.bukkit.entity.TextDisplay.class, t -> {
+                t.setPersistent(false);
+                t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+                t.setShadowed(true);
+                t.setBackgroundColor(org.bukkit.Color.fromARGB(0x70, 0x1b, 0x10, 0x22));
+                t.text(plugin.messages().get("attractions.rtp-portal"));
+            });
+        }
+    }
 
     public void reload(ConfigReader root) {
         plugin.tasks().cancel(this);
         plugin.tasks().repeat(this, 40, 10, "dropper watchdog", this::dropperWatch);
+        plugin.tasks().repeat(this, 40, 5, "rtp portal", this::portalGlow);
         ConfigReader cfg = root.sub("attractions");
         padPower = cfg.decimal("jump-pads.power", 1.8, 0.2, 6);
         dropperGems = cfg.longValue("dropper.daily-gems", 2, 0, 100_000);
@@ -134,6 +167,19 @@ public final class SpawnGamesService implements Listener {
         }
         Block b = event.getClickedBlock();
         Player p = event.getPlayer();
+        for (Location plate : plugin.attractionStore().all("rtp_portal")) {
+            if (same(b, plate)) {
+                long now = System.currentTimeMillis();
+                if (portalCooldown.getOrDefault(p.getUniqueId(), 0L) > now) {
+                    return;
+                }
+                portalCooldown.put(p.getUniqueId(), now + 4000);
+                p.getWorld().spawnParticle(Particle.REVERSE_PORTAL, p.getLocation().add(0, 1, 0), 80, 0.4, 1, 0.4, 0.2);
+                SoundSpec.of("block.portal.trigger", 0.6f, 1.6f).play(p);
+                plugin.rtp().start(p, null, false, null);
+                return;
+            }
+        }
         for (Location pad : plugin.attractionStore().all("jump_pad")) {
             if (same(b, pad)) {
                 Vector dir = new Vector(-Math.sin(Math.toRadians(pad.getYaw())), 0, Math.cos(Math.toRadians(pad.getYaw())));

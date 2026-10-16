@@ -8,8 +8,11 @@
       {"when": "mythos_hammer", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mythos_hammer"}},
       {"when": "newyear_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_pickaxe"}},
       {"when": "ore_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ore_pickaxe"}},
+      {"when": "power_drill", "model": {"type": "minecraft:model", "model": "mythoscraft:item/power_drill"}},
       {"when": "smelter_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/smelter_pickaxe"}},
-      {"when": "spawner_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/spawner_pickaxe"}}
+      {"when": "spawner_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/spawner_pickaxe"}},
+      {"when": "vein_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/vein_pickaxe"}},
+      {"when": "zap_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/zap_pickaxe"}}
     ],
     "fallback": {
     "type": "minecraft:model",

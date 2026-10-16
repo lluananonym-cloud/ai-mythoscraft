@@ -81,11 +81,12 @@ def paint_swatch(base, style):
 
 
 class Cube:
-    def __init__(self, frm, to, color, style='matte', rot=None, glow=False, name='', faces=None):
+    def __init__(self, frm, to, color, style='matte', rot=None, glow=False, name='', faces=None, anim=None):
         self.frm, self.to = list(frm), list(to)
         self.color, self.style = color, ('glow' if glow and style == 'matte' else style)
         self.rot, self.glow, self.name = rot, glow, name
         self.faces = faces or {}            # face -> (color, style) override
+        self.anim = anim                    # texture id of an animated texture (all faces show it, uv 0..16)
 
 
 class SwatchModel:
@@ -139,12 +140,18 @@ class SwatchModel:
     def json(self, texture_id):
         s = self.tex.size[0]
         els = []
+        anims = {}
+        for c in self.cubes:
+            if c.anim and c.anim not in anims:
+                anims[c.anim] = 'a%d' % len(anims)
         for bi, c in enumerate(self.cubes):
             faces = {}
             for f in ('north', 'south', 'east', 'west', 'up', 'down'):
                 x, y, w, h = self.pos[(bi, f)]
                 faces[f] = {'uv': [round(x / s * 16, 4), round(y / s * 16, 4), round((x + w) / s * 16, 4), round((y + h) / s * 16, 4)],
                             'texture': '#0'}
+            if c.anim:
+                faces = {f: {'uv': [0, 0, 16, 16], 'texture': '#' + anims[c.anim]} for f in faces}
             e = {'from': [round(v, 4) for v in c.frm], 'to': [round(v, 4) for v in c.to], 'faces': faces}
             if c.name:
                 e['name'] = c.name
@@ -153,7 +160,9 @@ class SwatchModel:
             if c.glow:
                 e['light_emission'] = 15
             els.append(e)
-        out = {'textures': {'0': texture_id, 'particle': texture_id}, 'elements': els,
+        textures = {'0': texture_id, 'particle': texture_id}
+        textures.update({k: tid for tid, k in anims.items()})
+        out = {'textures': textures, 'elements': els,
                'display': getattr(self, 'extra_display', None) or DISPLAYS[self.display]}
         if self.display in ('hat', 'companion'):
             out['gui_light'] = 'side'

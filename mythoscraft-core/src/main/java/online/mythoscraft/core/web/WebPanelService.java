@@ -673,8 +673,8 @@ public final class WebPanelService {
         m.put("world", p.getWorld().getName());
         m.put("location", p.getLocation().getBlockX() + " " + p.getLocation().getBlockY() + " " + p.getLocation().getBlockZ());
         Map<String, Object> jobs = new LinkedHashMap<>();
-        for (String job : new String[]{"miner", "lumberjack", "farmer", "hunter", "fisher", "builder"}) {
-            jobs.put(job, plugin.progress().loaded(p) ? plugin.progress().get(p, "jobs." + job + ".level") : 0);
+        for (online.mythoscraft.core.progress.Job job : online.mythoscraft.core.progress.Job.values()) {
+            jobs.put(job.id(), plugin.progress().loaded(p) ? plugin.jobs().level(p, job) : 0);
         }
         m.put("jobs", jobs);
         List<String> inv = new ArrayList<>();

@@ -18,6 +18,7 @@
       {"when": "mythos_wand", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mythos_wand"}},
       {"when": "pharaoh_staff", "model": {"type": "minecraft:model", "model": "mythoscraft:item/pharaoh_staff"}},
       {"when": "region_wand", "model": {"type": "minecraft:model", "model": "mythoscraft:item/region_wand"}},
+      {"when": "sort_wand", "model": {"type": "minecraft:model", "model": "mythoscraft:item/sort_wand"}},
       {"when": "tide_staff", "model": {"type": "minecraft:model", "model": "mythoscraft:item/tide_staff"}},
       {"when": "void_scepter", "model": {"type": "minecraft:model", "model": "mythoscraft:item/void_scepter"}},
       {"when": "witch_broom", "model": {"type": "minecraft:model", "model": "mythoscraft:item/witch_broom"}},

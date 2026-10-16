@@ -361,6 +361,120 @@ tools:
   cooldown: <red>{seconds}s cooldown left
   no-target: <red>No target in range
 items:
+  spawner_booster:
+    name: <gradient:#a3e635:#7c3aed><bold>Spawner Booster</bold></gradient>
+    lore:
+    - <dark_gray>Spawner collection
+    - '<gray>Right-click a spawner:'
+    - '<#d9f99d>✦ +40 % spawn speed per booster'
+    - '<gray>Stacks up to level 10 (more mobs from level 4)'
+  companion_shadow:
+    name: '<gradient:#7c3aed:#1d1428><bold>Shadow Cube Companion</bold></gradient>'
+    lore:
+    - '<dark_gray>Companion'
+    - '<gray>Right-click: sits on your head'
+    - '<gray>Place it on the ground: farms mobs for you'
+  sort_wand:
+    name: <gradient:#2f9a3c:#2f62d8><bold>Sorting Wand</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V1
+    - '<gray>Right-click a chest/barrel:'
+    - '<#bbf7d0>✦ merges stacks and sorts everything'
+  infinite_bucket:
+    name: <gradient:#46d4e8:#2f62d8><bold>Endless Water Bucket</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V1
+    - '<#a5f3fc>✦ Never runs empty'
+  vein_pickaxe:
+    name: <gradient:#ff9a2a:#c8743c><bold>Vein Pickaxe</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V2
+    - '<#fed7aa>✦ Mines the whole ore vein (up to 48 blocks)'
+    - '<dark_gray>Sneak: single block'
+  repair_charm:
+    name: <gradient:#2ed27a:#8d99aa><bold>Repair Charm</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V2
+    - '<gray>In your off hand:'
+    - '<#bbf7d0>✦ slowly repairs tools & armour'
+  paint_brush:
+    name: <gradient:#d8313a:#f6d23c:#2f62d8><bold>Magic Paint Brush</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V3
+    - '<gray>Right-click: recolours wool, concrete, glass,'
+    - '<gray>carpet, terracotta & candles'
+    - '<gray>Right-click the air: change colour'
+  concrete_mixer:
+    name: <gradient:#f07a1c:#a7b0bd><bold>Concrete Mixer</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V3
+    - '<gray>Right-click concrete powder: becomes concrete (3×3×3)'
+    - '<gray>Right-click the air: mixes all powder in your inventory'
+  soul_sword:
+    name: <gradient:#5eead4:#1f2d3a><bold>Soul Sword</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V3
+    - '<#99f6e4>✦ 12 % chance: steals a heart'
+    - '<gray>Souls circle around you while you hold it'
+  dwarf_hat:
+    name: <gradient:#c0282f:#f4f1ea><bold>Dwarf Hat</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V3
+    - '<gray>Wear it: you become tiny'
+  growth_totem:
+    name: <gradient:#e0a628:#2ed27a><bold>Growth Totem</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V3
+    - '<gray>In your off hand: you become a giant'
+    - '<gray>(longer steps and reach)'
+  power_drill:
+    name: <gradient:#f07a1c:#22232b><bold>Power Drill</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#fed7aa>✦ Right-click: drills a 3×3 tunnel, 8 deep'
+    - '<gray>Uses 20 % battery'
+    - '<gray>Sneak + right-click: recharge with redstone'
+  mega_chainsaw:
+    name: <gradient:#f6d23c:#d8313a><bold>Mega Chainsaw</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#fef08a>✦ Fells the whole tree including leaves'
+    - '<gray>and plants a new sapling'
+  minepro_totem:
+    name: <gradient:#7c3aed:#e0a628><bold>MinePro641 Totem</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#e9d5ff>✦ Saves you from death – and stays!'
+    - '<gray>Recharges for 10 minutes'
+  blossom_crown:
+    name: <gradient:#f9a8d4:#58b83a><bold>Blossom Crown</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<gray>Blossoms and leaves swirl around you'
+    - '<#fbcfe8>✦ Light regeneration'
+  bark_hand:
+    name: <gradient:#a8743c:#58b83a><bold>Bark Hand</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<gray>In your off hand, right-click a tree:'
+    - '<#fde68a>✦ the whole tree gets stripped'
+  zap_pickaxe:
+    name: <gradient:#ffffff:#a3e635><bold>Zap Pickaxe</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#ecfccb>✦ Mines 3×3'
+    - '<gray>Sometimes lightning strikes: Haste III'
+  zap_sword:
+    name: <gradient:#ffffff:#a3e635><bold>Zap Blade</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#ecfccb>✦ 20 % chance: lightning strike (+4 damage)'
+  zap_rod:
+    name: <gradient:#ffffff:#a3e635><bold>Zap Rod</bold></gradient>
+    lore:
+    - <dark_gray>Relic Crate V4
+    - '<#ecfccb>✦ Faster bites, double catch & XP'
+    - '<gray>Pulls hooked mobs towards you'
   list: '<gray>Custom items: <white>{items}'
   unknown: '<red>Unknown item. Available: <white>{items}'
   given: <green>{player} received {item}<green>.
@@ -1283,26 +1397,31 @@ items:
     lore:
     - '<dark_gray>Companion'
     - '<gray>Right-click: sits on your head (again: send home)'
+    - '<gray>Sneak + right-click the ground: farms for you'
   companion_penguin:
     name: '<aqua><bold>Penguin Companion</bold>'
     lore:
     - '<dark_gray>Companion'
     - '<gray>Right-click: sits on your head (again: send home)'
+    - '<gray>Sneak + right-click the ground: farms for you'
   companion_ghost:
     name: '<gold><bold>Ghost Companion</bold>'
     lore:
     - '<dark_gray>Companion'
     - '<gray>Right-click: sits on your head (again: send home)'
+    - '<gray>Sneak + right-click the ground: farms for you'
   companion_dragon:
     name: '<green><bold>Dragon Companion</bold>'
     lore:
     - '<dark_gray>Companion'
     - '<gray>Right-click: sits on your head (again: send home)'
+    - '<gray>Sneak + right-click the ground: farms for you'
   companion_bee:
     name: '<yellow><bold>Bee Companion</bold>'
     lore:
     - '<dark_gray>Companion'
     - '<gray>Right-click: sits on your head (again: send home)'
+    - '<gray>Sneak + right-click the ground: farms for you'
   golden_crown:
     name: <gradient:#fde047:#d97706><bold>Golden Crown</bold></gradient>
     lore:
@@ -1905,6 +2024,15 @@ items:
     lore:
     - <gray>Refills 60% of your mana.
 crates:
+  need-key-relic: '<red>You need a {key}<red>! <gray>Relic keys come from the <light_purple>Mythos wheel</light_purple> and from other relic crates.'
+  relic:
+    appeared: "<newline><gradient:#f59e0b:#ec4899:#8b5cf6><bold>✦ A RELIC CRATE APPEARED! ✦</bold></gradient><newline><gray>A {crate}<gray> now stands on the relic pedestal at the spawn – only for <white>{minutes} minutes</white>!<newline>"
+    sign-empty: "<gradient:#f59e0b:#ec4899:#8b5cf6><bold>✦ Relic crates appear here ✦</bold></gradient><newline><gray>A small chance at every crate swap:<newline><#d6a35c>V1 {v1}%  <white>V2 {v2}%  <aqua>V3 {v3}%  <red>V4 {v4}%"
+    sign-active: "{crate}<newline><gray>disappears in <white>{time}"
+    info-line: '<gradient:#f59e0b:#ec4899><bold>Relic pedestal:</bold></gradient> {crate} <dark_gray>({time})'
+    none: '<gray>empty – appears rarely at a crate swap'
+    hint: '<gray>The {crate} <gray>only appears rarely on the <gold>relic pedestal</gold> at the spawn (at a crate swap).'
+    not-possible: '<red>Not possible – is there a relic pedestal (new spawn) and is that a relic crate?'
   need-key: <red>You need a {key} <red>in your hand!
   won: '<gray>Won: {reward} <dark_gray>({crate}<dark_gray>)'
   broadcast: <gold>✦ <white>{player}</white> <gray>pulled {reward} <gray>from a {crate}<gray>!
@@ -2770,6 +2898,10 @@ buttons:
 jobs:
   title: <dark_gray>Jobs
   names:
+    gambler: Gambler
+    enchanter: Enchanter
+    brewer: Brewer
+    cook: Cook
     miner: Miner
     lumberjack: Lumberjack
     farmer: Farmer
@@ -2777,6 +2909,15 @@ jobs:
     fisher: Fisher
     builder: Builder
   how:
+    gambler:
+    - <gray>Spin the wheels and open crates
+    - <gray>Paid spins and rare prizes give more
+    enchanter:
+    - <gray>Enchant at the table, work at the anvil
+    brewer:
+    - <gray>Brew potions and take them out
+    cook:
+    - <gray>Cook food in a furnace (smelting ores counts too)
     miner:
     - <gray>Mine ores and stone
     - <gray>Rare gem finds at diamond, emerald, ancient debris
@@ -2825,6 +2966,18 @@ achievements:
   done: <green>✔ Done
   open: <red>✘ Still open
   names:
+    job_gambler_10: '<gold>Gambler: Journeyman'
+    job_gambler_25: '<gold>Gambler: Master'
+    job_gambler_50: '<gold>Gambler: Grandmaster'
+    job_enchanter_10: '<gold>Enchanter: Journeyman'
+    job_enchanter_25: '<gold>Enchanter: Master'
+    job_enchanter_50: '<gold>Enchanter: Grandmaster'
+    job_brewer_10: '<gold>Brewer: Journeyman'
+    job_brewer_25: '<gold>Brewer: Master'
+    job_brewer_50: '<gold>Brewer: Grandmaster'
+    job_cook_10: '<gold>Cook: Journeyman'
+    job_cook_25: '<gold>Cook: Master'
+    job_cook_50: '<gold>Cook: Grandmaster'
     mobkills_10: <gold>Monster Scare
     mobkills_100: <gold>Monster Hunter
     mobkills_500: <gold>Monster Slayer
@@ -2885,6 +3038,18 @@ achievements:
     parkour_1: <gold>Hopper
     parkour_25: <gold>Parkour Pro
   desc:
+    job_gambler_10: <gray>Reach level 10 as a gambler
+    job_gambler_25: <gray>Reach level 25 as a gambler
+    job_gambler_50: <gray>Reach level 50 as a gambler
+    job_enchanter_10: <gray>Reach level 10 as a enchanter
+    job_enchanter_25: <gray>Reach level 25 as a enchanter
+    job_enchanter_50: <gray>Reach level 50 as a enchanter
+    job_brewer_10: <gray>Reach level 10 as a brewer
+    job_brewer_25: <gray>Reach level 25 as a brewer
+    job_brewer_50: <gray>Reach level 50 as a brewer
+    job_cook_10: <gray>Reach level 10 as a cook
+    job_cook_25: <gray>Reach level 25 as a cook
+    job_cook_50: <gray>Reach level 50 as a cook
     mobkills_10: <gray>Kill 10 monsters
     mobkills_100: <gray>Kill 100 monsters
     mobkills_500: <gray>Kill 500 monsters
@@ -2990,6 +3155,10 @@ invsee:
   ender: <gray>Ender chest of <white>{player}</white> opened.
   self: <red>That's your own inventory.
 attractions:
+  wheel2:
+    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS WHEEL ✦</bold></gradient><newline><gray>Right-click: spin for <white>{price}</white> {currency}<newline><gray>Better prizes & <gradient:#f59e0b:#ec4899><bold>relic keys</bold></gradient><newline><dark_gray>Left-click: show prizes"
+    prizes-header: '<light_purple>🎡 Prizes on the Mythos wheel:'
+  rtp-portal: "<gradient:#a855f7:#ec4899><bold>✦ WILDERNESS PORTAL ✦</bold></gradient><newline><gray>Walk in = random spot to build"
   not-enough: <red>You need <white>{price}</white> {currency}<red> for that. You have <white>{balance}</white>.
   statue:
     title-1: <gradient:#fde047:#f59e0b><bold>👑 No. 1</bold></gradient>
@@ -3559,3 +3728,124 @@ moderation:
   log-header: '<gold>Latest moderation actions:'
   testkey: '<green>{amount}× test key for {crate} – you see the opening but get nothing.'
   testkey-won: '<gray>[TEST] You would have won: {reward} <dark_gray>(not given)'
+guide:
+  bar: '<gold><bold>First steps</bold></gold> <gray>{step}/{total}</gray> <dark_gray>»</dark_gray> <white>{goal}'
+  stopped: '<gray>The glowing trail is off. <dark_gray>(/guide starts it again)'
+  finish: "<newline><gradient:#fde047:#a855f7><bold>✔ FIRST STEPS DONE!</bold></gradient><newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Great! Now find a nice spot and set your home with <yellow>/sethome</yellow>.<newline><gray>Quests & starting money: <yellow>/quests</yellow> <dark_gray>·</dark_gray> <gray>Trail again: <yellow>/guide</yellow><newline>"
+  starter:
+    goal: 'Claim your starter kit'
+    bar: '<gold>✦ Step 1:</gold> <white>Type <yellow><bold>/starter</bold></yellow> <gray>– or follow the trail to Lia <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Follow the <gold>glowing trail</gold>! First, grab your starter kit: <click:run_command:/starter><hover:show_text:'<green>Claim starter kit'><yellow><u>/starter</u></yellow></hover></click> <dark_gray>(/guide skip = next, /guide stop = off)"
+  wheel:
+    goal: 'Spin the wheel of fortune'
+    bar: '<gold>✦ Step 2:</gold> <white>Right-click a <light_purple><bold>wheel of fortune</bold></light_purple> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Now to the <light_purple>wheels of fortune</light_purple>! The big wheel spins <green>once a day for free</green> – right-click spins, left-click shows the prizes."
+  games:
+    goal: 'Try the dropper'
+    bar: '<gold>✦ Step 3:</gold> <white>Walk to the <aqua><bold>dropper</bold></aqua> <gray>and step on the pressure plate <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>The spawn has <aqua>mini games</aqua> with daily rewards: dropper, parkour, maze, spleef … Check out the <aqua>dropper</aqua>!"
+  crates:
+    goal: 'Learn about crates'
+    bar: '<gold>✦ Step 4:</gold> <white>Go to the <gold><bold>crates</bold></gold> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Almost done – off to the <gold>crates</gold>!"
+    explain: "<newline><gold><bold>📦 HOW CRATES WORK</bold></gold><newline><gray>• Every crate needs its <yellow>key</yellow> in your hand – <white>right-click</white> opens it.<newline><gray>• <white>Left-click</white> shows all prizes with their chances.<newline><gray>• Keys come from <aqua>events</aqua>, the <green>daily reward</green>, the <light_purple>wheels</light_purple> and the <yellow>/shop</yellow>.<newline><gray>• The pedestals <white>switch</white> their crate regularly – and very rarely a <gradient:#f59e0b:#ec4899:#8b5cf6><bold>Relic Crate</bold></gradient> appears!<newline>"
+  rtp:
+    goal: 'Into the wilderness'
+    bar: '<gold>✦ Step 5:</gold> <white>Jump into the <dark_purple><bold>wilderness portal</bold></dark_purple> <gray>or type <yellow>/rtp</yellow> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Last step: the <dark_purple>wilderness portal</dark_purple> takes you to a free spot to build. <gray>Or: <click:run_command:/rtp><yellow><u>/rtp</u></yellow></click>"
+relic:
+  no-permission: '<red>You may not do that here.'
+  booster:
+    not-spawner: '<gray>Right-click a <white>spawner</white> with it.'
+    max: '<yellow>This spawner is fully boosted already (level {max}).'
+    applied: '<green>⚡ Spawner boosted! <white>Level {level}/{max}</white> <gray>– now spawns <white>{speed}×</white> as fast.'
+  sort:
+    done: '<green>✔ Sorted – <white>{stacks}</white> <green>stacks.'
+  vein:
+    done: '<gold>⛏ Ore vein mined: <white>{blocks}</white> <gold>blocks'
+  paint:
+    color: '<gray>Brush colour: {color}'
+    not-this: '<gray>Beds, shulker boxes and banners cannot be repainted.'
+  mixer:
+    inventory: '<gray>🪣 Mixed <white>{amount}</white> <gray>concrete powder into concrete.'
+  soul:
+    stolen: '<aqua>☠ Soul stolen – <red>+1 ❤'
+  drill:
+    running: '<gold>🔩 Drilling … <gray>Battery: <white>{battery} %'
+    empty: '<red>🔋 Battery empty ({battery} %) <gray>– sneak + right-click with redstone in your inventory to recharge.'
+    charged: '<green>🔋 Charged: <white>{battery} %'
+    no-redstone: '<red>No redstone in your inventory <gray>(battery: {battery} %).'
+  chainsaw:
+    done: '<yellow>🪚 Tree felled: <white>{logs}</white> <yellow>logs'
+  bark:
+    done: '<gold>🪵 Tree stripped: <white>{logs}</white> <gold>logs'
+  minepro:
+    saved: '<gradient:#7c3aed:#e0a628><bold>MinePro641 saved you!</bold></gradient> <gray>The totem recharges for 10 minutes.'
+  zap:
+    charged: '<yellow>⚡ Charged! <white>Haste III'
+companion-farm:
+  menu-title: '<dark_gray>Farming companion: {job}'
+  jobs:
+    crops: '<yellow>Field Bee'
+    fish: '<aqua>Fishing Penguin'
+    trees: '<white>Lumberjack Snowman'
+    plants: '<green>Plant Ghost'
+    ores: '<gold>Ore Dragon'
+    mobs: '<dark_purple>Monster Shadow'
+  how:
+    crops:
+    - ''
+    - '<gray>Harvests ripe crops (wheat, carrots,'
+    - '<gray>potatoes, beetroot, nether wart, berries)'
+    - '<gray>and replants them right away.'
+    fish:
+    - ''
+    - '<gray>Fishes in nearby water:'
+    - '<gray>fish, sometimes treasure – and XP.'
+    trees:
+    - ''
+    - '<gray>Fells whole trees including leaves'
+    - '<gray>and plants a new sapling.'
+    plants:
+    - ''
+    - '<gray>Harvests sugar cane, cactus, bamboo, kelp,'
+    - '<gray>melons and pumpkins (the stem stays).'
+    ores:
+    - ''
+    - '<gray>Finds ores around it and mines them'
+    - '<gray>(stone is left in their place).'
+    mobs:
+    - ''
+    - '<gray>Hunts monsters around it –'
+    - '<gray>loot and XP go into its storage.'
+  duration: '<gray>{minutes} minutes'
+  duration-selected: '<green><bold>▶ {minutes} minutes</bold>'
+  radius: '<gray>{radius} blocks wide'
+  radius-selected: '<green><bold>▶ {radius} blocks wide</bold>'
+  start: '<green><bold>▶ Start'
+  start-lore:
+  - '<gray>Works <white>{minutes} min</white> within <white>{radius}</white> blocks'
+  - '<dark_gray>(only while the chunk is loaded)'
+  stop: '<red><bold>■ Stop'
+  stop-lore:
+  - '<gray><white>{minutes} min</white> left'
+  collect: '<gold><bold>Collect loot'
+  collect-lore:
+  - '<gray>Storage: <white>{stacks}</white><gray>/{max} stacks'
+  - '<gray>XP: <white>{xp}'
+  pickup: '<red><bold>Pick up'
+  pickup-lore:
+  - '<gray>Takes the loot and the companion back.'
+  placed: '<green>✔ {job} <green>sits here now. <gray>Right-click it: menu.'
+  place-on-ground: '<gray>Sneak + right-click <white>on top of a block</white> to put the companion down.'
+  not-here: '<red>No companion may farm here.'
+  limit: '<red>You already have {max} farming companions. <gray>Pick one up to place a new one.'
+  not-yours: '<gray>That is the companion of <white>{owner}</white>.'
+  started: '<green>▶ Farming for {minutes} min <gray>({radius} blocks)'
+  stopped: '<yellow>■ Stopped.'
+  collected: '<gold>✔ Collected {stacks} stacks.'
+  picked-up: '<green>Companion picked up.'
+  finished: '<gold>⏰ Your {job} <gold>is done – <white>{stacks}</white> <gold>stacks of loot are waiting.'
+  no-water: '<aqua>🐧 No water nearby – the penguin needs water to fish.'
+  label-running: "{job}<newline><gray>{owner} <dark_gray>· <white>{time}<newline><gray>Storage {stacks}/{max} <dark_gray>· {radius} blocks"
+  label-idle: "{job}<newline><gray>{owner} <dark_gray>· <yellow>paused<newline><gray>Storage {stacks}/{max}"

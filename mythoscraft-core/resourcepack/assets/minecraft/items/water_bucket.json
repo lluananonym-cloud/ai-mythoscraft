@@ -1,0 +1,14 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "infinite_bucket", "model": {"type": "minecraft:model", "model": "mythoscraft:item/infinite_bucket"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/water_bucket"
+  }
+  }
+}

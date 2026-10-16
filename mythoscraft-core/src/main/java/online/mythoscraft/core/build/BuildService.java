@@ -232,7 +232,8 @@ public final class BuildService {
         java.util.Map<String, List<Location>> points = new java.util.LinkedHashMap<>();
         for (String key : new String[]{"statue", "wheel", "well", "merchant", "merchant_wander", "ring", "elytra_start", "elytra_lift",
                 "lamp", "deco", "season_tree", "dropper_start", "dropper_pool", "dropper_lift", "maze_goal", "jump_pad", "mentor", "starter_board", "ground", "obelisk_accent", "arch_top",
-                "crate", "crate_event", "cannon", "cannon_target", "party_center", "party_exit", "spleef_center", "spleef_exit", "range_start", "range_stand", "target"}) {
+                "crate", "crate_event", "cannon", "cannon_target", "party_center", "party_exit", "spleef_center", "spleef_exit", "range_start", "range_stand", "target",
+                "rtp_portal", "wheel2", "relic_crate"}) {
             List<Location> list = new java.util.ArrayList<>();
             for (BlockPlan.Marker m : plan.markers(key)) {
                 list.add(new Location(w, ox + m.x(), oy + m.y(), oz + m.z(), m.yaw(), 0));

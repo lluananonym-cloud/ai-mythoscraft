@@ -99,6 +99,33 @@ class StructureTest {
         int limit = SpawnStructure.RADIUS + 1;
         assertTrue(p.minX() >= -limit && p.maxX() <= limit && p.minZ() >= -limit && p.maxZ() <= limit,
                 "spawn exceeds its clear radius");
+        // relic pedestal, second wheel and the wilderness portal of the newcomer guide
+        assertEquals(1, p.markers("wheel2").size());
+        assertEquals(1, p.markers("relic_crate").size());
+        assertEquals(5, p.markers("rtp_portal").size());
+        for (BlockPlan.Marker plate : p.markers("rtp_portal")) {
+            assertEquals("minecraft:heavy_weighted_pressure_plate", p.get((int) plate.x(), (int) plate.y(), (int) plate.z()), "portal plate " + plate);
+            assertTrue(p.get((int) plate.x(), (int) plate.y() + 1, (int) plate.z()) == null, "portal blocked above " + plate);
+        }
+        BlockPlan.Marker relic = p.markers("relic_crate").get(0);
+        assertNotNull(p.get((int) relic.x(), (int) relic.y() - 1, (int) relic.z()), "relic crate without pedestal");
+        assertTrue(passable(p.get((int) relic.x(), (int) relic.y(), (int) relic.z())), "relic crate spot blocked");
+        // nothing may stand inside the two wheels (they spin as entities in the air)
+        for (String w : new String[]{"wheel", "wheel2"}) {
+            BlockPlan.Marker m = p.markers(w).get(0);
+            double yaw = Math.toRadians(m.yaw());
+            double sx = Math.cos(yaw);
+            double sz = Math.sin(yaw);
+            for (double a = 0; a < 360; a += 6) {
+                for (double r = 0; r <= 6.6; r += 0.5) {
+                    double side = Math.cos(Math.toRadians(a)) * r;
+                    int x = (int) Math.floor(m.x() + sx * side);
+                    int y = (int) Math.floor(m.y() + Math.sin(Math.toRadians(a)) * r);
+                    int z = (int) Math.floor(m.z() + sz * side);
+                    assertTrue(y < 1 || passable(p.get(x, y, z)), w + " blocked by " + p.get(x, y, z) + " at " + x + " " + y + " " + z);
+                }
+            }
+        }
         for (BlockPlan.Marker crate : p.markers("crate")) {
             int x = (int) Math.floor(crate.x());
             int y = (int) Math.floor(crate.y());

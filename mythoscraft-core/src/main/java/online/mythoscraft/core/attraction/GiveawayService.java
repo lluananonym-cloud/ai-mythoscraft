@@ -328,7 +328,7 @@ public final class GiveawayService extends BaseCommand implements org.bukkit.eve
         String a = args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "";
         if (a.equals("item")) {
             Player p = player(sender);
-            if (!p.hasPermission("mythos.giveaway.item") && !p.hasPermission("mythos.giveaway")) {
+            if (!mayHostOwn(p)) {
                 throw new CommandFail("giveaway.item-no-permission");
             }
             int minutes = 5;
@@ -344,7 +344,7 @@ public final class GiveawayService extends BaseCommand implements org.bukkit.eve
         }
         if (a.equals("coins")) {
             Player p = player(sender);
-            if (!p.hasPermission("mythos.giveaway.item") && !p.hasPermission("mythos.giveaway")) {
+            if (!mayHostOwn(p)) {
                 throw new CommandFail("giveaway.item-no-permission");
             }
             if (args.length < 2) {
@@ -420,11 +420,19 @@ public final class GiveawayService extends BaseCommand implements org.bukkit.eve
         SoundSpec.of("entity.experience_orb.pickup", 1f, 1.4f).play(p);
     }
 
+    /**
+     * Item and coin giveaways: the permission, or the CREATOR rank (or higher) itself – older config.yml files on a
+     * server lack mythos.giveaway.item in the CREATOR permission list, the rank alone has to be enough.
+     */
+    private boolean mayHostOwn(Player p) {
+        return p.hasPermission("mythos.giveaway.item") || p.hasPermission("mythos.giveaway") || plugin.rankPerks().atLeastCreator(p);
+    }
+
     @Override
     protected List<String> complete(CommandSender sender, String label, String[] args) {
         if (args.length == 1) {
             return sender.hasPermission("mythos.giveaway") ? List.of("start", "stop", "item", "coins")
-                    : sender.hasPermission("mythos.giveaway.item") ? List.of("item", "coins") : List.of();
+                    : sender instanceof Player p && mayHostOwn(p) ? List.of("item", "coins") : List.of();
         }
         return List.of();
     }

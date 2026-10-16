@@ -6,7 +6,7 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 21
+config-version: 22
 
 # Zeitzone für Daily-Belohnung, Tages-Multiplikatoren, Event-Uhrzeiten und Tageswechsel.
 timezone: Europe/Berlin
@@ -1609,6 +1609,29 @@ crate-carousel:
     silvester: neujahr
   # Kisten, die nie im Karussell erscheinen
   never: []
+  # Relikt-Sockel: bei JEDEM Kistenwechsel eine kleine Chance, dass dort eine Relikt-Kiste erscheint
+  relic:
+    enabled: true
+    # wie lange eine erschienene Relikt-Kiste stehen bleibt (Minuten)
+    minutes: 20
+    # Chance pro Kistenwechsel (0.01 = 1 %). Die seltenste Stufe wird zuerst gewürfelt.
+    chances:
+      relic4: 0.004
+      relic3: 0.012
+      relic2: 0.03
+      relic1: 0.06
+
+# Farm-Begleiter: Schleichen + Rechtsklick mit einem Begleiter auf den Boden → er farmt dort (Menü: Dauer & Radius)
+# Biene = Felder, Pinguin = Angeln, Schneemann = Bäume, Geist = Zuckerrohr/Kaktus/Melonen, Drache = Erze, Schattenwürfel = Monster
+companion-farm:
+  enabled: true
+  # so viele Begleiter darf jeder gleichzeitig farmen lassen
+  max-per-player: 2
+
+# Spawner-Booster (aus der Spawner-Kiste): Rechtsklick auf einen Spawner, stapelbar
+spawner-booster:
+  # höchste Stufe pro Spawner (jede Stufe: 40 % schneller, ab 4 Stufen mehr Mobs pro Spawn)
+  max-level: 10
 
 # ───────────────────────────── Persönliche Booster (Items) ─────────────────────────────
 boosters:
@@ -2414,7 +2437,11 @@ attractions:
   wheel:
     price: 2500
     currency: coins
-    radius: 5
+    radius: 6
+    # Größe der Felder (1 = ein Block)
+    segment-size: 1.25
+    # 1× am Tag gratis drehen (plus Extra-Drehs der Ränge)
+    free-daily: true
     # Felder (mehr Felder = feiner verteilt). Hauptgewinn: Silvester-Schlüssel (nur hier erhältlich!)
     segments:
       - {reward: "coins 250", weight: 20, block: LIME_CONCRETE}
@@ -2437,6 +2464,30 @@ attractions:
       - {reward: "key mythos 1", weight: 1, block: AMETHYST_BLOCK}
       - {reward: "gems 25", weight: 0.6, block: DIAMOND_BLOCK}
       - {reward: "key silvester 1", weight: 0.35, block: GOLD_BLOCK}
+  # Zweites, größeres Rad am Spawn: kostet Gems, dafür bessere Preise und Relikt-Schlüssel
+  wheel2:
+    price: 5
+    currency: gems
+    radius: 6
+    segment-size: 1.35
+    free-daily: false
+    segments:
+      - {reward: "coins 5000", weight: 18, block: YELLOW_STAINED_GLASS}
+      - {reward: "key elite 1", weight: 14, block: LIGHT_BLUE_STAINED_GLASS}
+      - {reward: "coins 10000", weight: 12, block: ORANGE_STAINED_GLASS}
+      - {reward: "gems 4", weight: 12, block: MAGENTA_STAINED_GLASS}
+      - {reward: "key cosmetic 1", weight: 9, block: PINK_STAINED_GLASS}
+      - {reward: "key spawner 1", weight: 7, block: BLUE_STAINED_GLASS}
+      - {reward: "tool job_elixir 2", weight: 7, block: LIME_STAINED_GLASS}
+      - {reward: "key begleiter 1", weight: 6, block: GREEN_STAINED_GLASS}
+      - {reward: "gems 10", weight: 6, block: PURPLE_STAINED_GLASS}
+      - {reward: "coins 25000", weight: 5, block: GOLD_BLOCK}
+      - {reward: "key mythos 1", weight: 4, block: AMETHYST_BLOCK}
+      - {reward: "key relic1 1", weight: 3, block: COPPER_BLOCK}
+      - {reward: "gems 30", weight: 2, block: DIAMOND_BLOCK}
+      - {reward: "key relic2 1", weight: 1.5, block: EMERALD_BLOCK}
+      - {reward: "key relic3 1", weight: 0.5, block: CRYING_OBSIDIAN}
+      - {reward: "key relic4 1", weight: 0.12, block: NETHERITE_BLOCK}
   rings:
     daily-gems: 3
     daily-coins: 500
@@ -2721,5 +2772,9 @@ starter-kit:
 # ───────────────────────────── Einführung ─────────────────────────────
 # Kamerafahrt über den Spawn mit Mentorin Lia – beim ersten Join, sobald das Texture-Pack geladen ist (/intro, /intro skip)
 intro:
+  enabled: true
+
+# Leucht-Spur nach der Einführung: /starter → Glücksrad → Dropper/Parkour → Kisten → RTP-Portal (/guide, /guide skip|stop)
+guide:
   enabled: true
 

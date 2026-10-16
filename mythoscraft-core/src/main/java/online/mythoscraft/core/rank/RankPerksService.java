@@ -189,8 +189,8 @@ public final class RankPerksService implements Listener {
         return of(p).spawnFly() || atLeastCreator(p);
     }
 
-    /** CREATOR and every rank above it (by weight) may fly at the spawn. */
-    private boolean atLeastCreator(Player p) {
+    /** CREATOR and every rank above it (by weight): fly at the spawn, host item and coin giveaways. */
+    public boolean atLeastCreator(Player p) {
         online.mythoscraft.core.rank.Rank creator = plugin.ranks().byId("CREATOR");
         online.mythoscraft.core.rank.Rank own = plugin.ranks().rankOf(p);
         return creator != null && own != null && own.weight() >= creator.weight();

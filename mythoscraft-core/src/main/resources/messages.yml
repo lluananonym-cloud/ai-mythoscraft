@@ -366,6 +366,120 @@ tools:
   no-target: "<red>Kein Ziel in Reichweite"
 
 items:
+  spawner_booster:
+    name: <gradient:#a3e635:#7c3aed><bold>Spawner-Booster</bold></gradient>
+    lore:
+    - <dark_gray>Spawner-Kollektion
+    - '<gray>Rechtsklick auf einen Spawner:'
+    - '<#d9f99d>✦ +40 % Spawn-Tempo pro Booster'
+    - '<gray>Stapelbar bis Stufe 10 (ab Stufe 4 mehr Mobs)'
+  companion_shadow:
+    name: '<gradient:#7c3aed:#1d1428><bold>Schattenwürfel-Begleiter</bold></gradient>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf'
+    - '<gray>Auf den Boden setzen: farmt Mobs für dich'
+  sort_wand:
+    name: <gradient:#2f9a3c:#2f62d8><bold>Sortier-Stab</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V1
+    - '<gray>Rechtsklick auf eine Kiste/ein Fass:'
+    - '<#bbf7d0>✦ fasst Stapel zusammen und sortiert alles'
+  infinite_bucket:
+    name: <gradient:#46d4e8:#2f62d8><bold>Endloser Wassereimer</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V1
+    - '<#a5f3fc>✦ Wird nie leer'
+  vein_pickaxe:
+    name: <gradient:#ff9a2a:#c8743c><bold>Ader-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V2
+    - '<#fed7aa>✦ Baut die ganze Erzader ab (bis 48 Blöcke)'
+    - '<dark_gray>Schleichen: nur ein Block'
+  repair_charm:
+    name: <gradient:#2ed27a:#8d99aa><bold>Reparatur-Amulett</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V2
+    - '<gray>In der Zweithand:'
+    - '<#bbf7d0>✦ repariert Werkzeug & Rüstung langsam'
+  paint_brush:
+    name: <gradient:#d8313a:#f6d23c:#2f62d8><bold>Zauber-Pinsel</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V3
+    - '<gray>Rechtsklick: Wolle, Beton, Glas, Teppich,'
+    - '<gray>Keramik & Kerzen umfärben'
+    - '<gray>Rechtsklick in die Luft: Farbe wechseln'
+  concrete_mixer:
+    name: <gradient:#f07a1c:#a7b0bd><bold>Betonmischer</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V3
+    - '<gray>Rechtsklick auf Trockenbeton: wird fester Beton (3×3×3)'
+    - '<gray>Rechtsklick in die Luft: mischt allen Trockenbeton im Inventar'
+  soul_sword:
+    name: <gradient:#5eead4:#1f2d3a><bold>Seelenschwert</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V3
+    - '<#99f6e4>✦ 12 % Chance: klaut ein Herz'
+    - '<gray>Seelen kreisen um dich, solange du es hältst'
+  dwarf_hat:
+    name: <gradient:#c0282f:#f4f1ea><bold>Zwergenmütze</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V3
+    - '<gray>Aufsetzen: du wirst ganz klein'
+  growth_totem:
+    name: <gradient:#e0a628:#2ed27a><bold>Wachstums-Totem</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V3
+    - '<gray>In der Zweithand: du wirst ein Riese'
+    - '<gray>(größere Schritte und Reichweite)'
+  power_drill:
+    name: <gradient:#f07a1c:#22232b><bold>Akku-Bohrer</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#fed7aa>✦ Rechtsklick: bohrt einen 3×3-Tunnel, 8 tief'
+    - '<gray>Kostet 20 % Akku'
+    - '<gray>Schleichen + Rechtsklick: mit Redstone aufladen'
+  mega_chainsaw:
+    name: <gradient:#f6d23c:#d8313a><bold>Mega-Kettensäge</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#fef08a>✦ Fällt den ganzen Baum samt Blättern'
+    - '<gray>und pflanzt einen neuen Setzling'
+  minepro_totem:
+    name: <gradient:#7c3aed:#e0a628><bold>MinePro641-Totem</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#e9d5ff>✦ Rettet dich vor dem Tod – und bleibt!'
+    - '<gray>Lädt 10 Minuten auf, danach wieder bereit'
+  blossom_crown:
+    name: <gradient:#f9a8d4:#58b83a><bold>Blütenkrone</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<gray>Blüten und Blätter wirbeln um dich herum'
+    - '<#fbcfe8>✦ Leichte Regeneration'
+  bark_hand:
+    name: <gradient:#a8743c:#58b83a><bold>Rinden-Hand</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<gray>In der Zweithand, Rechtsklick auf einen Baum:'
+    - '<#fde68a>✦ der ganze Baum wird geschält'
+  zap_pickaxe:
+    name: <gradient:#ffffff:#a3e635><bold>Blitz-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#ecfccb>✦ Baut 3×3 ab'
+    - '<gray>Manchmal schlägt ein Blitz ein: Eile III'
+  zap_sword:
+    name: <gradient:#ffffff:#a3e635><bold>Blitz-Klinge</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#ecfccb>✦ 20 % Chance: Blitzschlag (+4 Schaden)'
+  zap_rod:
+    name: <gradient:#ffffff:#a3e635><bold>Blitz-Angel</bold></gradient>
+    lore:
+    - <dark_gray>Relikt-Kiste V4
+    - '<#ecfccb>✦ Beißt schneller, doppelter Fang & XP'
+    - '<gray>Zieht gehakte Mobs zu dir'
   mana_elixir:
     name: <blue><bold>Mana-Elixier</bold>
     lore:
@@ -1335,26 +1449,31 @@ items:
     lore:
     - '<dark_gray>Begleiter'
     - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+    - '<gray>Schleichen + Rechtsklick auf den Boden: farmt für dich'
   companion_penguin:
     name: '<aqua><bold>Pinguin-Begleiter</bold>'
     lore:
     - '<dark_gray>Begleiter'
     - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+    - '<gray>Schleichen + Rechtsklick auf den Boden: farmt für dich'
   companion_ghost:
     name: '<gold><bold>Geister-Begleiter</bold>'
     lore:
     - '<dark_gray>Begleiter'
     - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+    - '<gray>Schleichen + Rechtsklick auf den Boden: farmt für dich'
   companion_dragon:
     name: '<green><bold>Drachen-Begleiter</bold>'
     lore:
     - '<dark_gray>Begleiter'
     - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+    - '<gray>Schleichen + Rechtsklick auf den Boden: farmt für dich'
   companion_bee:
     name: '<yellow><bold>Bienen-Begleiter</bold>'
     lore:
     - '<dark_gray>Begleiter'
     - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+    - '<gray>Schleichen + Rechtsklick auf den Boden: farmt für dich'
   golden_crown:
     name: <gradient:#fde047:#d97706><bold>Goldkrone</bold></gradient>
     lore:
@@ -1911,6 +2030,15 @@ items:
     - '<gray>In der Zweithand: +25% XP in allen Berufen'
 
 crates:
+  need-key-relic: '<red>Du brauchst einen {key}<red>! <gray>Relikt-Schlüssel gibt es am <light_purple>Mythos-Rad</light_purple> und in anderen Relikt-Kisten.'
+  relic:
+    appeared: "<newline><gradient:#f59e0b:#ec4899:#8b5cf6><bold>✦ RELIKT-KISTE ERSCHIENEN! ✦</bold></gradient><newline><gray>Auf dem Relikt-Sockel am Spawn steht jetzt eine {crate}<gray> – nur <white>{minutes} Minuten</white>!<newline>"
+    sign-empty: "<gradient:#f59e0b:#ec4899:#8b5cf6><bold>✦ Relikt-Kisten erscheinen hier ✦</bold></gradient><newline><gray>Bei jedem Kistenwechsel eine kleine Chance:<newline><#d6a35c>V1 {v1}%  <white>V2 {v2}%  <aqua>V3 {v3}%  <red>V4 {v4}%"
+    sign-active: "{crate}<newline><gray>verschwindet in <white>{time}"
+    info-line: '<gradient:#f59e0b:#ec4899><bold>Relikt-Sockel:</bold></gradient> {crate} <dark_gray>({time})'
+    none: '<gray>leer – erscheint selten bei einem Kistenwechsel'
+    hint: '<gray>Die {crate} <gray>erscheint nur selten auf dem <gold>Relikt-Sockel</gold> am Spawn (bei einem Kistenwechsel).'
+    not-possible: '<red>Das geht nicht – gibt es den Relikt-Sockel (neuer Spawn) und ist das eine Relikt-Kiste?'
   carousel:
     header: <gold><bold>🎠 Kisten-Karussell</bold> <gray>(alle {minutes} Min. wechselt ein Sockel)
     fixed-line: <dark_gray>▪ <white>{crate} <dark_gray>– fest
@@ -2931,6 +3059,10 @@ buttons:
 jobs:
   title: <dark_gray>Berufe
   names:
+    gambler: Glücksspieler
+    enchanter: Verzauberer
+    brewer: Brauer
+    cook: Koch
     miner: Bergarbeiter
     lumberjack: Holzfäller
     farmer: Farmer
@@ -2938,6 +3070,15 @@ jobs:
     fisher: Fischer
     builder: Baumeister
   how:
+    gambler:
+    - <gray>Am Glücksrad drehen und Kisten öffnen
+    - <gray>Bezahlte Drehs und seltene Gewinne geben mehr
+    enchanter:
+    - <gray>Am Zaubertisch verzaubern, am Amboss arbeiten
+    brewer:
+    - <gray>Tränke brauen und aus dem Braustand nehmen
+    cook:
+    - <gray>Essen im Ofen braten (auch Erze schmelzen)
     miner:
     - <gray>Erze und Stein abbauen
     - <gray>Seltene Gem-Funde bei Diamant, Smaragd, Antikem Schrott
@@ -2987,6 +3128,18 @@ achievements:
   done: <green>✔ Geschafft
   open: <red>✘ Noch offen
   names:
+    job_gambler_10: '<gold>Glücksspieler: Geselle'
+    job_gambler_25: '<gold>Glücksspieler: Meister'
+    job_gambler_50: '<gold>Glücksspieler: Großmeister'
+    job_enchanter_10: '<gold>Verzauberer: Geselle'
+    job_enchanter_25: '<gold>Verzauberer: Meister'
+    job_enchanter_50: '<gold>Verzauberer: Großmeister'
+    job_brewer_10: '<gold>Brauer: Geselle'
+    job_brewer_25: '<gold>Brauer: Meister'
+    job_brewer_50: '<gold>Brauer: Großmeister'
+    job_cook_10: '<gold>Koch: Geselle'
+    job_cook_25: '<gold>Koch: Meister'
+    job_cook_50: '<gold>Koch: Großmeister'
     mobkills_10: <gold>Monsterschreck
     mobkills_100: <gold>Monsterjäger
     mobkills_500: <gold>Monsterschlächter
@@ -3047,6 +3200,18 @@ achievements:
     parkour_1: <gold>Springinsfeld
     parkour_25: <gold>Parkourprofi
   desc:
+    job_gambler_10: <gray>Erreiche Level 10 als Glücksspieler
+    job_gambler_25: <gray>Erreiche Level 25 als Glücksspieler
+    job_gambler_50: <gray>Erreiche Level 50 als Glücksspieler
+    job_enchanter_10: <gray>Erreiche Level 10 als Verzauberer
+    job_enchanter_25: <gray>Erreiche Level 25 als Verzauberer
+    job_enchanter_50: <gray>Erreiche Level 50 als Verzauberer
+    job_brewer_10: <gray>Erreiche Level 10 als Brauer
+    job_brewer_25: <gray>Erreiche Level 25 als Brauer
+    job_brewer_50: <gray>Erreiche Level 50 als Brauer
+    job_cook_10: <gray>Erreiche Level 10 als Koch
+    job_cook_25: <gray>Erreiche Level 25 als Koch
+    job_cook_50: <gray>Erreiche Level 50 als Koch
     mobkills_10: <gray>Töte 10 Monster
     mobkills_100: <gray>Töte 100 Monster
     mobkills_500: <gray>Töte 500 Monster
@@ -3158,6 +3323,10 @@ invsee:
   self: <red>Das ist dein eigenes Inventar.
 
 attractions:
+  wheel2:
+    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS-RAD ✦</bold></gradient><newline><gray>Rechtsklick: drehen für <white>{price}</white> {currency}<newline><gray>Bessere Preise & <gradient:#f59e0b:#ec4899><bold>Relikt-Schlüssel</bold></gradient><newline><dark_gray>Linksklick: Gewinne ansehen"
+    prizes-header: '<light_purple>🎡 Gewinne am Mythos-Rad:'
+  rtp-portal: "<gradient:#a855f7:#ec4899><bold>✦ WILDNIS-PORTAL ✦</bold></gradient><newline><gray>Hineinlaufen = zufälliger Ort zum Bauen"
   cannon: '<gold>💥 BUMM! <gray>Ab ins Wasser!'
   creatures:
     pet: <light_purple>♥ Du streichelst {creature}<light_purple>!
@@ -3589,3 +3758,124 @@ moderation:
   log-header: '<gold>Letzte Moderations-Aktionen:'
   testkey: '<green>{amount}× Test-Schlüssel für {crate} – du siehst die Öffnung, bekommst aber nichts.'
   testkey-won: '<gray>[TEST] Gewonnen hättest du: {reward} <dark_gray>(nicht ausgegeben)'
+guide:
+  bar: '<gold><bold>Erste Schritte</bold></gold> <gray>{step}/{total}</gray> <dark_gray>»</dark_gray> <white>{goal}'
+  stopped: '<gray>Die Leucht-Spur ist aus. <dark_gray>(/guide startet sie wieder)'
+  finish: "<newline><gradient:#fde047:#a855f7><bold>✔ ERSTE SCHRITTE GESCHAFFT!</bold></gradient><newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Super! Jetzt such dir einen schönen Platz und setz mit <yellow>/sethome</yellow> dein Zuhause.<newline><gray>Aufgaben & Startgeld: <yellow>/aufgaben</yellow> <dark_gray>·</dark_gray> <gray>Spur nochmal: <yellow>/guide</yellow><newline>"
+  starter:
+    goal: 'Hol dein Starter-Kit'
+    bar: '<gold>✦ Schritt 1:</gold> <white>Tippe <yellow><bold>/starter</bold></yellow> <gray>– oder folge der Spur zu Lia <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Folge der <gold>leuchtenden Spur</gold>! Zuerst holst du dir dein Starter-Kit: <click:run_command:/starter><hover:show_text:'<green>Starter-Kit abholen'><yellow><u>/starter</u></yellow></hover></click> <dark_gray>(/guide skip = weiter, /guide stop = aus)"
+  wheel:
+    goal: 'Dreh am Glücksrad'
+    bar: '<gold>✦ Schritt 2:</gold> <white>Rechtsklick auf ein <light_purple><bold>Glücksrad</bold></light_purple> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Jetzt zu den <light_purple>Glücksrädern</light_purple>! Am großen Rad drehst du <green>einmal am Tag gratis</green> – Rechtsklick dreht, Linksklick zeigt die Preise."
+  games:
+    goal: 'Probier den Dropper'
+    bar: '<gold>✦ Schritt 3:</gold> <white>Lauf zum <aqua><bold>Dropper</bold></aqua> <gray>und tritt auf die Druckplatte <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Am Spawn gibt's <aqua>Minispiele</aqua> mit täglichen Belohnungen: Dropper, Parkour, Labyrinth, Spleef … Schau dir den <aqua>Dropper</aqua> an!"
+  crates:
+    goal: 'Lerne die Kisten kennen'
+    bar: '<gold>✦ Schritt 4:</gold> <white>Geh zu den <gold><bold>Kisten</bold></gold> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Fast fertig – ab zu den <gold>Kisten</gold>!"
+    explain: "<newline><gold><bold>📦 SO FUNKTIONIEREN DIE KISTEN</bold></gold><newline><gray>• Jede Kiste braucht ihren <yellow>Schlüssel</yellow> in der Hand – <white>Rechtsklick</white> öffnet sie.<newline><gray>• <white>Linksklick</white> zeigt alle Gewinne mit Chancen.<newline><gray>• Schlüssel gibt's bei <aqua>Events</aqua>, der <green>Tagesbelohnung</green>, am <light_purple>Glücksrad</light_purple> und im <yellow>/shop</yellow>.<newline><gray>• Die Sockel <white>wechseln</white> ihre Kiste regelmäßig – und ganz selten erscheint eine <gradient:#f59e0b:#ec4899:#8b5cf6><bold>Relikt-Kiste</bold></gradient>!<newline>"
+  rtp:
+    goal: 'Ab in die Wildnis'
+    bar: '<gold>✦ Schritt 5:</gold> <white>Spring ins <dark_purple><bold>Wildnis-Portal</bold></dark_purple> <gray>oder tippe <yellow>/rtp</yellow> <dark_gray>({distance} m)'
+    chat: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Letzter Schritt: Das <dark_purple>Wildnis-Portal</dark_purple> bringt dich an einen freien Ort zum Bauen. <gray>Oder: <click:run_command:/rtp><yellow><u>/rtp</u></yellow></click>"
+relic:
+  no-permission: '<red>Das darfst du hier nicht.'
+  booster:
+    not-spawner: '<gray>Rechtsklick damit auf einen <white>Spawner</white>.'
+    max: '<yellow>Dieser Spawner ist schon voll geboostet (Stufe {max}).'
+    applied: '<green>⚡ Spawner geboostet! <white>Stufe {level}/{max}</white> <gray>– spawnt jetzt <white>{speed}×</white> so schnell.'
+  sort:
+    done: '<green>✔ Sortiert – <white>{stacks}</white> <green>Stapel.'
+  vein:
+    done: '<gold>⛏ Erzader abgebaut: <white>{blocks}</white> <gold>Blöcke'
+  paint:
+    color: '<gray>Pinsel-Farbe: {color}'
+    not-this: '<gray>Betten, Shulker und Banner kann der Pinsel nicht umfärben.'
+  mixer:
+    inventory: '<gray>🪣 <white>{amount}</white> <gray>Trockenbeton zu Beton gemischt.'
+  soul:
+    stolen: '<aqua>☠ Seele geraubt – <red>+1 ❤'
+  drill:
+    running: '<gold>🔩 Bohren … <gray>Akku: <white>{battery} %'
+    empty: '<red>🔋 Akku leer ({battery} %) <gray>– Schleichen + Rechtsklick mit Redstone im Inventar lädt auf.'
+    charged: '<green>🔋 Aufgeladen: <white>{battery} %'
+    no-redstone: '<red>Kein Redstone im Inventar <gray>(Akku: {battery} %).'
+  chainsaw:
+    done: '<yellow>🪚 Baum gefällt: <white>{logs}</white> <yellow>Stämme'
+  bark:
+    done: '<gold>🪵 Baum geschält: <white>{logs}</white> <gold>Stämme'
+  minepro:
+    saved: '<gradient:#7c3aed:#e0a628><bold>MinePro641 hat dich gerettet!</bold></gradient> <gray>Das Totem lädt 10 Minuten auf.'
+  zap:
+    charged: '<yellow>⚡ Aufgeladen! <white>Eile III'
+companion-farm:
+  menu-title: '<dark_gray>Farm-Begleiter: {job}'
+  jobs:
+    crops: '<yellow>Felder-Biene'
+    fish: '<aqua>Angel-Pinguin'
+    trees: '<white>Holzfäller-Schneemann'
+    plants: '<green>Pflanzen-Geist'
+    ores: '<gold>Erz-Drache'
+    mobs: '<dark_purple>Monster-Schatten'
+  how:
+    crops:
+    - ''
+    - '<gray>Erntet reife Felder (Weizen, Karotten,'
+    - '<gray>Kartoffeln, Rote Bete, Netherwarzen, Beeren)'
+    - '<gray>und pflanzt sofort wieder an.'
+    fish:
+    - ''
+    - '<gray>Angelt im Wasser in der Nähe:'
+    - '<gray>Fische, manchmal Schätze – und XP.'
+    trees:
+    - ''
+    - '<gray>Fällt ganze Bäume samt Blättern'
+    - '<gray>und pflanzt einen neuen Setzling.'
+    plants:
+    - ''
+    - '<gray>Erntet Zuckerrohr, Kaktus, Bambus, Seetang,'
+    - '<gray>Melonen und Kürbisse (der Stängel bleibt).'
+    ores:
+    - ''
+    - '<gray>Spürt Erze im Umkreis auf und baut sie ab'
+    - '<gray>(an ihrer Stelle bleibt Stein).'
+    mobs:
+    - ''
+    - '<gray>Jagt Monster im Umkreis –'
+    - '<gray>Beute und XP landen im Lager.'
+  duration: '<gray>{minutes} Minuten'
+  duration-selected: '<green><bold>▶ {minutes} Minuten</bold>'
+  radius: '<gray>{radius} Blöcke weit'
+  radius-selected: '<green><bold>▶ {radius} Blöcke weit</bold>'
+  start: '<green><bold>▶ Loslegen'
+  start-lore:
+  - '<gray>Arbeitet <white>{minutes} Min.</white> im Umkreis von <white>{radius}</white> Blöcken'
+  - '<dark_gray>(nur solange der Chunk geladen ist)'
+  stop: '<red><bold>■ Anhalten'
+  stop-lore:
+  - '<gray>Noch <white>{minutes} Min.</white>'
+  collect: '<gold><bold>Beute abholen'
+  collect-lore:
+  - '<gray>Lager: <white>{stacks}</white><gray>/{max} Stapel'
+  - '<gray>XP: <white>{xp}'
+  pickup: '<red><bold>Aufheben'
+  pickup-lore:
+  - '<gray>Nimmt Beute und Begleiter wieder mit.'
+  placed: '<green>✔ {job} <green>sitzt jetzt hier. <gray>Rechtsklick auf ihn: Menü.'
+  place-on-ground: '<gray>Schleichen + Rechtsklick <white>oben auf einen Block</white>, um den Begleiter abzusetzen.'
+  not-here: '<red>Hier darf kein Begleiter farmen.'
+  limit: '<red>Du hast schon {max} farmende Begleiter. <gray>Heb einen auf, um einen neuen abzusetzen.'
+  not-yours: '<gray>Das ist der Begleiter von <white>{owner}</white>.'
+  started: '<green>▶ Farmt jetzt {minutes} Min. <gray>({radius} Blöcke)'
+  stopped: '<yellow>■ Angehalten.'
+  collected: '<gold>✔ {stacks} Stapel abgeholt.'
+  picked-up: '<green>Begleiter aufgehoben.'
+  finished: '<gold>⏰ Dein {job} <gold>ist fertig – <white>{stacks}</white> <gold>Stapel Beute warten auf dich.'
+  no-water: '<aqua>🐧 Kein Wasser in der Nähe – der Pinguin braucht Wasser zum Angeln.'
+  label-running: "{job}<newline><gray>{owner} <dark_gray>· <white>{time}<newline><gray>Lager {stacks}/{max} <dark_gray>· {radius} Blöcke"
+  label-idle: "{job}<newline><gray>{owner} <dark_gray>· <yellow>pausiert<newline><gray>Lager {stacks}/{max}"
