@@ -1,4 +1,4 @@
-messages-version: 4
+messages-version: 5
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
 join: '<dark_gray>[<green>+</green>]</dark_gray> <white>{player}'
 quit: '<dark_gray>[<red>-</red>]</dark_gray> <white>{player}'
@@ -61,7 +61,7 @@ sync:
   failed: '<red>Your inventory could not be loaded from MythosCraft – sending you back so nothing gets lost.'
   join-main-first: '<red>Join the MythosCraft survival server once first – then come here with <white>/plot</white>.'
   no-key: "<red>Inventory sync has no key yet. <gray>On the survival server run <white>/mythos synckey</white>, click to copy, paste it here."
-  key-set: '<green>✔ Sync key saved. <gray>Rejoin to load your inventory.'
+  key-set: '<green>✔ Sync key saved. <gray>Loading your inventory …'
   status: '<gray>Sync: <white>{status}</white> <dark_gray>· <gray>key: <white>{key}'
 fly:
   on: '<light_purple>✦ You can fly on your plot (double jump).'

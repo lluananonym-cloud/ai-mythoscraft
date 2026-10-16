@@ -324,9 +324,13 @@ final class PlotCommand implements TabExecutor {
                 plugin.getConfig().set("sync.key", args[2].trim());
                 plugin.saveConfig();
                 plugin.msg().send(p, "sync.key-set");
+                plugin.sync().retry(p);
             }
-            case "sync" -> plugin.msg().send(p, "sync.status", "status", plugin.sync().status(),
-                    "key", plugin.getConfig().getString("sync.key", "").isBlank() ? "missing" : "set");
+            case "sync" -> {
+                plugin.msg().send(p, "sync.status", "status", "testing …", "key",
+                        plugin.getConfig().getString("sync.key", "").isBlank() ? "missing" : "set");
+                plugin.sync().test(p, p.getUniqueId());
+            }
             default -> plugin.msg().send(p, "usage", "usage", "/plot admin <unclaim|tp <x;z>|key <key>|sync>");
         }
     }

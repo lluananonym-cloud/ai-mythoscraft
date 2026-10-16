@@ -248,6 +248,33 @@ final class SyncClient implements Listener {
         pull(p, 0);
     }
 
+    /** after the key was entered: load right away, no rejoin needed */
+    void retry(Player p) {
+        lastStatus = "key saved – testing";
+        workingBase = null;
+        if (sessions.containsKey(p.getUniqueId()) || busy(p)) {
+            return;
+        }
+        loading.add(p.getUniqueId());
+        plugin.msg().bar(p, "sync.loading");
+        pull(p, 0);
+    }
+
+    /** /plot admin sync – asks the survival server right now and tells the result */
+    void test(org.bukkit.command.CommandSender to, UUID id) {
+        if (key().isEmpty()) {
+            plugin.msg().send(to, "sync.status", "status", "no key – run /mythos synckey on the survival server", "key", "missing");
+            return;
+        }
+        JsonObject body = new JsonObject();
+        body.addProperty("uuid", id.toString());
+        post("/api/sync/info", body).whenComplete((o, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            String s = o != null && o.has("status") ? o.get("status").getAsString() : "error";
+            String text = "ok".equals(s) ? "connected ✔ " + status() : "key".equals(s) ? "wrong key – copy it again with /mythos synckey" : "not reachable – " + status();
+            plugin.msg().send(to, "sync.status", "status", text, "key", "set");
+        }));
+    }
+
     private void pull(Player p, int attempt) {
         JsonObject body = new JsonObject();
         body.addProperty("uuid", p.getUniqueId().toString());
