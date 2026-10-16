@@ -40,6 +40,11 @@ public final class PlotTransferCommand extends BaseCommand {
     protected void execute(CommandSender sender, String label, String[] args) throws CommandFail {
         Player p = player(sender);
         var cfg = plugin.getConfig();
+        // MythosPlots on this server: the plot world is a world here – its /plot does everything
+        if (plugin.getServer().getPluginManager().isPluginEnabled("MythosPlots")) {
+            p.performCommand("mythosplots:plot" + (args.length == 0 ? "" : " " + String.join(" ", args)));
+            return;
+        }
         if (!cfg.getBoolean("plot-server.enabled", true)) {
             plugin.messages().send(p, "plot-server.disabled");
             return;
@@ -101,6 +106,11 @@ public final class PlotTransferCommand extends BaseCommand {
 
     @Override
     protected List<String> complete(CommandSender sender, String label, String[] args) {
+        var local = plugin.getServer().getPluginCommand("mythosplots:plot");
+        if (local != null && plugin.getServer().getPluginManager().isPluginEnabled("MythosPlots")) {
+            List<String> out = local.tabComplete(sender, label, args);
+            return out == null ? List.of() : out;
+        }
         return List.of();
     }
 }

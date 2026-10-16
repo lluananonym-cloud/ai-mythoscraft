@@ -32,6 +32,8 @@ public final class MythosPlots extends JavaPlugin {
     private Material borderFree;
     private Material borderClaimed;
     private RankLimits ranks;
+    /** true = MythosCraft runs on this server too (plot world = second world of the survival server) */
+    private boolean local;
     private PlotBoard board;
     private SyncClient sync;
     /** who used /smp recently – the quit message then says "went back to MythosCraft" */
@@ -72,6 +74,20 @@ public final class MythosPlots extends JavaPlugin {
         getCommand("smp").setExecutor(back);
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
+        local = getServer().getPluginManager().isPluginEnabled("MythosCraft");
+        if (local) {
+            // same server as MythosCraft: the plot world is just a second world – inventory, custom items, ranks,
+            // coins, scoreboard, chat and all commands come from MythosCraft itself
+            var services = getServer().getServicesManager();
+            services.register(java.util.function.BiPredicate.class,
+                    (java.util.function.BiPredicate<Player, Location>) this::mayBuild, this, org.bukkit.plugin.ServicePriority.Normal);
+            services.register(java.util.function.Predicate.class,
+                    (java.util.function.Predicate<Player>) this::onOwnPlot, this, org.bukkit.plugin.ServicePriority.Normal);
+            getLogger().info("MythosCraft runs on this server – plot world '" + world.getName() + "' is part of it ("
+                    + store.all().size() + " plots claimed).");
+            return;
+        }
         ranks = new RankLimits(this);
         board = new PlotBoard(this);
         sync = new SyncClient(this);
@@ -81,7 +97,6 @@ public final class MythosPlots extends JavaPlugin {
         getCommand("gm").setExecutor(new GameModeCommand(this));
         BalanceCommand balance = new BalanceCommand(this);
         getCommand("balance").setExecutor(balance);
-        getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
         pack = new PackHost(this);
         pack.start();
         getLogger().info("Plot world '" + world.getName() + "' ready – " + store.all().size() + " plots claimed.");
@@ -193,12 +208,38 @@ public final class MythosPlots extends JavaPlugin {
         }
         int max = getConfig().getInt("plots.max-per-player", 1);
         max = Math.max(max, ranks == null ? 0 : ranks.plots(p));      // MythosCraft rank (rank-perks.<rank>.plots)
+        if (local) {
+            // MythosCraft on this server tells the plots of the rank
+            var reg = getServer().getServicesManager().getRegistration(java.util.function.ToIntFunction.class);
+            if (reg != null) {
+                @SuppressWarnings("unchecked")
+                java.util.function.ToIntFunction<Player> f = (java.util.function.ToIntFunction<Player>) reg.getProvider();
+                max = Math.max(max, f.applyAsInt(p));
+            }
+        }
         for (int n = 1; n <= 100; n++) {
             if (p.hasPermission("mythosplots.plots." + n)) {
                 max = Math.max(max, n);
             }
         }
         return max;
+    }
+
+    public boolean local() {
+        return local;
+    }
+
+    /** standing on a plot he owns or may build on (MythosCraft: base-fly perk and Fly Booster work there) */
+    public boolean onOwnPlot(Player p) {
+        Plot plot = store.get(plotAt(p.getLocation()));
+        return plot != null && plot.mayBuild(p.getUniqueId());
+    }
+
+    /** /smp from the plot world: on the same server simply back to the survival spawn */
+    public void toSurvival(Player p) {
+        if (!p.performCommand(getConfig().getString("local.back-command", "spawn"))) {
+            p.teleport(getServer().getWorlds().get(0).getSpawnLocation());
+        }
     }
 
     /** admins & co.: OP / mythosplots.gamemode, or one of the ranks in world.gamemode-ranks on MythosCraft */

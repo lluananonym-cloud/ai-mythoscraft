@@ -2,6 +2,8 @@ name: MythosPlots
 version: '${project.version}'
 main: online.mythoscraft.plots.MythosPlots
 api-version: '1.21'
+# on the survival server: MythosCraft first, so it keeps /plot, /mythos, /money … and hands /plot over to this plugin
+softdepend: [MythosCraft]
 author: MinePro641
 website: https://mythoscraft.online
 description: MythosCraft plot server – plot world, /plot, protection, same resource pack, /smp back to the main server.

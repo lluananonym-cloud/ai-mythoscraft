@@ -141,7 +141,7 @@ public final class RankPerksService implements Listener {
                     && !plugin.tournaments().isParticipant(p);
             // own base (first place after /rtp): by rank, or anywhere near the own homes with an active Fly Booster
             boolean booster = flyBoosterLeft(p) > 0;
-            boolean atBase = plugin.bases() != null && plugin.bases().mayFlyHere(p, p.getLocation());
+            boolean atBase = plugin.bases() != null && plugin.bases().mayFlyHere(p, p.getLocation()) || onOwnPlot(p);
             boolean boosted = booster && !plugin.arenas().isInArena(p) && !plugin.tournaments().isParticipant(p)
                     && (atBase || nearHome(p, 48));
             boolean may = fliesAtSpawn(p) && atSpawn || atHome || (atBase && k.baseFly()) || boosted;
@@ -173,6 +173,20 @@ public final class RankPerksService implements Listener {
             if (atSpawn && !k.trail().isEmpty() && (p.getVelocity().lengthSquared() > 0.01 || p.isFlying())) {
                 trail(p, k.trail());
             }
+        }
+    }
+
+    /** MythosPlots on this server: standing on an own (or trusted) plot counts like the own base */
+    @SuppressWarnings("unchecked")
+    private static boolean onOwnPlot(Player p) {
+        var reg = org.bukkit.Bukkit.getServicesManager().getRegistration(java.util.function.Predicate.class);
+        if (reg == null) {
+            return false;
+        }
+        try {
+            return ((java.util.function.Predicate<Player>) reg.getProvider()).test(p);
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 

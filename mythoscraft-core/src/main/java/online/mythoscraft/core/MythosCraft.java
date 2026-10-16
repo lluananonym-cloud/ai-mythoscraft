@@ -252,6 +252,10 @@ public class MythosCraft extends JavaPlugin {
             webDaily = new online.mythoscraft.core.web.WebDailyRewards(this);
             playerSite = new online.mythoscraft.core.web.PlayerSite(this);
             serverSync = new online.mythoscraft.core.web.ServerSync(this);
+            // MythosPlots on this server asks how many plots a player's rank gives (rank-perks.<rank>.plots)
+            getServer().getServicesManager().register(java.util.function.ToIntFunction.class,
+                    (java.util.function.ToIntFunction<org.bukkit.entity.Player>) p -> serverSync.plotLimit(ranks.rankOf(p)),
+                    this, org.bukkit.plugin.ServicePriority.Normal);
             newbies = new online.mythoscraft.core.progress.NewbieService(this);
             bases = new online.mythoscraft.core.teleport.StarterBaseService(this);
             rtp = new RtpService(this, cooldowns);

@@ -35,6 +35,15 @@ final class PlotCommand implements TabExecutor {
             return true;
         }
         Msg m = plugin.msg();
+        if (args.length == 0 && !plugin.isPlotWorld(p.getWorld())) {
+            // just "/plot" from the survival world: into the plot world – to the own plot, or the plot spawn
+            List<Plot> own = plugin.store().of(p.getUniqueId());
+            p.teleport(own.isEmpty() ? plugin.spawn() : plugin.entrance(own.get(0).id()));
+            if (own.isEmpty()) {
+                m.plain(p, "welcome", "player", p.getName());
+            }
+            return true;
+        }
         String sub = args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "help";
         switch (sub) {
             case "auto", "a" -> auto(p);

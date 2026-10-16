@@ -95,11 +95,28 @@ public final class ProtectionService {
     }
 
     public boolean allows(Player player, Block block, Flag flag) {
-        return canBypass(player) || query(block, flag);
+        return external(player, block.getLocation()) && (canBypass(player) || query(block, flag));
     }
 
     public boolean allows(Player player, Location loc, Flag flag) {
-        return canBypass(player) || query(loc, flag);
+        return external(player, loc) && (canBypass(player) || query(loc, flag));
+    }
+
+    /**
+     * Another plugin's protection on this server (MythosPlots registers its plot rules as a BiPredicate service):
+     * custom item abilities must not change other people's plots or the roads either.
+     */
+    @SuppressWarnings("unchecked")
+    private static boolean external(Player player, Location loc) {
+        var reg = org.bukkit.Bukkit.getServicesManager().getRegistration(java.util.function.BiPredicate.class);
+        if (reg == null || player == null || loc == null) {
+            return true;
+        }
+        try {
+            return ((java.util.function.BiPredicate<Player, Location>) reg.getProvider()).test(player, loc);
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 
     /** Like {@link #allows} but tells the player (rate limited) when it is denied. */

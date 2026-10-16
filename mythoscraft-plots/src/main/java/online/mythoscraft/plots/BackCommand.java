@@ -35,6 +35,10 @@ final class BackCommand implements CommandExecutor {
             sender.sendMessage("Players only.");
             return true;
         }
+        if (plugin.local()) {
+            plugin.toSurvival(p);
+            return true;
+        }
         plugin.msg().send(p, "transfer.sending");
         plugin.backToMain(p);
         return true;

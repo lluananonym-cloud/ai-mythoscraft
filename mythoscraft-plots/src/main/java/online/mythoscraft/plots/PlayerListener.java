@@ -34,6 +34,9 @@ final class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
+        if (plugin.local()) {
+            return;             // MythosCraft does join, spawn and messages
+        }
         e.joinMessage(plugin.msg().get("join", "player", p.getName()));
         if (!plugin.isPlotWorld(p.getWorld()) || !p.hasPlayedBefore() || plugin.getConfig().getBoolean("world.spawn-on-join", false)) {
             p.teleport(plugin.spawn());
@@ -64,7 +67,7 @@ final class PlayerListener implements Listener {
     /** the game mode stays what the plot world uses (team members may still go spectator) */
     @EventHandler(ignoreCancelled = true)
     public void onGameMode(org.bukkit.event.player.PlayerGameModeChangeEvent e) {
-        if (!plugin.getConfig().getBoolean("world.force-gamemode", true)) {
+        if (plugin.local() || !plugin.getConfig().getBoolean("world.force-gamemode", true)) {
             return;
         }
         GameMode gm = mode();
@@ -76,13 +79,36 @@ final class PlayerListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         current.remove(e.getPlayer().getUniqueId());
+        if (plugin.local()) {
+            return;
+        }
         e.quitMessage(plugin.msg().get(plugin.hopped(e.getPlayer()) ? "quit-to-main" : "quit", "player", e.getPlayer().getName()));
     }
 
     @EventHandler
     public void onRespawn(PlayerRespawnEvent e) {
+        if (plugin.local()) {
+            // died in the plot world without a bed: back at the plot spawn; everything else is MythosCraft's
+            if (plugin.isPlotWorld(e.getPlayer().getWorld()) && !e.isBedSpawn() && !e.isAnchorSpawn()) {
+                e.setRespawnLocation(plugin.spawn());
+            }
+            return;
+        }
         e.setRespawnLocation(plugin.spawn());
     }
+
+    /** same server: welcome when walking into the plot world */
+    @EventHandler
+    public void onWorld(org.bukkit.event.player.PlayerChangedWorldEvent e) {
+        Player p = e.getPlayer();
+        if (plugin.local() && plugin.isPlotWorld(p.getWorld())) {
+            boolean seen = p.getPersistentDataContainer().has(SEEN);
+            p.getPersistentDataContainer().set(SEEN, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+            plugin.msg().plain(p, seen ? "welcome-back" : "welcome", "player", p.getName());
+        }
+    }
+
+    private static final org.bukkit.NamespacedKey SEEN = new org.bukkit.NamespacedKey("mythosplots", "seen");
 
     @EventHandler(ignoreCancelled = true)
     public void onVoid(EntityDamageEvent e) {
@@ -145,7 +171,7 @@ final class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onChat(AsyncChatEvent e) {
-        if (!plugin.getConfig().getBoolean("chat.format", true)) {
+        if (plugin.local() || !plugin.getConfig().getBoolean("chat.format", true)) {
             return;
         }
         RankLimits ranks = plugin.ranks();
