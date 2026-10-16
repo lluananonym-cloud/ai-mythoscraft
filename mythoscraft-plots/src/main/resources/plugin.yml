@@ -1,0 +1,20 @@
+name: MythosPlots
+version: '${project.version}'
+main: online.mythoscraft.plots.MythosPlots
+api-version: '1.21'
+author: MinePro641
+website: https://mythoscraft.online
+description: MythosCraft plot server – plot world, /plot, protection, same resource pack, /smp back to the main server.
+commands:
+  plot:
+    description: Claim and manage your plot (/plot help)
+    usage: /plot help
+    aliases: [p, plots]
+  smp:
+    description: Back to the MythosCraft main server
+    usage: /smp
+    aliases: [mythos, hub, lobby, survival]
+permissions:
+  mythosplots.admin:
+    description: Build everywhere, unlimited plots, /plot admin
+    default: op

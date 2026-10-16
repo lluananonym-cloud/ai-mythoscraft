@@ -1,0 +1,45 @@
+prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
+join: '<dark_gray>[<green>+</green>]</dark_gray> <white>{player}'
+quit: '<dark_gray>[<red>-</red>]</dark_gray> <white>{player}'
+welcome: "<newline><gradient:#5ef0a0:#22d3ee><bold>✦ WELCOME TO THE PLOT WORLD ✦</bold></gradient><newline><white>Build anything you want on your own plot!<newline><gray>• <click:run_command:'/plot auto'><hover:show_text:'<gray>Click'><green><u>/plot auto</u></green></hover></click> <gray>– get your plot right now<newline><gray>• <white>/plot home</white> <gray>· <white>/plot visit <player></white> <gray>· <white>/plot add <player></white><newline><gray>• <click:run_command:'/smp'><hover:show_text:'<gray>Click'><gold><u>/smp</u></gold></hover></click> <gray>– back to the MythosCraft survival server<newline>"
+welcome-back: "<gray>Welcome back, <white>{player}</white>! <click:run_command:'/plot home'><hover:show_text:'<gray>Click'><green><u>/plot home</u></green></hover></click> <dark_gray>· <click:run_command:'/smp'><gold><u>/smp</u></gold></click>"
+pack-prompt: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>uses its own resource pack for all custom items.'
+help: "<newline><gradient:#5ef0a0:#22d3ee><bold>Plot commands</bold></gradient><newline><green>/plot auto</green> <gray>– claim the next free plot<newline><green>/plot claim</green> <gray>– claim the plot you stand on<newline><green>/plot home [n]</green> <gray>– to your plot<newline><green>/plot list</green> <gray>– your plots<newline><green>/plot visit <player> [n]</green> <gray>– visit a plot<newline><green>/plot info</green> <gray>– who owns this plot<newline><green>/plot add|remove <player></green> <gray>– let friends build<newline><green>/plot deny|undeny <player></green> <gray>– keep someone out<newline><green>/plot sethome</green> <gray>– home point on your plot<newline><green>/plot clear confirm</green> <gray>– reset your plot<newline><green>/plot unclaim confirm</green> <gray>– give the plot up<newline><gold>/smp</gold> <gray>– back to the main server<newline>"
+usage: '<gray>Usage: <white>{usage}'
+no-permission: '<red>You are not allowed to do that.'
+unknown-player: '<red>Player <white>{player}</white> is unknown.'
+not-on-plot: '<red>You are not standing on a plot.'
+not-your-plot: '<red>Stand on your own plot to do that.'
+already-claimed: '<red>This plot already belongs to <white>{owner}</white>.'
+limit: '<red>You can own {max} plot(s). <gray>Give one up with /plot unclaim confirm.'
+no-free-plot: '<red>No free plot found.'
+claimed: '<green>✔ Plot <white>{id}</white> is yours! <gray>/plot add <player> lets friends build.'
+no-plot: "<gray>You don't have a plot yet – <click:run_command:'/plot auto'><green><u>/plot auto</u></green></click>"
+player-no-plot: '<gray><white>{player}</white> has no plot.'
+teleported: '<green>Welcome home! <gray>(plot {id})'
+visiting: '<gray>Visiting the plot of <white>{player}</white> <dark_gray>({id})'
+list-header: '<green>Your plots <gray>({count}/{max}):'
+list-line: "<dark_gray>• <click:run_command:'/plot home {n}'><white>#{n}</white> <gray>{id}</click>"
+info-free: '<gray>Plot <white>{id}</white> is free – <green>/plot claim</green>'
+info: "<newline><green><bold>Plot {id}</bold></green><newline><gray>Owner: <white>{owner}<newline><gray>Builders: <white>{trusted}<newline><gray>Denied: <white>{denied}<newline><gray>Claimed: <white>{date}<newline>"
+trusted: '<green><white>{player}</white> can now build on this plot.'
+untrusted: '<gray><white>{player}</white> can no longer build here.'
+denied: '<gray><white>{player}</white> may not enter this plot any more.'
+undenied: '<gray><white>{player}</white> may enter this plot again.'
+you-are-denied: '<red>You are not allowed on this plot.'
+home-set: '<green>✔ Plot home set.'
+unclaim-confirm: '<red>Really give this plot up? Everything on it is removed. <white>/plot unclaim confirm'
+unclaimed: '<gray>Plot <white>{id}</white> is free again.'
+clear-confirm: '<red>Really reset this plot? Everything on it is removed. <white>/plot clear confirm'
+clearing: '<gray>Resetting your plot …'
+cleared: '<green>✔ Your plot is fresh again.'
+protected-plot: '<red>This plot belongs to someone else.'
+protected-road: '<red>Roads can''t be changed.'
+enter-free: "<gray>Plot <white>{id}</white> <dark_gray>· <green>free – /plot claim"
+enter: '<gray>Plot <white>{id}</white> <dark_gray>· <gray>owner: <white>{owner}'
+enter-own: '<green>🏠 Your plot <white>{id}'
+transfer:
+  sending: '<gray>Back to <gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient><gray> …'
+  title: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient>'
+  subtitle: '<gray>Back to the survival world'
+  failed: '<red>The main server can''t be reached right now.'

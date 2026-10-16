@@ -1,0 +1,45 @@
+# MythosPlots – plot server of MythosCraft
+# Both servers need accepts-transfers=true in server.properties (for /plot on the main server and /smp here).
+
+main-server:
+  host: mythoscraftsmp.minekeep.gg
+  port: 25565
+
+world:
+  # created automatically with its own generator (plot raster) – no flat world or build command needed
+  name: plots
+  # CREATIVE (build freely, CityBuild plot style) or SURVIVAL
+  gamemode: CREATIVE
+  always-day: true
+  no-weather: true
+  pvp: false
+  item-drops: true
+  # true = every join starts at the spawn, false = players stay where they left
+  spawn-on-join: false
+
+plots:
+  # plot size in blocks and road width – do NOT change once plots are claimed
+  size: 48
+  road: 7
+  # plots per player; more with permission mythosplots.plots.<n> (e.g. mythosplots.plots.3)
+  max-per-player: 1
+  road-block: POLISHED_ANDESITE
+  road-edge-block: STONE_BRICKS
+  border-free: SMOOTH_STONE_SLAB
+  border-claimed: QUARTZ_SLAB
+  reset-columns-per-tick: 12
+
+resource-pack:
+  enabled: true
+  required: true
+  # external link instead of the built-in web server (then also set sha1)
+  url: ""
+  sha1: ""
+  self-host:
+    bind: 0.0.0.0
+    # MineKeep allows only the ports 2053, 2083, 2087 and 2096
+    port: 2053
+    public-url: "https://mythoscraftsmpplot.minekeep.dev:2053"
+
+chat:
+  format: true
