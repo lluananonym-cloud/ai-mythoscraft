@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Inventories · MythosCraft</title>
+  <link rel="stylesheet" href="inventory.css">
+</head>
+<body>
+  <header>
+    <div class="brand">MYTHOSCRAFT <span>/ inventories</span></div>
+    <div id="who"></div>
+  </header>
+  <main>
+    <section id="login" class="card hidden">
+      <h2>Admins only</h2>
+      <p>Sign in with the team panel first, then come back to this page.</p>
+      <a class="btn" href="/panel/">Open team panel</a>
+    </section>
+    <section id="denied" class="card hidden">
+      <h2>No access</h2>
+      <p>This page is only for admins.</p>
+    </section>
+    <section id="app" class="hidden">
+      <aside class="card">
+        <input id="search" placeholder="Search player …" autocomplete="off">
+        <ul id="players"></ul>
+      </aside>
+      <article class="card" id="detail">
+        <p class="muted">Choose a player.</p>
+      </article>
+    </section>
+  </main>
+  <script src="inventory.js"></script>
+</body>
+</html>

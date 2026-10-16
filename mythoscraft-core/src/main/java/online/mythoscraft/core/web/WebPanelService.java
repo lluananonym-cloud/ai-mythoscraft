@@ -397,7 +397,7 @@ public final class WebPanelService {
                     }
                     json(ex, 200, plotPerks(query(ex).getOrDefault("uuid", "")));
                 }
-                case "/api/sync/pull", "/api/sync/push", "/api/sync/info" -> plugin.serverSync().handle(ex, path, this);
+                case "/api/sync/pull", "/api/sync/push", "/api/sync/info", "/api/sync/checkpoint" -> plugin.serverSync().handle(ex, path, this);
                 case "/api/login/start" -> loginStart(ex);
                 case "/api/apply/decide" -> {
                     if (limited(ex, 30)) {
@@ -505,6 +505,38 @@ public final class WebPanelService {
             case "/api/player" -> json(ex, 200, sync(() -> player(query(ex).getOrDefault("name", ""))));
             case "/api/actions" -> json(ex, 200, sync(() -> WebActions.definitions(plugin)));
             case "/api/log" -> json(ex, 200, Map.of("log", new ArrayList<>(log)));
+            case "/api/inventory/list", "/api/inventory/get", "/api/inventory/backup", "/api/inventory/restore" -> {
+                // stored inventories (survival + plot server) – admins only
+                if (role == null || !role.atLeast(Role.ADMIN)) {
+                    json(ex, 403, Map.of("error", "role"));
+                    return;
+                }
+                ServerSync sync = plugin.serverSync();
+                if (path.endsWith("/list")) {
+                    json(ex, 200, Map.of("players", sync(sync::list)));
+                    return;
+                }
+                Map<String, String> q = query(ex);
+                JsonObject b = post ? body(ex) : new JsonObject();
+                String uuid = b.has("uuid") ? b.get("uuid").getAsString() : q.getOrDefault("uuid", "");
+                String backup = b.has("id") ? b.get("id").getAsString() : q.getOrDefault("id", "");
+                UUID id;
+                try {
+                    id = UUID.fromString(uuid);
+                } catch (IllegalArgumentException e) {
+                    json(ex, 400, Map.of("error", "uuid"));
+                    return;
+                }
+                if (path.endsWith("/get")) {
+                    json(ex, 200, sync(() -> sync.inspect(id)));
+                } else if (path.endsWith("/backup")) {
+                    json(ex, 200, sync(() -> sync.backupView(id, backup)));
+                } else if (!post) {
+                    json(ex, 405, Map.of("error", "post"));
+                } else {
+                    json(ex, 200, sync(() -> sync.restore(id, backup, s.name())));
+                }
+            }
             case "/api/action" -> {
                 if (!post || !role.atLeast(Role.EDIT)) {
                     json(ex, 403, Map.of("error", "role"));
@@ -949,8 +981,8 @@ public final class WebPanelService {
 
     private void staticFile(HttpExchange ex, String path) throws IOException {
         // the public wiki is the start page, the team panel lives under /panel/
-        if (path.isEmpty() || path.equals("/") || path.equals("/wiki") || path.equals("/panel")) {
-            String to = path.equals("/panel") ? "/panel/" : "/wiki/";
+        if (path.isEmpty() || path.equals("/") || path.equals("/wiki") || path.equals("/panel") || path.equals("/inventory")) {
+            String to = path.equals("/panel") ? "/panel/" : path.equals("/inventory") ? "/inventory/" : "/wiki/";
             ex.getResponseHeaders().set("Location", to);
             ex.sendResponseHeaders(302, -1);
             return;

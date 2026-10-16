@@ -1,4 +1,4 @@
-config-version: 29
+config-version: 30
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -4037,6 +4037,7 @@ applications:
   you-denied: "<newline><red><bold>📝 Your moderator application was declined.</bold><newline><gray>Note: <white>{note}<newline><gray>Thanks for applying – you can try again later.<newline>"
 
 server-sync:
+  checkpoint: "<yellow>The plot world did not answer – you got the inventory from its last save point (at most a minute old)."
   waiting: "<gray>⏳ Loading your inventory from the plot world …"
   loaded: "<green>✔ Inventory synced"
   timeout: "<red>The plot world did not send your inventory in time – you keep the inventory you had before you went there."

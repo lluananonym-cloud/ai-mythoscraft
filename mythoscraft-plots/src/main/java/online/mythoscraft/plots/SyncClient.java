@@ -66,6 +66,7 @@ final class SyncClient implements Listener {
     SyncClient(MythosPlots plugin) {
         this.plugin = plugin;
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAll, 600, 600);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::checkpoints, 1200, 1200);
         Bukkit.getScheduler().runTaskTimer(plugin, this::flyTick, 40, 10);
     }
 
@@ -151,6 +152,13 @@ final class SyncClient implements Listener {
             }
             try {
                 JsonObject o = JsonParser.parseString(res.body()).getAsJsonObject();
+                if (!o.has("status")) {
+                    // e.g. 401 {"error":"login"}: the survival server runs a MythosCraft.jar without the sync
+                    String b = res.body().length() > 80 ? res.body().substring(0, 80) : res.body();
+                    lastStatus = base + ": answer " + res.statusCode() + " " + b
+                            + (res.statusCode() == 401 ? " – is the newest MythosCraft.jar on the survival server?" : "");
+                    return null;
+                }
                 workingBase = base;
                 lastStatus = "ok (" + res.statusCode() + ")";
                 return o;
@@ -328,6 +336,9 @@ final class SyncClient implements Listener {
     private void fail(Player p, String key) {
         done(p);
         plugin.msg().send(p, key);
+        if (p.hasPermission("mythosplots.admin")) {
+            plugin.msg().send(p, "sync.reason", "status", status());
+        }
         if (!plugin.bypass(p)) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (p.isOnline()) {
@@ -392,6 +403,19 @@ final class SyncClient implements Listener {
                 post("/api/sync/push", body(p, session)).get(10, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception ex) {
                 plugin.getLogger().warning("Inventory of " + p.getName() + " could not be sent back on shutdown: " + ex);
+            }
+        }
+    }
+
+    /** every minute: live save point on the survival server (admin page, and safety if this server crashes) */
+    private void checkpoints() {
+        if (!enabled() || key().isEmpty()) {
+            return;
+        }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            String session = sessions.get(p.getUniqueId());
+            if (session != null && !busy(p)) {
+                post("/api/sync/checkpoint", body(p, session));
             }
         }
     }

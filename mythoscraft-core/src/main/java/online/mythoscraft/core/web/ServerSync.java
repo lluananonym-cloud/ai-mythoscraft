@@ -59,6 +59,9 @@ public final class ServerSync implements Listener {
         Mode mode = Mode.MAIN;
         String session = "";
         JsonObject data;
+        /** latest live save point from the plot server while he plays there */
+        JsonObject checkpoint;
+        String name = "?";
         long since = System.currentTimeMillis();
     }
 
@@ -127,6 +130,8 @@ public final class ServerSync implements Listener {
                     s.session = o.has("session") ? o.get("session").getAsString() : "";
                     s.since = o.has("since") ? o.get("since").getAsLong() : 0;
                     s.data = o.has("data") && o.get("data").isJsonObject() ? o.getAsJsonObject("data") : null;
+                    s.checkpoint = o.has("checkpoint") && o.get("checkpoint").isJsonObject() ? o.getAsJsonObject("checkpoint") : null;
+                    s.name = o.has("name") ? o.get("name").getAsString() : "?";
                 } catch (IOException | RuntimeException e) {
                     plugin.getLogger().warning("server-sync: " + f.getName() + " unreadable – " + e.getMessage());
                 }
@@ -144,8 +149,12 @@ public final class ServerSync implements Listener {
         o.addProperty("mode", s.mode.name());
         o.addProperty("session", s.session);
         o.addProperty("since", s.since);
+        o.addProperty("name", s.name);
         if (s.data != null) {
             o.add("data", s.data);
+        }
+        if (s.checkpoint != null) {
+            o.add("checkpoint", s.checkpoint);
         }
         String text = o.toString();
         Runnable write = () -> {
@@ -357,10 +366,18 @@ public final class ServerSync implements Listener {
                     } else if (System.currentTimeMillis() > until) {
                         done = true;
                         waiting.remove(id);
+                        if (s.checkpoint != null) {
+                            // plot server gone (crash …): the last live save point from there
+                            apply(p, s.checkpoint);
+                            plugin.messages().send(p, "server-sync.checkpoint");
+                            plugin.getLogger().warning("server-sync: plot server did not answer for " + p.getName()
+                                    + " – loaded the last live save point from there.");
+                        } else {
+                            plugin.messages().send(p, "server-sync.timeout");
+                            plugin.getLogger().warning("server-sync: the plot server did not send " + p.getName()
+                                    + "'s inventory back – he keeps the inventory he had before going there.");
+                        }
                         back(p, id, s);
-                        plugin.messages().send(p, "server-sync.timeout");
-                        plugin.getLogger().warning("server-sync: the plot server did not send " + p.getName()
-                                + "'s inventory back – he keeps the inventory he had before going there.");
                     }
                 }
             });
@@ -372,7 +389,9 @@ public final class ServerSync implements Listener {
     private void back(Player p, UUID id, State s) {
         s.mode = Mode.MAIN;
         s.session = "";
+        s.name = p.getName();
         s.data = null;
+        s.checkpoint = null;
         s.since = System.currentTimeMillis();
         save(id, s);
     }
@@ -405,9 +424,11 @@ public final class ServerSync implements Listener {
         }
         s.mode = Mode.RELEASED;
         s.session = "";
+        s.name = p.getName();
         s.data = snapshot(p, looks);
         s.since = System.currentTimeMillis();
         save(id, s);
+        backup(id, s.data, "left-survival");
     }
 
     /** shutdown: everybody online is released, so the plot server may take them */
@@ -506,11 +527,18 @@ public final class ServerSync implements Listener {
         if (path.endsWith("/info")) {
             WebPanelService.json(ex, 200, info(id));
         } else if (path.endsWith("/pull")) {
-            WebPanelService.json(ex, 200, web.sync(() -> pull(id)));
+            Map<String, Object> r = web.sync(() -> pull(id));
+            plugin.getLogger().info("server-sync: plot server takes the inventory of " + state(id).name + " → " + r.get("status"));
+            WebPanelService.json(ex, 200, r);
         } else {
             String session = body.has("session") ? body.get("session").getAsString() : "";
             JsonObject data = body.has("data") && body.get("data").isJsonObject() ? body.getAsJsonObject("data") : null;
-            WebPanelService.json(ex, 200, web.sync(() -> push(id, session, data)));
+            boolean live = path.endsWith("/checkpoint");
+            Map<String, Object> r = web.sync(() -> live ? checkpoint(id, session, data) : push(id, session, data));
+            if (!live) {
+                plugin.getLogger().info("server-sync: plot server sends back the inventory of " + state(id).name + " → " + r.get("status"));
+            }
+            WebPanelService.json(ex, 200, r);
         }
     }
 
@@ -547,8 +575,214 @@ public final class ServerSync implements Listener {
         s.mode = Mode.RETURNED;
         s.session = "";
         s.data = data;
+        s.checkpoint = null;
         s.since = System.currentTimeMillis();
         save(id, s);
+        backup(id, data, "back-from-plot");
+        Player online = Bukkit.getPlayer(id);
+        if (online != null && !waiting.contains(id)) {
+            // he is already here and not waiting (e.g. the push came late after a restart): take it now
+            apply(online, data);
+            back(online, id, s);
+        }
         return Map.of("status", "ok");
+    }
+
+    /** live save point every minute while he plays on the plot server */
+    private Map<String, Object> checkpoint(UUID id, String session, JsonObject data) {
+        State s = state(id);
+        if (s.mode != Mode.PLOT || s.session.isEmpty() || !s.session.equals(session) || data == null) {
+            return Map.of("status", "rejected");
+        }
+        s.checkpoint = data;
+        save(id, s);
+        long last = lastBackup.getOrDefault(id, 0L);
+        if (System.currentTimeMillis() - last > 10 * 60_000L) {
+            backup(id, data, "plot-live");
+        }
+        return Map.of("status", "ok");
+    }
+
+    // ------------------------------------------------------------------------------------------- backups
+    private final Map<UUID, Long> lastBackup = new ConcurrentHashMap<>();
+
+    private File backupDir(UUID id) {
+        return new File(folder, "backups/" + id);
+    }
+
+    private void backup(UUID id, JsonObject data, String reason) {
+        if (data == null) {
+            return;
+        }
+        lastBackup.put(id, System.currentTimeMillis());
+        String text = data.toString();
+        int keep = Math.max(1, plugin.getConfig().getInt("server-sync.backups-per-player", 30));
+        plugin.tasks().io("server sync backup", () -> {
+            try {
+                File dir = backupDir(id);
+                Files.createDirectories(dir.toPath());
+                Files.writeString(new File(dir, System.currentTimeMillis() + "-" + reason + ".json").toPath(), text, StandardCharsets.UTF_8);
+                File[] all = dir.listFiles((d, n) -> n.endsWith(".json"));
+                if (all != null && all.length > keep) {
+                    java.util.Arrays.sort(all, java.util.Comparator.comparing(File::getName));
+                    for (int i = 0; i < all.length - keep; i++) {
+                        all[i].delete();
+                    }
+                }
+            } catch (IOException e) {
+                plugin.getLogger().warning("server-sync: backup of " + id + " failed – " + e.getMessage());
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------- admin page /inventory
+    /** everybody the sync knows: name, where the inventory is right now, since when */
+    java.util.List<Map<String, Object>> list() {
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        File[] files = folder.listFiles((d, n) -> n.endsWith(".json") && n.length() > 30);
+        if (files != null) {
+            for (File f : files) {
+                try {
+                    UUID id = UUID.fromString(f.getName().substring(0, f.getName().length() - 5));
+                    State s = state(id);
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("uuid", id.toString());
+                    m.put("name", Bukkit.getPlayer(id) != null ? Bukkit.getPlayer(id).getName() : s.name);
+                    m.put("where", where(id, s));
+                    m.put("since", s.since);
+                    out.add(m);
+                } catch (RuntimeException ignored) {
+                    // other file
+                }
+            }
+        }
+        out.sort(java.util.Comparator.comparing(m -> String.valueOf(m.get("name")).toLowerCase(java.util.Locale.ROOT)));
+        return out;
+    }
+
+    private String where(UUID id, State s) {
+        if (Bukkit.getPlayer(id) != null) {
+            return busy(Bukkit.getPlayer(id)) ? "arriving" : "survival";
+        }
+        return switch (s.mode) {
+            case PLOT -> "plot";
+            case RETURNED -> "on the way back";
+            default -> "offline";
+        };
+    }
+
+    private static java.util.List<Map<String, Object>> describe(String data, int size, MythosCraft plugin) {
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        ItemStack[] items = items(data, size);
+        for (int i = 0; i < items.length; i++) {
+            ItemStack it = items[i];
+            if (it == null) {
+                continue;
+            }
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("slot", i);
+            m.put("type", it.getType().getKey().getKey());
+            m.put("amount", it.getAmount());
+            var custom = plugin.items().identify(it);
+            m.put("custom", custom == null ? "" : custom.id());
+            m.put("name", it.hasItemMeta() && it.getItemMeta().hasDisplayName()
+                    ? net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(it.getItemMeta().displayName())
+                    : "");
+            out.add(m);
+        }
+        return out;
+    }
+
+    private Map<String, Object> view(JsonObject d) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        if (d == null) {
+            return m;
+        }
+        m.put("inventory", describe(str(d, "inventory"), 41, plugin));
+        m.put("ender", describe(str(d, "ender"), 27, plugin));
+        m.put("level", d.has("level") ? d.get("level").getAsInt() : 0);
+        m.put("health", d.has("health") ? d.get("health").getAsDouble() : 0);
+        m.put("food", d.has("food") ? d.get("food").getAsInt() : 0);
+        m.put("time", d.has("time") ? d.get("time").getAsLong() : 0);
+        return m;
+    }
+
+    /** one player: the inventory right now (live from the game, the live save point or the stored one) + backups */
+    Map<String, Object> inspect(UUID id) {
+        State s = state(id);
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        Player online = Bukkit.getPlayer(id);
+        out.put("uuid", id.toString());
+        out.put("name", online != null ? online.getName() : s.name);
+        out.put("where", where(id, s));
+        JsonObject now = online != null ? snapshot(online, new JsonObject()) : s.mode == Mode.PLOT && s.checkpoint != null ? s.checkpoint : s.data;
+        out.put("source", online != null ? "live (survival)" : s.mode == Mode.PLOT && s.checkpoint != null ? "live save point (plot)" : "stored");
+        out.put("current", view(now));
+        java.util.List<Map<String, Object>> backups = new java.util.ArrayList<>();
+        File[] all = backupDir(id).listFiles((d, n) -> n.endsWith(".json"));
+        if (all != null) {
+            java.util.Arrays.sort(all, java.util.Comparator.comparing(File::getName).reversed());
+            for (File f : all) {
+                String n = f.getName().substring(0, f.getName().length() - 5);
+                int dash = n.indexOf('-');
+                Map<String, Object> b = new java.util.LinkedHashMap<>();
+                b.put("id", n);
+                b.put("time", dash > 0 ? Long.parseLong(n.substring(0, dash)) : 0);
+                b.put("reason", dash > 0 ? n.substring(dash + 1) : "");
+                backups.add(b);
+            }
+        }
+        out.put("backups", backups);
+        return out;
+    }
+
+    Map<String, Object> backupView(UUID id, String backupId) throws IOException {
+        if (!backupId.matches("[0-9]+-[a-z-]+")) {
+            return Map.of("error", "id");
+        }
+        File f = new File(backupDir(id), backupId + ".json");
+        if (!f.isFile()) {
+            return Map.of("error", "missing");
+        }
+        JsonObject d = JsonParser.parseString(Files.readString(f.toPath(), StandardCharsets.UTF_8)).getAsJsonObject();
+        return view(d);
+    }
+
+    /** admin: put a backup back. Online here → right away; offline → on his next join here. */
+    Map<String, Object> restore(UUID id, String backupId, String by) throws IOException {
+        if (!backupId.matches("[0-9]+-[a-z-]+")) {
+            return Map.of("error", "id");
+        }
+        File f = new File(backupDir(id), backupId + ".json");
+        if (!f.isFile()) {
+            return Map.of("error", "missing");
+        }
+        JsonObject d = JsonParser.parseString(Files.readString(f.toPath(), StandardCharsets.UTF_8)).getAsJsonObject();
+        State s = state(id);
+        if (s.mode == Mode.PLOT) {
+            return Map.of("error", "on the plot server right now – restore when he is back or offline");
+        }
+        Player online = Bukkit.getPlayer(id);
+        if (online != null) {
+            if (busy(online)) {
+                return Map.of("error", "just arriving – try again in a moment");
+            }
+            backup(id, snapshot(online, new JsonObject()), "before-restore");
+            apply(online, d);
+            plugin.getLogger().info("server-sync: " + by + " restored backup " + backupId + " for " + online.getName());
+            return Map.of("ok", true, "applied", "now");
+        }
+        if (s.data != null) {
+            backup(id, s.data, "before-restore");
+        }
+        d.remove("fly-until");
+        s.mode = Mode.RETURNED;
+        s.session = "";
+        s.data = d;
+        s.checkpoint = null;
+        s.since = System.currentTimeMillis();
+        save(id, s);
+        plugin.getLogger().info("server-sync: " + by + " restored backup " + backupId + " for " + s.name + " (on next join)");
+        return Map.of("ok", true, "applied", "next join");
     }
 }

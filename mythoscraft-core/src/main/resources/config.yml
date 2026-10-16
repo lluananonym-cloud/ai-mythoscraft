@@ -6,7 +6,7 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 31
+config-version: 32
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
   30: [shop.entries]
@@ -1650,6 +1650,8 @@ server-sync:
   key: ""
   # so lange wartet ein Spieler beim Zurückkommen auf sein Inventar vom Plot-Server
   wait-seconds: 20
+  # Sicherungen pro Spieler (data/server-sync/backups) – ansehen und zurückspielen auf der Website unter /inventory (nur Admins)
+  backups-per-player: 30
 
 # Neue Spieler: [NEW]-Tag, Chat-Helfer, /thank, Belohnung fürs Durchziehen des Guides, Login-Streak beim Join
 newbies:

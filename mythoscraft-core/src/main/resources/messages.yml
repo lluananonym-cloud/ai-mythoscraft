@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 29
+config-version: 30
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -4067,6 +4067,7 @@ applications:
   you-denied: "<newline><red><bold>📝 Your moderator application was declined.</bold><newline><gray>Note: <white>{note}<newline><gray>Thanks for applying – you can try again later.<newline>"
 
 server-sync:
+  checkpoint: "<yellow>Die Plot-Welt hat nicht geantwortet – du hast das Inventar vom letzten Speicherpunkt dort (höchstens eine Minute alt)."
   waiting: "<gray>⏳ Dein Inventar wird aus der Plot-Welt geladen …"
   loaded: "<green>✔ Inventar synchronisiert"
   timeout: "<red>Die Plot-Welt hat dein Inventar nicht rechtzeitig geschickt – du behältst das Inventar von vorher."

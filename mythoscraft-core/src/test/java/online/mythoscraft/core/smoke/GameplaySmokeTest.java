@@ -330,6 +330,10 @@ class GameplaySmokeTest {
         com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(pulled.substring(4)).getAsJsonObject();
         com.google.gson.JsonObject data = o.getAsJsonObject("data");
         assertTrue(data.getAsJsonObject("looks").has("prefix"), "rank looks travel along");
+        // live save point while he plays there
+        data.addProperty("level", 6);
+        String cp = "{\"uuid\":\"" + id + "\",\"session\":\"" + o.get("session").getAsString() + "\",\"data\":" + data + "}";
+        assertTrue(http("POST", "/api/sync/checkpoint", cp, null, true, null).contains("\"ok\""));
         // on the plot server he gained levels; a wrong session is refused
         data.addProperty("level", 9);
         String wrong = "{\"uuid\":\"" + id + "\",\"session\":\"x\",\"data\":" + data + "}";
@@ -344,6 +348,12 @@ class GameplaySmokeTest {
         assertEquals(9, back.getLevel(), "inventory from the plot server applied");
         ItemStack d = back.getInventory().getItem(3);
         assertTrue(d != null && d.getType() == org.bukkit.Material.DIAMOND && d.getAmount() == 5, "items kept: " + d);
+        // admin page exists, its data only for admins
+        assertTrue(http("GET", "/inventory/", null, null, false, null).startsWith("200"));
+        assertTrue(http("GET", "/api/inventory/list", null, null, false, null).startsWith("401"));
+        java.io.File backups = new java.io.File(plugin.getDataFolder(), "data/server-sync/backups/" + id);
+        waitFor(() -> backups.isDirectory() && backups.list().length >= 2);
+        assertTrue(backups.list().length >= 2, "backups written");
     }
 
     private String http(String method, String path, String body, String cookie, boolean panelHeader, String[] setCookie) throws Exception {
