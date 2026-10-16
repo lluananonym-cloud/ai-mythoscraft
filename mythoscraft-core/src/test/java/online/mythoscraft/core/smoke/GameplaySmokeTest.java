@@ -953,6 +953,13 @@ class GameplaySmokeTest {
         long npcs = w.getEntities().stream().filter(e -> "spawn_npc".equals(e.getPersistentDataContainer()
                 .get(online.mythoscraft.core.util.Keys.ENTITY, org.bukkit.persistence.PersistentDataType.STRING))).count();
         assertEquals(markers.length, npcs, "helper NPCs");
+        // a spawn built before the NPCs existed: only Lia's spot is stored – the NPCs still come
+        plugin.attractionStore().define(new org.bukkit.Location(w, 0, 64, 0), 128,
+                java.util.Map.of("mentor", List.of(new org.bukkit.Location(w, 0.5, 65, 0.5))));
+        plugin.attractions().rebuild();
+        long again = w.getEntities().stream().filter(e -> e.isValid() && "spawn_npc".equals(e.getPersistentDataContainer()
+                .get(online.mythoscraft.core.util.Keys.ENTITY, org.bukkit.persistence.PersistentDataType.STRING))).count();
+        assertEquals(markers.length, again, "helper NPCs without stored spots");
     }
 
     @Test

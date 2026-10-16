@@ -669,6 +669,7 @@ async function loadMe() {
     me = r.ok ? await r.json() : null;
   } catch { me = null; }
   renderDaily();
+  renderApply();
 }
 async function signIn() {
   dailyMsg = '';
@@ -733,6 +734,10 @@ function renderApply() {
     return;
   }
   const qs = applyInfo.questions || [];
+  // keep what was typed (also over reloads of the page)
+  let draft = {};
+  try { draft = JSON.parse(localStorage.getItem('wiki.apply') || '{}'); } catch { draft = {}; }
+  box.querySelectorAll('textarea').forEach((ta) => { draft[ta.name] = ta.value; });
   box.innerHTML = `${mine && mine.status === 'denied' ? `<div class="app-status s-denied"><b>${T[lang].applyStatus.denied}</b>${mine.note ? `<p class="muted">${t('note')}: ${esc(mine.note)}</p>` : ''}</div>` : ''}
     <form class="app-form" id="app-form">
       <div class="dme"><img alt="" src="https://mc-heads.net/avatar/${encodeURIComponent(me.uuid)}/48"><div><b></b><small>${t('applyMin').replace('{h}', applyInfo.minHours)}</small></div></div>
@@ -741,6 +746,13 @@ function renderApply() {
       ${applyMsg ? `<p class="muted">${applyMsg}</p>` : ''}
     </form>`;
   box.querySelector('.dme b').textContent = me.name;
+  box.querySelectorAll('textarea').forEach((ta) => {
+    ta.value = draft[ta.name] || '';
+    ta.addEventListener('input', () => {
+      draft[ta.name] = ta.value;
+      try { localStorage.setItem('wiki.apply', JSON.stringify(draft)); } catch { /* private mode */ }
+    });
+  });
   $('#app-form').onsubmit = async (e) => {
     e.preventDefault();
     const answers = qs.map((_, i) => e.target[`q${i}`].value);
@@ -749,7 +761,10 @@ function renderApply() {
         body: JSON.stringify({ answers }) });
       const j = await r.json();
       applyMsg = r.ok ? t('applySent') : (T[lang].applyErr[j.error] || j.error);
-      if (r.ok) { burstAt($('#apply-box')); await loadApply(); return; }
+      if (r.ok) {
+        try { localStorage.removeItem('wiki.apply'); } catch { /* ignore */ }
+        burstAt($('#apply-box')); await loadApply(); return;
+      }
     } catch { applyMsg = t('relayDown'); }
     renderApply();
   };
@@ -767,7 +782,6 @@ function burstAt(box) {
   }
 }
 function renderDaily() {
-  renderApply();
   const box = $('#daily-box');
   if (!box) return;
   const table = (live && live.daily) || [];
@@ -799,7 +813,7 @@ function renderDaily() {
       ${dailyMsg ? `<p class="muted">${dailyMsg}</p>` : ''}`;
     box.querySelector('.dme b').textContent = me.name;
     const cl = $('#cl'); if (cl) cl.onclick = claim;
-    $('#lo').onclick = async () => { await post('/api/player/logout'); me = null; renderDaily(); };
+    $('#lo').onclick = async () => { await post('/api/player/logout'); me = null; renderDaily(); renderApply(); };
     tickCountdowns();
   }
 }
@@ -810,7 +824,7 @@ loadApply();
 const revealObs = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); } }), { threshold: 0.12 });
 function renderAll() {
   applyI18n(); renderFilters(); renderGrid(); renderCollections(); renderCalendar(); renderEvent(); renderTours(); renderBoards(); tickCountdowns();
-  renderSim(); renderDaily();
+  renderSim(); renderDaily(); renderApply();
   document.querySelectorAll('.reveal').forEach((e) => revealObs.observe(e));
 }
 $('#lang').onclick = () => { lang = lang === 'de' ? 'en' : 'de'; localStorage.setItem('wiki.lang', lang); renderAll(); };

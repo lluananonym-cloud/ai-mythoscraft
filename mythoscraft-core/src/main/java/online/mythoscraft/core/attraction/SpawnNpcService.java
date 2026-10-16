@@ -34,15 +34,16 @@ public final class SpawnNpcService {
     static final String TAG = "spawn_npc";
 
     /** marker → skin, item in hand, message key */
-    private record Npc(String marker, String skin, Material hand, String key) {
+    /** dx/dz/yaw: spot relative to Lia (the starter square centre) – used when the spawn stored no NPC spots */
+    private record Npc(String marker, String skin, Material hand, String key, int dx, int dz, float yaw) {
     }
 
     private static final List<Npc> NPCS = List.of(
-            new Npc("npc_rtp", "WestDesert68101", Material.COMPASS, "rtp"),
-            new Npc("npc_plot", "Jakob283", Material.GRASS_BLOCK, "plot"),
-            new Npc("npc_jobs", "Jakob283", Material.IRON_PICKAXE, "jobs"),
-            new Npc("npc_crates", "WestDesert68101", Material.TRIAL_KEY, "crates"),
-            new Npc("npc_idle", "LeonKal", Material.COOKIE, "idle"));
+            new Npc("npc_rtp", "WestDesert68101", Material.COMPASS, "rtp", 2, 7, 180),
+            new Npc("npc_plot", "Jakob283", Material.GRASS_BLOCK, "plot", -5, 1, -90),
+            new Npc("npc_jobs", "Jakob283", Material.IRON_PICKAXE, "jobs", 4, 1, 90),
+            new Npc("npc_crates", "WestDesert68101", Material.TRIAL_KEY, "crates", -3, -5, 0),
+            new Npc("npc_idle", "LeonKal", Material.COOKIE, "idle", 6, -8, 135));
 
     private final MythosCraft plugin;
     private final List<Entity> spawned = new ArrayList<>();
@@ -54,12 +55,43 @@ public final class SpawnNpcService {
         this.plugin = plugin;
     }
 
+    /**
+     * The stored spot of an NPC; spawns built before the NPCs existed have none – then the spot is worked out from
+     * Lia's position (or the spawn centre: the starter square lies 96 blocks south of it).
+     */
+    private Location spot(Npc n) {
+        Location stored = plugin.attractionStore().first(n.marker());
+        if (stored != null) {
+            return stored;
+        }
+        Location base = plugin.attractionStore().first("mentor");
+        if (base != null) {
+            base = new Location(base.getWorld(), Math.floor(base.getX()), Math.floor(base.getY()), Math.floor(base.getZ()));
+        } else {
+            Location c = plugin.attractionStore().center();
+            if (c == null) {
+                return null;
+            }
+            base = new Location(c.getWorld(), Math.floor(c.getX()), Math.floor(c.getY()) + 1, Math.floor(c.getZ()) + 96);
+        }
+        Location l = base.clone().add(n.dx() + 0.5, 0, n.dz() + 0.5);
+        // stand on the ground there (the spawn may have been built a bit differently)
+        for (int i = 0; i < 4 && !l.getBlock().isPassable(); i++) {
+            l.add(0, 1, 0);
+        }
+        for (int i = 0; i < 4 && l.clone().add(0, -1, 0).getBlock().isPassable(); i++) {
+            l.add(0, -1, 0);
+        }
+        l.setYaw(n.yaw());
+        return l;
+    }
+
     /** @return how many NPCs stand now */
     int spawn() {
         clear();
         int missingMarkers = 0;
         for (Npc n : NPCS) {
-            Location at = plugin.attractionStore().first(n.marker());
+            Location at = spot(n);
             if (at == null || at.getWorld() == null) {
                 missingMarkers++;
                 continue;
@@ -126,7 +158,7 @@ public final class SpawnNpcService {
     boolean missing() {
         int expected = 0;
         for (Npc n : NPCS) {
-            Location at = plugin.attractionStore().first(n.marker());
+            Location at = spot(n);
             if (at != null && at.isChunkLoaded()) {
                 expected++;
             }
@@ -166,7 +198,7 @@ public final class SpawnNpcService {
 
     boolean any() {
         for (Npc n : NPCS) {
-            if (plugin.attractionStore().first(n.marker()) != null) {
+            if (spot(n) != null) {
                 return true;
             }
         }
