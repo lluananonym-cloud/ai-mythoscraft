@@ -6,7 +6,7 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 30
+config-version: 31
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
   30: [shop.entries]
@@ -1641,6 +1641,15 @@ plot-server:
   join-command: "mk join mythoscraftsmpplot"
   # Plots für Teammitglieder (MOD und höher); Spieler: rank-perks.<Rang>.plots
   staff-plots: 5
+
+# Ein Inventar für Survival- und Plot-Server: Inventar, Enderkiste, XP, Leben und Hunger wandern mit,
+# der Plot-Server zeigt Rang, Coins und Gems von hier. Schlüssel: leer = automatisch erzeugt,
+# übertragen mit /mythos synckey (Klick kopiert) → auf dem Plot-Server in den Chat einfügen.
+server-sync:
+  enabled: true
+  key: ""
+  # so lange wartet ein Spieler beim Zurückkommen auf sein Inventar vom Plot-Server
+  wait-seconds: 20
 
 # Neue Spieler: [NEW]-Tag, Chat-Helfer, /thank, Belohnung fürs Durchziehen des Guides, Login-Streak beim Join
 newbies:

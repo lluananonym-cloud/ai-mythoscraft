@@ -152,7 +152,7 @@ final class PlayerListener implements Listener {
             RankLimits.Info i = ranks.info(source.getUniqueId());
             return Component.text()
                     .append(ranks.prefix(source.getUniqueId(), viewer instanceof Player v ? v : null))
-                    .append(name.color(i == null ? NamedTextColor.WHITE : i.nameColor()))
+                    .append(i != null && !Component.empty().equals(i.name()) ? i.name() : name.color(i == null ? NamedTextColor.WHITE : i.nameColor()))
                     .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
                     .append(message.color(i == null ? NamedTextColor.GRAY : i.chatColor()))
                     .build();

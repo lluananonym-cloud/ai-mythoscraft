@@ -71,6 +71,28 @@ public final class MythosCommand extends BaseCommand {
                 return args.length == 1 ? List.of("here") : List.of();
             }
         });
+        register(new SubCommand() {
+            @Override
+            public String name() {
+                return "synckey";
+            }
+
+            @Override
+            public String permission() {
+                return "mythos.admin";
+            }
+
+            /** /mythos synckey – the key the plot server needs (click copies "/plot admin key …") */
+            @Override
+            public void execute(CommandSender sender, String[] args) {
+                String cmd = "/plot admin key " + plugin.serverSync().key();
+                if (sender instanceof org.bukkit.entity.Player) {
+                    plugin.messages().sendRaw(sender, "server-sync.key", "command", cmd);
+                } else {
+                    sender.sendMessage("Run this on the plot server: " + cmd);
+                }
+            }
+        });
     }
 
     private void register(SubCommand sub) {

@@ -165,6 +165,7 @@ public class MythosCraft extends JavaPlugin {
     private online.mythoscraft.core.cosmetic.CompanionFarmService companionFarms;
     private online.mythoscraft.core.web.WebDailyRewards webDaily;
     private online.mythoscraft.core.web.PlayerSite playerSite;
+    private online.mythoscraft.core.web.ServerSync serverSync;
     private online.mythoscraft.core.progress.NewbieService newbies;
     private online.mythoscraft.core.teleport.StarterBaseService bases;
 
@@ -250,6 +251,7 @@ public class MythosCraft extends JavaPlugin {
             companionFarms = new online.mythoscraft.core.cosmetic.CompanionFarmService(this);
             webDaily = new online.mythoscraft.core.web.WebDailyRewards(this);
             playerSite = new online.mythoscraft.core.web.PlayerSite(this);
+            serverSync = new online.mythoscraft.core.web.ServerSync(this);
             newbies = new online.mythoscraft.core.progress.NewbieService(this);
             bases = new online.mythoscraft.core.teleport.StarterBaseService(this);
             rtp = new RtpService(this, cooldowns);
@@ -448,7 +450,7 @@ public class MythosCraft extends JavaPlugin {
                 clans, upgrades, floorGames, boosters, magic, creatures, rankPerks, giveaways,
                 new online.mythoscraft.core.item.HelmetUpgradeListener(this),
                 new online.mythoscraft.core.teleport.SpawnItemListener(this),
-                companions, companionFarms, webDaily, newbies, bases, playerSite,
+                companions, companionFarms, webDaily, newbies, bases, playerSite, serverSync,
                 trophies,
                 new online.mythoscraft.core.display.ServerLinksService(this),
                 new online.mythoscraft.core.config.LocaleContextListener(messages)
@@ -641,6 +643,7 @@ public class MythosCraft extends JavaPlugin {
         safe("spawn creatures", () -> creatures.despawnAll());
         safe("sky dome", () -> skyDome.clear());
         safe("rank perks", () -> rankPerks.shutdown());
+        safe("server sync", () -> serverSync.shutdown());
         safe("web panel", () -> webPanel.stop());
         safe("crates", () -> crates.shutdown());
         safe("arenas", () -> arenas.shutdown());
@@ -888,6 +891,10 @@ public class MythosCraft extends JavaPlugin {
 
     public online.mythoscraft.core.progress.NewbieService newbies() {
         return newbies;
+    }
+
+    public online.mythoscraft.core.web.ServerSync serverSync() {
+        return serverSync;
     }
 
     public online.mythoscraft.core.web.PlayerSite playerSite() {

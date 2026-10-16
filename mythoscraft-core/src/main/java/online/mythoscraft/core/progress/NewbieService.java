@@ -117,6 +117,9 @@ public final class NewbieService extends BaseCommand implements Listener {
                 if (!p.isOnline() || !autoDaily) {
                     return;
                 }
+                if (plugin.serverSync() != null && plugin.serverSync().busy(p)) {
+                    return;             // inventory still coming from the plot server – claimed on the next join
+                }
                 PlayerData data = plugin.playerData().get(p);
                 if (!plugin.daily().canClaim(data)) {
                     return;

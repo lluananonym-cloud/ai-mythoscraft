@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 28
+config-version: 29
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -30,6 +30,7 @@ general:
 help:
   header: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>v{version} – Befehle"
   mythos:
+    synckey: '<#e9d5ff>/mythos synckey</#e9d5ff> <gray>– key for the plot server (inventory/rank sync)'
     npcs: '<#e9d5ff>/mythos npcs [here]</#e9d5ff> <gray>– respawn the helper NPCs at spawn (here = around you)'
     help: "<dark_gray>• <#e9d5ff>/mythos help <gray>– diese Hilfe"
     status: "<dark_gray>• <#e9d5ff>/mythos status <gray>– Zustand aller Systeme"
@@ -4064,3 +4065,9 @@ applications:
   decided: '<green>Application #{id} of <white>{player}</white> → <white>{status}</white>.'
   you-accepted: "<newline><gradient:#5ef0a0:#22d3ee><bold>📝 YOUR MODERATOR APPLICATION WAS ACCEPTED!</bold></gradient><newline><gray>Note: <white>{note}<newline><gray>The team will contact you on Discord.<newline>"
   you-denied: "<newline><red><bold>📝 Your moderator application was declined.</bold><newline><gray>Note: <white>{note}<newline><gray>Thanks for applying – you can try again later.<newline>"
+
+server-sync:
+  waiting: "<gray>⏳ Dein Inventar wird aus der Plot-Welt geladen …"
+  loaded: "<green>✔ Inventar synchronisiert"
+  timeout: "<red>Die Plot-Welt hat dein Inventar nicht rechtzeitig geschickt – du behältst das Inventar von vorher."
+  key: "<gray>Schlüssel für den Plot-Server: <click:copy_to_clipboard:'{command}'><hover:show_text:'<gray>Klicken zum Kopieren'><gold><u>[ KLICKEN ZUM KOPIEREN ]</u></gold></hover></click><newline><gray>Dann <white>auf dem Plot-Server</white> in den Chat einfügen (dort OP nötig)."

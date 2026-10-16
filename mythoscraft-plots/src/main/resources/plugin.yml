@@ -10,6 +10,10 @@ commands:
     description: Claim and manage your plot (/plot help)
     usage: /plot help
     aliases: [p, plots]
+  balance:
+    description: Your coins and gems (from the survival server)
+    usage: /money
+    aliases: [money, coins, gems, bal]
   smp:
     description: Back to the MythosCraft main server
     usage: /smp

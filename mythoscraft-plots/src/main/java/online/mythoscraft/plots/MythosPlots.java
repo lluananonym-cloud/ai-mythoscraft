@@ -32,6 +32,8 @@ public final class MythosPlots extends JavaPlugin {
     private Material borderFree;
     private Material borderClaimed;
     private RankLimits ranks;
+    private PlotBoard board;
+    private SyncClient sync;
     /** who used /smp recently – the quit message then says "went back to MythosCraft" */
     private final java.util.Map<java.util.UUID, Long> hops = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -43,6 +45,12 @@ public final class MythosPlots extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // config of an older version: survival + same inventory as on MythosCraft from now on
+        if (getConfig().getInt("config-version", 1) < 2) {
+            getConfig().set("world.gamemode", "SURVIVAL");
+            getConfig().set("config-version", 2);
+            saveConfig();
+        }
         msg.load(this);
         grid = new PlotGrid(getConfig().getInt("plots.size", 48), getConfig().getInt("plots.road", 7));
         borderFree = material("plots.border-free", Material.SMOOTH_STONE_SLAB);
@@ -61,7 +69,13 @@ public final class MythosPlots extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         ranks = new RankLimits(this);
+        board = new PlotBoard(this);
+        sync = new SyncClient(this);
+        getServer().getPluginManager().registerEvents(sync, this);
         getServer().getPluginManager().registerEvents(ranks, this);
+        getServer().getPluginManager().registerEvents(board, this);
+        BalanceCommand balance = new BalanceCommand(this);
+        getCommand("balance").setExecutor(balance);
         getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
         pack = new PackHost(this);
         pack.start();
@@ -70,6 +84,9 @@ public final class MythosPlots extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (sync != null) {
+            sync.shutdown();
+        }
         if (store != null) {
             store.save();
         }
@@ -177,6 +194,14 @@ public final class MythosPlots extends JavaPlugin {
             }
         }
         return max;
+    }
+
+    public PlotBoard board() {
+        return board;
+    }
+
+    public SyncClient sync() {
+        return sync;
     }
 
     public RankLimits ranks() {

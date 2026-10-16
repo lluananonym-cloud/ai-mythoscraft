@@ -397,6 +397,7 @@ public final class WebPanelService {
                     }
                     json(ex, 200, plotPerks(query(ex).getOrDefault("uuid", "")));
                 }
+                case "/api/sync/pull", "/api/sync/push", "/api/sync/info" -> plugin.serverSync().handle(ex, path, this);
                 case "/api/login/start" -> loginStart(ex);
                 case "/api/apply/decide" -> {
                     if (limited(ex, 30)) {
@@ -853,7 +854,7 @@ public final class WebPanelService {
 
     private final ThreadLocal<JsonObject> lastBody = new ThreadLocal<>();
 
-    private JsonObject body(HttpExchange ex) throws IOException {
+    JsonObject body(HttpExchange ex) throws IOException {
         JsonObject cached = lastBody.get();
         if (cached != null && ex.getAttribute("bodyRead") != null) {
             return cached;
@@ -936,7 +937,7 @@ public final class WebPanelService {
         return f.get(10, TimeUnit.SECONDS);
     }
 
-    private static void json(HttpExchange ex, int status, Object body) throws IOException {
+    static void json(HttpExchange ex, int status, Object body) throws IOException {
         byte[] b = GSON.toJson(body).getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         ex.getResponseHeaders().set("Cache-Control", "no-store");

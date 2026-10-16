@@ -316,7 +316,18 @@ final class PlotCommand implements TabExecutor {
                     plugin.msg().send(p, "usage", "usage", "/plot admin tp <x;z>");
                 }
             }
-            default -> plugin.msg().send(p, "usage", "usage", "/plot admin <unclaim|tp <x;z>>");
+            case "key" -> {
+                if (args.length < 3 || args[2].length() < 16) {
+                    plugin.msg().send(p, "usage", "usage", "/plot admin key <key from /mythos synckey>");
+                    return;
+                }
+                plugin.getConfig().set("sync.key", args[2].trim());
+                plugin.saveConfig();
+                plugin.msg().send(p, "sync.key-set");
+            }
+            case "sync" -> plugin.msg().send(p, "sync.status", "status", plugin.sync().status(),
+                    "key", plugin.getConfig().getString("sync.key", "").isBlank() ? "missing" : "set");
+            default -> plugin.msg().send(p, "usage", "usage", "/plot admin <unclaim|tp <x;z>|key <key>|sync>");
         }
     }
 
@@ -345,7 +356,7 @@ final class PlotCommand implements TabExecutor {
                 return List.of("confirm");
             }
             if (s.equals("admin")) {
-                return List.of("unclaim", "tp");
+                return List.of("unclaim", "tp", "key", "sync");
             }
         }
         return List.of();

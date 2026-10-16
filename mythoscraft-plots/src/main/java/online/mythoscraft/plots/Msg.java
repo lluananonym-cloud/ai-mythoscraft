@@ -48,6 +48,13 @@ public final class Msg {
     /** {name} placeholders: pairs of name, value (value may be a Component). */
     public Component get(String key, Object... pairs) {
         String text = raw(key);
+        // inside click/hover arguments ('{command}') tags are not resolved – put plain values in directly
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            Object v = pairs[i + 1];
+            if (v instanceof CharSequence || v instanceof Number) {
+                text = text.replace("'{" + pairs[i] + "}'", "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'");
+            }
+        }
         TagResolver.Builder b = TagResolver.builder();
         for (int i = 0; i + 1 < pairs.length; i += 2) {
             String name = String.valueOf(pairs[i]);

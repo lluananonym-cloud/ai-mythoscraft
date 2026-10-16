@@ -164,6 +164,13 @@ public final class Messages {
         if (template == null || template.isEmpty()) {
             return Component.empty();
         }
+        // inside click/hover arguments ('{command}') tags are not resolved – put plain values in directly
+        for (int i = 0; i + 1 < placeholders.length; i += 2) {
+            Object v = placeholders[i + 1];
+            if (v instanceof CharSequence || v instanceof Number) {
+                template = template.replace("'{" + placeholders[i] + "}'", "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'");
+            }
+        }
         return Text.parse(PLACEHOLDER.matcher(template).replaceAll("<$1>"), resolver(placeholders));
     }
 

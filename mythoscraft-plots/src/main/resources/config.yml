@@ -2,18 +2,34 @@
 # Switching servers works through MineKeep's proxy: /smp asks the proxy to connect the player ("Connect"),
 # and if that does not happen within 2 s, a button sends /mk join <server> from the player's game.
 
+# do not change – lets the plugin update older settings
+config-version: 2
+
 main-server:
   # server name at MineKeep
   proxy-server: mythoscraftsmp
   join-command: "mk join mythoscraftsmp"
-  # website of the main server (MythosCraft plugin) – tells how many plots a player's rank gives
+  # website of the main server (MythosCraft plugin): inventory sync, rank, coins, gems, plots per rank
   api-url: "https://mythoscraftsmp.minekeep.dev:2083"
+  # more addresses to try if the one above does not answer (e.g. "http://<ip>:2083")
+  api-fallbacks: []
+
+# Same inventory, ender chest, XP, health and hunger as on the survival server.
+# key: run /mythos synckey on the survival server, click to copy, paste it in the chat here (as OP).
+sync:
+  enabled: true
+  key: ""
+
+scoreboard:
+  enabled: true
+  title: "<gradient:#c084fc:#f59e0b><bold>✦ MythosCraft ✦</bold></gradient>"
+  footer: "<gradient:#c084fc:#f59e0b>mythoscraft.online</gradient>"
 
 world:
   # created automatically with its own generator (plot raster) – no flat world or build command needed
   name: plots
-  # CREATIVE (build freely, CityBuild plot style) or SURVIVAL
-  gamemode: CREATIVE
+  # SURVIVAL (same inventory as on the survival server) or CREATIVE
+  gamemode: SURVIVAL
   # nobody can switch to another game mode here (team members may still use spectator)
   force-gamemode: true
   always-day: true

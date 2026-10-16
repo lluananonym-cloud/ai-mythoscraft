@@ -1,9 +1,9 @@
-messages-version: 2
+messages-version: 3
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
 join: '<dark_gray>[<green>+</green>]</dark_gray> <white>{player}'
 quit: '<dark_gray>[<red>-</red>]</dark_gray> <white>{player}'
 quit-to-main: '<dark_gray>[<gold>⬅</gold>]</dark_gray> <white>{player} <gray>went back to MythosCraft'
-welcome: "<newline><gradient:#5ef0a0:#22d3ee><bold>✦ WELCOME TO THE PLOT WORLD ✦</bold></gradient><newline><white>Build anything you want on your own plot!<newline><gray>• <click:run_command:'/plot auto'><hover:show_text:'<gray>Click'><green><u>/plot auto</u></green></hover></click> <gray>– get your plot right now<newline><gray>• <white>/plot home</white> <gray>· <white>/plot visit <player></white> <gray>· <white>/plot add <player></white><newline><gray>• <click:run_command:'/smp'><hover:show_text:'<gray>Click'><gold><u>/smp</u></gold></hover></click> <gray>– back to the MythosCraft survival server<newline>"
+welcome: "<newline><gradient:#5ef0a0:#22d3ee><bold>✦ WELCOME TO THE PLOT WORLD ✦</bold></gradient><newline><white>Build anything you want on your own plot – with your own items from MythosCraft!<newline><gray>• <click:run_command:'/plot auto'><hover:show_text:'<gray>Click'><green><u>/plot auto</u></green></hover></click> <gray>– get your plot right now<newline><gray>• <white>/plot home</white> <gray>· <white>/plot visit <player></white> <gray>· <white>/plot add <player></white><newline><gray>• <click:run_command:'/smp'><hover:show_text:'<gray>Click'><gold><u>/smp</u></gold></hover></click> <gray>– back to the MythosCraft survival server<newline>"
 welcome-back: "<gray>Welcome back, <white>{player}</white>! <click:run_command:'/plot home'><hover:show_text:'<gray>Click'><green><u>/plot home</u></green></hover></click> <dark_gray>· <click:run_command:'/smp'><gold><u>/smp</u></gold></click>"
 pack-prompt: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>uses its own resource pack for all custom items.'
 help: "<newline><gradient:#5ef0a0:#22d3ee><bold>Plot commands</bold></gradient><newline><green>/plot auto</green> <gray>– claim the next free plot<newline><green>/plot claim</green> <gray>– claim the plot you stand on<newline><green>/plot home [n]</green> <gray>– to your plot<newline><green>/plot list</green> <gray>– your plots<newline><green>/plot visit <player> [n]</green> <gray>– visit a plot<newline><green>/plot info</green> <gray>– who owns this plot<newline><green>/plot add|remove <player></green> <gray>– let friends build<newline><green>/plot deny|undeny <player></green> <gray>– keep someone out<newline><green>/plot border</green> <gray>– pick the border colour of your plot<newline><green>/plot clear confirm</green> <gray>– reset your plot<newline><green>/plot unclaim confirm</green> <gray>– give the plot up<newline><gold>/smp</gold> <gray>– back to the main server<newline>"
@@ -55,3 +55,16 @@ border:
   chosen: '<green>✔ Your border'
   reset: '<red>Default border'
   set: '<green>✔ Border is now <white>{block}</white>.'
+sync:
+  loading: '<gray>⏳ Loading your inventory from MythosCraft …'
+  loaded: '<green>✔ Inventory, rank and coins synced'
+  failed: '<red>Your inventory could not be loaded from MythosCraft – sending you back so nothing gets lost.'
+  join-main-first: '<red>Join the MythosCraft survival server once first – then come here with <white>/plot</white>.'
+  no-key: "<red>Inventory sync has no key yet. <gray>On the survival server run <white>/mythos synckey</white>, click to copy, paste it here."
+  key-set: '<green>✔ Sync key saved. <gray>Rejoin to load your inventory.'
+  status: '<gray>Sync: <white>{status}</white> <dark_gray>· <gray>key: <white>{key}'
+fly:
+  on: '<light_purple>✦ You can fly on your plot (double jump).'
+  off: '<gray>✦ Flight off – you left your plot.'
+  booster: '<aqua>✈ Fly Booster active: <white>{minutes} min</white> of flight on your plot (and in your base on MythosCraft).'
+balance: '<gray>Coins: <gold>{coins}</gold> <dark_gray>· <gray>Gems: <light_purple>{gems}'

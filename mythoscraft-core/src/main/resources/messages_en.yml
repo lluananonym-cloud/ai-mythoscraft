@@ -1,4 +1,4 @@
-config-version: 28
+config-version: 29
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -24,6 +24,7 @@ general:
 help:
   header: <gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>v{version} – Commands
   mythos:
+    synckey: '<#e9d5ff>/mythos synckey</#e9d5ff> <gray>– key for the plot server (inventory/rank sync)'
     npcs: '<#e9d5ff>/mythos npcs [here]</#e9d5ff> <gray>– respawn the helper NPCs at spawn (here = around you)'
     help: <dark_gray>• <#e9d5ff>/mythos help <gray>– this help
     status: <dark_gray>• <#e9d5ff>/mythos status <gray>– status of all systems
@@ -4034,3 +4035,9 @@ applications:
   decided: '<green>Application #{id} of <white>{player}</white> → <white>{status}</white>.'
   you-accepted: "<newline><gradient:#5ef0a0:#22d3ee><bold>📝 YOUR MODERATOR APPLICATION WAS ACCEPTED!</bold></gradient><newline><gray>Note: <white>{note}<newline><gray>The team will contact you on Discord.<newline>"
   you-denied: "<newline><red><bold>📝 Your moderator application was declined.</bold><newline><gray>Note: <white>{note}<newline><gray>Thanks for applying – you can try again later.<newline>"
+
+server-sync:
+  waiting: "<gray>⏳ Loading your inventory from the plot world …"
+  loaded: "<green>✔ Inventory synced"
+  timeout: "<red>The plot world did not send your inventory in time – you keep the inventory you had before you went there."
+  key: "<gray>Plot server key: <click:copy_to_clipboard:'{command}'><hover:show_text:'<gray>Click to copy'><gold><u>[ CLICK TO COPY ]</u></gold></hover></click><newline><gray>Then paste it in the chat <white>on the plot server</white> (you need OP there)."

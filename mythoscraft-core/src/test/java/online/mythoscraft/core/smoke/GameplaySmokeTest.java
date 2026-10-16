@@ -288,6 +288,45 @@ class GameplaySmokeTest {
         assertTrue(!plugin.giveaways().running());
     }
 
+    private String syncKey;
+
+    @Test
+    void inventoryGoesToThePlotServerAndBack() throws Exception {
+        plugin.getConfig().set("web-panel.port", 18085);
+        plugin.getConfig().set("web-panel.bind", "127.0.0.1");
+        plugin.getConfig().set("web-panel.relay.url", "");
+        plugin.saveConfig();
+        plugin.reloadAll();
+        PlayerMock p = join("Hopper");
+        java.util.UUID id = p.getUniqueId();
+        p.getInventory().setItem(3, new ItemStack(org.bukkit.Material.DIAMOND, 5));
+        p.setLevel(4);
+        p.disconnect();
+        server.getScheduler().performTicks(5);
+        String uuid = "{\"uuid\":\"" + id + "\"}";
+        assertTrue(http("POST", "/api/sync/pull", uuid, null, true, null).startsWith("403"), "no key, no inventory");
+        syncKey = plugin.serverSync().key();
+        String pulled = http("POST", "/api/sync/pull", uuid, null, true, null);
+        assertTrue(pulled.startsWith("200") && pulled.contains("\"ok\""), pulled);
+        com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(pulled.substring(4)).getAsJsonObject();
+        com.google.gson.JsonObject data = o.getAsJsonObject("data");
+        assertTrue(data.getAsJsonObject("looks").has("prefix"), "rank looks travel along");
+        // on the plot server he gained levels; a wrong session is refused
+        data.addProperty("level", 9);
+        String wrong = "{\"uuid\":\"" + id + "\",\"session\":\"x\",\"data\":" + data + "}";
+        assertTrue(http("POST", "/api/sync/push", wrong, null, true, null).contains("rejected"));
+        String push = "{\"uuid\":\"" + id + "\",\"session\":\"" + o.get("session").getAsString() + "\",\"data\":" + data + "}";
+        assertTrue(http("POST", "/api/sync/push", push, null, true, null).contains("\"ok\""));
+        assertTrue(http("POST", "/api/sync/push", push, null, true, null).contains("rejected"), "only once");
+        syncKey = null;
+        PlayerMock back = new PlayerMock(server, "Hopper", id);
+        server.addPlayer(back);
+        server.getScheduler().performTicks(5);
+        assertEquals(9, back.getLevel(), "inventory from the plot server applied");
+        ItemStack d = back.getInventory().getItem(3);
+        assertTrue(d != null && d.getType() == org.bukkit.Material.DIAMOND && d.getAmount() == 5, "items kept: " + d);
+    }
+
     private String http(String method, String path, String body, String cookie, boolean panelHeader, String[] setCookie) throws Exception {
         java.util.concurrent.CompletableFuture<String> f = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             try {
@@ -298,6 +337,9 @@ class GameplaySmokeTest {
                 }
                 if (panelHeader) {
                     c.setRequestProperty("X-Panel", "1");
+                }
+                if (syncKey != null) {
+                    c.setRequestProperty("X-Sync-Key", syncKey);
                 }
                 if (body != null) {
                     c.setDoOutput(true);

@@ -66,6 +66,10 @@ public final class RankPerksService implements Listener {
         plugin.tasks().repeat(this, 60, 10, "rank perks", this::tick);
     }
 
+    public Perks of(Rank r) {
+        return r == null ? Perks.NONE : perks.getOrDefault(r.id().toUpperCase(Locale.ROOT), Perks.NONE);
+    }
+
     public Perks of(Player p) {
         Rank r = plugin.ranks().rankOf(p);
         return r == null ? Perks.NONE : perks.getOrDefault(r.id().toUpperCase(Locale.ROOT), Perks.NONE);
