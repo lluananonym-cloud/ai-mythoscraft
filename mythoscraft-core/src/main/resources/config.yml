@@ -6,9 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 26
+config-version: 28
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
+  28: [web-panel.port, web-panel.public-url, web-panel.relay.url, server-links.links]
   25: [language.per-player, language.default]
   24: [attractions.wheel.daily-limit, attractions.wheel2.daily-limit, attractions.wheel2.segments]
   23: [attractions.wheel, attractions.wheel2]
@@ -1850,14 +1851,40 @@ giveaways:
 # Port muss beim Hoster freigegeben sein (wie beim Resourcepack). Für HTTPS: public-url hinter einem Proxy eintragen.
 web-panel:
   enabled: true
-  port: 8085
+  # Die komplette Website (Wiki, Kisten-Simulator, Tagesbelohnung, Mod-Bewerbung, Team-Panel) läuft direkt im Plugin.
+  # MineKeep erlaubt nur die Ports 2053, 2083, 2087, 2096 (2053 = Resource Pack) → Website auf 2083.
+  port: 2083
   bind: "0.0.0.0"
-  public-url: ""
-  # Hoster ohne zusätzliche Ports (z.B. MineKeep): der Server verbindet sich selbst NACH AUSSEN mit der Netlify-Seite.
-  # url = deine Netlify-Adresse, secret wird automatisch erzeugt (bei Netlify als PANEL_SECRET eintragen, /website relay)
+  # Öffentliche Adresse der Website (ohne / am Ende)
+  public-url: "https://mythoscraftsmp.minekeep.dev:2083"
+  # Nur für Spezialfälle: externe Relay-Seite (leer = aus, nicht nötig)
   relay:
-    url: "https://darling-pie-7277b6.netlify.app"
+    url: ""
     secret: ""
+
+# Moderator-Bewerbung auf der Website (Spieler melden sich mit ihrem Minecraft-Konto an).
+# Ingame lesen und beantworten: /applications (Recht mythos.applications, Standard: OP)
+mod-applications:
+  enabled: true
+  min-playtime-hours: 5
+  # Wartezeit nach einer Absage, bis man sich neu bewerben kann
+  cooldown-days: 14
+  # Jede Bewerbung kommt per E-Mail (FormSubmit) – mit Links zum Annehmen/Ablehnen. Die allererste Mail von FormSubmit
+  # ist eine Aktivierungs-Mail: einmal bestätigen, danach kommen alle Bewerbungen an. Leer = keine Mail.
+  email: "lluan.anonym@gmail.com"
+  # Rang, den ein angenommener Bewerber bekommt
+  accept-rank: MOD
+  # optional zusätzlich ein Konsolen-Befehl beim Annehmen ({player} = Name), leer = keiner
+  accept-command: ""
+  questions:
+    - "How old are you?"
+    - "What is your Discord name?"
+    - "How many hours per week can you be online, and at which times?"
+    - "Have you been a moderator before? Where and for how long?"
+    - "Why do you want to be a moderator on MythosCraft?"
+    - "A player insults others in chat and ignores your warning. What do you do?"
+    - "Two players accuse each other of stealing from a chest. How do you handle it?"
+    - "Anything else you want to tell us?"
 
 # ───────────────────────────── Sprache ─────────────────────────────
 # Standard: alles auf Englisch für alle Spieler. per-player: true = jeder sieht die Sprache seines Minecraft-Spiels
@@ -2831,10 +2858,14 @@ bets:
 # ───────────────────────────── Pausenmenü: Server-Links ─────────────────────────────
 # Knopf "Server-Links…" im Pausenmenü (ESC). Einträge ohne url werden ausgelassen.
 # type = eingebauter Link-Typ (website, community, support, news, …) ODER name = eigener Text (MiniMessage).
+# /discord – Einladungslink (wird auch im Pause-Menü unter "Server Links" als Discord genutzt)
+discord:
+  invite: "https://discord.gg/MewpPph3aw"
+
 server-links:
   enabled: true
   links:
-    - {type: website, url: "https://darling-pie-7277b6.netlify.app"}
+    - {type: website, url: "https://mythoscraftsmp.minekeep.dev:2083"}
     - {name: "<#5865F2>Discord", url: ""}
     - {name: "<gold>Shop", url: ""}
     - {name: "<aqua>Wiki & Regeln", url: ""}

@@ -265,3 +265,16 @@ a { color: inherit; }
 .confetti { position: absolute; top: 70%; width: 9px; height: 14px; border-radius: 2px; animation: confetti 1.3s ease-out forwards; }
 @keyframes confetti { to { transform: translate(var(--dx), var(--dy)) rotate(540deg); opacity: 0; } }
 @media (max-width: 520px) { .tile { flex-basis: 104px; } .roller { height: 150px; } .crow { grid-template-columns: 26px 1fr 64px; } .crow .crar { display: none; } }
+
+/* moderator application */
+.app-form { display: flex; flex-direction: column; gap: 14px; }
+.app-form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 15px; }
+.app-form textarea { font: inherit; font-weight: 400; color: var(--text); background: #0006; border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; resize: vertical; min-height: 46px; }
+.app-form textarea:focus { outline: none; border-color: #b25cf088; box-shadow: 0 0 0 3px #b25cf022; }
+.app-form .btn-open { align-self: flex-start; }
+.app-status { border-radius: 14px; padding: 16px 18px; border: 1px solid var(--line); background: #ffffff07; margin-bottom: 14px; }
+.app-status.s-accepted { border-color: #5ef0a066; background: #5ef0a014; }
+.app-status.s-open { border-color: #f6c23c55; background: #f6c23c10; }
+.app-status.s-denied { border-color: #ff4d8d55; background: #ff4d8d10; }
+#apply-box { position: relative; }

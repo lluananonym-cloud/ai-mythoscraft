@@ -164,6 +164,7 @@ public class MythosCraft extends JavaPlugin {
     private online.mythoscraft.core.cosmetic.CompanionService companions;
     private online.mythoscraft.core.cosmetic.CompanionFarmService companionFarms;
     private online.mythoscraft.core.web.WebDailyRewards webDaily;
+    private online.mythoscraft.core.web.PlayerSite playerSite;
     private online.mythoscraft.core.progress.NewbieService newbies;
     private online.mythoscraft.core.teleport.StarterBaseService bases;
 
@@ -248,6 +249,7 @@ public class MythosCraft extends JavaPlugin {
             companions = new online.mythoscraft.core.cosmetic.CompanionService(this);
             companionFarms = new online.mythoscraft.core.cosmetic.CompanionFarmService(this);
             webDaily = new online.mythoscraft.core.web.WebDailyRewards(this);
+            playerSite = new online.mythoscraft.core.web.PlayerSite(this);
             newbies = new online.mythoscraft.core.progress.NewbieService(this);
             bases = new online.mythoscraft.core.teleport.StarterBaseService(this);
             rtp = new RtpService(this, cooldowns);
@@ -446,7 +448,7 @@ public class MythosCraft extends JavaPlugin {
                 clans, upgrades, floorGames, boosters, magic, creatures, rankPerks, giveaways,
                 new online.mythoscraft.core.item.HelmetUpgradeListener(this),
                 new online.mythoscraft.core.teleport.SpawnItemListener(this),
-                companions, companionFarms, webDaily, newbies, bases,
+                companions, companionFarms, webDaily, newbies, bases, playerSite,
                 trophies,
                 new online.mythoscraft.core.display.ServerLinksService(this),
                 new online.mythoscraft.core.config.LocaleContextListener(messages)
@@ -519,6 +521,8 @@ public class MythosCraft extends JavaPlugin {
         getServer().getPluginManager().registerEvents(guide, this);
         command("guide", guide);
         command("thank", newbies);
+        command("applications", playerSite);
+        command("discord", new online.mythoscraft.core.display.DiscordCommand(this));
         command("base", bases);
         command("plot", new online.mythoscraft.core.teleport.PlotTransferCommand(this));
         online.mythoscraft.core.command.ModerationService moderation = new online.mythoscraft.core.command.ModerationService(this);
@@ -884,6 +888,10 @@ public class MythosCraft extends JavaPlugin {
 
     public online.mythoscraft.core.progress.NewbieService newbies() {
         return newbies;
+    }
+
+    public online.mythoscraft.core.web.PlayerSite playerSite() {
+        return playerSite;
     }
 
     public online.mythoscraft.core.web.WebDailyRewards webDaily() {

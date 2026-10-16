@@ -32,6 +32,9 @@ public final class ServerLinksService implements Listener {
         List<Map<?, ?>> list = plugin.getConfig().getMapList("server-links.links");
         for (Map<?, ?> entry : list) {
             Object rawUrl = entry.get("url");
+            if ((rawUrl == null || String.valueOf(rawUrl).isBlank()) && String.valueOf(entry.get("name")).toLowerCase(Locale.ROOT).contains("discord")) {
+                rawUrl = plugin.getConfig().getString("discord.invite", "");      // the Discord link from /discord
+            }
             if (rawUrl == null || String.valueOf(rawUrl).isBlank()) {
                 continue;
             }

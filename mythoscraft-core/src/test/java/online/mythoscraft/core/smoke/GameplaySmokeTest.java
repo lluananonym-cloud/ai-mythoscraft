@@ -332,8 +332,11 @@ class GameplaySmokeTest {
         PlayerMock stranger = join("Fremder");
         plugin.webPanel().allow(admin.getUniqueId(), admin.getName(), online.mythoscraft.core.web.WebPanelService.Role.ADMIN);
 
-        assertTrue(http("GET", "/", null, null, false, null).startsWith("200"), "index.html");
-        assertTrue(http("GET", "/app.js", null, null, false, null).startsWith("200"), "app.js");
+        assertTrue(http("GET", "/panel/", null, null, false, null).startsWith("200"), "panel index.html");
+        assertTrue(http("GET", "/panel/app.js", null, null, false, null).startsWith("200"), "app.js");
+        String home = http("GET", "/", null, null, false, null);
+        assertTrue(home.startsWith("200") && home.contains("MythosCraft Wiki"), "start page is the wiki");
+        assertTrue(http("GET", "/wiki/data.json", null, null, false, null).startsWith("200"), "wiki data");
         assertTrue(http("POST", "/api/login/start", "{}", null, false, null).startsWith("403"), "csrf header required");
         assertTrue(http("GET", "/api/stats", null, null, false, null).startsWith("401"), "stats need login");
 
@@ -366,6 +369,62 @@ class GameplaySmokeTest {
                 cookie[0], true, null).startsWith("400"));
         // only the owner manages access
         assertTrue(http("GET", "/api/access", null, cookie[0], false, null).startsWith("403"));
+        plugin.webPanel().stop();
+    }
+
+    @Test
+    void websiteDailyRewardAndModApplication() throws Exception {
+        plugin.getConfig().set("web-panel.port", 18085);
+        plugin.getConfig().set("web-panel.bind", "127.0.0.1");
+        plugin.getConfig().set("web-panel.relay.url", "");
+        plugin.getConfig().set("mod-applications.min-playtime-hours", 0);
+        plugin.getConfig().set("mod-applications.email", "");
+        plugin.saveConfig();
+        plugin.reloadAll();
+        PlayerMock fan = join("Webfan");
+        // a normal player signs in with a code (the team panel would refuse him)
+        String start = http("POST", "/api/login/start?kind=player", "{}", null, true, null);
+        com.google.gson.JsonObject ch = com.google.gson.JsonParser.parseString(start.substring(4)).getAsJsonObject();
+        assertEquals("ok", plugin.webPanel().confirm(fan, ch.get("code").getAsString()));
+        String[] cookie = new String[1];
+        assertTrue(http("GET", "/api/login/poll?id=" + ch.get("id").getAsString(), null, null, false, cookie).contains("\"ok\""));
+        assertTrue(cookie[0] != null && cookie[0].startsWith("mcplayer="), "player cookie " + cookie[0]);
+        assertTrue(http("GET", "/api/me", null, cookie[0], false, null).startsWith("401"), "no team panel for players");
+        String me = http("GET", "/api/player/me", null, cookie[0], false, null);
+        assertTrue(me.startsWith("200") && me.contains("\"canClaim\":true"), me);
+        // daily reward: once per day, arrives in game
+        online.mythoscraft.core.player.PlayerData d = plugin.playerData().get(fan);
+        long before = online.mythoscraft.core.economy.Currency.COINS.get(d);
+        assertTrue(http("POST", "/api/player/claim", "{}", cookie[0], true, null).startsWith("200"));
+        assertTrue(http("POST", "/api/player/claim", "{}", cookie[0], true, null).startsWith("409"), "only once a day");
+        for (int i = 0; i < 20; i++) {
+            server.getScheduler().performOneTick();
+        }
+        assertTrue(online.mythoscraft.core.economy.Currency.COINS.get(d) > before, "website reward arrived in game");
+        // moderator application
+        String info = http("GET", "/api/apply", null, cookie[0], false, null);
+        assertTrue(info.contains("\"open\":true"), info);
+        int n = plugin.getConfig().getStringList("mod-applications.questions").size();
+        com.google.gson.JsonArray answers = new com.google.gson.JsonArray();
+        for (int i = 0; i < n; i++) {
+            answers.add("answer " + i);
+        }
+        String sent = http("POST", "/api/apply", "{\"answers\":" + answers + "}", cookie[0], true, null);
+        assertTrue(sent.startsWith("200"), sent);
+        assertTrue(http("POST", "/api/apply", "{\"answers\":" + answers + "}", cookie[0], true, null).contains("pending"), "one open application");
+        String id = com.google.gson.JsonParser.parseString(sent.substring(4)).getAsJsonObject().get("id").getAsString();
+        org.bukkit.configuration.file.YamlConfiguration apps = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new java.io.File(plugin.getDataFolder(), "data/applications.yml"));
+        String key = apps.getString("applications." + id + ".key");
+        assertTrue(http("GET", "/api/apply/decide?id=" + id + "&key=wrong&action=accept", null, null, false, null).contains("invalid"));
+        String page = http("GET", "/api/apply/decide?id=" + id + "&key=" + key + "&action=accept", null, null, false, null);
+        assertTrue(page.contains("now a moderator"), page);
+        for (int i = 0; i < 40; i++) {
+            server.getScheduler().performOneTick();
+        }
+        assertEquals("MOD", plugin.playerData().get(fan).rankId(), "accepted applicant got the MOD rank");
+        assertTrue(http("GET", "/api/apply/decide?id=" + id + "&key=" + key + "&action=accept", null, null, false, null).contains("already used"));
+        assertTrue(http("GET", "/api/apply", null, cookie[0], false, null).contains("accepted"));
         plugin.webPanel().stop();
     }
 

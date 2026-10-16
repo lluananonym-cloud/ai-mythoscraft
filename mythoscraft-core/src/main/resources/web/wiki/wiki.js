@@ -25,7 +25,12 @@ const T = {
     months: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
     weekdays: { MONDAY: 'Montag', TUESDAY: 'Dienstag', WEDNESDAY: 'Mittwoch', THURSDAY: 'Donnerstag', FRIDAY: 'Freitag', SATURDAY: 'Samstag', SUNDAY: 'Sonntag' },
     hours: 'Std.', noData: 'Noch keine Einträge.', ofMonth: '. des Monats',
-    'nav.crates': 'Kisten', 'nav.daily': 'Tagesbelohnung',
+    'nav.crates': 'Kisten', 'nav.daily': 'Tagesbelohnung', 'nav.apply': 'Bewerben',
+    'apply.title': 'Werde Moderator', 'apply.sub': 'Hilf neuen Spielern, halte den Chat freundlich und gestalte den Server mit. Melde dich mit deinem Minecraft-Konto an und schick deine Bewerbung.',
+    applySend: 'Bewerbung abschicken', applyClosed: 'Bewerbungen sind gerade geschlossen.', applySent: 'Danke! Deine Bewerbung ist angekommen – du bekommst die Antwort im Spiel.',
+    applyStatus: { open: '⏳ Deine Bewerbung wird gerade gelesen.', accepted: '✅ Angenommen! Das Team meldet sich bei dir.', denied: '❌ Leider abgelehnt.' },
+    applyErr: { pending: 'Du hast schon eine offene Bewerbung.', cooldown: 'Du kannst dich erst später neu bewerben.', playtime: 'Du brauchst mehr Spielzeit auf dem Server.', empty: 'Bitte beantworte alle Fragen.', closed: 'Bewerbungen sind gerade geschlossen.' },
+    applyMin: 'Mindestens {h} Stunden Spielzeit nötig.', note: 'Notiz',
     'sim.title': 'Kisten-Simulator', 'sim.sub': 'Öffne jede Kiste so oft du willst – gleiche Gewinne und Chancen wie im Spiel. Nur zum Spaß, es wird nichts vergeben.',
     'sim.open': 'Öffnen', 'sim.open10': '10× öffnen', 'sim.reset': 'Zurücksetzen', 'sim.chances': 'Alle Gewinne & Chancen',
     opened: 'geöffnet', best: 'Bester Fund', won: 'Gewonnen',
@@ -56,7 +61,12 @@ const T = {
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     weekdays: { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday', SATURDAY: 'Saturday', SUNDAY: 'Sunday' },
     hours: 'h', noData: 'No entries yet.', ofMonth: ' of the month',
-    'nav.crates': 'Crates', 'nav.daily': 'Daily reward',
+    'nav.crates': 'Crates', 'nav.daily': 'Daily reward', 'nav.apply': 'Apply',
+    'apply.title': 'Become a moderator', 'apply.sub': 'Help new players, keep the chat friendly and shape the server with us. Sign in with your Minecraft account and send your application.',
+    applySend: 'Send application', applyClosed: 'Applications are closed right now.', applySent: 'Thank you! Your application arrived – you will get the answer in game.',
+    applyStatus: { open: '⏳ Your application is being read.', accepted: '✅ Accepted! The team will contact you.', denied: '❌ Sorry, your application was declined.' },
+    applyErr: { pending: 'You already have an open application.', cooldown: 'You can apply again later.', playtime: 'You need more play time on the server.', empty: 'Please answer every question.', closed: 'Applications are closed right now.' },
+    applyMin: 'At least {h} hours of play time needed.', note: 'Note',
     'sim.title': 'Crate simulator', 'sim.sub': 'Open every crate as often as you like – same rewards and chances as in game. Just for fun, nothing is given.',
     'sim.open': 'Open', 'sim.open10': 'Open 10×', 'sim.reset': 'Reset', 'sim.chances': 'All rewards & chances',
     opened: 'opened', best: 'Best drop', won: 'You got',
@@ -698,7 +708,66 @@ function burst() {
     setTimeout(() => s.remove(), 1400);
   }
 }
+let applyInfo = null;
+let applyMsg = '';
+async function loadApply() {
+  try {
+    const r = await fetch('/api/apply', { credentials: 'same-origin', cache: 'no-store' });
+    applyInfo = r.ok ? await r.json() : null;
+  } catch { applyInfo = null; }
+  renderApply();
+}
+function renderApply() {
+  const box = $('#apply-box');
+  if (!box) return;
+  if (!applyInfo) { box.innerHTML = `<p class="muted">${t('relayDown')}</p>`; return; }
+  if (!applyInfo.open) { box.innerHTML = `<p class="muted">${t('applyClosed')}</p>`; return; }
+  if (!me) {
+    box.innerHTML = `<div class="signin"><p class="muted">${t('applyMin').replace('{h}', applyInfo.minHours)}</p><button class="btn-open" id="si2">⛏ ${t('signIn')}</button></div>`;
+    $('#si2').onclick = () => { $('#daily').scrollIntoView({ behavior: 'smooth' }); signIn(); };
+    return;
+  }
+  const mine = applyInfo.mine;
+  if (mine && (mine.status === 'open' || mine.status === 'accepted')) {
+    box.innerHTML = `<div class="app-status s-${mine.status}"><b>${T[lang].applyStatus[mine.status]}</b>${mine.note ? `<p class="muted">${t('note')}: ${esc(mine.note)}</p>` : ''}</div>`;
+    return;
+  }
+  const qs = applyInfo.questions || [];
+  box.innerHTML = `${mine && mine.status === 'denied' ? `<div class="app-status s-denied"><b>${T[lang].applyStatus.denied}</b>${mine.note ? `<p class="muted">${t('note')}: ${esc(mine.note)}</p>` : ''}</div>` : ''}
+    <form class="app-form" id="app-form">
+      <div class="dme"><img alt="" src="https://mc-heads.net/avatar/${encodeURIComponent(me.uuid)}/48"><div><b></b><small>${t('applyMin').replace('{h}', applyInfo.minHours)}</small></div></div>
+      ${qs.map((q, i) => `<label><span>${i + 1}. ${esc(q)}</span><textarea name="q${i}" rows="${i > 3 ? 4 : 2}" maxlength="1500" required></textarea></label>`).join('')}
+      <button class="btn-open big" type="submit">📝 ${t('applySend')}</button>
+      ${applyMsg ? `<p class="muted">${applyMsg}</p>` : ''}
+    </form>`;
+  box.querySelector('.dme b').textContent = me.name;
+  $('#app-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const answers = qs.map((_, i) => e.target[`q${i}`].value);
+    try {
+      const r = await fetch('/api/apply', { method: 'POST', credentials: 'same-origin', headers: { 'X-Panel': '1', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }) });
+      const j = await r.json();
+      applyMsg = r.ok ? t('applySent') : (T[lang].applyErr[j.error] || j.error);
+      if (r.ok) { burstAt($('#apply-box')); await loadApply(); return; }
+    } catch { applyMsg = t('relayDown'); }
+    renderApply();
+  };
+}
+const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function burstAt(box) {
+  for (let i = 0; i < 22; i++) {
+    const s = el('i', 'confetti');
+    s.style.left = 50 + (Math.random() - 0.5) * 30 + '%';
+    s.style.setProperty('--dx', (Math.random() - 0.5) * 420 + 'px');
+    s.style.setProperty('--dy', -120 - Math.random() * 220 + 'px');
+    s.style.background = ['#f6c23c', '#b25cf0', '#22d3ee', '#5ef0a0', '#ff6ad5'][i % 5];
+    box.append(s);
+    setTimeout(() => s.remove(), 1400);
+  }
+}
 function renderDaily() {
+  renderApply();
   const box = $('#daily-box');
   if (!box) return;
   const table = (live && live.daily) || [];
@@ -735,6 +804,7 @@ function renderDaily() {
   }
 }
 loadMe();
+loadApply();
 
 // ------------------------------------------------------------------ scroll reveal & init
 const revealObs = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); } }), { threshold: 0.12 });

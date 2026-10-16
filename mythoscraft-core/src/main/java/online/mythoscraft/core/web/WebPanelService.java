@@ -58,7 +58,8 @@ public final class WebPanelService {
         }
     }
 
-    private record Challenge(String code, long expires, String ip, UUID[] confirmed, String[] name) {
+    /** player = website sign-in of a normal player (daily reward, applications), else team panel */
+    private record Challenge(String code, long expires, String ip, UUID[] confirmed, String[] name, boolean player) {
     }
 
     private record Session(UUID uuid, String name, long expires) {
@@ -241,7 +242,7 @@ public final class WebPanelService {
         challenges.values().removeIf(ch -> ch.expires() < now);
         for (Challenge ch : challenges.values()) {
             if (ch.code().equals(c)) {
-                if (role(p.getUniqueId()) == null) {
+                if (!ch.player() && role(p.getUniqueId()) == null) {
                     return "denied";
                 }
                 ch.confirmed()[0] = p.getUniqueId();
@@ -389,6 +390,20 @@ public final class WebPanelService {
                     json(ex, 200, sync(() -> plugin.wiki().snapshot()));
                 }
                 case "/api/login/start" -> loginStart(ex);
+                case "/api/apply/decide" -> {
+                    if (limited(ex, 30)) {
+                        json(ex, 429, Map.of("error", "rate"));
+                        return;
+                    }
+                    plugin.playerSite().decideLink(ex, this);
+                }
+                case "/api/apply", "/api/player/me", "/api/player/claim", "/api/player/logout" -> {
+                    if (limited(ex, 120)) {
+                        json(ex, 429, Map.of("error", "rate"));
+                        return;
+                    }
+                    plugin.playerSite().handle(ex, path, post, this);
+                }
                 case "/api/login/poll" -> loginPoll(ex);
                 case "/api/logout" -> {
                     Session s = session(ex);
@@ -424,8 +439,9 @@ public final class WebPanelService {
             code.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
         String id = random(24);
+        boolean player = "player".equals(query(ex).get("kind"));
         challenges.put(id, new Challenge(code.toString(), now + 180_000, ex.getRemoteAddress().getAddress().getHostAddress(),
-                new UUID[1], new String[1]));
+                new UUID[1], new String[1], player));
         json(ex, 200, Map.of("id", id, "code", code.toString(), "expires", 180));
     }
 
@@ -445,6 +461,15 @@ public final class WebPanelService {
             return;
         }
         challenges.remove(id);
+        if (ch.player()) {
+            ex.getResponseHeaders().add("Set-Cookie", plugin.playerSite().signIn(ch.confirmed()[0], ch.name()[0]));
+            json(ex, 200, Map.of("state", "ok", "name", ch.name()[0], "uuid", ch.confirmed()[0].toString()));
+            return;
+        }
+        if (role(ch.confirmed()[0]) == null) {
+            json(ex, 200, Map.of("state", "denied"));
+            return;
+        }
         String token = random(32);
         sessions.put(hash(token), new Session(ch.confirmed()[0], ch.name()[0], System.currentTimeMillis() + 7L * 24 * 3600_000));
         saveSessions();
@@ -876,8 +901,15 @@ public final class WebPanelService {
     }
 
     private void staticFile(HttpExchange ex, String path) throws IOException {
-        if (path.equals("/") || path.isEmpty()) {
-            path = "/index.html";
+        // the public wiki is the start page, the team panel lives under /panel/
+        if (path.isEmpty() || path.equals("/") || path.equals("/wiki") || path.equals("/panel")) {
+            String to = path.equals("/panel") ? "/panel/" : "/wiki/";
+            ex.getResponseHeaders().set("Location", to);
+            ex.sendResponseHeaders(302, -1);
+            return;
+        }
+        if (path.endsWith("/")) {
+            path = path + "index.html";
         }
         if (path.contains("..") || !path.matches("/[a-zA-Z0-9_./-]+")) {
             ex.sendResponseHeaders(404, -1);
@@ -895,9 +927,12 @@ public final class WebPanelService {
         }
         String type = path.endsWith(".html") ? "text/html; charset=utf-8" : path.endsWith(".js") ? "text/javascript; charset=utf-8"
                 : path.endsWith(".css") ? "text/css; charset=utf-8" : path.endsWith(".png") ? "image/png"
-                : path.endsWith(".svg") ? "image/svg+xml" : "application/octet-stream";
+                : path.endsWith(".svg") ? "image/svg+xml" : path.endsWith(".json") ? "application/json; charset=utf-8"
+                : path.endsWith(".ico") ? "image/x-icon" : "application/octet-stream";
         ex.getResponseHeaders().set("Content-Type", type);
-        ex.getResponseHeaders().set("Cache-Control", "no-cache");
+        // textures and 3D models change only with a new plugin version
+        ex.getResponseHeaders().set("Cache-Control", path.startsWith("/wiki/tex/") || path.startsWith("/wiki/models/")
+                ? "public, max-age=3600" : "no-cache");
         if (path.endsWith(".html")) {
             ex.getResponseHeaders().set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; "
                     + "img-src 'self' data: https://mc-heads.net https://crafatar.com https://textures.minecraft.net; "

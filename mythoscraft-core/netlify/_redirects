@@ -1,2 +1,0 @@
-# all API calls go to the plugin on the Minecraft server
-/api/*  http://mythoscraftsmp.minekeep.gg:8085/api/:splat  200

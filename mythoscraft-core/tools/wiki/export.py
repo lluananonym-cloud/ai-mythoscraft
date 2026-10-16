@@ -1,4 +1,4 @@
-"""Exports everything the wiki website needs into tools/netlify-relay/public/wiki/:
+"""Exports everything the wiki website needs into src/main/resources/web/wiki/ (served by the plugin itself):
 items (names/lore DE+EN, collection, rarity, where to get them), the 3D models + textures straight from the generated
 resource pack, collections with their seasons. Live data (leaderboards, events, tournaments) comes from /api/public.
 
@@ -15,7 +15,7 @@ import yaml
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 RES = os.path.join(ROOT, 'src', 'main', 'resources')
 PACK = os.path.join(ROOT, 'resourcepack', 'assets')
-OUT = os.path.join(ROOT, 'tools', 'netlify-relay', 'public', 'wiki')
+OUT = os.path.join(ROOT, 'src', 'main', 'resources', 'web', 'wiki')
 JAVA = os.path.join(ROOT, 'src', 'main', 'java', 'online', 'mythoscraft', 'core', 'item', 'CustomItem.java')
 
 NAMED = {'black': '#000000', 'dark_blue': '#0000aa', 'dark_green': '#00aa00', 'dark_aqua': '#00aaaa', 'dark_red': '#aa0000',

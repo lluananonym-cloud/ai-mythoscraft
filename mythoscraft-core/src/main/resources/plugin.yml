@@ -19,6 +19,15 @@ commands:
     description: Spielmodus wechseln (freigegebene Creator)
     usage: /gm <c|s|sp>
     aliases: [gamemode2]
+  applications:
+    description: Moderator-Bewerbungen von der Website lesen und annehmen/ablehnen.
+    usage: /applications [list|all|view <id>|accept <id> [note]|deny <id> [note]]
+    aliases: [bewerbungen, apps]
+    permission: mythos.applications
+  discord:
+    description: Link zum MythosCraft-Discord.
+    usage: /discord
+    aliases: [dc]
   plot:
     description: Ab auf den Plot-Server (eigene Grundstücke zum Bauen). Zurück mit /smp.
     usage: /plot
@@ -275,6 +284,9 @@ commands:
     aliases: [auftraege, farmauftrag, orders]
 
 permissions:
+  mythos.applications:
+    description: Moderator-Bewerbungen der Website lesen und beantworten
+    default: op
   mythos.announce:
     description: /pronounce – Ankündigungen an alle
     default: op

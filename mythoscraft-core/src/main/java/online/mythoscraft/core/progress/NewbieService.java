@@ -139,6 +139,9 @@ public final class NewbieService extends BaseCommand implements Listener {
             return;
         }
         Player p = event.getPlayer();
+        if (!isNew(p)) {
+            return;                         // the chat helper only answers new players
+        }
         String text = PlainTextComponentSerializer.plainText().serialize(event.message()).toLowerCase(Locale.ROOT).trim();
         if (text.length() > 80 || text.startsWith("/")) {
             return;

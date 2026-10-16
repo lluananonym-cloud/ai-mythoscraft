@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 24
+config-version: 26
 config-reset:
   22: [intro]
   21: [items.minepro_totem.lore]
@@ -4038,3 +4038,18 @@ npcs:
     - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>Did you know? The wheel gives you a free spin every day."
     - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>I once saw a relic crate appear. Best day of my life."
     - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>Help a [NEW] player and they can /thank you – free coins!"
+discord:
+  link: "<newline><#5865F2><bold>💬 MythosCraft Discord</bold></#5865F2><newline><gray>News, events, giveaways, support & more:<newline><click:open_url:'{link}'><hover:show_text:'<gray>Click to open'><#8ea1ff><u>{link}</u></#8ea1ff></hover></click><newline>"
+  none: '<gray>There is no Discord link yet.'
+applications:
+  new: '<gold>📝 New moderator application from <white>{player}</white>! <click:run_command:"/applications view {id}"><hover:show_text:"<gray>Click to read"><yellow><u>/applications view {id}</u></yellow></hover></click>'
+  open-count: "<gold>📝 {count} open moderator application(s). <click:run_command:'/applications'><yellow><u>/applications</u></yellow></click>"
+  header: '<gold><bold>📝 Moderator applications</bold> <gray>(/applications all shows every one)'
+  line: "<dark_gray>• <click:run_command:'/applications view {id}'><hover:show_text:'<gray>Click to read'><white>#{id} {player}</white></hover></click> <gray>– {status} <dark_gray>({hours} h played)"
+  none: '<gray>No open applications.'
+  view-head: "<newline><gold><bold>Application #{id}</bold> <white>{player}</white> <gray>– {status} · {hours} h played"
+  view-qa: "<yellow>{n}. {question}<newline><white>{answer}"
+  view-actions: "<newline><click:suggest_command:'/applications accept {id} '><hover:show_text:'<gray>Click'><green><u>✔ Accept</u></green></hover></click>   <click:suggest_command:'/applications deny {id} '><hover:show_text:'<gray>Click'><red><u>✖ Deny</u></red></hover></click><newline>"
+  decided: '<green>Application #{id} of <white>{player}</white> → <white>{status}</white>.'
+  you-accepted: "<newline><gradient:#5ef0a0:#22d3ee><bold>📝 YOUR MODERATOR APPLICATION WAS ACCEPTED!</bold></gradient><newline><gray>Note: <white>{note}<newline><gray>The team will contact you on Discord.<newline>"
+  you-denied: "<newline><red><bold>📝 Your moderator application was declined.</bold><newline><gray>Note: <white>{note}<newline><gray>Thanks for applying – you can try again later.<newline>"
