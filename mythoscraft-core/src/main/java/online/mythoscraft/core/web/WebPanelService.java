@@ -905,10 +905,18 @@ public final class WebPanelService {
             if (mod != null && r.weight() >= mod.weight()) {
                 plots = Math.max(plots, plugin.getConfig().getInt("plot-server.staff-plots", 5));
             }
+            boolean staff = mod != null && r.weight() >= mod.weight();
+            var gson = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("rank", r.id());
             out.put("display", r.display());
             out.put("plots", plots);
+            // looks of the rank for the plot server (chat, tab list, name tag) – as JSON text components
+            out.put("prefix", gson.serialize(plugin.display().prefix(r, staff, true)));
+            out.put("text-prefix", gson.serialize(plugin.display().prefix(r, staff, false)));
+            out.put("name-color", r.teamColor().toString());
+            out.put("chat-color", r.chatColor() == null ? "#AAAAAA" : r.chatColor().asHexString());
+            out.put("weight", r.weight());
             return out;
         });
     }

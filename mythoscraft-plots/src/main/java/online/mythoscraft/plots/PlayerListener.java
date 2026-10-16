@@ -147,10 +147,15 @@ final class PlayerListener implements Listener {
         if (!plugin.getConfig().getBoolean("chat.format", true)) {
             return;
         }
-        e.renderer((source, name, message, viewer) -> Component.text()
-                .append(name.color(NamedTextColor.WHITE))
-                .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
-                .append(message.color(NamedTextColor.GRAY))
-                .build());
+        RankLimits ranks = plugin.ranks();
+        e.renderer((source, name, message, viewer) -> {
+            RankLimits.Info i = ranks.info(source.getUniqueId());
+            return Component.text()
+                    .append(ranks.prefix(source.getUniqueId(), viewer instanceof Player v ? v : null))
+                    .append(name.color(i == null ? NamedTextColor.WHITE : i.nameColor()))
+                    .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
+                    .append(message.color(i == null ? NamedTextColor.GRAY : i.chatColor()))
+                    .build();
+        });
     }
 }
