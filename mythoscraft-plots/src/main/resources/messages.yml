@@ -42,4 +42,8 @@ transfer:
   sending: '<gray>Back to <gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient><gray> …'
   title: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient>'
   subtitle: '<gray>Back to the survival world'
-  failed: '<red>The main server can''t be reached right now.'
+  dialog-text: "<white>Back to the MythosCraft survival server?<newline><newline><gray>Your plot stays here – come back with <white>/plot</white> over there."
+  button: '<gold><bold>▶ Back to MythosCraft'
+  button-hover: '<gray>Runs <white>{command}'
+  cancel: '<gray>Stay here'
+  click: "<gray>⬅ <click:run_command:'{command}'><hover:show_text:'<gray>Click to go back'><gold><bold><u>[ CLICK HERE – BACK TO MYTHOSCRAFT ]</u></bold></gold></hover></click> <dark_gray>({command})"

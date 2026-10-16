@@ -6,9 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 28
+config-version: 29
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
+  29: [plot-server]
   28: [web-panel.port, web-panel.public-url, web-panel.relay.url, server-links.links]
   25: [language.per-player, language.default]
   24: [attractions.wheel.daily-limit, attractions.wheel2.daily-limit, attractions.wheel2.segments]
@@ -1627,12 +1628,14 @@ crate-carousel:
       relic2: 0.03
       relic1: 0.06
 
-# Plot-Server (eigener Server mit dem MythosPlots-Plugin): /plot beamt Spieler dorthin, /smp dort wieder zurück.
-# Auf BEIDEN Servern muss in server.properties accepts-transfers=true stehen.
+# Plot-Server (eigener Server mit dem MythosPlots-Plugin). MineKeep verbindet seine Server mit dem eigenen
+# Proxy-Befehl /mk join <server> – /plot zeigt dafür einen Knopf, ein Klick schickt den Befehl vom Spieler aus.
 plot-server:
   enabled: true
-  host: mythoscraftsmpplot.minekeep.gg
-  port: 25565
+  # 1. Versuch: direkt über den Proxy (Servername bei MineKeep)
+  proxy-server: "mythoscraftsmpplot"
+  # 2. Versuch, falls der Spieler nach 2 s noch da ist: Knopf, der diesen Befehl vom Spieler aus schickt
+  join-command: "mk join mythoscraftsmpplot"
 
 # Neue Spieler: [NEW]-Tag, Chat-Helfer, /thank, Belohnung fürs Durchziehen des Guides, Login-Streak beim Join
 newbies:

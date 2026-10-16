@@ -5,7 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Entity;
@@ -234,23 +233,29 @@ public final class MythosPlots extends JavaPlugin {
         }.runTaskTimer(this, 1, 1);
     }
 
-    /** Back to the main server through Minecraft's transfer packet. */
-    public void transferToMain(Player p) {
-        String host = getConfig().getString("main-server.host", "mythoscraftsmp.minekeep.gg");
-        int port = getConfig().getInt("main-server.port", 25565);
+    /** Back to the main server: proxy "Connect" first, after 2 s the /mk join button. */
+    public void backToMain(Player p) {
+        String server = getConfig().getString("main-server.proxy-server", "mythoscraftsmp").trim();
+        String cmd = getConfig().getString("main-server.join-command", "mk join mythoscraftsmp").trim();
+        String full = cmd.startsWith("/") ? cmd : "/" + cmd;
         p.showTitle(Title.title(msg.get("transfer.title"), msg.get("transfer.subtitle"),
                 Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1500), Duration.ofMillis(300))));
-        p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, 0.4f, 1.6f);
+        try {
+            if (!getServer().getMessenger().isOutgoingChannelRegistered(this, "BungeeCord")) {
+                getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+            }
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
+            out.writeUTF("Connect");
+            out.writeUTF(server);
+            p.sendPluginMessage(this, "BungeeCord", bytes.toByteArray());
+        } catch (Exception e) {
+            getLogger().warning("Proxy connect to " + server + " failed: " + e.getMessage());
+        }
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (!p.isOnline()) {
-                return;
+            if (p.isOnline()) {
+                BackCommand.offer(this, p, full);
             }
-            try {
-                p.transfer(host, port);
-            } catch (RuntimeException e) {
-                msg.send(p, "transfer.failed");
-                getLogger().warning("Transfer to the main server failed: " + e.getMessage());
-            }
-        }, 30);
+        }, 40);
     }
 }

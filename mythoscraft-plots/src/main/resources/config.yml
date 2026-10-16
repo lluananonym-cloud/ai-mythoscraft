@@ -1,9 +1,11 @@
 # MythosPlots – plot server of MythosCraft
-# Both servers need accepts-transfers=true in server.properties (for /plot on the main server and /smp here).
+# Switching servers works through MineKeep's proxy: /smp asks the proxy to connect the player ("Connect"),
+# and if that does not happen within 2 s, a button sends /mk join <server> from the player's game.
 
 main-server:
-  host: mythoscraftsmp.minekeep.gg
-  port: 25565
+  # server name at MineKeep
+  proxy-server: mythoscraftsmp
+  join-command: "mk join mythoscraftsmp"
 
 world:
   # created automatically with its own generator (plot raster) – no flat world or build command needed

@@ -1,5 +1,6 @@
-config-version: 26
+config-version: 27
 config-reset:
+  27: [plot-server]
   22: [intro]
   21: [items.minepro_totem.lore]
   20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
@@ -3938,12 +3939,14 @@ companion-farm:
   label-running: "{job}<newline><gray>{owner} <dark_gray>· <white>{time}<newline><gray>Storage {stacks}/{max} <dark_gray>· {radius} blocks"
   label-idle: "{job}<newline><gray>{owner} <dark_gray>· <yellow>paused<newline><gray>Storage {stacks}/{max}"
 plot-server:
-  sending: '<gray>Beaming you to the <gradient:#5ef0a0:#22d3ee><bold>Plot World</bold></gradient><gray>… <dark_gray>(back with /smp)'
   title: '<gradient:#5ef0a0:#22d3ee><bold>PLOT WORLD</bold></gradient>'
-  subtitle: '<gray>Your own plots to build on'
-  failed: '<red>The plot server can''t be reached right now. Try again later.'
-  stuck: "<red>The transfer didn't work. <gray>Join the plot world directly: <click:copy_to_clipboard:'{host}'><hover:show_text:'<gray>Click to copy'><white><u>{host}</u></white></hover></click> <dark_gray>(needs Minecraft Java 1.20.5+)"
+  dialog-text: "<white>Your own plots to build on – claim one with <green>/plot auto</green> over there.<newline><newline><gray>Same account, same friends. Back here with <white>/smp</white>."
+  button: '<green><bold>▶ Join the plot world'
+  button-hover: '<gray>Runs <white>{command}'
+  cancel: '<gray>Stay here'
+  click: "<gray>🏠 <click:run_command:'{command}'><hover:show_text:'<gray>Click to join the plot world'><green><bold><u>[ CLICK HERE – JOIN THE PLOT WORLD ]</u></bold></green></hover></click> <dark_gray>({command})"
   disabled: '<red>The plot world is closed right now.'
+  sending: '<gray>Beaming you to the <gradient:#5ef0a0:#22d3ee><bold>Plot World</bold></gradient><gray>…'
 newbie:
   tag: '<green><bold>[NEW]</bold></green>'
   welcome-back: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Welcome back! Not sure what to do? <click:run_command:'/guide'><hover:show_text:'<gray>Click'><aqua><u>/guide</u></aqua></hover></click> <white>shows you around – and finishing it gives a <gold>free reward</gold>!"

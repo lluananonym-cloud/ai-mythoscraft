@@ -5,7 +5,9 @@ Eigener Server mit Plot-Welt (wie CityBuild). Vom Hauptserver kommt man mit `/pl
 ## Einrichtung
 
 1. `MythosPlots.jar` in den `plugins`-Ordner des Plot-Servers (mythoscraftsmpplot.minekeep.gg) legen und den Server starten.
-2. In der `server.properties` auf **beiden** Servern (Haupt- und Plot-Server): `accepts-transfers=true` – sonst klappt das Hin- und Herbeamen nicht.
+2. Wechseln läuft über MineKeep: `/plot` (Hauptserver) bzw. `/smp` (hier) bittet erst den Proxy direkt um den Wechsel; klappt das nicht,
+   erscheint nach 2 Sekunden ein Knopf, der `/mk join mythoscraftsmpplot` bzw. `/mk join mythoscraftsmp` vom Spieler aus schickt.
+   Servernamen: `main-server.proxy-server` / `join-command` in der config.yml.
 3. Fertig. Die Plot-Welt `plots` wird beim ersten Start automatisch mit eigenem Generator angelegt (keine Flat-Welt, kein Bau-Befehl nötig). Die Standard-Welt des Servers wird nicht benutzt.
 
 ## Was drin ist
