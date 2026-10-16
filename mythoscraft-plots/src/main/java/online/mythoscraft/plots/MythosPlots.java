@@ -74,6 +74,7 @@ public final class MythosPlots extends JavaPlugin {
         getServer().getPluginManager().registerEvents(sync, this);
         getServer().getPluginManager().registerEvents(ranks, this);
         getServer().getPluginManager().registerEvents(board, this);
+        getCommand("gm").setExecutor(new GameModeCommand(this));
         BalanceCommand balance = new BalanceCommand(this);
         getCommand("balance").setExecutor(balance);
         getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
@@ -194,6 +195,15 @@ public final class MythosPlots extends JavaPlugin {
             }
         }
         return max;
+    }
+
+    /** admins & co.: OP / mythosplots.gamemode, or one of the ranks in world.gamemode-ranks on MythosCraft */
+    public boolean mayChangeGameMode(Player p) {
+        if (bypass(p) || p.hasPermission("mythosplots.gamemode")) {
+            return true;
+        }
+        RankLimits.Info i = ranks == null ? null : ranks.info(p.getUniqueId());
+        return i != null && getConfig().getStringList("world.gamemode-ranks").stream().anyMatch(r -> r.equalsIgnoreCase(i.rank()));
     }
 
     public PlotBoard board() {

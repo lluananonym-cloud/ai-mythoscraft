@@ -1,4 +1,4 @@
-messages-version: 3
+messages-version: 4
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
 join: '<dark_gray>[<green>+</green>]</dark_gray> <white>{player}'
 quit: '<dark_gray>[<red>-</red>]</dark_gray> <white>{player}'
@@ -68,3 +68,7 @@ fly:
   off: '<gray>✦ Flight off – you left your plot.'
   booster: '<aqua>✈ Fly Booster active: <white>{minutes} min</white> of flight on your plot (and in your base on MythosCraft).'
 balance: '<gray>Coins: <gold>{coins}</gold> <dark_gray>· <gray>Gems: <light_purple>{gems}'
+gamemode:
+  set: '<gray>Game mode of <white>{player}</white>: <green>{mode}'
+  stashed: '<gray>Your survival inventory is put aside – creative starts empty. <dark_gray>(back with /gm s)'
+  restored: '<green>✔ Your survival inventory is back.'

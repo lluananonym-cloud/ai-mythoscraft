@@ -58,6 +58,8 @@ final class SyncClient implements Listener {
     private final Set<UUID> loading = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Long> flyUntil = new ConcurrentHashMap<>();
     private final Set<UUID> flying = ConcurrentHashMap.newKeySet();
+    /** survival inventory put aside while a team member is in creative/spectator – that one goes back, not the creative one */
+    private final Map<UUID, JsonObject> stash = new ConcurrentHashMap<>();
     private volatile String lastStatus = "nothing yet";
     private volatile String workingBase;
 
@@ -179,10 +181,11 @@ final class SyncClient implements Listener {
 
     private JsonObject snapshot(Player p) {
         JsonObject o = new JsonObject();
-        o.addProperty("inventory", items(p.getInventory().getContents()));
-        o.addProperty("ender", items(p.getEnderChest().getContents()));
-        o.addProperty("level", p.getLevel());
-        o.addProperty("exp", p.getExp());
+        JsonObject kept = stash.get(p.getUniqueId());
+        o.addProperty("inventory", kept != null ? kept.get("inventory").getAsString() : items(p.getInventory().getContents()));
+        o.addProperty("ender", kept != null ? kept.get("ender").getAsString() : items(p.getEnderChest().getContents()));
+        o.addProperty("level", kept != null ? kept.get("level").getAsInt() : p.getLevel());
+        o.addProperty("exp", kept != null ? kept.get("exp").getAsFloat() : p.getExp());
         o.addProperty("health", p.getHealth());
         o.addProperty("food", p.getFoodLevel());
         o.addProperty("saturation", p.getSaturation());
@@ -313,10 +316,12 @@ final class SyncClient implements Listener {
         String session = sessions.remove(id);
         if (session == null) {
             flyUntil.remove(id);
+            stash.remove(id);
             return;
         }
         JsonObject body = body(p, session);
         flyUntil.remove(id);
+        stash.remove(id);
         push(p.getName(), body, 0);
     }
 
@@ -431,6 +436,44 @@ final class SyncClient implements Listener {
         flyUntil.put(e.getPlayer().getUniqueId(), until);
         plugin.msg().send(e.getPlayer(), "fly.booster", "minutes", (until - System.currentTimeMillis() + 59_999) / 60_000);
         e.getPlayer().playSound(e.getPlayer().getLocation(), org.bukkit.Sound.ENTITY_PHANTOM_FLAP, 0.8f, 1.4f);
+    }
+
+    // ------------------------------------------------------------------------------------------- creative for the team
+    private static boolean survivalLike(GameMode m) {
+        return m == GameMode.SURVIVAL || m == GameMode.ADVENTURE;
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onGameMode(org.bukkit.event.player.PlayerGameModeChangeEvent e) {
+        Player p = e.getPlayer();
+        boolean from = survivalLike(p.getGameMode());
+        boolean to = survivalLike(e.getNewGameMode());
+        if (from && !to && !busy(p)) {
+            // into creative/spectator: the survival things are put aside, creative starts empty
+            JsonObject kept = new JsonObject();
+            kept.addProperty("inventory", items(p.getInventory().getContents()));
+            kept.addProperty("ender", items(p.getEnderChest().getContents()));
+            kept.addProperty("level", p.getLevel());
+            kept.addProperty("exp", p.getExp());
+            stash.put(p.getUniqueId(), kept);
+            p.getInventory().clear();
+            p.getEnderChest().clear();
+            plugin.msg().send(p, "gamemode.stashed");
+        } else if (!from && to) {
+            JsonObject kept = stash.remove(p.getUniqueId());
+            if (kept != null) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (!p.isOnline()) {
+                        return;
+                    }
+                    p.getInventory().setContents(items(kept.get("inventory").getAsString(), p.getInventory().getSize()));
+                    p.getEnderChest().setContents(items(kept.get("ender").getAsString(), p.getEnderChest().getSize()));
+                    p.setLevel(kept.get("level").getAsInt());
+                    p.setExp(kept.get("exp").getAsFloat());
+                    plugin.msg().send(p, "gamemode.restored");
+                });
+            }
+        }
     }
 
     // ------------------------------------------------------------------------------------------- while loading

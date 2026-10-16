@@ -39,8 +39,9 @@ final class PlayerListener implements Listener {
             p.teleport(plugin.spawn());
         }
         // everyone builds in creative here (own inventory of this server – nothing comes over from survival)
+        // the inventory from MythosCraft is a survival inventory – everyone starts in survival (admins: /gm)
         GameMode gm = mode();
-        if (p.getGameMode() != gm && !(plugin.bypass(p) && p.getGameMode() == GameMode.SPECTATOR)) {
+        if (p.getGameMode() != gm) {
             p.setGameMode(gm);
         }
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
@@ -67,7 +68,7 @@ final class PlayerListener implements Listener {
             return;
         }
         GameMode gm = mode();
-        if (e.getNewGameMode() != gm && !(plugin.bypass(e.getPlayer()) && e.getNewGameMode() == GameMode.SPECTATOR)) {
+        if (e.getNewGameMode() != gm && !plugin.mayChangeGameMode(e.getPlayer())) {
             e.setCancelled(true);
         }
     }

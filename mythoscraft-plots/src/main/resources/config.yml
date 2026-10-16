@@ -30,8 +30,10 @@ world:
   name: plots
   # SURVIVAL (same inventory as on the survival server) or CREATIVE
   gamemode: SURVIVAL
-  # nobody can switch to another game mode here (team members may still use spectator)
+  # only admins & co. can switch to another game mode here (/gm c|s|sp|a) – OP, permission mythosplots.gamemode
+  # or one of these MythosCraft ranks. Creative has its own empty inventory (creative items never reach MythosCraft).
   force-gamemode: true
+  gamemode-ranks: [BUILDER, ADMIN, OWNER, MYTHOS]
   always-day: true
   no-weather: true
   pvp: false

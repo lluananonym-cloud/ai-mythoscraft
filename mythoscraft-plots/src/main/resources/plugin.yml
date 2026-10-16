@@ -10,6 +10,10 @@ commands:
     description: Claim and manage your plot (/plot help)
     usage: /plot help
     aliases: [p, plots]
+  gm:
+    description: Change game mode (admins & co.)
+    usage: /gm <c|s|sp|a> [player]
+    aliases: [gmc, gms, gmsp, gma]
   balance:
     description: Your coins and gems (from the survival server)
     usage: /money
@@ -19,6 +23,9 @@ commands:
     usage: /smp
     aliases: [mythos, hub, lobby, survival]
 permissions:
+  mythosplots.gamemode:
+    description: May use /gm and change the game mode on the plot server
+    default: op
   mythosplots.admin:
     description: Build everywhere, unlimited plots, /plot admin
     default: op
