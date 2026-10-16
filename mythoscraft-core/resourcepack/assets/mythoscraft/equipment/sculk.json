@@ -1,0 +1,6 @@
+{
+  "layers": {
+    "humanoid": [{"texture": "mythoscraft:sculk"}],
+    "humanoid_leggings": [{"texture": "mythoscraft:sculk"}]
+  }
+}

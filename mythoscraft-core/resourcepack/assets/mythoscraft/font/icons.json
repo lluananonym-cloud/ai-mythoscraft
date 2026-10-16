@@ -1,0 +1,29 @@
+{
+  "providers": [
+    {"type": "space", "advances": {" ": 4}},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_vip.png", "height": 9, "ascent": 8, "chars": ["\uE001"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_elite.png", "height": 9, "ascent": 8, "chars": ["\uE002"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_mythos.png", "height": 9, "ascent": 8, "chars": ["\uE003"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_team.png", "height": 9, "ascent": 8, "chars": ["\uE004"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_vipplus.png", "height": 9, "ascent": 8, "chars": ["\uE005"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_held.png", "height": 9, "ascent": 8, "chars": ["\uE006"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_legende.png", "height": 9, "ascent": 8, "chars": ["\uE007"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_titan.png", "height": 9, "ascent": 8, "chars": ["\uE008"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_supporter.png", "height": 9, "ascent": 8, "chars": ["\uE009"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_builder.png", "height": 9, "ascent": 8, "chars": ["\uE00A"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_mod.png", "height": 9, "ascent": 8, "chars": ["\uE00B"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_admin.png", "height": 9, "ascent": 8, "chars": ["\uE00C"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_owner.png", "height": 9, "ascent": 8, "chars": ["\uE00D"]},
+    {"type": "bitmap", "file": "mythoscraft:font/badge_creator.png", "height": 9, "ascent": 8, "chars": ["\uE00E"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_coin.png", "height": 8, "ascent": 7, "chars": ["\uE010"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_gem.png", "height": 8, "ascent": 7, "chars": ["\uE011"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_kill.png", "height": 8, "ascent": 7, "chars": ["\uE012"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_death.png", "height": 8, "ascent": 7, "chars": ["\uE013"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_time.png", "height": 8, "ascent": 7, "chars": ["\uE014"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_event.png", "height": 8, "ascent": 7, "chars": ["\uE015"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_key.png", "height": 8, "ascent": 7, "chars": ["\uE016"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_rank.png", "height": 8, "ascent": 7, "chars": ["\uE017"]},
+    {"type": "bitmap", "file": "mythoscraft:font/icon_streak.png", "height": 8, "ascent": 7, "chars": ["\uE018"]},
+    {"type": "bitmap", "file": "mythoscraft:font/logo.png", "height": 20, "ascent": 7, "chars": ["\uE020"]}
+  ]
+}

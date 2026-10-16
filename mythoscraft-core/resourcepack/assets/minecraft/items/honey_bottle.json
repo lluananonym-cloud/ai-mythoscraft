@@ -1,0 +1,24 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "diving_flask", "model": {"type": "minecraft:model", "model": "mythoscraft:item/diving_flask"}},
+      {"when": "dragon_flask", "model": {"type": "minecraft:model", "model": "mythoscraft:item/dragon_flask"}},
+      {"when": "eggnog", "model": {"type": "minecraft:model", "model": "mythoscraft:item/eggnog"}},
+      {"when": "healing_flask", "model": {"type": "minecraft:model", "model": "mythoscraft:item/healing_flask"}},
+      {"when": "hot_cocoa", "model": {"type": "minecraft:model", "model": "mythoscraft:item/hot_cocoa"}},
+      {"when": "job_elixir", "model": {"type": "minecraft:model", "model": "mythoscraft:item/job_elixir"}},
+      {"when": "mana_potion", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mana_potion"}},
+      {"when": "mythos_elixir", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mythos_elixir"}},
+      {"when": "rainbow_potion", "model": {"type": "minecraft:model", "model": "mythoscraft:item/rainbow_potion"}},
+      {"when": "shrink_potion", "model": {"type": "minecraft:model", "model": "mythoscraft:item/shrink_potion"}},
+      {"when": "storm_flask", "model": {"type": "minecraft:model", "model": "mythoscraft:item/storm_flask"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/honey_bottle"
+  }
+  }
+}

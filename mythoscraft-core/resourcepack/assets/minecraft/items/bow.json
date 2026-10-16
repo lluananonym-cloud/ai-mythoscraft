@@ -1,0 +1,240 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "comet_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/comet_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/comet_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/comet_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/comet_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }},
+      {"when": "crystal_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/crystal_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/crystal_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/crystal_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/crystal_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }},
+      {"when": "ender_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/ender_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/ender_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/ender_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/ender_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }},
+      {"when": "ghost_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/ghost_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/ghost_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/ghost_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/ghost_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }},
+      {"when": "leaf_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/leaf_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/leaf_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/leaf_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/leaf_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }},
+      {"when": "storm_bow", "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mythoscraft:item/storm_bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/storm_bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "mythoscraft:item/storm_bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "mythoscraft:item/storm_bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }}
+    ],
+    "fallback": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/bow"
+    },
+    "on_true": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "minecraft:item/bow_pulling_1"
+          },
+          "threshold": 0.65
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "minecraft:item/bow_pulling_2"
+          },
+          "threshold": 0.9
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "minecraft:item/bow_pulling_0"
+      },
+      "property": "minecraft:use_duration",
+      "scale": 0.05
+    },
+    "property": "minecraft:using_item"
+  }
+  }
+}

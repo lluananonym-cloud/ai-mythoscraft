@@ -1,0 +1,3591 @@
+# MythosCraft – messages.yml
+# Platzhalter stehen in {geschweiften Klammern}. Farben: &-Codes, &#RRGGBB oder MiniMessage.
+# Eine Nachricht auf "" setzen, um sie abzuschalten.
+
+# Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
+config-version: 19
+
+prefix: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» "
+
+general:
+  usage: "<gray>Benutzung: <#e9d5ff>{usage}"
+  no-permission: "<red>Dafür hast du keine Rechte."
+  players-only: "<red>Dieser Befehl ist nur für Spieler."
+  player-not-found: "<red>Spieler <white>{player}</white> ist nicht online."
+  player-unknown: "<red>Spieler <white>{player}</white> war noch nie auf dem Server."
+  not-a-number: "<red>'{value}' ist keine gültige Zahl."
+  unknown-subcommand: "<red>Unbekannter Befehl. Hilfe: <white>{command}"
+  error: "<red>Da ist etwas schiefgelaufen. Das Team wurde im Log informiert."
+  data-loading: "<gray>Deine Daten werden noch geladen – bitte versuche es gleich nochmal."
+  data-load-failed: "<red>Deine Daten konnten nicht geladen werden. Bitte verbinde dich neu."
+  login-data-failed: "<red>MythosCraft konnte deine Spielerdaten nicht laden.\n<gray>Bitte versuche es in ein paar Sekunden erneut."
+  save-failed: "<red>Speichern fehlgeschlagen – bitte melde das dem Team."
+  reloaded: "<green>Neu geladen in {ms} ms. <gray>Config-Warnungen: <white>{warnings}"
+
+help:
+  header: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <gray>v{version} – Befehle"
+  mythos:
+    help: "<dark_gray>• <#e9d5ff>/mythos help <gray>– diese Hilfe"
+    status: "<dark_gray>• <#e9d5ff>/mythos status <gray>– Zustand aller Systeme"
+    reload: "<dark_gray>• <#e9d5ff>/mythos reload <gray>– Config, Texte, Regionen, Events neu laden"
+    bypass: "<dark_gray>• <#e9d5ff>/mythos bypass <gray>– Regionsschutz-Bypass an/aus"
+    top: "<dark_gray>• <#e9d5ff>/mythos top <Statistik> <gray>– Bestenliste"
+    region: "<dark_gray>• <#e9d5ff>/mythos region … <gray>– Regionen (pos1, pos2, create, set, info, …)"
+    arena: "<dark_gray>• <#e9d5ff>/mythos arena … <gray>– Arenen (create, setspawn, enable, snapshot, …)"
+    event: "<dark_gray>• <#e9d5ff>/mythos event … <gray>– Events (list, start, stop, info, spawnboss)"
+    eco: "<dark_gray>• <#e9d5ff>/mythos eco <give|take|set> <Spieler> <coins|gems> <Betrag>"
+    crate: "<dark_gray>• <#e9d5ff>/mythos crate … <gray>– Kisten (place, remove, key, keyall, list)"
+    item: "<dark_gray>• <#e9d5ff>/mythos item give <Spieler> <Item|Set> [Anzahl] <gray>– Custom Items, z.B. pumpkin_set"
+    boost: "<dark_gray>• <#e9d5ff>/mythos boost <coins|gems|events> <Faktor> <Dauer>"
+    holo: "<dark_gray>• <#e9d5ff>/mythos holo create <Name> <Statistik> <gray>– Hologramm-Bestenliste"
+    tournament: "<dark_gray>• <#e9d5ff>/mythos tournament start|test|stop|setarena|info <gray>– Turniere (test = mit Bots)"
+  player-commands: "<gray>Spieler: <#e9d5ff>/spawn /home /sethome /homes /tpa /balance /pay /daily /stats /top /event /arena /tournament /shop /ah /auftrag /helpop"
+  region: "<gray>/mythos region <#e9d5ff>wand | pos1 | pos2 | create <Name> [Prio] | delete <Name> | info [Name] | list | set [Region] <Flag> <true|false|none> | priority <Name> <Zahl> | redefine <Name> | flags | reload"
+  arena: "<gray>/mythos arena <#e9d5ff>place <daily|weekly|monthly> [Name] | pos1 | pos2 | create <Name> | delete | info | list | setspawn | clearspawns | setspectator | enable | disable | set <Arena> <Option> <Wert> | redefine | snapshot | reset"
+  crate: "<gray>/mythos crate <#e9d5ff>place <Kiste> | remove | list | types | key <Spieler> <Kiste> [Anzahl] | keyall <Kiste> [Anzahl]"
+
+status:
+  header: "<gradient:#c084fc:#f59e0b><bold>Systemstatus</bold></gradient>"
+  ok: "<green>OK"
+  error: "<red>FEHLER"
+  body:
+    - "<gray>Plugin: <white>{version}</white> <dark_gray>|</dark_gray> Server: <white>{server}</white> <dark_gray>|</dark_gray> TPS: <white>{tps}"
+    - "<gray>Datenbank: <white>{database}</white> {db_state} <dark_gray>|</dark_gray> Warteschlange: <white>{db_pending}</white> <dark_gray>|</dark_gray> Fehler: <white>{db_failures}"
+    - "<gray>Regionen: <white>{regions}</white> <dark_gray>|</dark_gray> Arenen: <white>{arenas}</white> <dark_gray>|</dark_gray> Kisten: <white>{crates}</white> <dark_gray>|</dark_gray> Hologramme: <white>{holograms}"
+    - "<gray>Spielerdaten im Cache: <white>{players}</white> <dark_gray>|</dark_gray> Event: {event}"
+    - "<gray>Tasks: <white>{tasks}</white> <dark_gray>|</dark_gray> RAM: <white>{memory}</white> <dark_gray>|</dark_gray> Resource Pack: <white>{pack}"
+    - "<gray>Config-Warnungen: <white>{warnings}"
+  last-error: "<red>Letzter DB-Fehler: <gray>{error}"
+  warning: "<gold>⚠ <gray>{warning}"
+
+protection:
+  denied: "<red>✖ <gray>Hier ist das nicht erlaubt: <white>{flag}"
+  bypass-on: "<green>Regionsschutz-Bypass ist jetzt <bold>AN</bold>."
+  bypass-off: "<yellow>Regionsschutz-Bypass ist jetzt <bold>AUS</bold> – du wirst wie ein Spieler behandelt."
+  flags:
+    pvp: "PvP"
+    build: "Bauen"
+    break: "Abbauen"
+    interact: "Interagieren"
+    use: "Türen & Schalter"
+    container: "Kisten öffnen"
+    explosions: "Explosionen"
+    fire: "Feuer"
+    entity-damage: "Tiere/Entities verletzen"
+    mob-damage: "Mob-Schaden"
+    damage: "Schaden"
+    mob-spawning: "Mob-Spawning"
+    hunger: "Hunger"
+    item-drop: "Items droppen"
+
+region:
+  pos1: "<gray>Position 1 gesetzt: <white>{x}, {y}, {z}"
+  pos2: "<gray>Position 2 gesetzt: <white>{x}, {y}, {z}"
+  wand: "<gray>Regionsstab erhalten: <white>Linksklick = Pos1</white>, <white>Rechtsklick = Pos2</white>."
+  no-selection: "<red>Setze zuerst Pos1 und Pos2 (in derselben Welt)."
+  invalid-name: "<red>Name nur mit a-z, 0-9, _ und - (max. 32 Zeichen)."
+  exists: "<red>Region <white>{region}</white> existiert bereits."
+  created: "<green>Region <white>{region}</white> erstellt <gray>({size}, {volume} Blöcke)."
+  deleted: "<green>Region <white>{region}</white> gelöscht."
+  unknown: "<red>Region <white>{region}</white> gibt es nicht."
+  none-here: "<red>Du stehst in keiner Region."
+  is-arena: "<red>{region} ist eine Arena – nutze /mythos arena."
+  spawn-delete-warning: "<yellow>Achtung: Das war die Spawn-Region. Sie wird beim nächsten Reload neu erstellt, falls auto-create aktiv ist."
+  info: "<gray>Region <white>{region}</white> <dark_gray>({type})</dark_gray>\n<gray>Welt: <white>{world}</white> <dark_gray>|</dark_gray> Bereich: <white>{bounds}</white>\n<gray>Priorität: <white>{priority}</white> <dark_gray>|</dark_gray> Volumen: <white>{volume}</white>\n<gray>Flags: <white>{flags}"
+  list-header: "<gray>Regionen: <white>{count}</white> <dark_gray>(+ {arenas} Arena-Regionen)"
+  list-line: "<dark_gray> • <#e9d5ff>{region} <gray>({world}, Prio {priority}, {volume} Blöcke)"
+  unknown-flag: "<red>Unbekanntes Flag. Verfügbar: <white>{flags}"
+  invalid-value: "<red>Wert muss true, false oder none sein."
+  flag-set: "<green>{region}: <white>{flag}</white> = <white>{value}"
+  priority-set: "<green>{region}: Priorität = <white>{priority}"
+  redefined: "<green>Region <white>{region}</white> neu definiert ({volume} Blöcke)."
+  flags: "<gray>Flags: <white>{flags}"
+  reloaded: "<green>{count} Regionen neu geladen."
+
+spawn:
+  name: "Spawn"
+  set: "<green>Spawn gesetzt: <white>{location}"
+  not-set: "<red>Es ist noch kein Spawn gesetzt."
+  item-name: "<!italic><gold><bold>Zum Spawn</bold> <gray>(Rechtsklick)"
+  sent-other: "<green>{player} wurde zum Spawn geschickt."
+
+teleport:
+  starting: "<gray>Teleport zu <#e9d5ff>{target}</#e9d5ff> in <white>{seconds}s</white>…"
+  starting-still: "<gray>Teleport zu <#e9d5ff>{target}</#e9d5ff> in <white>{seconds}s</white> – <yellow>nicht bewegen!"
+  countdown: "<#e9d5ff>✦ Teleport zu {target} in <white>{seconds}</white>…"
+  done: "<green>✔ Teleportiert: <white>{target}"
+  cancelled-move: "<red>Teleport abgebrochen – du hast dich bewegt."
+  cancelled-damage: "<red>Teleport abgebrochen – du hast Schaden bekommen."
+  invalid-target: "<red>Das Ziel ist nicht erreichbar (Welt nicht geladen?)."
+  failed: "<red>Teleport fehlgeschlagen."
+  cooldown: "<red>Bitte warte noch <white>{seconds}s</white>."
+  in-combat: "<red>Du bist im Kampf! Warte noch <white>{seconds}s</white>."
+
+homes:
+  name: "Home {home}"
+  set: "<green>Home <white>{home}</white> gesetzt. <gray>({count}/{max})"
+  updated: "<green>Home <white>{home}</white> aktualisiert. <gray>({count}/{max})"
+  deleted: "<green>Home <white>{home}</white> gelöscht."
+  not-found: "<red>Home <white>{home}</white> gibt es nicht. <gray>/homes"
+  none: "<gray>Du hast noch kein Home. Setze eins mit <#e9d5ff>/sethome [Name]"
+  choose: "<gray>Du hast mehrere Homes – <#e9d5ff>/home <Name></#e9d5ff> oder <#e9d5ff>/homes"
+  limit: "<red>Du hast das Maximum von <white>{max}</white> Homes erreicht. Höhere Ränge haben mehr!"
+  invalid-name: "<red>Home-Name nur mit Buchstaben, Zahlen, _ und - (max. 16)."
+  blocked-world: "<red>In dieser Welt kannst du kein Home setzen."
+  no-arena: "<red>In Arenen kannst du kein Home setzen."
+  world-missing: "<red>Die Welt von Home <white>{home}</white> ist nicht geladen."
+  list-header: "<gray>Deine Homes <dark_gray>({count}/{max})</dark_gray> – klicke zum Teleportieren:"
+  list-entry: "<#e9d5ff><u>{home}</u>"
+  list-separator: "<dark_gray>, "
+  list-hover: "<gray>{home}\n<dark_gray>{world} {x} {y} {z}\n<green>Klick: teleportieren"
+
+tpa:
+  self: "<red>Du kannst dir nicht selbst eine Anfrage schicken."
+  sent: "<gray>Anfrage an <white>{player}</white> gesendet <dark_gray>(läuft in {seconds}s ab)."
+  sent-here: "<gray>Anfrage an <white>{player}</white> gesendet, zu dir zu kommen <dark_gray>({seconds}s)."
+  received: "<white>{player}</white> <gray>möchte sich zu dir teleportieren."
+  received-here: "<white>{player}</white> <gray>möchte, dass du dich zu <white>ihm/ihr</white> teleportierst."
+  button-accept: "<green><bold>[ANNEHMEN]</bold>"
+  button-deny: "<red><bold>[ABLEHNEN]</bold>"
+  hover-accept: "<green>Teleport-Anfrage annehmen"
+  hover-deny: "<red>Teleport-Anfrage ablehnen"
+  already-pending: "<red>Du hast {player} bereits eine Anfrage geschickt."
+  target-full: "<red>{player} hat zu viele offene Anfragen."
+  none: "<red>Du hast keine offene Teleport-Anfrage."
+  none-from: "<red>Keine Anfrage von <white>{player}</white>."
+  offline: "<red>Der Spieler ist nicht mehr online."
+  accepted-target: "<green>Anfrage von <white>{player}</white> angenommen."
+  accepted-sender: "<green>{player} hat deine Anfrage angenommen!"
+  denied-target: "<gray>Anfrage von <white>{player}</white> abgelehnt."
+  denied-sender: "<red>{player} hat deine Anfrage abgelehnt."
+  cancelled: "<gray>Deine Anfrage wurde zurückgezogen."
+  cancelled-target: "<gray>{player} hat die Anfrage zurückgezogen."
+  no-outgoing: "<red>Du hast keine offene Anfrage."
+  expired-sender: "<gray>Deine Anfrage an <white>{player}</white> ist abgelaufen."
+  expired-target: "<gray>Die Anfrage von <white>{player}</white> ist abgelaufen."
+  left: "<gray>{player} hat den Server verlassen – Anfrage entfernt."
+  failed: "<red>Teleport für {player} nicht möglich."
+  in-combat: "<red>Du bist gerade im Kampf – kein Teleport möglich."
+  into-arena: "<red>Teleports in Arenen sind nicht erlaubt."
+  into-pvp: "<red>Teleports in PvP-Bereiche sind nicht erlaubt."
+
+economy:
+  names:
+    coins: "Coins"
+    gems: "Gems"
+  balance: "<gray>Dein Kontostand: {icon_coin} <gold>{coins} Coins</gold> <dark_gray>|</dark_gray> {icon_gem} <light_purple>{gems} Gems"
+  balance-other: "<gray>{player}: {icon_coin} <gold>{coins} Coins</gold> <dark_gray>|</dark_gray> {icon_gem} <light_purple>{gems} Gems"
+  coins: "<gray>Du hast {icon} <gold>{coins} Coins</gold>."
+  coins-other: "<gray>{player} hat {icon} <gold>{coins} Coins</gold>."
+  gems: "<gray>Du hast {icon} <light_purple>{gems} Gems</light_purple>."
+  gems-other: "<gray>{player} hat {icon} <light_purple>{gems} Gems</light_purple>."
+  paid: "<green>Du hast <white>{player}</white> <gold>{amount} {currency}</gold> überwiesen. <gray>Neuer Stand: {balance}"
+  received: "<green>Du hast <gold>{amount} {currency}</gold> von <white>{player}</white> erhalten!"
+  not-enough: "<red>Nicht genug {currency}! Du hast nur <white>{balance}</white>."
+  invalid-amount: "<red>Ungültiger Betrag. Erlaubt: ganze Zahl über 0 (max. {max}), z.B. 500, 1k, 2,5k."
+  pay-self: "<red>Du kannst dir nicht selbst Geld schicken."
+  pay-cooldown: "<red>Bitte warte {seconds}s vor der nächsten Überweisung."
+  limit: "<red>{player} hat bereits den maximalen Kontostand."
+  disabled: "<red>Diese Währung ist deaktiviert."
+  not-transferable: "<red>{currency} können nicht überwiesen werden."
+  admin-done: "<green>{player}: {action} {amount} {currency} → neuer Stand <white>{balance}"
+  admin-notify: "<gray>Dein {currency}-Stand wurde vom Team angepasst: <white>{balance}"
+
+multiplier:
+  coins: "Coins"
+  gems: "Gems"
+  events: "Events"
+  new-day: "<gold>☀ Neuer Tag!</gold> <gray>Multiplikatoren heute – Coins: <white>x{coins}</white>, Gems: <white>x{gems}</white>, Events: <white>x{events}"
+
+booster:
+  started: "<gradient:#22c55e:#a3e635><bold>BOOSTER!</bold></gradient> <white>{type} x{factor}</white> <gray>für <white>{duration}</white> <dark_gray>(gestartet von {player})"
+  ended: "<gray>Der {type}-Booster ist abgelaufen."
+  stopped: "<gray>{type}-Booster beendet."
+  none: "<red>Für diesen Typ läuft kein Booster."
+  info-header: "<gray>Multiplikatoren heute <dark_gray>({day})"
+  info-line: "<dark_gray> • <#e9d5ff>{type}: <gray>Tag x{daily} <dark_gray>|</dark_gray> Booster {booster} <dark_gray>|</dark_gray> <white>Gesamt x{total}"
+
+daily:
+  claimed: "<green>✔ Tagesbelohnung: <gold>+{coins} Coins</gold> <gray>(Streak: <white>{streak}</white> Tage)"
+  bonus-gems: "<light_purple>✦ Streak-Bonus: +{gems} Gems <gray>für {streak} Tage am Stück!"
+  already: "<gray>Schon abgeholt! Nächste Belohnung in <white>{time}</white>."
+  streak-hint: "<dark_gray>Tipp: Hol dir jeden Tag /daily – die Belohnung wächst mit deinem Streak."
+  reminder: "<gold>☀ <gray>Deine Tagesbelohnung wartet: <#e9d5ff><click:run_command:/daily><u>/daily</u></click>"
+  disabled: "<red>Die Tagesbelohnung ist deaktiviert."
+  milestone: '<gold>🔥 {streak} Tage Serie! Bonus: {reward}'
+  milestone-broadcast: <gold>🔥 {player} <yellow>hat eine {streak}-Tage-Login-Serie!
+  claimed-gems: '<green>Tagesbelohnung abgeholt: <light_purple>+{gems} Gems</light_purple> <gray>(Serie: {streak} Tage) – heute ein Gem-Tag!'
+
+rewards:
+  mob-kill: "<gold>+{coins} Coins"
+  player-kill: "<gold>+{coins} Coins <gray>für {player}"
+  playtime: "<green>Danke fürs Spielen! <gold>+{coins} Coins</gold> <gray>für {minutes} aktive Minuten."
+  playtime-gems: "<green>Danke fürs Spielen! <gold>+{coins} Coins</gold> <light_purple>+{gems} Gems</light_purple> <gray>für {minutes} aktive Minuten."
+  describe:
+    coins: "<gold>{amount} Coins"
+    gems: "<light_purple>{amount} Gems"
+    xp: "<green>{amount} XP"
+    key: "<white>{amount}× </white>{crate} <gray>Schlüssel"
+    tool: "<white>{amount}× </white>{item}"
+    item: "<white>{amount}× </white>{item}"
+    command: "<white>Spezial-Belohnung"
+    voucher: <white>{amount}× </white><gold>Rang-Gutschein</gold> {rank} <gray>({duration})
+    book: <white>{amount}× </white><aqua>Buch:</aqua> {enchantment}
+    spawner: <white>{amount}× <light_purple>{mob}-Spawner
+
+death:
+  broadcast: "<dark_gray>☠ <gray>{player} ist gestorben."
+  broadcast-killed: "<dark_gray>☠ <gray>{player} wurde von <red>{killer}</red> getötet."
+  killstreak: "<gold>✹ {player}</gold> <gray>hat eine <red><bold>{streak}er Killstreak</bold></red>!"
+
+rank:
+  set: "<green>{player} hat jetzt den Rang {rank} <gray>(Dauer: {duration})."
+  received: "<gradient:#c084fc:#f59e0b>✦ Du hast den Rang</gradient> {rank} <gradient:#f59e0b:#c084fc>erhalten! ✦</gradient> <gray>(Dauer: {duration})"
+  expired: "<gray>Dein Rang ist abgelaufen."
+  unknown: "<red>Rang <white>{rank}</white> gibt es nicht. <gray>/rank list"
+  invalid-duration: "<red>Ungültige Dauer. Beispiele: 7d, 30d, 12h, perm"
+  info: "<gray>{player}: Rang {rank} <dark_gray>|</dark_gray> <gray>Restzeit: <white>{remaining}"
+  list-header: "<gray>Ränge:"
+  list-line: "<dark_gray> • </dark_gray>{rank} <dark_gray>({id}, Weight {weight}, {homes} Homes, Coins x{multiplier})"
+  mythos-owner-only: "<red>Den <gradient:#c084fc:#f59e0b><bold>MYTHOS</bold></gradient><red>-Rang kann nur <white>{owner}</white> vergeben oder entfernen."
+  owner-locked: "<red>Der Rang von <white>{owner}</white> ist fest und kann nicht geändert werden."
+  mythos-granted: "<gradient:#c084fc:#f59e0b><bold>✦ {owner} hat {player} in den MYTHOS-Rang erhoben! ✦</bold></gradient>"
+  owner-only-rank: <red>Den Rang {rank} <red>kann nur <white>{owner}</white> vergeben oder entfernen.
+
+join:
+  mythos-title: "<gradient:#c084fc:#f59e0b><bold>✦ MYTHOS ✦</bold></gradient>"
+  mythos-subtitle: "<#e9d5ff>{player} <gray>ist online"
+
+chat:
+  hover: "{rank} <white>{player}</white>\n<gray>Coins: <gold>{coins}</gold>\n<gray>Kills: <white>{kills}</white>\n<dark_gray>Klick: Nachricht schreiben"
+
+helpop:
+  format: "<red><bold>[HelpOp]</bold></red> <white>{player}</white><gray>: <yellow>{message}"
+  hover: "<gray>Klick: /tp {player}"
+  sent: "<green>Deine Nachricht wurde an das Team gesendet."
+  sent-offline: "<yellow>Gerade ist kein Teammitglied online – deine Nachricht wurde gespeichert."
+  cooldown: "<red>Bitte warte noch {seconds}s."
+
+stats:
+  names:
+    coins: "Coins"
+    gems: "Gems"
+    kills: "Kills"
+    deaths: "Tode"
+    playtime: "Spielzeit"
+    eventpoints: "Event-Punkte"
+    eventswon: "Event-Siege"
+    bossdamage: "Boss-Schaden"
+    mobkills: "Mob-Kills"
+    relics: "Relikte"
+    crates: "Geöffnete Kisten"
+    streak: "Beste Killstreak"
+  show:
+    - "<dark_gray><st>                                        </st>"
+    - "<gradient:#c084fc:#f59e0b><bold>{player}</bold></gradient> <dark_gray>|</dark_gray> {rank}"
+    - "<gray>Coins: <gold>{coins}</gold>  <dark_gray>|</dark_gray>  Gems: <light_purple>{gems}"
+    - "<gray>Kills: <white>{kills}</white>  Tode: <white>{deaths}</white>  K/D: <white>{kd}</white>  Beste Streak: <white>{streak}"
+    - "<gray>Mob-Kills: <white>{mobkills}</white>  <dark_gray>|</dark_gray>  Spielzeit: <white>{playtime}"
+    - "<gray>Event-Punkte: <white>{event_points}</white>  Siege: <white>{events_won}</white>  Boss-Schaden: <white>{boss_damage}"
+    - "<gray>Relikte: <white>{relics}</white>  Kisten: <white>{crates}</white>  Daily-Streak: <white>{daily_streak}"
+    - "<dark_gray><st>                                        </st>"
+  unknown: "<red>Unbekannte Statistik. Verfügbar: <white>{stats}"
+  top-header: "<gradient:#c084fc:#f59e0b><bold>Top 10 – {stat}</bold></gradient>"
+  top-line-podium: "<gold>#{place}</gold> <white>{player}</white> <dark_gray>–</dark_gray> <#e9d5ff>{value}"
+  top-line: "<gray>#{place} {player} <dark_gray>–</dark_gray> <white>{value}"
+  top-empty: "<gray>Noch keine Einträge."
+
+holograms:
+  title: "<gradient:#c084fc:#f59e0b><bold>✦ Top {stat} ✦</bold></gradient>"
+  line-top: "<gold>#{place}</gold> <white>{player}</white> <dark_gray>–</dark_gray> <#e9d5ff>{value}"
+  line: "<gray>#{place} {player} <dark_gray>–</dark_gray> <white>{value}"
+  empty: "<gray>Noch keine Einträge"
+  loading: "<gray>Lädt…"
+  created: "<green>Hologramm <white>{name}</white> erstellt."
+  deleted: "<green>Hologramm <white>{name}</white> gelöscht."
+  unknown: "<red>Hologramm <white>{name}</white> gibt es nicht."
+  list-header: "<gray>Hologramme: <white>{count}"
+  list-line: "<dark_gray> • <#e9d5ff>{name} <gray>({stat}) {location}"
+
+arena:
+  states:
+    disabled: "<red>geschlossen"
+    waiting: "<green>offen"
+    running: "<gold>läuft"
+    resetting: "<yellow>wird zurückgesetzt"
+  list-header: "<gray>Arenen:"
+  list-line: "<dark_gray> • <#e9d5ff>{arena} <gray>– {state} <dark_gray>({players}/{max})"
+  unknown: "<red>Arena <white>{arena}</white> gibt es nicht."
+  exists: "<red>Arena <white>{arena}</white> existiert bereits."
+  created: "<green>Arena <white>{arena}</white> erstellt. <gray>Nächste Schritte: setspawn, (setspectator), enable."
+  deleted: "<green>Arena <white>{arena}</white> gelöscht."
+  disabled: "<red>Arena <white>{arena}</white> ist geschlossen."
+  disabled-admin: "<yellow>Arena <white>{arena}</white> geschlossen."
+  enabled: "<green>Arena <white>{arena}</white> ist jetzt offen."
+  resetting: "<yellow>Arena <white>{arena}</white> wird gerade zurückgesetzt – gleich wieder!"
+  full: "<red>Arena <white>{arena}</white> ist voll."
+  no-spawns: "<red>Arena <white>{arena}</white> hat noch keine Spawnpunkte."
+  already-in: "<red>Du bist bereits in einer Arena. <gray>/arena leave"
+  not-in: "<red>Du bist in keiner Arena."
+  joined: "<green>Willkommen in der Arena <white>{arena}</white>! <gray>({players} Spieler) – verlassen mit <#e9d5ff>/arena leave"
+  spectating: "<gray>Du schaust Arena <white>{arena}</white> zu. Verlassen mit <#e9d5ff>/arena leave"
+  left: "<gray>Du hast die Arena <white>{arena}</white> verlassen."
+  player-joined: "<green>+ <white>{player}</white> <gray>({players} Spieler)"
+  player-left: "<red>- <white>{player}</white> <gray>({players} Spieler)"
+  closed: "<yellow>Arena <white>{arena}</white> wurde geschlossen."
+  leave-first: "<red>Verlasse zuerst die Arena mit <white>/arena leave</white>."
+  command-blocked: "<red>Dieser Befehl ist in der Arena gesperrt. <gray>/arena leave"
+  restore-failed: "<red>Dein Inventar konnte nicht wiederhergestellt werden – es ist gesichert, bitte melde dich beim Team!"
+  recovered: "<green>Dein Inventar aus der Arena <white>{arena}</white> wurde nach einem Neustart wiederhergestellt."
+  outside: "<red>Du stehst nicht in Arena <white>{arena}</white>."
+  spawn-added: "<green>Spawnpunkt #{count} für <white>{arena}</white> gesetzt."
+  spawns-cleared: "<green>Alle Spawnpunkte von <white>{arena}</white> gelöscht."
+  spectator-set: "<green>Zuschauer-Spawn für <white>{arena}</white> gesetzt."
+  unknown-setting: "<red>Unbekannte Option. Verfügbar: <white>{settings}"
+  invalid-value: "<red>Ungültiger Wert für <white>{setting}</white>."
+  unknown-kit: "<yellow>Hinweis: Kit <white>{kit}</white> existiert nicht. Vorhandene Kits: {kits}"
+  setting-set: "<green>{arena}: <white>{setting}</white> = <white>{value}"
+  redefined: "<green>Bereich von <white>{arena}</white> neu gesetzt. Denk an einen neuen Snapshot!"
+  info: "<gray>Arena <white>{arena}</white> – {state}\n<gray>Welt: <white>{world}</white> <dark_gray>|</dark_gray> Bereich: <white>{bounds}</white>\n<gray>Spawns: <white>{spawns}</white> <dark_gray>|</dark_gray> Zuschauer: <white>{spectator}</white> <dark_gray>|</dark_gray> Spieler: <white>{players}</white> <dark_gray>|</dark_gray> Snapshot: <white>{snapshot}</white>\n<gray>Einstellungen: <white>{settings}"
+  snapshot-started: "<gray>Snapshot von <white>{arena}</white> wird erstellt ({volume} Blöcke)…"
+  snapshot-done: "<green>Snapshot von <white>{arena}</white> gespeichert ({ms} ms)."
+  snapshot-failed: "<red>Snapshot fehlgeschlagen: {error}"
+  no-snapshot: "<red>Arena <white>{arena}</white> hat keinen Snapshot. <gray>/mythos arena snapshot {arena}"
+  reset-started: "<gray>Arena <white>{arena}</white> wird zurückgesetzt…"
+  reset-done: "<green>Arena <white>{arena}</white> wurde zurückgesetzt."
+  reset-failed: "<red>Reset von {arena} fehlgeschlagen: {error}"
+
+resourcepack:
+  prompt: "<gradient:#c084fc:#f59e0b><bold>MythosCraft Resource Pack</bold></gradient>\n<gray>Für Rang-Abzeichen, 3D-Kisten und Custom Tools."
+  declined: "<gray>Kein Problem – du siehst Ränge und Items in der klassischen Ansicht. <dark_gray>(Server-Pack in den Servereinstellungen aktivierbar)"
+  failed: "<red>Das Resource Pack konnte nicht geladen werden. <gray>Ränge werden als Text angezeigt."
+  outdated: "<gold>⚠ Admin-Hinweis:</gold> <gray>In <white>resource-pack.url</white> steht ein <red>altes</red> Pack. Neue Items, Rüstungen und Kisten sieht so niemand. Lade <white>plugins/MythosCraft/MythosCraft-ResourcePack.zip</white> auf mc-packs.net hoch und trage den neuen Link ein (SHA-1 <white>{hash}</white>), dann <white>/mythos reload</white>."
+
+tools:
+  cooldown: "<red>Noch {seconds}s Abklingzeit"
+  no-target: "<red>Kein Ziel in Reichweite"
+
+items:
+  mana_elixir:
+    name: <blue><bold>Mana-Elixier</bold>
+    lore:
+    - <gray>Füllt 60 % deines Manas auf.
+  spell_scroll:
+    name: <light_purple><bold>Zauberrolle</bold>
+    lore:
+    - <gray>Lehrt dich einen neuen Zauber für
+    - <gray>den Mythos-Zauberstab.
+  mythos_wand:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Zauberstab</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: Zauber wirken (kostet Mana)'
+    - '<gray>Schleichen + Rechtsklick: nächster Zauber'
+    - <dark_gray>Neue Zauber lernst du mit Zauberrollen
+  meteor_shower:
+    name: <red><bold>Meteoritenschauer</bold>
+    lore:
+    - <gray>Ruft Meteoriten um dich herum herab –
+    - <gray>sie hinterlassen Erze, Diamanten und Gems.
+    - <dark_gray>Nicht am Spawn / in Arenen
+  mutation_serum:
+    name: <green><bold>Mutations-Serum</bold>
+    lore:
+    - '<gray>20 Minuten eine zufällige Mutation:'
+    - <gray>Riese, Zwerg, Katze, Midas, Glückspilz oder Feder.
+    - <dark_gray>Rechtsklick zum Trinken
+  find_booster:
+    name: <aqua><bold>Fund-Booster</bold>
+    lore:
+    - <gray>30 Minuten <aqua>3× seltene Gem-Funde</aqua> beim Abbauen.
+    - <dark_gray>Rechtsklick zum Benutzen
+  xp_booster:
+    name: <green><bold>Job-XP-Booster</bold>
+    lore:
+    - <gray>30 Minuten <green>doppelte Job-XP</green>.
+    - <dark_gray>Rechtsklick zum Benutzen
+  gem_booster:
+    name: <light_purple><bold>Gem-Booster</bold>
+    lore:
+    - <gray>30 Minuten <light_purple>×1,5 Gems</light_purple> – nur für dich.
+    - <dark_gray>Rechtsklick zum Benutzen
+  coin_booster:
+    name: <gold><bold>Coin-Booster</bold>
+    lore:
+    - <gray>30 Minuten <gold>doppelte Coins</gold> – nur für dich.
+    - <dark_gray>Rechtsklick zum Benutzen
+  list: "<gray>Custom Items: <white>{items}"
+  unknown: "<red>Unbekanntes Item. Verfügbar: <white>{items}"
+  given: "<green>{player} hat {item} <green>erhalten."
+  mythos_hammer:
+    name: "<gradient:#c084fc:#f59e0b><bold>Mythos-Hammer</bold></gradient>"
+    lore:
+      - "<gray>Ein uralter Hammer, geschmiedet"
+      - "<gray>im Herzen eines Sterns."
+      - ""
+      - "<#e9d5ff>✦ Baut 3×3 Blöcke ab"
+      - "<dark_gray>Schleichen: nur einen Block"
+  excavator:
+    name: "<gradient:#f59e0b:#fde68a><bold>Erdbrecher</bold></gradient>"
+    lore:
+      - "<gray>Gräbt sich durch alles, was weich ist."
+      - ""
+      - "<#e9d5ff>✦ Gräbt 3×3 (Erde, Sand, Kies, Schnee …)"
+      - "<dark_gray>Schleichen: nur einen Block"
+  timber_axe:
+    name: "<gradient:#22c55e:#a3e635><bold>Weltenbaum-Axt</bold></gradient>"
+    lore:
+      - "<gray>Ein Hieb – und der ganze Baum fällt."
+      - ""
+      - "<#e9d5ff>✦ Fällt ganze natürliche Bäume"
+      - "<dark_gray>Schleichen: nur einen Stamm"
+  warden_blade:
+    name: "<gradient:#0e7c86:#3fe0d0><bold>Klinge des Wächters</bold></gradient>"
+    lore:
+      - "<gray>Aus dem Echo des Ancient Warden geschmiedet."
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Schallstrahl"
+      - "<dark_gray>Abklingzeit beachten"
+  meteor_staff:
+    name: "<gradient:#ff4d1a:#f59e0b><bold>Sternenfall-Stab</bold></gradient>"
+    lore:
+      - "<gray>Ruft einen Mini-Meteor herab."
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick auf einen Block"
+      - "<dark_gray>Respektiert PvP- und Schutzregeln"
+  relic_compass:
+    name: "<gradient:#7c3aed:#22d3ee><bold>Relikt-Kompass</bold></gradient>"
+    lore:
+      - "<gray>Zeigt während der Ancient Hunt"
+      - "<gray>auf das nächste Relikt."
+  region_wand:
+    name: "<gold><bold>Regionsstab</bold>"
+    lore:
+      - "<gray>Linksklick: Position 1"
+      - "<gray>Rechtsklick: Position 2"
+  mythos_coin:
+    name: "<gold><bold>Mythos-Münze</bold>"
+    lore:
+      - "<gray>Die Währung von MythosCraft."
+  mythos_gem:
+    name: "<light_purple><bold>Mythos-Gem</bold>"
+    lore:
+      - "<gray>Selten und wertvoll."
+  ancient_relic:
+    name: "<dark_purple><bold>Uraltes Relikt</bold>"
+    lore:
+      - "<gray>Pulsiert mit alter Energie."
+  meteor:
+    name: "<red><bold>Meteorit</bold>"
+    lore: []
+  meteor_core:
+    name: "<gold><bold>Meteorkern</bold>"
+    lore:
+      - "<gray>Noch warm vom Einschlag."
+  grappling_hook:
+    name: "<gradient:#94a3b8:#e2e8f0><bold>Enterhaken</bold></gradient>"
+    lore:
+      - "<gray>Wirf ihn an eine Wand und"
+      - "<gray>zieh dich blitzschnell hin."
+      - ""
+      - "<#e9d5ff>✦ Einholen = Hinziehen"
+  mythos_backpack:
+    name: "<gradient:#c084fc:#f59e0b><bold>Mythos-Rucksack</bold></gradient>"
+    lore:
+      - "<gray>27 zusätzliche Plätze,"
+      - "<gray>gespeichert im Rucksack selbst."
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Öffnen"
+  healing_totem:
+    name: "<gradient:#4ade80:#bbf7d0><bold>Heiltotem</bold></gradient>"
+    lore:
+      - "<gray>Heilt dich und alle Spieler"
+      - "<gray>in deiner Nähe."
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick · 60s Abklingzeit"
+  magnet_charm:
+    name: "<gradient:#f87171:#60a5fa><bold>Magnet-Talisman</bold></gradient>"
+    lore:
+      - "<gray>In der Zweithand: zieht Items"
+      - "<gray>in der Umgebung zu dir."
+  miner_lantern:
+    name: "<gold><bold>Bergmannslaterne</bold>"
+    lore:
+      - "<gray>In der Zweithand: Nachtsicht."
+  xp_tome:
+    name: "<green><bold>Buch des Wissens</bold>"
+    lore:
+      - "<gray>Rechtsklick: +500 Erfahrung."
+  return_feather:
+    name: "<white><bold>Heimfeder</bold>"
+    lore:
+      - "<gray>Rechtsklick: Teleport zum Spawn"
+      - "<dark_gray>(3s stillstehen, wird verbraucht)"
+  lucky_clover:
+    name: "<green><bold>Glücksklee</bold>"
+    lore:
+      - "<gray>30 Minuten Glück II."
+  haste_rune:
+    name: "<yellow><bold>Rune der Eile</bold>"
+    lore:
+      - "<gray>3 Minuten Eile II und Tempo."
+  pumpkin_scythe:
+    name: "<gradient:#ff7a1a:#7c2d12><bold>Kürbissense</bold></gradient>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Treffer schneiden durch alle"
+      - "<#e9d5ff>  Gegner im Umkreis (50% Schaden)"
+  bat_blade:
+    name: "<gradient:#4c1d95:#1f2937><bold>Fledermausklinge</bold></gradient>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Lebensraub: 15% des Schadens"
+  ghost_bow:
+    name: "<gradient:#a5f3fc:#6366f1><bold>Geisterbogen</bold></gradient>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Pfeile fliegen schwerelos"
+      - "<#e9d5ff>✦ Treffer verursachen Verdorren"
+  ghost_lantern:
+    name: "<gradient:#22d3ee:#a5f3fc><bold>Geisterlaterne</bold></gradient>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Gegner leuchten,"
+      - "<#e9d5ff>  du bekommst Nachtsicht"
+  candy_bucket:
+    name: "<gradient:#ff7a1a:#fde047><bold>Süßigkeiteneimer</bold></gradient>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Süßes oder Saures!"
+  pumpkin_bomb:
+    name: "<gold><bold>Kürbisbombe</bold>"
+    lore:
+      - "<dark_gray>Schauernacht-Kollektion"
+      - "<gray>Werfen: gruselige Explosion"
+  candy_corn:
+    name: "<gradient:#fde047:#ff7a1a><bold>Zuckermais</bold></gradient>"
+    lore:
+      - "<gray>Tempo II für 20 Sekunden."
+  lollipop:
+    name: "<gradient:#f472b6:#c084fc><bold>Lolli</bold></gradient>"
+    lore:
+      - "<gray>Regeneration für 10 Sekunden."
+  caramel_apple:
+    name: "<gradient:#f59e0b:#b45309><bold>Karamellapfel</bold></gradient>"
+    lore:
+      - "<gray>Absorption II für 30 Sekunden."
+  frost_blade:
+    name: "<gradient:#a5f3fc:#0ea5e9><bold>Frostklinge</bold></gradient>"
+    lore:
+      - "<dark_gray>Frostfest-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Treffer verlangsamen"
+  candy_cane:
+    name: "<gradient:#ef4444:#ffffff><bold>Zuckerstange</bold></gradient>"
+    lore:
+      - "<dark_gray>Frostfest-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Extra-Rückstoß"
+  ice_wand:
+    name: "<gradient:#e0f2fe:#38bdf8><bold>Eisstab</bold></gradient>"
+    lore:
+      - "<dark_gray>Frostfest-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Ziel einfrieren"
+  snow_cannon:
+    name: "<white><bold>Schneekanone</bold>"
+    lore:
+      - "<dark_gray>Frostfest-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Schneeball-Salve"
+  gift_box:
+    name: "<gradient:#ef4444:#22c55e><bold>Geschenk</bold></gradient>"
+    lore:
+      - "<dark_gray>Frostfest-Kollektion"
+      - "<gray>Rechtsklick zum Auspacken!"
+  hot_cocoa:
+    name: "<gradient:#92400e:#fde68a><bold>Heiße Schokolade</bold></gradient>"
+    lore:
+      - "<gray>Wärmt auf und heilt."
+  star_saber:
+    name: "<gradient:#22d3ee:#c084fc:#fde68a><bold>Sternensäbel</bold></gradient>"
+    lore:
+      - "<dark_gray>Sternen-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ 20%: Sternenfall-Treffer"
+  comet_bow:
+    name: "<gradient:#f472b6:#22d3ee><bold>Kometenbogen</bold></gradient>"
+    lore:
+      - "<dark_gray>Sternen-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Einschläge treffen alles im Umkreis"
+  void_scepter:
+    name: "<gradient:#7c3aed:#1e1b4b><bold>Leerenzepter</bold></gradient>"
+    lore:
+      - "<dark_gray>Sternen-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Blink nach vorne"
+  phoenix_feather:
+    name: "<gradient:#ff4d1a:#fde047><bold>Phönixfeder</bold></gradient>"
+    lore:
+      - "<dark_gray>Sternen-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rettet dich einmal vor dem Tod"
+      - "<dark_gray>(irgendwo im Inventar)"
+  nebula_orb:
+    name: "<gradient:#7c3aed:#f472b6:#22d3ee><bold>Nebelkugel</bold></gradient>"
+    lore:
+      - "<dark_gray>Sternen-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Zweithand: Nachtsicht + Regeneration"
+  inferno_axe:
+    name: "<gradient:#ff4d1a:#7f1d1d><bold>Höllenaxt</bold></gradient>"
+    lore:
+      - "<dark_gray>Inferno-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Setzt Gegner in Brand"
+  ember_wand:
+    name: "<gradient:#fb923c:#dc2626><bold>Glutstab</bold></gradient>"
+    lore:
+      - "<dark_gray>Inferno-Kollektion"
+      - ""
+      - "<#e9d5ff>✦ Rechtsklick: Feuerball"
+  dragon_flask:
+    name: "<gradient:#dc2626:#fbbf24><bold>Drachenfeuer-Flasche</bold></gradient>"
+    lore:
+      - "<dark_gray>Inferno-Kollektion"
+      - "<gray>Feuerresistenz + Stärke"
+  trophy_daily:
+    name: "<gradient:#cbd5e1:#94a3b8><bold>Tagesturnier-Pokal</bold></gradient>"
+    lore:
+      - "<gray>Sieger eines Tagesturniers."
+  trophy_weekly:
+    name: "<gradient:#fde047:#f59e0b><bold>Wochenturnier-Pokal</bold></gradient>"
+    lore:
+      - "<gray>Sieger eines Wochenturniers."
+  trophy_monthly:
+    name: "<gradient:#c084fc:#f59e0b><bold>Monatsturnier-Pokal</bold></gradient>"
+    lore:
+      - "<gray>Sieger eines Monatsturniers!"
+      - "<gradient:#c084fc:#f59e0b>Legende von MythosCraft</gradient>"
+  mythos_helmet:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Helm</bold></gradient>
+    lore:
+    - <dark_gray>Mythos-Set
+    - '<gray>Allrounder: stark in allem'
+    - '<gray>Set-Bonus: Resistenz + Glück'
+  mythos_chestplate:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Brustpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Mythos-Set
+    - '<gray>Allrounder: stark in allem'
+    - '<gray>Set-Bonus: Resistenz + Glück'
+  mythos_leggings:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Beinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Mythos-Set
+    - '<gray>Allrounder: stark in allem'
+    - '<gray>Set-Bonus: Resistenz + Glück'
+  mythos_boots:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Stiefel</bold></gradient>
+    lore:
+    - <dark_gray>Mythos-Set
+    - '<gray>Allrounder: stark in allem'
+    - '<gray>Set-Bonus: Resistenz + Glück'
+  pumpkin_helmet:
+    name: <gradient:#ff7a1a:#7c2d12><bold>Kürbiskopf</bold></gradient>
+    lore:
+    - <dark_gray>Kürbiskönig-Set (Schauernacht)
+    - '<gray>Leicht: weniger Schutz, mehr Tempo'
+    - '<gray>Set-Bonus: Nachtsicht + Tempo'
+  pumpkin_chestplate:
+    name: <gradient:#ff7a1a:#7c2d12><bold>Kürbisharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Kürbiskönig-Set (Schauernacht)
+    - '<gray>Leicht: weniger Schutz, mehr Tempo'
+    - '<gray>Set-Bonus: Nachtsicht + Tempo'
+  pumpkin_leggings:
+    name: <gradient:#ff7a1a:#7c2d12><bold>Kürbisbeinlinge</bold></gradient>
+    lore:
+    - <dark_gray>Kürbiskönig-Set (Schauernacht)
+    - '<gray>Leicht: weniger Schutz, mehr Tempo'
+    - '<gray>Set-Bonus: Nachtsicht + Tempo'
+  pumpkin_boots:
+    name: <gradient:#ff7a1a:#7c2d12><bold>Kürbisstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Kürbiskönig-Set (Schauernacht)
+    - '<gray>Leicht: weniger Schutz, mehr Tempo'
+    - '<gray>Set-Bonus: Nachtsicht + Tempo'
+  frost_helmet:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Frostkrone</bold></gradient>
+    lore:
+    - <dark_gray>Frostwächter-Set (Frostfest)
+    - '<gray>Verteidiger: viel Rückstoß-Schutz'
+    - '<gray>Set-Bonus: Resistenz, kein Einfrieren'
+  frost_chestplate:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Frostpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Frostwächter-Set (Frostfest)
+    - '<gray>Verteidiger: viel Rückstoß-Schutz'
+    - '<gray>Set-Bonus: Resistenz, kein Einfrieren'
+  frost_leggings:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Frostbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Frostwächter-Set (Frostfest)
+    - '<gray>Verteidiger: viel Rückstoß-Schutz'
+    - '<gray>Set-Bonus: Resistenz, kein Einfrieren'
+  frost_boots:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Froststiefel</bold></gradient>
+    lore:
+    - <dark_gray>Frostwächter-Set (Frostfest)
+    - '<gray>Verteidiger: viel Rückstoß-Schutz'
+    - '<gray>Set-Bonus: Resistenz, kein Einfrieren'
+  inferno_helmet:
+    name: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Helm</bold></gradient>
+    lore:
+    - <dark_gray>Inferno-Set
+    - '<gray>Angreifer: +Schaden pro Teil'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  inferno_chestplate:
+    name: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Brustpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Inferno-Set
+    - '<gray>Angreifer: +Schaden pro Teil'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  inferno_leggings:
+    name: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Beinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Inferno-Set
+    - '<gray>Angreifer: +Schaden pro Teil'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  inferno_boots:
+    name: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Stiefel</bold></gradient>
+    lore:
+    - <dark_gray>Inferno-Set
+    - '<gray>Angreifer: +Schaden pro Teil'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  sculk_helmet:
+    name: <gradient:#2dd4bf:#0b3b44><bold>Wächter-Helm</bold></gradient>
+    lore:
+    - <dark_gray>Wächter-Set (Ancient)
+    - '<gray>Panzer: höchster Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Eile, keine Dunkelheit'
+  sculk_chestplate:
+    name: <gradient:#2dd4bf:#0b3b44><bold>Wächter-Brustpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Wächter-Set (Ancient)
+    - '<gray>Panzer: höchster Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Eile, keine Dunkelheit'
+  sculk_leggings:
+    name: <gradient:#2dd4bf:#0b3b44><bold>Wächter-Beinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Wächter-Set (Ancient)
+    - '<gray>Panzer: höchster Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Eile, keine Dunkelheit'
+  sculk_boots:
+    name: <gradient:#2dd4bf:#0b3b44><bold>Wächter-Stiefel</bold></gradient>
+    lore:
+    - <dark_gray>Wächter-Set (Ancient)
+    - '<gray>Panzer: höchster Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Eile, keine Dunkelheit'
+  dragon_helmet:
+    name: <gradient:#a21caf:#dc2626><bold>Drachenhelm</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Set
+    - '<gray>Berserker: viel Extra-Schaden'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  dragon_chestplate:
+    name: <gradient:#a21caf:#dc2626><bold>Drachenpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Set
+    - '<gray>Berserker: viel Extra-Schaden'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  dragon_leggings:
+    name: <gradient:#a21caf:#dc2626><bold>Drachenbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Set
+    - '<gray>Berserker: viel Extra-Schaden'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  dragon_boots:
+    name: <gradient:#a21caf:#dc2626><bold>Drachenstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Set
+    - '<gray>Berserker: viel Extra-Schaden'
+    - '<gray>Set-Bonus: Feuerresistenz + Stärke'
+  storm_helmet:
+    name: <gradient:#7dd3fc:#facc15><bold>Sturmhelm</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Set
+    - '<gray>Sprinter: sehr schnell, leicht'
+    - '<gray>Set-Bonus: Tempo II + Sprungkraft'
+  storm_chestplate:
+    name: <gradient:#7dd3fc:#facc15><bold>Sturmpanzer</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Set
+    - '<gray>Sprinter: sehr schnell, leicht'
+    - '<gray>Set-Bonus: Tempo II + Sprungkraft'
+  storm_leggings:
+    name: <gradient:#7dd3fc:#facc15><bold>Sturmbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Set
+    - '<gray>Sprinter: sehr schnell, leicht'
+    - '<gray>Set-Bonus: Tempo II + Sprungkraft'
+  storm_boots:
+    name: <gradient:#7dd3fc:#facc15><bold>Sturmstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Set
+    - '<gray>Sprinter: sehr schnell, leicht'
+    - '<gray>Set-Bonus: Tempo II + Sprungkraft'
+  angel_helmet:
+    name: <gradient:#fef3c7:#fde68a><bold>Engelskrone</bold></gradient>
+    lore:
+    - <dark_gray>Engel-Set (Sternen)
+    - '<gray>Lebenskraft: +Herzen pro Teil'
+    - '<gray>Set-Bonus: Regeneration, kein Fallschaden'
+  angel_chestplate:
+    name: <gradient:#fef3c7:#fde68a><bold>Engelsrüstung</bold></gradient>
+    lore:
+    - <dark_gray>Engel-Set (Sternen)
+    - '<gray>Lebenskraft: +Herzen pro Teil'
+    - '<gray>Set-Bonus: Regeneration, kein Fallschaden'
+  angel_leggings:
+    name: <gradient:#fef3c7:#fde68a><bold>Engelsbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Engel-Set (Sternen)
+    - '<gray>Lebenskraft: +Herzen pro Teil'
+    - '<gray>Set-Bonus: Regeneration, kein Fallschaden'
+  angel_boots:
+    name: <gradient:#fef3c7:#fde68a><bold>Engelsschuhe</bold></gradient>
+    lore:
+    - <dark_gray>Engel-Set (Sternen)
+    - '<gray>Lebenskraft: +Herzen pro Teil'
+    - '<gray>Set-Bonus: Regeneration, kein Fallschaden'
+  witch_broom:
+    name: <gradient:#7c3aed:#ff7a1a><bold>Hexenbesen</bold></gradient>
+    lore:
+    - <dark_gray>Schauernacht-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: aufsitzen und fliegen'
+    - <gray>W schneller · S bremsen · Leertaste steigen
+    - <gray>Strg Turbo · Shift landen
+    - '<gold>Tricks: <gray>Linksklick Fassrolle,'
+    - <gray>2× Leertaste Looping, Strg+Leertaste Schraube
+  harvest_sickle:
+    name: <gradient:#facc15:#16a34a><bold>Erntesichel</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick auf Felder: erntet 5×5'
+    - <#e9d5ff>  reife Pflanzen und pflanzt neu
+  watering_can:
+    name: <gradient:#38bdf8:#22c55e><bold>Gießkanne</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: lässt Pflanzen in 3×3 wachsen'
+  seed_bag:
+    name: <gradient:#a3e635:#854d0e><bold>Saatbeutel</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick auf Ackerland: sät 5×5'
+    - <gray>(Samen aus deinem Inventar)
+  lucky_rod:
+    name: <gradient:#22d3ee:#fde047><bold>Glücksangel</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - ''
+    - <#e9d5ff>✦ Fische beißen doppelt so schnell
+    - <#e9d5ff>✦ 35% doppelter Fang, manchmal Coins
+  compost_charm:
+    name: <gradient:#65a30d:#78350f><bold>Kompost-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: 25% Chance auf'
+    - <gray>doppelte Ernte
+  honey_bread:
+    name: <gradient:#fbbf24:#b45309><bold>Honigbrot</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - <gray>Sehr sättigend + Regeneration
+  fortune_cookie:
+    name: <gradient:#fde68a:#d97706><bold>Glückskeks</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - <gray>Mit Weisheit – und manchmal Coins oder Gems
+  thunder_hammer:
+    name: <gradient:#7dd3fc:#1e3a8a><bold>Donnerhammer</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: Blitz auf das Ziel'
+    - '<#e9d5ff>✦ Treffer: 25% Kettenblitz'
+  wind_blade:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Windklinge</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: Sturmsprint nach vorne'
+    - <#e9d5ff>✦ Treffer schleudern Gegner hoch
+  storm_bow:
+    name: <gradient:#38bdf8:#facc15><bold>Sturmbogen</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - ''
+    - <#e9d5ff>✦ Treffer rufen Blitze herab
+  static_charm:
+    name: <gradient:#facc15:#38bdf8><bold>Statik-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: Angreifer bekommen'
+    - <gray>manchmal einen elektrischen Schlag
+  storm_flask:
+    name: <gradient:#7dd3fc:#a78bfa><bold>Sturmflasche</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - <gray>Tempo II + Sprungkraft II (60s)
+  dragon_blade:
+    name: <gradient:#a21caf:#dc2626><bold>Drachenklinge</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Kollektion
+    - ''
+    - <#e9d5ff>✦ +30% Schaden gegen Monster
+    - <#e9d5ff>✦ Treffer setzen in Brand
+  dragon_staff:
+    name: <gradient:#7e22ce:#f472b6><bold>Drachenstab</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: Drachenodem-Kugel'
+    - <#e9d5ff>  (Flächenschaden + Feuer)
+  dragon_scale:
+    name: <gradient:#a21caf:#4c1d95><bold>Drachenschuppe</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: dauerhafte'
+    - <gray>Feuerresistenz
+  dragon_heart:
+    name: <gradient:#dc2626:#7e22ce><bold>Drachenherz</bold></gradient>
+    lore:
+    - <dark_gray>Drachen-Kollektion
+    - '<gray>Rechtsklick: Absorption II, Stärke, Resistenz'
+  smelter_pickaxe:
+    name: <gradient:#f97316:#78350f><bold>Schmelz-Spitzhacke</bold></gradient>
+    lore:
+    - ''
+    - <#e9d5ff>✦ Schmilzt Erze und Blöcke sofort
+    - <gray>(Eisen, Gold, Kupfer, Sand, Stein …)
+  builder_wand:
+    name: <gradient:#fde68a:#a16207><bold>Baumeister-Stab</bold></gradient>
+    lore:
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick auf eine Fläche: setzt'
+    - <#e9d5ff>  bis zu 3×3 gleiche Blöcke davor
+  ender_pouch:
+    name: <gradient:#14b8a6:#0f172a><bold>Ender-Beutel</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: öffnet deine Endertruhe'
+  jump_charm:
+    name: <gradient:#86efac:#16a34a><bold>Sprung-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: Sprungkraft'
+  aqua_charm:
+    name: <gradient:#67e8f9:#1d4ed8><bold>Aqua-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: Unterwasseratmung'
+    - <gray>und schnell schwimmen
+  coin_pouch:
+    name: <gradient:#fde047:#d97706><bold>Münzbeutel</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: 100 – 1000 Coins'
+  gem_pouch:
+    name: <gradient:#e879f9:#7e22ce><bold>Gem-Beutel</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: 1 – 5 Gems'
+  key_fragment:
+    name: <gradient:#fbbf24:#c084fc><bold>Schlüssel-Splitter</bold></gradient>
+    lore:
+    - <gray>9 Splitter + Rechtsklick ergeben
+    - <gray>einen zufälligen Kisten-Schlüssel
+  swift_rune:
+    name: <gradient:#e0f2fe:#64748b><bold>Windrune</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: Tempo II + Sprungkraft (3 Min.)'
+  rtp_scroll:
+    name: <gradient:#a78bfa:#22d3ee><bold>Reiserolle</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: zufälliger Teleport'
+    - <gray>in die Wildnis – ohne Wartezeit
+  mythos_elixir:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Elixier</bold></gradient>
+    lore:
+    - <gray>Stärke, Tempo, Regeneration und
+    - <gray>Resistenz für 90 Sekunden
+  ore_pickaxe:
+    name: <gradient:#94a3b8:#22d3ee><bold>Erzader-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Ancient-Kollektion
+    - ''
+    - <#e9d5ff>✦ Baut ganze Erzadern auf einmal ab
+    - <gray>(bis zu 16 Blöcke)
+  mob_net:
+    name: <gradient:#a3e635:#0e7490><bold>Tierfänger</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick auf ein Tier: einfangen'
+    - '<#e9d5ff>✦ Rechtsklick auf einen Block: freilassen'
+  ender_bow:
+    name: <gradient:#14b8a6:#7c3aed><bold>Enderbogen</bold></gradient>
+    lore:
+    - <dark_gray>Sternen-Kollektion
+    - ''
+    - <#e9d5ff>✦ Du teleportierst dich dorthin,
+    - <#e9d5ff>  wo der Pfeil landet (8s Abklingzeit)
+  boomerang:
+    name: <gradient:#fbbf24:#ea580c><bold>Sturm-Bumerang</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: werfen – trifft alles'
+    - <#e9d5ff>  auf dem Hin- und Rückweg
+  healing_flask:
+    name: <gradient:#f87171:#fecaca><bold>Heilflasche</bold></gradient>
+    lore:
+    - <gray>Heilt sofort 4 Herzen + Regeneration
+  wisdom_charm:
+    name: <gradient:#bef264:#4d7c0f><bold>Weisheits-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: +50% Erfahrung'
+  treasure_map:
+    name: <gradient:#fde68a:#92400e><bold>Schatzkarte</bold></gradient>
+    lore:
+    - <dark_gray>Ancient-Kollektion
+    - '<gray>Rechtsklick: versteckt einen Schatz'
+    - <gray>150 – 400 Blöcke entfernt
+  frost_bomb:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Frostbombe</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Werfen: friert alles im Umkreis ein'
+  smoke_bomb:
+    name: <gradient:#6b7280:#1f2937><bold>Rauchbombe</bold></gradient>
+    lore:
+    - <dark_gray>Schauernacht-Kollektion
+    - '<gray>Rechtsklick: unsichtbar + schnell,'
+    - <gray>Gegner in der Nähe sind geblendet
+  easter_egg:
+    name: <gradient:#f9a8d4:#a5f3fc><bold>Osterei</bold></gradient>
+    lore:
+    - <dark_gray>Frühlings-Kollektion
+    - '<gray>Rechtsklick: Überraschung!'
+  carrot_blade:
+    name: <gradient:#fb923c:#16a34a><bold>Möhrenschwert</bold></gradient>
+    lore:
+    - <dark_gray>Frühlings-Kollektion
+    - ''
+    - <#e9d5ff>✦ Treffer geben dir kurz Tempo
+  blossom_wand:
+    name: <gradient:#f9a8d4:#86efac><bold>Blütenstab</bold></gradient>
+    lore:
+    - <dark_gray>Frühlings-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: Blumen blühen, alle'
+    - <#e9d5ff>  in der Nähe regenerieren
+  golem_egg:
+    name: <gradient:#e5e7eb:#78716c><bold>Golem-Ei</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: ein Eisengolem beschützt'
+    - <gray>dich 90 Sekunden lang
+  light_staff:
+    name: <gradient:#fef9c3:#facc15><bold>Lichtstab</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: unsichtbares Licht setzen'
+    - <gray>(nochmal klicken entfernt es)
+  climbing_gloves:
+    name: <gradient:#a16207:#57534e><bold>Kletterhandschuhe</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: Schleichen an'
+    - <gray>einer Wand lässt dich hochklettern
+  firework_wand:
+    name: <gradient:#f472b6:#38bdf8><bold>Feuerwerksstab</bold></gradient>
+    lore:
+    - <dark_gray>Sternen-Kollektion
+    - '<gray>Rechtsklick: buntes Feuerwerk (harmlos)'
+  gravity_gauntlet:
+    name: <gradient:#7c3aed:#0f172a><bold>Gravitations-Handschuh</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - ''
+    - '<#e9d5ff>✦ Rechtsklick: zieht ein Ziel zu dir'
+  shield_crystal:
+    name: <gradient:#bae6fd:#6366f1><bold>Schildkristall</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: 10 Sekunden Resistenz III'
+  time_sand:
+    name: <gradient:#fde68a:#a16207><bold>Zeitsand</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: für dich Tag ↔ Nacht'
+    - <gray>(nur du siehst es, nochmal = normal)
+  weather_orb:
+    name: <gradient:#e0f2fe:#475569><bold>Wetterkugel</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: für dich Sonne ↔ Regen'
+    - <gray>(nur du siehst es, nochmal = normal)
+  ore_compass:
+    name: <gradient:#67e8f9:#a16207><bold>Erzkompass</bold></gradient>
+    lore:
+    - <dark_gray>Ancient-Kollektion
+    - '<gray>Rechtsklick: zeigt das nächste wertvolle'
+    - <gray>Erz im Umkreis von 16 Blöcken
+  mega_mushroom:
+    name: <gradient:#ef4444:#fafafa><bold>Riesenpilz</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - '<gray>Rechtsklick: 30 Sekunden riesengroß!'
+  shrink_potion:
+    name: <gradient:#a7f3d0:#0d9488><bold>Schrumpftrank</bold></gradient>
+    lore:
+    - <dark_gray>Ernte-Kollektion
+    - '<gray>Trinken: 30 Sekunden winzig klein'
+  ninja_helmet:
+    name: <gradient:#334155:#0f172a><bold>Schattenmaske</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Set
+    - '<gray>Leicht: wenig Schutz, sehr schnell, +Schaden'
+    - '<gray>Set-Bonus: Tempo, unsichtbar beim Schleichen'
+  ninja_chestplate:
+    name: <gradient:#334155:#0f172a><bold>Schattenweste</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Set
+    - '<gray>Leicht: wenig Schutz, sehr schnell, +Schaden'
+    - '<gray>Set-Bonus: Tempo, unsichtbar beim Schleichen'
+  ninja_leggings:
+    name: <gradient:#334155:#0f172a><bold>Schattenhose</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Set
+    - '<gray>Leicht: wenig Schutz, sehr schnell, +Schaden'
+    - '<gray>Set-Bonus: Tempo, unsichtbar beim Schleichen'
+  ninja_boots:
+    name: <gradient:#334155:#0f172a><bold>Schattenschuhe</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Set
+    - '<gray>Leicht: wenig Schutz, sehr schnell, +Schaden'
+    - '<gray>Set-Bonus: Tempo, unsichtbar beim Schleichen'
+  knight_helmet:
+    name: <gradient:#e2e8f0:#64748b><bold>Ritterhelm</bold></gradient>
+    lore:
+    - <dark_gray>Ritter-Set
+    - '<gray>Bollwerk: viel Rückstoß-Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Resistenz + Absorption'
+  knight_chestplate:
+    name: <gradient:#e2e8f0:#64748b><bold>Ritterharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Ritter-Set
+    - '<gray>Bollwerk: viel Rückstoß-Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Resistenz + Absorption'
+  knight_leggings:
+    name: <gradient:#e2e8f0:#64748b><bold>Ritterbeinschienen</bold></gradient>
+    lore:
+    - <dark_gray>Ritter-Set
+    - '<gray>Bollwerk: viel Rückstoß-Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Resistenz + Absorption'
+  knight_boots:
+    name: <gradient:#e2e8f0:#64748b><bold>Ritterstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Ritter-Set
+    - '<gray>Bollwerk: viel Rückstoß-Schutz, etwas langsamer'
+    - '<gray>Set-Bonus: Resistenz + Absorption'
+  miner_helmet:
+    name: <gradient:#fde047:#a16207><bold>Grubenhelm</bold></gradient>
+    lore:
+    - <dark_gray>Bergmann-Set (Ancient)
+    - '<gray>Arbeiter: wenig Schutz, ideal zum Abbauen'
+    - '<gray>Set-Bonus: Eile II, Nachtsicht unter Tage'
+  miner_chestplate:
+    name: <gradient:#fde047:#a16207><bold>Grubenjacke</bold></gradient>
+    lore:
+    - <dark_gray>Bergmann-Set (Ancient)
+    - '<gray>Arbeiter: wenig Schutz, ideal zum Abbauen'
+    - '<gray>Set-Bonus: Eile II, Nachtsicht unter Tage'
+  miner_leggings:
+    name: <gradient:#fde047:#a16207><bold>Grubenhose</bold></gradient>
+    lore:
+    - <dark_gray>Bergmann-Set (Ancient)
+    - '<gray>Arbeiter: wenig Schutz, ideal zum Abbauen'
+    - '<gray>Set-Bonus: Eile II, Nachtsicht unter Tage'
+  miner_boots:
+    name: <gradient:#fde047:#a16207><bold>Grubenstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Bergmann-Set (Ancient)
+    - '<gray>Arbeiter: wenig Schutz, ideal zum Abbauen'
+    - '<gray>Set-Bonus: Eile II, Nachtsicht unter Tage'
+  return_crystal:
+    name: <gradient:#c4b5fd:#22d3ee><bold>Rückkehr-Kristall</bold></gradient>
+    lore:
+    - <dark_gray>Sternen-Kollektion
+    - '<gray>Rechtsklick: Ort merken / zurückkehren'
+    - '<gray>Schleichen + Rechtsklick: neuen Ort merken'
+  sponge_bomb:
+    name: <gradient:#fde047:#a3e635><bold>Schwammbombe</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: entfernt Wasser in der Nähe'
+  repair_hammer:
+    name: <gradient:#94a3b8:#475569><bold>Reparaturhammer</bold></gradient>
+    lore:
+    - '<gray>Item in die Zweithand, dann Rechtsklick:'
+    - <gray>repariert 25% der Haltbarkeit
+  enchant_scroll:
+    name: <gradient:#e879f9:#6366f1><bold>Verzauberungsrolle</bold></gradient>
+    lore:
+    - '<gray>Item in die Zweithand, dann Rechtsklick:'
+    - <gray>eine Verzauberung steigt um 1 Stufe
+  cloud_bottle:
+    name: <gradient:#f8fafc:#93c5fd><bold>Wolke in der Flasche</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - '<gray>Rechtsklick in der Luft: Doppelsprung'
+  hunger_charm:
+    name: <gradient:#fb923c:#a16207><bold>Sättigungs-Talisman</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: du wirst viel'
+    - <gray>langsamer hungrig
+  soul_jar:
+    name: <gradient:#a7f3d0:#0f766e><bold>Seelenglas</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: speichert deine Erfahrung'
+    - '<gray>Schleichen + Rechtsklick: zurückholen'
+  lucky_dice:
+    name: <gradient:#fafafa:#fde047><bold>Glückswürfel</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: würfeln – bei einer 6'
+    - <gray>wartet ein Schlüssel!
+  viking_helmet:
+    name: <gradient:#a8a29e:#7f1d1d><bold>Wikingerhelm</bold></gradient>
+    lore:
+    - <dark_gray>Wikinger-Set (Inferno)
+    - '<gray>Krieger: +Schaden, unter halber Gesundheit Berserker'
+    - '<gray>Set-Bonus: Resistenz, Stärke II bei wenig Leben'
+  viking_chestplate:
+    name: <gradient:#a8a29e:#7f1d1d><bold>Wikingerbrünne</bold></gradient>
+    lore:
+    - <dark_gray>Wikinger-Set (Inferno)
+    - '<gray>Krieger: +Schaden, unter halber Gesundheit Berserker'
+    - '<gray>Set-Bonus: Resistenz, Stärke II bei wenig Leben'
+  viking_leggings:
+    name: <gradient:#a8a29e:#7f1d1d><bold>Wikingerhose</bold></gradient>
+    lore:
+    - <dark_gray>Wikinger-Set (Inferno)
+    - '<gray>Krieger: +Schaden, unter halber Gesundheit Berserker'
+    - '<gray>Set-Bonus: Resistenz, Stärke II bei wenig Leben'
+  viking_boots:
+    name: <gradient:#a8a29e:#7f1d1d><bold>Wikingerstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Wikinger-Set (Inferno)
+    - '<gray>Krieger: +Schaden, unter halber Gesundheit Berserker'
+    - '<gray>Set-Bonus: Resistenz, Stärke II bei wenig Leben'
+  frost_walker_charm:
+    name: <gradient:#e0f2fe:#0284c7><bold>Frostpfad-Talisman</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>In der Zweithand: Wasser unter dir'
+    - <gray>gefriert – du läufst übers Meer
+  home_stone:
+    name: <gradient:#a3e635:#15803d><bold>Heimstein</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: zurück zu deinem Home'
+  magic_bean:
+    name: <gradient:#86efac:#166534><bold>Zauberbohne</bold></gradient>
+    lore:
+    - <dark_gray>Frühlings-Kollektion
+    - '<gray>Auf Erde oder Gras: wächst zu einer'
+    - <gray>riesigen Ranke, an der du hochklettern kannst
+  web_shooter:
+    name: <gradient:#e5e7eb:#4b5563><bold>Netzwerfer</bold></gradient>
+    lore:
+    - <dark_gray>Schauernacht-Kollektion
+    - '<gray>Rechtsklick: Netz – Treffer machen langsam'
+  player_tracker:
+    name: <gradient:#facc15:#0ea5e9><bold>Spielerspürer</bold></gradient>
+    lore:
+    - <dark_gray>Sturm-Kollektion
+    - '<gray>Rechtsklick: zeigt den nächsten Spieler'
+  rainbow_potion:
+    name: <gradient:#f472b6:#fde047:#38bdf8><bold>Regenbogentrank</bold></gradient>
+    lore:
+    - <dark_gray>Sternen-Kollektion
+    - <gray>3 zufällige gute Effekte (60s)
+  confetti_cannon:
+    name: <gradient:#f472b6:#86efac><bold>Konfettikanone</bold></gradient>
+    lore:
+    - '<gray>Rechtsklick: Party!'
+  lucky_horseshoe:
+    name: <gradient:#e5e7eb:#fbbf24><bold>Glückshufeisen</bold></gradient>
+    lore:
+    - '<gray>In der Zweithand: Glück II'
+    - <gray>(bessere Beute beim Angeln und in Truhen)
+  party_hat:
+    name: <gradient:#f472b6:#38bdf8><bold>Partyhut</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  companion_snowman:
+    name: '<white><bold>Schneemann-Begleiter</bold>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+  companion_penguin:
+    name: '<aqua><bold>Pinguin-Begleiter</bold>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+  companion_ghost:
+    name: '<gold><bold>Geister-Begleiter</bold>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+  companion_dragon:
+    name: '<green><bold>Drachen-Begleiter</bold>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+  companion_bee:
+    name: '<yellow><bold>Bienen-Begleiter</bold>'
+    lore:
+    - '<dark_gray>Begleiter'
+    - '<gray>Rechtsklick: sitzt auf deinem Kopf (nochmal: heimschicken)'
+  golden_crown:
+    name: <gradient:#fde047:#d97706><bold>Goldkrone</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  coral_blade:
+    name: <gradient:#fb7185:#0ea5e9><bold>Korallenklinge</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Treffer: Delfinsgnade'
+    - <gray>+3 Schaden gegen Gegner im Wasser
+  tide_staff:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Gezeitenstab</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Rechtsklick: Flutwelle stößt'
+    - <gray>Gegner vor dir weg
+  pearl_charm:
+    name: <gradient:#f0f9ff:#67e8f9><bold>Perlentalisman</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>In der Zweithand: Meereskraft im Wasser'
+  shell_horn:
+    name: <gradient:#fde68a:#f472b6><bold>Muschelhorn</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Rechtsklick: Tempo, Delfinsgnade und'
+    - <gray>Wasseratmung für alle in 20 Blöcken
+  kraken_ink:
+    name: <gradient:#4b5563:#111827><bold>Krakentinte</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Werfen: blendet und verlangsamt'
+  diving_flask:
+    name: <gradient:#67e8f9:#0369a1><bold>Taucherflasche</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Trinken: 5 Min. Wasseratmung'
+    - <gray>und Nachtsicht
+  sushi:
+    name: <gradient:#fda4af:#f8fafc><bold>Sushi</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Essen: Delfinsgnade (60s)'
+  treasure_net:
+    name: <gradient:#d6b98c:#0e7490><bold>Schatznetz</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Kollektion
+    - '<gray>Rechtsklick auf Wasser: 3 Fänge'
+  druid_staff:
+    name: <gradient:#86efac:#166534><bold>Druidenstab</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>Rechtsklick: Regeneration II für'
+    - <gray>alle in 8 Blöcken
+  leaf_bow:
+    name: <gradient:#4ade80:#14532d><bold>Blätterbogen</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - <gray>Pfeile fesseln Gegner kurz an den Boden
+  vine_whip:
+    name: <gradient:#22c55e:#365314><bold>Rankenpeitsche</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>Rechtsklick: Peitschenhieb auf 7 Blöcke,'
+    - <gray>verlangsamt das Ziel
+  acorn_bomb:
+    name: <gradient:#a16207:#4d7c0f><bold>Eichelbombe</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>Werfen: lässt einen Baum wachsen'
+  owl_charm:
+    name: <gradient:#d6d3d1:#78350f><bold>Eulentalisman</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>In der Zweithand: Nachtsicht'
+  berry_pie:
+    name: <gradient:#be185d:#7c2d12><bold>Beerenkuchen</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>Essen: Regeneration (8s)'
+  seed_of_life:
+    name: <gradient:#bbf7d0:#16a34a><bold>Samen des Lebens</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>Rechtsklick: volle Gesundheit,'
+    - <gray>volle Sättigung und Absorption
+  lumber_charm:
+    name: <gradient:#ca8a04:#713f12><bold>Holzfällertalisman</bold></gradient>
+    lore:
+    - <dark_gray>Wald-Kollektion
+    - '<gray>In der Zweithand: doppeltes Holz'
+  sky_glider:
+    name: <gradient:#f0f9ff:#38bdf8><bold>Himmelsgleiter</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - <gray>In der Zweithand + Schleichen
+    - '<gray>im Fall: langsames Gleiten'
+  wind_horn:
+    name: <gradient:#e0f2fe:#64748b><bold>Windhorn</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Rechtsklick: Windstoß nach oben'
+  cloud_sword:
+    name: <gradient:#ffffff:#7dd3fc><bold>Wolkenschwert</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - <gray>Treffer schleudern Gegner hoch,
+    - <gray>Fallangriffe +40% Schaden
+  thunder_bottle:
+    name: <gradient:#fde047:#6366f1><bold>Donnerflasche</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Werfen: Blitzschlag am Aufprallort'
+  star_map:
+    name: <gradient:#fef3c7:#1e3a8a><bold>Sternenkarte</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Rechtsklick: Position, Biom und'
+    - <gray>Entfernung zum Spawn
+  sky_cookie:
+    name: <gradient:#fde68a:#93c5fd><bold>Wolkenkeks</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Essen: Sanfter Fall und Sprungkraft'
+  comet_shard:
+    name: <gradient:#fef08a:#f97316><bold>Kometensplitter</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Rechtsklick: 300 Erfahrung'
+  balloon:
+    name: <gradient:#f87171:#fbbf24><bold>Ballon</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Kollektion
+    - '<gray>Rechtsklick: schwebe nach oben'
+  crystal_wand:
+    name: <gradient:#f5d0fe:#a21caf><bold>Kristallstab</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>Rechtsklick: Kristallstrahl (24 Blöcke)'
+    - <gray>– Ziel leuchtet
+  arcane_tome:
+    name: <gradient:#c4b5fd:#4c1d95><bold>Arkanes Buch</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>Rechtsklick: 1000 Erfahrung'
+  mana_potion:
+    name: <gradient:#93c5fd:#7c3aed><bold>Manatrank</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>Trinken: alle Abklingzeiten zurücksetzen'
+  prism_shield:
+    name: <gradient:#fbcfe8:#22d3ee><bold>Prismaschild</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>Rechtsklick: 10s Resistenz II,'
+    - <gray>30% Schaden wird reflektiert
+  crystal_bow:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristallbogen</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - <gray>Schießt 3 Pfeile auf einmal
+  crystal_heart:
+    name: <gradient:#fda4af:#c026d3><bold>Kristallherz</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>In der Zweithand: regelmäßig Absorption'
+  crystal_pickaxe:
+    name: <gradient:#e9d5ff:#9333ea><bold>Kristallspitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - <gray>12% Chance auf doppelte Erze
+  shard_bomb:
+    name: <gradient:#d8b4fe:#6b21a8><bold>Splitterbombe</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Kollektion
+    - '<gray>Werfen: Splitterexplosion – Gegner leuchten'
+  ocean_helmet:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Ozeanhelm</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Set
+    - '<gray>Volles Set: Wasseratmung, im Wasser Delfinsgnade + Meereskraft'
+  ocean_chestplate:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Ozeanharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Set
+    - '<gray>Volles Set: Wasseratmung, im Wasser Delfinsgnade + Meereskraft'
+  ocean_leggings:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Ozeanbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Set
+    - '<gray>Volles Set: Wasseratmung, im Wasser Delfinsgnade + Meereskraft'
+  ocean_boots:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Ozeanstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Ozean-Set
+    - '<gray>Volles Set: Wasseratmung, im Wasser Delfinsgnade + Meereskraft'
+  druid_helmet:
+    name: <gradient:#4ade80:#14532d><bold>Druidenhelm</bold></gradient>
+    lore:
+    - <dark_gray>Druiden-Set
+    - '<gray>Volles Set: Regeneration und kein Hunger'
+  druid_chestplate:
+    name: <gradient:#4ade80:#14532d><bold>Druidenharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Druiden-Set
+    - '<gray>Volles Set: Regeneration und kein Hunger'
+  druid_leggings:
+    name: <gradient:#4ade80:#14532d><bold>Druidenbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Druiden-Set
+    - '<gray>Volles Set: Regeneration und kein Hunger'
+  druid_boots:
+    name: <gradient:#4ade80:#14532d><bold>Druidenstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Druiden-Set
+    - '<gray>Volles Set: Regeneration und kein Hunger'
+  sky_helmet:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Himmelshelm</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Set
+    - '<gray>Volles Set: Tempo und Sprungkraft II'
+  sky_chestplate:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Himmelsharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Set
+    - '<gray>Volles Set: Tempo und Sprungkraft II'
+  sky_leggings:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Himmelsbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Set
+    - '<gray>Volles Set: Tempo und Sprungkraft II'
+  sky_boots:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Himmelsstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Himmels-Set
+    - '<gray>Volles Set: Tempo und Sprungkraft II'
+  crystal_helmet:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristallhelm</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Set
+    - '<gray>Volles Set: Eile, Glück und Absorption'
+  crystal_chestplate:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristallharnisch</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Set
+    - '<gray>Volles Set: Eile, Glück und Absorption'
+  crystal_leggings:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristallbeinschutz</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Set
+    - '<gray>Volles Set: Eile, Glück und Absorption'
+  crystal_boots:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristallstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Kristall-Set
+    - '<gray>Volles Set: Eile, Glück und Absorption'
+  pharaoh_staff:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Pharaonenstab</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>Rechtsklick: Sandsturm – Gegner in'
+    - <gray>7 Blöcken werden blind und langsam
+  khopesh:
+    name: <gradient:#fde68a:#b45309><bold>Chepesch</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>25% Chance: Ziel verdorrt'
+  scarab_charm:
+    name: <gradient:#22d3ee:#a16207><bold>Skarabäus-Talisman</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>In der Zweithand: Glück und Eile'
+  ankh:
+    name: <gradient:#fde047:#d97706><bold>Anch</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - <gray>Rettet dich einmal vor dem Tod
+    - <gray>(im Inventar reicht)
+  mummy_wrap:
+    name: <gradient:#f5f5f4:#a8a29e><bold>Mumienbinde</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>Rechtsklick: +4 Herzen und Regeneration'
+  sand_bomb:
+    name: <gradient:#fde68a:#ca8a04><bold>Sandbombe</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>Werfen: Sandwolke blendet Gegner'
+  pharaoh_treasure:
+    name: <gradient:#fde047:#92400e><bold>Pharaonenschatz</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>Rechtsklick: 500–3000 Coins'
+  sun_disc:
+    name: <gradient:#fde047:#f97316><bold>Sonnenscheibe</bold></gradient>
+    lore:
+    - <dark_gray>Millennium-Kollektion
+    - '<gray>Rechtsklick: 30s Stärke + Feuerschutz'
+  pumpkin_mask:
+    name: <gradient:#fb923c:#7c2d12><bold>Kürbismaske</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Schauernacht
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  skull_mask:
+    name: <gradient:#f5f5f4:#44403c><bold>Totenkopfmaske</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Schauernacht
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  witch_hat:
+    name: <gradient:#a855f7:#1c1917><bold>Hexenhut</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Schauernacht
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  santa_hat:
+    name: <gradient:#ef4444:#ffffff><bold>Weihnachtsmütze</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Frostfest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  reindeer_antlers:
+    name: <gradient:#a16207:#ef4444><bold>Rentiergeweih</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Frostfest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  snowman_head:
+    name: <gradient:#ffffff:#f97316><bold>Schneemannkopf</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Frostfest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  bunny_ears:
+    name: <gradient:#fbcfe8:#ffffff><bold>Hasenohren</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Frühlingsfest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  heart_glasses:
+    name: <gradient:#f472b6:#dc2626><bold>Herzbrille</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Valentinstag
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  sun_hat:
+    name: <gradient:#fde68a:#38bdf8><bold>Sonnenhut</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Sommerfest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  leaf_crown:
+    name: <gradient:#f97316:#a16207><bold>Blätterkrone</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Erntefest
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  new_year_glasses:
+    name: <gradient:#fde047:#a855f7><bold>Silvesterbrille</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Neujahr
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  star_halo:
+    name: <gradient:#fef3c7:#818cf8><bold>Sternenkranz</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – Sternenregen
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  top_hat:
+    name: <gradient:#44403c:#1c1917><bold>Zylinder</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – immer
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  cat_ears:
+    name: <gradient:#f9a8d4:#78716c><bold>Katzenohren</bold></gradient>
+    lore:
+    - <dark_gray>Kosmetik – immer
+    - '<gray>Rechtsklick oder in den Helm-Slot: aufsetzen'
+  rocket_booster:
+    name: <gradient:#f87171:#94a3b8><bold>Raketenbooster</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>Rechtsklick beim Gleiten: Schub'
+    - <gray>48 Ladungen (Haltbarkeit)
+  mars_orb:
+    name: <gradient:#f97316:#7f1d1d><bold>Mars</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>In der Zweithand: kreist um dich, Stärke'
+  moon_orb:
+    name: <gradient:#e5e7eb:#6b7280><bold>Mond</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>In der Zweithand: kreist um dich,'
+    - <gray>Sprungkraft + sanfter Fall
+  saturn_orb:
+    name: <gradient:#fde68a:#a16207><bold>Saturn</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>In der Zweithand: kreist um dich, Resistenz'
+  earth_orb:
+    name: <gradient:#38bdf8:#15803d><bold>Erde</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>In der Zweithand: kreist um dich, Regeneration'
+  laser_gun:
+    name: <gradient:#ef4444:#64748b><bold>Laserpistole</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>Rechtsklick: Laserstrahl (32 Blöcke)'
+  star_dust:
+    name: <gradient:#fef3c7:#818cf8><bold>Sternenstaub</bold></gradient>
+    lore:
+    - <dark_gray>Weltraum-Kollektion
+    - '<gray>Rechtsklick: 400 Erfahrung'
+  spawner_pickaxe:
+    name: <gradient:#a3e635:#7c3aed><bold>Spawner-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Spawner-Kollektion
+    - <gray>Baut Spawner ab – sie behalten ihr Mob!
+    - <gray>Sehr selten
+  chainsaw:
+    name: <gradient:#ef4444:#1c1917><bold>Kettensäge</bold></gradient>
+    lore:
+    - <dark_gray>Schauernacht-Kollektion
+    - '<gray>Rechtsklick: anwerfen (6s) – +50% Schaden'
+    - <gray>und ganze Bäume auf einmal fällen
+  gingerbread:
+    name: <gradient:#d97706:#7c2d12><bold>Lebkuchen</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Essen: Tempo II (30s)'
+  snow_globe:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Schneekugel</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Rechtsklick: Schneegestöber, Sprungkraft'
+    - <gray>und sanfter Fall
+  present_launcher:
+    name: <gradient:#ef4444:#16a34a><bold>Geschenkkanone</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Rechtsklick: Geschenke schießen'
+  mistletoe:
+    name: <gradient:#22c55e:#ef4444><bold>Mistelzweig</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>In der Zweithand: Regeneration für alle'
+    - <gray>in 6 Blöcken
+  nutcracker_sword:
+    name: <gradient:#ef4444:#fbbf24><bold>Nussknackerschwert</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>20% Chance: +4 Knack-Schaden'
+  ornament_bomb:
+    name: <gradient:#f472b6:#fde047><bold>Christbaumkugel-Bombe</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Werfen: Glitzer-Explosion, verlangsamt'
+  eggnog:
+    name: <gradient:#fef3c7:#d97706><bold>Eierpunsch</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Trinken: Absorption II + Regeneration'
+  reindeer_bell:
+    name: <gradient:#fde047:#b91c1c><bold>Rentierglocke</bold></gradient>
+    lore:
+    - <dark_gray>Frostfest-Kollektion
+    - '<gray>Rechtsklick: Tempo II (30s) + Glöckchen'
+  pharaoh_helmet:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Pharaonenhelm</bold></gradient>
+    lore:
+    - <dark_gray>Pharaonen-Set
+    - '<gray>Volles Set: Feuerschutz, Tempo, in der Sonne Stärke'
+  pharaoh_chestplate:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Pharaonenanzug</bold></gradient>
+    lore:
+    - <dark_gray>Pharaonen-Set
+    - '<gray>Volles Set: Feuerschutz, Tempo, in der Sonne Stärke'
+  pharaoh_leggings:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Pharaonenhose</bold></gradient>
+    lore:
+    - <dark_gray>Pharaonen-Set
+    - '<gray>Volles Set: Feuerschutz, Tempo, in der Sonne Stärke'
+  pharaoh_boots:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Pharaonenstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Pharaonen-Set
+    - '<gray>Volles Set: Feuerschutz, Tempo, in der Sonne Stärke'
+  astronaut_helmet:
+    name: <gradient:#f8fafc:#64748b><bold>Astronautenhelm</bold></gradient>
+    lore:
+    - <dark_gray>Astronauten-Set
+    - '<gray>Volles Set: Sprungkraft III, sanfter Fall, Nachtsicht'
+  astronaut_chestplate:
+    name: <gradient:#f8fafc:#64748b><bold>Astronautenanzug</bold></gradient>
+    lore:
+    - <dark_gray>Astronauten-Set
+    - '<gray>Volles Set: Sprungkraft III, sanfter Fall, Nachtsicht'
+  astronaut_leggings:
+    name: <gradient:#f8fafc:#64748b><bold>Astronautenhose</bold></gradient>
+    lore:
+    - <dark_gray>Astronauten-Set
+    - '<gray>Volles Set: Sprungkraft III, sanfter Fall, Nachtsicht'
+  astronaut_boots:
+    name: <gradient:#f8fafc:#64748b><bold>Astronautenstiefel</bold></gradient>
+    lore:
+    - <dark_gray>Astronauten-Set
+    - '<gray>Volles Set: Sprungkraft III, sanfter Fall, Nachtsicht'
+  newyear_pickaxe:
+    name: <gradient:#fde047:#a855f7><bold>Silvester-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - <#e9d5ff>✦ Baut 5×5×5 auf einmal ab
+    - <gray>+50% Bergarbeiter-XP
+    - '<dark_gray>Schleichen: nur ein Block'
+  newyear_axe:
+    name: <gradient:#fde047:#22c55e><bold>Silvester-Axt</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - <#e9d5ff>✦ Fällt ganze Bäume auf einen Schlag
+    - <gray>+50% Holzfäller-XP
+  newyear_hoe:
+    name: <gradient:#fde047:#84cc16><bold>Silvester-Hacke</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - <#e9d5ff>✦ Erntet 7×7 reife Pflanzen und pflanzt neu
+    - <gray>+50% Farmer-XP
+  newyear_rod:
+    name: <gradient:#fde047:#38bdf8><bold>Silvester-Angel</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - <#e9d5ff>✦ Fische beißen sofort an
+    - <#e9d5ff>✦ Jeder Fang doppelt
+    - <gray>+50% Fischer-XP
+  newyear_sword:
+    name: <gradient:#fde047:#ef4444><bold>Silvester-Schwert</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - <#e9d5ff>✦ Jeder Treffer trifft alles im Umkreis
+    - <gray>+50% Jäger-XP
+  newyear_trowel:
+    name: <gradient:#fde047:#f97316><bold>Silvester-Kelle</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - '<gray>In der Zweithand: doppelte Baumeister-XP'
+  job_elixir:
+    name: <gradient:#fde047:#a855f7><bold>Berufs-Elixier</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - '<gray>Trinken: 1 Stunde doppelte XP'
+    - <gray>in allen Berufen
+  lucky_rocket:
+    name: <gradient:#ef4444:#fde047><bold>Glücksrakete</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - '<gray>Rechtsklick: Feuerwerk + 300–2000 Coins'
+    - <gray>(mit Glück Gems)
+  fortune_charm:
+    name: <gradient:#fde047:#22d3ee><bold>Neujahrs-Talisman</bold></gradient>
+    lore:
+    - <dark_gray>Silvester-Kollektion
+    - '<gray>In der Zweithand: +25% XP in allen Berufen'
+
+crates:
+  carousel:
+    header: <gold><bold>🎠 Kisten-Karussell</bold> <gray>(alle {minutes} Min. wechselt ein Sockel)
+    fixed-line: <dark_gray>▪ <white>{crate} <dark_gray>– fest
+    slot-line: <dark_gray>▪ {crate} <dark_gray>→ <white>{next} <gray>in <yellow>{time}
+    event-line: '<dark_gray>▪ <light_purple>Event-Sockel: {event}'
+    later: '<gray>Danach: {crates}'
+    empty: <dark_gray>leer
+    sign: '<gray>⟳ <yellow>{time}
+    
+      <gray>dann: {next}'
+    new: '<gold>🎠 Neu im Kisten-Karussell: {crate}'
+    comes-back: <gray>🎠 Die {crate} <gray>steht gerade nicht am Spawn – sie kommt in ca. <white>{minutes} Min.</white> wieder. <dark_gray>(/kisten)
+    event-only: <gray>🎠 Die {crate} <gray>steht nur während ihres Events am Spawn.
+    info: '<gold><bold>🎠 Kisten-Karussell</bold>
+  
+      <gray>Jetzt am Spawn: {crates}
+  
+      <gray>Nächster Wechsel in <white>{seconds}s</white> <dark_gray>| <gray>Event-Kiste: {event}'
+    next: '<gray>Als Nächstes kommt: {crate}'
+    no-event: <dark_gray>keine (kein Event)
+  need-key: "<red>Du brauchst einen {key} <red>in der Hand!"
+  won: "<gray>Gewonnen: {reward} <dark_gray>({crate}<dark_gray>)"
+  broadcast: "<gold>✦ <white>{player}</white> <gray>hat {reward} <gray>aus einer {crate} <gray>gezogen!"
+  bulk-opened: "<green>{amount}× {crate} <green>auf einmal geöffnet!"
+  key-given: "<green>{player} hat {amount}× {key} <green>erhalten."
+  key-received: "<gold>✦ Du hast {amount}× {key} <gold>erhalten!"
+  keyall: "<gradient:#c084fc:#f59e0b><bold>KEY ALL!</bold></gradient> <gray>Alle bekommen <white>{amount}×</white> {key} <dark_gray>(von {player})"
+  placed: "<green>{crate} <green>platziert <gray>(ID {id}, {location})"
+  removed: "<green>Kiste {id} entfernt."
+  none-near: "<red>Keine Kiste in deiner Nähe (4 Blöcke)."
+  look-at-block: "<red>Schau auf einen Block, auf dem die Kiste stehen soll."
+  no-space: "<red>Über dem Block ist kein Platz."
+  occupied: "<red>Dort steht bereits eine Kiste."
+  unknown: "<red>Kiste <white>{crate}</white> gibt es nicht. Verfügbar: {crates}"
+  list-header: "<gray>Platzierte Kisten: <white>{count}"
+  list-line: "<dark_gray> • <white>{id}</white> {crate} <gray>{location}"
+  types-header: "<gray>Kisten-Typen:"
+  types-line: "<dark_gray> • <white>{id}</white> {crate} <gray>({rewards} Belohnungen)"
+  admin-info: "<gray>Kiste <white>{id}</white> (Typ {type}) – entfernen mit /mythos crate remove"
+  preview-title: "{crate} <dark_gray>– Inhalt"
+  preview-rarity: "<gray>Seltenheit: {rarity}"
+  preview-chance: "<gray>Chance: <white>{chance}%"
+  rarity:
+    common: "<gray>Gewöhnlich"
+    rare: "<aqua>Selten"
+    epic: "<light_purple>Episch"
+    legendary: "<gold>Legendär"
+    mythic: "<gradient:#c084fc:#f43f5e>Mythisch</gradient>"
+  type-missing: <red>Diese Kiste ({crate}) gibt es in der crates.yml nicht mehr – ein Admin muss sie ersetzen.
+  need-key-buy: <red>Du brauchst einen {key} <red>in der Hand! <gray>Kaufen kannst du ihn im <click:run_command:/shop><hover:show_text:'<green>Shop öffnen'><#e9d5ff><u>/shop</u></hover></click><gray>.
+  need-key-wheel: <red>Du brauchst einen {key}<red>! <gray>Den gibt es nicht zu kaufen – nur als <gold>Hauptgewinn am Glücksrad</gold> am Spawn.
+
+events:
+  units:
+    coins: "Coins"
+    points: "Punkte"
+    relics: "Relikte"
+    damage: "Damage"
+    kills: Kills
+    hits: Treffer
+    treasures: Truhen
+  enabled: "<green>aktiv"
+  disabled: "<red>deaktiviert"
+  announce: "<gold>⚡ {event} <gray>beginnt in <white>{seconds} Sekunden</white>!"
+  countdown: "{event} <gray>beginnt in <white>{seconds}s</white>!"
+  countdown-subtitle: "<gray>beginnt in <white>{seconds}"
+  started: "{event} <gray>hat begonnen! <dark_gray>(Dauer: {duration})"
+  start-failed: "<red>{event} konnte nicht gestartet werden."
+  stopped: "{event} <gray>wurde beendet."
+  results-header: "<gold>★ {event} <gold>beendet – Rangliste:"
+  results-empty: "{event} <gray>ist vorbei – diesmal hat niemand gepunktet."
+  results-line: "<gold>  {place}.</gold> <white>{player}</white> <dark_gray>–</dark_gray> <#e9d5ff>{score} {unit}</#e9d5ff> <dark_gray>–</dark_gray> {reward}"
+  your-place: "<gray>Dein Ergebnis: Platz <white>{place}</white> mit <white>{score} {unit}</white> – Belohnung: {reward}"
+  no-reward: "<dark_gray>-"
+  bossbar-starting: "{event} <white>beginnt in {seconds}s"
+  bossbar-running: "{event} <dark_gray>|</dark_gray> <white>{time}</white> <dark_gray>|</dark_gray> <gray>Führung: <white>{leader}"
+  no-leader: "-"
+  status-none: "<gray>keins"
+  status-starting: "{event} <yellow>{time}"
+  status-running: "{event} <white>{time}"
+  none: "<gray>Gerade läuft kein Event."
+  none-next: "<gray>Gerade läuft kein Event. Nächstes automatisches Event in ca. <white>{time}</white>."
+  info-header: "{event} <dark_gray>|</dark_gray> {status}"
+  info-you: "<gray>Du: <white>{score} {unit}</white> <dark_gray>(Platz {place})"
+  info-top: "<gray>  #{place} <white>{player}</white> <dark_gray>–</dark_gray> {score} {unit}"
+  list-header: "<gray>Events:"
+  list-line: "<dark_gray> • <white>{id}</white> {event} <dark_gray>–</dark_gray> {state} <dark_gray>(Cooldown: {cooldown})"
+  unknown: "<red>Unbekanntes Event. Verfügbar: <white>{events}"
+  already-running: "<red>Es läuft bereits ein Event. <gray>/mythos event stop"
+  not-running: "<red>Es läuft kein Event."
+  cannot-start: "<red>Event kann nicht starten: {reason}"
+  admin-started: "<green>{event} <green>gestartet."
+  admin-stopped: "<yellow>Event gestoppt."
+  boss-spawned: "<green>Ancient Warden wird beschworen…"
+  reloaded: "<green>Event-Konfiguration neu geladen."
+  coinrain:
+    name: "<gradient:#f59e0b:#fde68a><bold>CoinRain</bold></gradient>"
+    subtitle: "<gold>Sammle die fallenden Münzen!"
+    pickup: "<gold>+{coins} Coins <dark_gray>|</dark_gray> <gray>gesamt <white>{total}"
+  gemrush:
+    name: "<gradient:#a855f7:#f0abfc><bold>GemRush</bold></gradient>"
+    subtitle: "<light_purple>Baue Erze ab und jage Mobs!"
+    points: "<light_purple>+{points} Punkte <dark_gray>|</dark_gray> <gray>gesamt <white>{total}"
+    shard: "<light_purple>✦ Gem-Splitter gefunden! +{gems} Gem"
+    converted: "<gray>Deine {points} Rush-Punkte wurden in <light_purple>{gems} Gems</light_purple> umgewandelt."
+  ancienthunt:
+    name: "<gradient:#7c3aed:#22d3ee><bold>AncientHunt</bold></gradient>"
+    subtitle: "<aqua>Finde die uralten Relikte! Folge den Lichtsäulen."
+    hint: "<gray>Relikt in der Nähe: {distance} <dark_gray>({left} übrig)"
+    found: "<dark_purple>✦ <white>{player}</white> <gray>hat ein Relikt gefunden! <white>{left}/{total}</white> übrig."
+    reward: "<gold>+{coins} Coins <gray>für das Relikt!"
+    bossbar: "{event} <dark_gray>|</dark_gray> <gray>Gefunden <white>{found}/{total}</white> <dark_gray>|</dark_gray> <white>{time}"
+  meteor:
+    name: "<gradient:#ff4d1a:#f59e0b><bold>Meteorschauer</bold></gradient>"
+    subtitle: "<gold>Schaut in den Himmel!"
+    warning: "<red>☄ Ein Meteor schlägt in <white>{seconds}s</white> bei <white>X {x} Z {z}</white> <dark_gray>({world})</dark_gray> ein!"
+    impact: "<gold>☄ Ein Meteor ist bei <white>X {x} Z {z}</white> eingeschlagen! Holt euch den Kern!"
+    impact-title: "<red><bold>☄ EINSCHLAG!"
+    impact-subtitle: "<gold>Sichere dir den Meteorkern"
+    core-label: "<gold><bold>☄ Meteorkern</bold></gold>\n<gray>Rechtsklick – noch <white>{left}</white> Belohnungen"
+    claimed-first: "<gold>Erster am Kern!</gold> <gray>Belohnung:{rewards}"
+    claimed: "<gray>Meteorkern geplündert:{rewards}"
+    already-claimed: "<red>Diesen Kern hast du schon geplündert."
+    rare: "<gold>✦ <white>{player}</white> <gray>fand im Meteorkern: {reward}<gray>!"
+    core-expired: "<gray>Ein Meteorkern ist erloschen."
+    bossbar: "{event} <dark_gray>|</dark_gray> <gray>Meteore <white>{launched}/{total}</white> <dark_gray>|</dark_gray> <white>{time}"
+  ancientwarden:
+    name: "<gradient:#0e7c86:#3fe0d0><bold>Ancient Warden</bold></gradient>"
+    subtitle: "<aqua>Ein uralter Wächter erwacht …"
+    boss-name: "<gradient:#0e7c86:#3fe0d0><bold>Ancient Warden</bold></gradient>"
+    minion-name: "<dark_aqua>Echo"
+    spawned: "<dark_aqua>☠ Ein <gradient:#0e7c86:#3fe0d0><bold>Ancient Warden</bold></gradient> <dark_aqua>ist bei <white>{x}, {y}, {z}</white> <dark_gray>({world})</dark_gray> erschienen!"
+    enraged: "<red><bold>Der Ancient Warden ist wütend!</bold></red> <gray>Seine Angriffe werden schneller."
+    summon: "<dark_aqua>Der Ancient Warden ruft seine Echos!"
+    darkness: "<dark_aqua>Dunkelheit umhüllt dich …"
+    damage-dealt: "<aqua>-{damage} <gray>❤ <dark_gray>|</dark_gray> <gray>dein Schaden: <white>{total}"
+    bossbar: "<gradient:#0e7c86:#3fe0d0><bold>Ancient Warden</bold></gradient> <white>{health}</white><gray>/{max} ❤"
+    bossbar-enraged: "<red><bold>Ancient Warden (WÜTEND)</bold></red> <white>{health}</white><gray>/{max} ❤"
+    bossbar-searching: "{event} <gray>– der Boden bebt …"
+    defeated: "<gradient:#0e7c86:#3fe0d0><bold>Ancient Warden besiegt!</bold></gradient>"
+    escaped: "<gray>Der Ancient Warden ist in die Tiefe zurückgekehrt – keine Belohnungen."
+    vanished: "<gray>Der Ancient Warden ist verschwunden."
+    blade-drop: "<gradient:#0e7c86:#3fe0d0><bold>✦ {player} erhält die Klinge des Wächters! ✦</bold></gradient>"
+  boss-searching: '{event} <gray>– der Boss erscheint …'
+  boss-bar: '{event} <dark_gray>|</dark_gray> <red>❤ {health}</red><gray>/{max}'
+  collect:
+    pickup: <gold>+{points} Punkte <gray>(+{coins} Coins) <dark_gray>|</dark_gray> <white>{total}
+    rare: <gold>✦ Seltener Fund bei {event}<gold>! <white>{reward}
+  kill:
+    point: <red>☠ +{points} <dark_gray>|</dark_gray> <white>{total} Kills
+  fishing:
+    name: <gradient:#22d3ee:#1d4ed8><bold>Angelwettbewerb</bold></gradient>
+    catch: <aqua>🎣 +{points} <dark_gray>|</dark_gray> <white>{total} Punkte
+    goldfish: <gold>🐟 GOLDFISCH! <white>+{coins} Coins</white> und 5 Bonuspunkte!
+    subtitle: <aqua>Wirf die Angel aus – der größte Fang gewinnt!
+  harvest:
+    name: <gradient:#facc15:#16a34a><bold>Erntefest</bold></gradient>
+    point: <green>🌾 +{points} <dark_gray>|</dark_gray> <white>{total} Punkte
+    subtitle: <yellow>Ernte so viel du kannst!
+  snowballfight:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Schneeballschlacht</bold></gradient>
+    item: <aqua><bold>Event-Schneeball</bold>
+    hit: '<aqua>❄ Treffer: {player} <dark_gray>|</dark_gray> <white>{total}'
+    subtitle: <aqua>Schneeballschlacht – triff so viele wie möglich!
+  pumpkinhunt:
+    name: <gradient:#ff7a1a:#7c2d12><bold>Kürbisjagd</bold></gradient>
+    subtitle: <gold>Finde die versteckten Kürbisse!
+  ghostnight:
+    name: <gradient:#7c3aed:#22d3ee><bold>Geisternacht</bold></gradient>
+    mob-name: <dark_purple>Geist
+    subtitle: <dark_purple>Die Geister sind los – jage sie!
+  pumpkinking:
+    name: <gradient:#ff7a1a:#facc15><bold>Kürbiskönig</bold></gradient>
+    boss-name: <gold><bold>☠ Kürbiskönig ☠
+    spawned: <gold>🎃 Der Kürbiskönig ist erwacht bei <white>{x} {y} {z}</white> ({world})! <gray>Besiegt ihn gemeinsam!
+    defeated: <gold>🎃 Der Kürbiskönig wurde besiegt!
+    escaped: <gray>🎃 Der Kürbiskönig ist entkommen … bis nächstes Jahr!
+    subtitle: <gold>Der Kürbiskönig ist erwacht – besiegt ihn gemeinsam!
+  giftrain:
+    name: <gradient:#ef4444:#22c55e><bold>Geschenkeregen</bold></gradient>
+    subtitle: <red>Geschenke fallen vom Himmel – sammle sie ein!
+  frostgiant:
+    name: <gradient:#e0f2fe:#1e3a8a><bold>Frostriese</bold></gradient>
+    boss-name: <aqua><bold>❄ Frostriese ❄
+    spawned: <aqua>❄ Der Frostriese stapft heran bei <white>{x} {y} {z}</white> ({world})!
+    defeated: <aqua>❄ Der Frostriese ist geschmolzen!
+    escaped: <gray>❄ Der Frostriese ist im Schneesturm verschwunden …
+    subtitle: <aqua>Der Frostriese greift an – haltet zusammen!
+  starfall:
+    name: <gradient:#7c3aed:#22d3ee><bold>Sternschnuppen</bold></gradient>
+    subtitle: <light_purple>Sterne fallen herab – fang sie auf!
+  egghunt:
+    name: <gradient:#f9a8d4:#a5f3fc><bold>Ostereiersuche</bold></gradient>
+    subtitle: <green>Such die bunten Ostereier!
+  mobhunt:
+    name: <gradient:#dc2626:#7f1d1d><bold>Monsterjagd</bold></gradient>
+    subtitle: <red>Jage so viele Monster wie möglich!
+  goldrush:
+    name: <gradient:#fde047:#b45309><bold>Goldrausch</bold></gradient>
+    subtitle: <gold>Sammle das fallende Gold!
+  keyrain:
+    name: <gradient:#a78bfa:#22d3ee><bold>Schlüsselregen</bold></gradient>
+    subtitle: <aqua>Schnapp dir die Schlüssel!
+  chickenhunt:
+    name: <gradient:#fef3c7:#f97316><bold>Hühnerjagd</bold></gradient>
+    subtitle: <yellow>Fang die Event-Hühner!
+    mob-name: <gold>Goldhuhn
+  lumberjack:
+    name: <gradient:#a16207:#4ade80><bold>Holzfäller-Wettbewerb</bold></gradient>
+    subtitle: <green>Fälle so viele Bäume wie möglich!
+    point: <green>+{points} <gray>(gesamt {total})
+  parkourrace:
+    name: <gradient:#34d399:#fde047><bold>Parkour-Rennen</bold></gradient>
+    subtitle: <green>Am Spawn – wer ist am schnellsten?
+    hint: '<green>Parkour-Rennen: <gray>Geh zum Parkour am Spawn (<white>/spawn<gray>)!'
+    scored: <green>+{points} Punkte <gray>({time}) – gesamt {total}
+
+  diamondrain:
+    name: <gradient:#67e8f9:#2563eb><bold>Diamantregen</bold></gradient>
+    subtitle: <aqua>Diamanten fallen über dem Spawn – schnapp sie dir!
+  crystalhunt:
+    name: <gradient:#c084fc:#7c3aed><bold>Kristallsuche</bold></gradient>
+    subtitle: <light_purple>Am Spawn liegen Kristalle verstreut – sammle sie!
+  mushroomhunt:
+    name: <gradient:#dc2626:#a16207><bold>Pilzsammler</bold></gradient>
+    subtitle: <red>Überall um dich sprießen Pilze – sammle sie!
+  featherfall:
+    name: <gradient:#f8fafc:#94a3b8><bold>Federregen</bold></gradient>
+    subtitle: <white>Federn schweben über dem Spawn – fang sie!
+  luckrain:
+    name: <gradient:#fde047:#f97316><bold>Glücksregen</bold></gradient>
+    subtitle: <yellow>Glücksbringer regnen vom Himmel – frohes neues Jahr!
+  petalrain:
+    name: <gradient:#f9a8d4:#86efac><bold>Blütenregen</bold></gradient>
+    subtitle: <light_purple>Blüten wirbeln über den Spawn – sammle sie!
+  heartrain:
+    name: <gradient:#f472b6:#dc2626><bold>Herzregen</bold></gradient>
+    subtitle: <light_purple>Herzen fallen vom Himmel – sammle so viele wie möglich!
+  shellhunt:
+    name: <gradient:#38bdf8:#fde047><bold>Muschelsuche</bold></gradient>
+    subtitle: <aqua>Muscheln liegen um dich herum – sammle sie!
+  slimeplague:
+    name: <gradient:#86efac:#16a34a><bold>Schleimplage</bold></gradient>
+    subtitle: <green>Leuchtende Schleime tauchen auf – erledige sie!
+    mob-name: <gold>Glibber
+  spidernight:
+    name: <gradient:#7f1d1d:#a3a3a3><bold>Spinnennacht</bold></gradient>
+    subtitle: <red>Leuchtende Spinnen krabbeln heran!
+    mob-name: <gold>Event-Spinne
+  pigchase:
+    name: <gradient:#f9a8d4:#fde047><bold>Schweinejagd</bold></gradient>
+    subtitle: <light_purple>Fang die leuchtenden Glücksschweine!
+    mob-name: <gold>Glücksschwein
+  spiderqueen:
+    name: <gradient:#86efac:#14532d><bold>Spinnenkönigin</bold></gradient>
+    boss-name: <gold><bold>🕷 Spinnenkönigin 🕷
+    spawned: <gold>🕷 Die Spinnenkönigin ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>🕷 Die Spinnenkönigin wurde besiegt!
+    escaped: <gray>🕷 Die Spinnenkönigin ist entkommen …
+    subtitle: <gold>Die Spinnenkönigin greift an – besiegt den Boss gemeinsam!
+  boneking:
+    name: <gradient:#e5e7eb:#1f2937><bold>Knochenkönig</bold></gradient>
+    boss-name: <gold><bold>☠ Knochenkönig ☠
+    spawned: <gold>☠ Der Knochenkönig ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>☠ Der Knochenkönig wurde besiegt!
+    escaped: <gray>☠ Der Knochenkönig ist entkommen …
+    subtitle: <gold>Der Knochenkönig greift an – besiegt den Boss gemeinsam!
+  magmalord:
+    name: <gradient:#f97316:#7f1d1d><bold>Magmafürst</bold></gradient>
+    boss-name: <gold><bold>🔥 Magmafürst 🔥
+    spawned: <gold>🔥 Der Magmafürst ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>🔥 Der Magmafürst wurde besiegt!
+    escaped: <gray>🔥 Der Magmafürst ist entkommen …
+    subtitle: <gold>Der Magmafürst greift an – besiegt den Boss gemeinsam!
+  swampwitch:
+    name: <gradient:#a855f7:#15803d><bold>Sumpfhexe</bold></gradient>
+    boss-name: <gold><bold>🧪 Sumpfhexe 🧪
+    spawned: <gold>🧪 Die Sumpfhexe ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>🧪 Die Sumpfhexe wurde besiegt!
+    escaped: <gray>🧪 Die Sumpfhexe ist entkommen …
+    subtitle: <gold>Die Sumpfhexe greift an – besiegt den Boss gemeinsam!
+  stormknight:
+    name: <gradient:#38bdf8:#1e3a8a><bold>Sturmritter</bold></gradient>
+    boss-name: <gold><bold>⚡ Sturmritter ⚡
+    spawned: <gold>⚡ Der Sturmritter ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>⚡ Der Sturmritter wurde besiegt!
+    escaped: <gray>⚡ Der Sturmritter ist entkommen …
+    subtitle: <gold>Der Sturmritter greift an – besiegt den Boss gemeinsam!
+  killerbunny:
+    name: <gradient:#f9a8d4:#dc2626><bold>Killerhase</bold></gradient>
+    boss-name: <gold><bold>🐰 Killerhase 🐰
+    spawned: <gold>🐰 Der Killerhase ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>🐰 Der Killerhase wurde besiegt!
+    escaped: <gray>🐰 Der Killerhase ist entkommen …
+    subtitle: <gold>Der Killerhase greift an – besiegt den Boss gemeinsam!
+  mythostitan:
+    name: <gradient:#c084fc:#f59e0b><bold>Mythos-Titan</bold></gradient>
+    boss-name: <gold><bold>👑 Mythos-Titan 👑
+    spawned: <gold>👑 Der Mythos-Titan ist erschienen bei <white>{x} {y} {z}</white>! <gray>Kommt alle – <yellow>/event tp
+    defeated: <gold>👑 Der Mythos-Titan wurde besiegt!
+    escaped: <gray>👑 Der Mythos-Titan ist entkommen …
+    subtitle: <gold>Der Mythos-Titan greift an – besiegt den Boss gemeinsam!
+  treasurehunt:
+    name: <gradient:#fde047:#b45309><bold>Schatzsuche</bold></gradient>
+    subtitle: <gold>Den ganzen Tag tauchen Schatztruhen in der Wildnis auf!
+    hidden: <gold>💰 Eine Schatztruhe ist aufgetaucht – irgendwo bei <white>{x} {z}</white> <gray>({world}, ±50 Blöcke). Folge der Lichtsäule!
+    found: '<gold>💰 <white>{player}</white> hat eine Schatztruhe gefunden: <white>{reward}'
+  venue:
+    spawn: <yellow>📍 {event} <gray>findet am <white>Spawn</white> statt. <click:run_command:/event tp><hover:show_text:'<green>Hinbeamen'><green><u>[Hinbeamen]</u></hover></click>
+    arena: <yellow>📍 {event} <gray>findet in der <white>Himmels-Arena</white> statt. <click:run_command:/event tp><hover:show_text:'<green>Hinbeamen'><green><u>[Hinbeamen]</u></hover></click> <dark_gray>(oder Knopf „Zum Event“ am Spawn)
+    wild: <yellow>📍 {event} <gray>findet in der Wildnis bei <white>{x} {z}</white> statt. <click:run_command:/event tp><hover:show_text:'<green>Hinbeamen'><green><u>[Hinbeamen]</u></hover></click>
+    player: <yellow>📍 {event} <gray>findet überall statt – mach einfach mit, wo du bist!
+  tp-everywhere: <gray>{event} <gray>läuft überall – mach einfach dort mit, wo du gerade bist!
+  tp-in-arena: <red>Verlass zuerst die Arena.
+  tp-hint: <click:run_command:/event tp><green><u>[Zum Event beamen]</u></click>
+upgrades:
+  help: '<gold><bold>⚒ Schmied</bold> <gray>– nimm eine Waffe, Rüstung oder ein Werkzeug in die Hand und tippe <yellow>/schmied</yellow>.
+
+    <gray>Jede Stufe macht es stärker (+1 bis +10). Ab +7 kann es schiefgehen – das Item bleibt aber.'
+  info: '<gold><bold>⚒ Schmied</bold> <gray>– {item} <white>+{level}</white> → <yellow>+{next}
+
+    <gray>Kosten: <gold>{coins} Coins</gold>, <light_purple>{gems} Gems</light_purple>, <white>{amount}× {material}
+
+    <gray>Erfolgschance: <white>{chance}%
+
+    <click:run_command:/schmied ok><hover:show_text:''<green>Jetzt verbessern''><green><bold>[VERBESSERN]</bold></hover></click>'
+  done: <green>⚒ Geschafft! Dein Item ist jetzt <gold><bold>+{level}</bold></gold>!
+  failed: <red>⚒ Das Schmieden ist misslungen … <gray>Dein Item ist unverändert, das Material ist weg.
+  nothing-in-hand: <red>Nimm zuerst ein Item in die Hand.
+  not-upgradable: <red>Nur Waffen, Bögen, Rüstung und Werkzeuge (einzeln) kann man verbessern.
+  max-level: <gold>Dieses Item ist schon auf der höchsten Stufe!
+  not-enough-coins: <red>Dafür hast du nicht genug Coins.
+  not-enough-gems: <red>Dafür hast du nicht genug Gems.
+  not-enough-material: <red>Dir fehlt noch Material (siehe /schmied).
+  disabled: <red>Der Schmied ist ausgeschaltet.
+  broadcast: <gold>⚒ <white>{player}</white> <gray>hat <white>{item}</white> <gray>auf <gold><bold>+{level}</bold></gold> <gray>geschmiedet!
+  bonus-damage: Schaden
+  bonus-armor: Schaden erlitten
+  bonus-tool: schneller abbauen
+boosters:
+  started: <gold>⚡ {booster} <gold>aktiv für <white>{minutes} Min.</white>!
+  ended: <gray>⚡ {booster} <gray>ist abgelaufen.
+  names:
+    coins: <gold>Coin-Booster
+    gems: <light_purple>Gem-Booster
+    xp: <green>Job-XP-Booster
+    find: <aqua>Fund-Booster
+  mutation-names:
+    giant: '<green>Mutation: Riese'
+    dwarf: '<green>Mutation: Zwerg'
+    cat: '<green>Mutation: Katze'
+    midas: '<green>Mutation: Midas'
+    lucky: '<green>Mutation: Glückspilz'
+    feather: '<green>Mutation: Feder'
+  mutation:
+    giant: '<green>🧬 Mutation: <white>Riese</white>! <gray>Größer, +3 Herzen, mehr Reichweite – {minutes} Min.'
+    dwarf: '<green>🧬 Mutation: <white>Zwerg</white>! <gray>Klein und flink – {minutes} Min.'
+    cat: '<green>🧬 Mutation: <white>Katze</white>! <gray>Nachtsicht, höher springen, kein Fallschaden – {minutes} Min.'
+    midas: '<green>🧬 Mutation: <white>Midas</white>! <gray>+50 % Coins – {minutes} Min.'
+    lucky: '<green>🧬 Mutation: <white>Glückspilz</white>! <gray>Doppelte Gem-Funde – {minutes} Min.'
+    feather: '<green>🧬 Mutation: <white>Feder</white>! <gray>Halbe Schwerkraft, kein Fallschaden – {minutes} Min.'
+  mutation-ended: <gray>🧬 Deine Mutation ist vorbei.
+  meteor-start: <red>☄ Meteoritenschauer! <gray>{meteors} Meteoriten schlagen um dich ein – ihre Schätze gehören zuerst dir.
+  meteor-gems: <light_purple>☄ +{gems} Gems aus dem Meteoriten!
+  meteor-not-here: <red>Hier nicht – geh dafür raus in die Welt.
+  info-header: <gold><bold>⚡ Deine Booster</bold>
+  info-line: <dark_gray>• {booster} <gray>noch <white>{minutes} Min.
+  info-none: <gray>Keine aktiv. Booster gibt es im /shop (Seite 3) und in Kisten.
+magic:
+  swap-not-at-spawn: '<red>✦ Am Spawn kannst du nicht die Plätze tauschen.'
+  swapped-by: '<light_purple>✦ {player} hat mit dir die Plätze getauscht!'
+  unknown-spell: '<red>Unbekannter Zauber. Möglich: <white>{spells}</white> oder <white>alle'
+  admin-learned: '<green>✦ {player} kennt jetzt {count} Zauber mehr.'
+  admin-forgot: '<gray>✦ {player} hat {count} Zauber vergessen (Start-Zauber bleiben).'
+  bar: <#a855f7>✦ {bar} <white>{mana}<gray>/{max} <dark_gray>| {spell} <gray>({cost})
+  no-mana: <#a855f7>✦ Zu wenig Mana <gray>({cost} nötig)
+  not-here: <red>In Arenen und Turnieren wirkt keine Magie.
+  no-monster: <gray>Kein Monster in der Nähe.
+  learned: '<light_purple>✦ Neuer Zauber gelernt: {spell} <dark_gray>– <gray>{desc}'
+  know-all: <light_purple>Du kennst schon alle Zauber!
+  help: '<gradient:#c084fc:#f59e0b><bold>✦ Mythos-Magie</bold></gradient>
+
+    <gray>Mit dem <white>Mythos-Zauberstab</white>: Rechtsklick = Zauber, Schleichen + Rechtsklick = nächster Zauber.
+
+    <gray>Mana lädt sich von selbst auf (Mana-Elixier füllt nach). Neue Zauber lernst du mit <white>Zauberrollen</white>.
+
+    <gray>Zauber: Sternensprung, Arkanpfeil, Frostring, Heilquelle, Federschwebe, Mythos-Schild, Kettenblitz.
+
+    <dark_gray>Magie trifft nur Monster – nie Spieler.'
+  spells:
+    star-jump:
+      id: sternensprung
+      name: <aqua>Sternensprung
+      desc: 'Teleportiert dich nach vorn – auf ein Wesen gezielt: Plätze tauschen.'
+    arcane-bolt:
+      id: arkanpfeil
+      name: <light_purple>Arkanpfeil
+      desc: Ein zielsuchendes Geschoss gegen Monster.
+    frost-ring:
+      id: frostring
+      name: <aqua>Frostring
+      desc: Monster um dich erstarren und nehmen Schaden.
+    healing-spring:
+      id: heilquelle
+      name: <green>Heilquelle
+      desc: Heilt dich und Freunde in der Nähe.
+    feather-lift:
+      id: federschwebe
+      name: <white>Federschwebe
+      desc: Hebt dich an und lässt dich sanft gleiten.
+    mythos-shield:
+      id: mythos-schild
+      name: <gold>Mythos-Schild
+      desc: Extra-Herzen und weniger Schaden.
+    chain-lightning:
+      id: kettenblitz
+      name: <yellow>Kettenblitz
+      desc: Ein Blitz springt von Monster zu Monster.
+rank-perks:
+  join: <gold>★ {rank} <white>{player}</white> <gray>ist online!
+  daily-keys: <gold>🎁 Deine täglichen {rank}<gold>-Schlüssel sind da!
+  fly-on: <light_purple>✦ Hier kannst du fliegen (doppelt springen).
+  fly-off: <gray>✦ Flug aus – du bist außerhalb des Flug-Bereichs.
+giveaway:
+  coins-not-enough: "<red>Du hast keine <white>{amount}</white> Coins für die Verlosung."
+  coins-returned: "<gray>Niemand hat mitgemacht – deine <gold>{amount} Coins</gold> sind zurück auf deinem Konto."
+  coins-min: "<red>Eine Coin-Verlosung braucht mindestens <white>100</white> Coins."
+  item-started: <gradient:#ef4444:#f43f5e><bold>🎁 CREATOR-VERLOSUNG!</bold></gradient> <white>{player}</white> <gray>verlost <white>{prize}</white> – <click:run_command:/verlosung><hover:show_text:'<green>Mitmachen'><green><bold>[MITMACHEN]</bold></hover></click> <gray>noch {minutes} Min.
+  item-empty: <red>Nimm das Item, das du verlosen willst, in die Hand.
+  item-fee: <red>Eine Item-Verlosung kostet <white>{fee} Coins</white>.
+  item-cooldown: <red>Deine nächste Item-Verlosung geht in {minutes} Min.
+  item-no-permission: <red>Item-Verlosungen können nur Creator starten.
+  item-returned: <gray>🎁 Du hast Items aus einer Verlosung zurückbekommen.
+  own: <gray>Bei deiner eigenen Verlosung kannst du nicht mitmachen.
+  started: '<gradient:#fde047:#f472b6><bold>🎁 VERLOSUNG!</bold></gradient> <gray>Preis: <white>{prize}</white> <gray>({winners} Gewinner) – <click:run_command:/verlosung><hover:show_text:''<green>Mitmachen''><green><bold>[MITMACHEN]</bold></hover></click> <gray>noch {minutes} Min.'
+  reminder: <gold>🎁 Verlosung von <white>{prize}</white> <gray>endet in {seconds}s – {entries} dabei. <click:run_command:/verlosung><green><bold>[MITMACHEN]</bold></click>
+  joined: <green>🎁 Du bist dabei! <gray>({entries} Teilnehmer, Ziehung in {seconds}s)
+  already-in: <gray>Du bist schon dabei ({entries} Teilnehmer).
+  none: <gray>Gerade läuft keine Verlosung.
+  winner: <gradient:#fde047:#f472b6><bold>🎉 {player}</bold></gradient> <gray>gewinnt <white>{prize}</white> <gray>({entries} Teilnehmer)!
+  nobody: <gray>🎁 Bei der Verlosung von {prize} <gray>hat niemand mitgemacht.
+  already: <red>Es läuft schon eine Verlosung.
+  bad-reward: '<red>Ungültige Belohnung: {error}'
+web:
+  login-sent: <green>✔ Code gesendet – die Website meldet dich in 1–2 Sekunden an.
+  relay-connected: '<green>✔ Website-Verbindung steht: <white>{url}'
+  relay-offline: <red>✖ Keine Verbindung zur Website ({url}). <gray>Stimmt PANEL_SECRET bei Netlify?
+  relay-secret: '<gray>Schlüssel für Netlify (PANEL_SECRET): <click:copy_to_clipboard:{secret}><hover:show_text:''<green>Kopieren''><yellow><u>{secret}</u></yellow></hover></click> <dark_gray>(klicken = kopieren, niemandem zeigen!)'
+  link: '<gradient:#22d3ee:#a855f7><bold>🌐 MythosCraft Panel</bold></gradient> <gray>– <click:open_url:{url}><u><aqua>{url}</aqua></u></click>
+
+    <gray>Dort auf <white>„Mit Server anmelden“</white> klicken und hier <yellow>/website login <Code></yellow> eingeben.'
+  login-ok: <green>✔ Du bist jetzt auf der Website angemeldet!
+  login-denied: <red>Du hast keinen Zugriff auf die Website. <gray>(Nur MinePro641 vergibt ihn.)
+  login-unknown: <red>Dieser Code ist unbekannt oder abgelaufen. <gray>Hol dir auf der Website einen neuen.
+  allowed: <green>✔ {player} darf die Website jetzt nutzen <gray>({role}).
+  denied: <gray>{player} hat keinen Website-Zugriff mehr.
+  not-allowed: <gray>{player} hatte keinen Website-Zugriff.
+  owner-only: <red>Nur MinePro641 kann den Website-Zugriff verwalten.
+abilities:
+  ghost-lantern: "<aqua>✦ {count} Gegner enthüllt"
+  candy: "<gold>Süßes! <white>{item}"
+  lucky: "<green>✦ Das Glück ist mit dir (30 Min.)"
+  gift: "<green>Geschenk ausgepackt: {reward}"
+  phoenix: "<gradient:#ff4d1a:#fde047><bold>Die Phönixfeder hat dich gerettet!</bold></gradient>"
+  harvest: <green>🌾 {count} Pflanzen geerntet
+  harvest-none: <gray>Hier ist nichts reif.
+  watered: <aqua>💧 {count} Pflanzen gegossen
+  planted: <green>🌱 {count} Samen gesät
+  seeds-none: <red>Du hast keine Samen (Weizen, Karotten, Kartoffeln, Rote Bete).
+  builder-invalid: <red>Mit diesem Block geht das nicht (nur volle Blöcke ohne Inhalt).
+  builder-no-blocks: <red>Du hast keine passenden Blöcke im Inventar.
+  builder-no-space: <red>Davor ist kein Platz.
+  builder-placed: <gold>⚒ {count} Blöcke gesetzt
+  coin-pouch: <gold>● +{amount} Coins
+  gem-pouch: <light_purple>◆ +{amount} Gems
+  fragments-needed: '<gray>Splitter: <white>{have}/{need}</white> – sammle weiter!'
+  fragment-key: '<gold>✦ {need} Splitter verschmolzen: {reward}'
+  fortunes:
+  - <yellow>🥠 „Heute findest du etwas Glänzendes.“
+  - <yellow>🥠 „Wer zuerst gräbt, findet zuerst Diamanten.“
+  - <yellow>🥠 „Ein Creeper schleicht hinter dir … nur Spaß.“
+  - <yellow>🥠 „Großes Glück wartet in einer Kiste.“
+  - <yellow>🥠 „Teile deine Ernte – sie kommt doppelt zurück.“
+  - <yellow>🥠 „Der Mythos-Rang ist näher, als du denkst.“
+  broom-help: <gray>🧹 <white>Flug!</white> W schneller · S bremsen · Leertaste steigen · Strg Turbo · Shift landen <dark_gray>|</dark_gray> <gold>Tricks:</gold> Linksklick, 2× Leertaste, Strg+Leertaste
+  broom-blocked: <red>Hier kannst du nicht aufsitzen.
+  broom-combat: <red>Im Kampf kannst du nicht fliegen.
+  broom-tired: <yellow>Dein Besen ist erschöpft – du landest.
+  broom-status: <light_purple>🧹 {speed} km/h <dark_gray>|</dark_gray> <white>{time}s</white> <dark_gray>|</dark_gray> <gold>{points} Trickpunkte
+  broom-trick: <gold>✦ {trick}! <white>+{points}</white> <gray>(Combo ×{combo}, gesamt {total})
+  broom-score: <gold>🧹 Flug beendet – <white>{points}</white> Trickpunkte!
+  broom-tricks:
+    roll: Fassrolle
+    loop: Looping
+    spin: Korkenzieher
+  net-protected: <red>Hier kannst du kein Tier freilassen.
+  net-broken: <red>Das Tier konnte nicht freigelassen werden.
+  net-full: <yellow>Im Fänger ist schon ein Tier – erst freilassen.
+  net-invalid: <red>Das kannst du nicht einfangen.
+  net-caught: '<green>Eingefangen: {entity}'
+  net-lore:
+  - '<gray>Enthält: <white>{entity}'
+  - '<yellow>Rechtsklick auf einen Block: freilassen'
+  treasure-searching: <gray>🗺 Die Karte zeichnet sich …
+  treasure-failed: <red>Die Karte bleibt leer – versuch es woanders.
+  treasure-hidden: <gold>🗺 Ein Schatz liegt bei <white>{x} {y} {z}</white> <gray>({distance} Blöcke). Dein Kompass zeigt dorthin!
+  easter-egg: '<light_purple>🥚 Im Osterei: {reward}'
+  blossom: <light_purple>🌸 {count} Blumen erblüht
+  golem-blocked: <red>Hier kannst du keinen Golem rufen.
+  golem-summoned: <gray>🛡 Dein Golem beschützt dich!
+  golem-name: <gray>Leibwächter von <white>{player}
+  light-placed: <yellow>💡 Licht gesetzt
+  light-removed: <gray>💡 Licht entfernt
+  shield: <aqua>🛡 Schildkristall aktiv (10s)
+  time-day: <yellow>☀ Für dich ist jetzt Tag
+  time-night: <blue>☾ Für dich ist jetzt Nacht
+  time-reset: <gray>⌛ Zeit wieder normal
+  weather-clear: <yellow>☀ Für dich scheint die Sonne
+  weather-rain: <aqua>☂ Für dich regnet es
+  weather-reset: <gray>Wetter wieder normal
+  ore-none: <gray>Kein wertvolles Erz im Umkreis von {radius} Blöcken.
+  ore-found: <aqua>⛏ {ore} <gray>in <white>{distance}</white> Blöcken – folge den Funken!
+  size-big: <red>🍄 Riesig für {seconds}s!
+  size-small: <aqua>🧪 Winzig für {seconds}s!
+  size-normal: <gray>Du hast wieder normale Größe.
+  crystal-marked: <light_purple>💎 Ort gemerkt
+  crystal-invalid: <red>Der Kristall kann dich gerade nicht zurückbringen.
+  crystal-target: <light_purple>gemerkten Ort
+  crystal-lore:
+  - '<gray>Gemerkt: <white>{location}'
+  - '<gray>Rechtsklick: zurückkehren'
+  - '<gray>Schleichen + Rechtsklick: neuen Ort merken'
+  sponge: <yellow>🧽 {count} Wasserblöcke entfernt
+  repair-none: <red>Nimm ein beschädigtes Item in die Zweithand.
+  repaired: <green>🔨 +{amount} Haltbarkeit
+  enchant-none: <red>Das Item in der Zweithand hat keine Verzauberung, die noch steigen kann.
+  enchanted: '<light_purple>✦ Verbessert: {enchantment}'
+  cloud-ground: <gray>Das geht nur in der Luft.
+  jar-empty: <gray>Das Seelenglas ist leer.
+  jar-stored: '<aqua>🫙 Gespeichert: <white>{xp}</white> Erfahrung'
+  jar-released: <green>🫙 <white>{xp}</white> Erfahrung zurückgeholt
+  jar-lore:
+  - '<gray>Gespeicherte Erfahrung: <white>{xp}'
+  - '<gray>Rechtsklick: mehr speichern'
+  - '<gray>Schleichen + Rechtsklick: zurückholen'
+  dice: <gold>🎲 Du würfelst eine <white>{side}</white>! <gray>{reward}
+  bean-soil: <red>Die Bohne wächst nur auf Erde, Gras oder Moos.
+  bean-space: <red>Hier ist nicht genug Platz nach oben.
+  tracker-none: <gray>Kein Spieler in der Nähe.
+  tracker-found: <yellow>🧭 {player} <gray>ist <white>{distance}</white> Blöcke entfernt – folge den Funken!
+  rainbow: <light_purple>🌈 Regenbogenkräfte!
+  mana: <aqua>✦ Alle Abklingzeiten zurückgesetzt!
+  net-water: <red>Ziele auf Wasser.
+  prism: <light_purple>✦ Prismaschild aktiv (10s)
+  star-map: '<gold>✦ Sternenkarte: <white>{x} {y} {z} <gray>| Biom: <white>{biome} <gray>| Spawn: <white>{spawn} Blöcke'
+  rocket-glide: <red>Der Raketenbooster funktioniert nur beim Gleiten (Elytra).
+  treasure-coins: <gold>✦ Im Schatz waren <white>{coins}</white> Coins!
+  chainsaw: <red>✦ BRRRRMM! Kettensäge läuft (6s)
+  ankh: <gold>✦ Das Anch hat dich vor dem Tod bewahrt!
+  job-elixir: '<gold>✦ Berufs-Elixier: 1 Stunde doppelte Berufs-XP!'
+  lucky-rocket: '<gold>🎆 Glücksrakete: <white>+{coins} Coins'
+  lucky-rocket-gems: '<light_purple>🎆 Glücksrakete: <white>+{gems} Gems!'
+
+armor:
+  bonus-active: "<gradient:#c084fc:#f59e0b>✦ Set-Bonus aktiv:</gradient> {set}"
+  sets:
+    mythos: "<light_purple>Mythos"
+    pumpkin: "<gold>Kürbiskönig"
+    frost: "<aqua>Frostwächter"
+    inferno: "<red>Inferno"
+    sculk: "<dark_aqua>Wächter"
+    dragon: <dark_purple>Drachen
+    storm: <aqua>Sturm
+    angel: <yellow>Engel
+    ninja: <dark_gray>Schatten
+    knight: <white>Ritter
+    miner: <yellow>Bergmann
+    viking: <red>Wikinger
+    ocean: <gradient:#22d3ee:#1e3a8a><bold>Ozean-Set</bold></gradient>
+    druid: <gradient:#4ade80:#14532d><bold>Druiden-Set</bold></gradient>
+    sky: <gradient:#e0f2fe:#38bdf8><bold>Himmels-Set</bold></gradient>
+    crystal: <gradient:#f0abfc:#7e22ce><bold>Kristall-Set</bold></gradient>
+    pharaoh: <gradient:#fbbf24:#1d4ed8><bold>Pharaonen-Set</bold></gradient>
+    astronaut: <gradient:#f8fafc:#64748b><bold>Astronauten-Set</bold></gradient>
+
+seasons:
+  silvester-ended: '<gray>🎆 Silvester-Modus beendet (normales Wetter und Tageszeit, kein Feuerwerk, keine Geschenke). <dark_gray>/season silvester-an'
+  silvester-resumed: '<gold>🎆 Silvester-Modus läuft wieder.'
+  silvester-gift: '<gold>🎆 Silvester-Geschenk: <light_purple>+{gems} Gems</light_purple>! <gray>Guten Rutsch!'
+  none: "<gray>keine"
+  active: "<gray>Aktuelle Saison: {season} <dark_gray>– Mobs droppen Saison-Items!"
+  key-drop: "<gold>✦ <white>{player}</white> <gray>hat einen {key} <gray>von einem Monster erbeutet!"
+  info: '<gray>Saison: {season} <dark_gray>(Modus: {mode})'
+  unknown: '<red>Saison {season} gibt es nicht. <gray>Vorhanden: {seasons}'
+  started: <gradient:#f59e0b:#a855f7><bold>✦ Die Saison beginnt:</bold></gradient> {season}
+  stopped: <gray>Saison beendet (bis du /season auto machst, läuft keine).
+  auto: <gray>Saisons laufen wieder nach Datum.
+  countdown: <gradient:#fde047:#f472b6><bold>{seconds}</bold></gradient>
+  new-year-title: <gradient:#fde047:#a855f7:#38bdf8><bold>Frohes neues Jahr {year}!</bold></gradient>
+  new-year-subtitle: <gray>Alles Gute vom MythosCraft-Team ✦
+  happy-new-year: <gradient:#fde047:#a855f7><bold>🎆 Frohes neues Jahr {year}!</bold></gradient> <gray>Feuerwerk für alle!
+  countdown-subtitle: <gray>bis zum neuen Jahr
+  test-show: '<yellow>Silvester-Test: Countdown und Feuerwerk starten jetzt für alle.'
+  banner: '{season}'
+
+tournament:
+  trophy: <gold>🏆 Dein Pokal für den Sieg ({tier}<gold>) liegt in deinem Inventar!
+  tiers:
+    daily: "<gradient:#cbd5e1:#94a3b8><bold>Tagesturnier</bold></gradient>"
+    weekly: "<gradient:#fde047:#f59e0b><bold>Wochenturnier</bold></gradient>"
+    monthly: "<gradient:#c084fc:#f59e0b><bold>Monatsturnier</bold></gradient>"
+  phases:
+    registration: "<yellow>Anmeldung"
+    starting: "<gold>Start"
+    running: "<red>Kampf"
+    ending: "<gray>Ende"
+  opened: "{tier} <gray>– Anmeldung offen! Kit: {kit} <dark_gray>|</dark_gray> <white>{slots}</white> <gray>Plätze <dark_gray>|</dark_gray> Start in <white>{time}</white> <dark_gray>|</dark_gray> Arena {arena}"
+  opened-test: "<yellow>[TEST]</yellow> {tier} <gray>– Testturnier mit Bots! Kit: {kit} <dark_gray>|</dark_gray> Start in <white>{time}</white>"
+  join-button: "<green><bold>[ JETZT BEITRETEN ]</bold></green> <gray>oder <white>/tournament join"
+  join-hover: "<green>Klicke, um am Turnier teilzunehmen"
+  joined: "<green>Du bist angemeldet für das {tier}! <gray>({count}/{slots}) – Start in <white>{time}"
+  already-joined: "<yellow>Du bist bereits angemeldet."
+  no-registration: "<red>Gerade ist keine Turnier-Anmeldung offen. <gray>/tournament info"
+  full: "<red>Das Turnier ist voll ({slots} Plätze) – die ersten {slots} sind dabei."
+  now-full: "{tier} <gray>ist voll! <white>{slots}/{slots}"
+  not-joined: "<red>Du bist für kein Turnier angemeldet."
+  left: "<gray>Du hast dich vom Turnier abgemeldet."
+  forfeit: "<gray>Du hast aufgegeben."
+  reminder: "{tier} <gray>startet in <white>{time}</white>! <dark_gray>({count}/{slots})</dark_gray> <white>/tournament join"
+  cancelled-players: "{tier} <gray>fällt aus – zu wenige Spieler (mindestens {min})."
+  cancelled-arena: "{tier} <gray>fällt aus – die Arena ist nicht verfügbar."
+  started: "{tier} <gray>beginnt mit <white>{count}</white> Kämpfern! Kit: {kit}"
+  get-ready: "<gray>Mach dich bereit …"
+  fight-title: "<red><bold>KÄMPFT!</bold>"
+  fight-subtitle: "<gray>Kit: {kit}"
+  eliminated: "<red>☠ <white>{player}</white> <gray>ist ausgeschieden. <dark_gray>({alive} übrig)"
+  eliminated-by: "<red>☠ <white>{player}</white> <gray>wurde von <red>{killer}</red> eliminiert. <dark_gray>({alive} übrig)"
+  your-place: "<gray>Turnier vorbei für dich: Platz <white>#{place}</white> mit <white>{kills}</white> Kills. Dein Inventar ist zurück!"
+  results-header: "<gold>★ {tier} <gold>beendet – Sieger:"
+  results-line: "<gold>  {place}.</gold> <white>{player}</white> <dark_gray>–</dark_gray> <#e9d5ff>{kills} Kills"
+  winner-title: "<gradient:#fde047:#f59e0b><bold>{player}</bold></gradient>"
+  winner-subtitle: "<gray>gewinnt das {tier}!"
+  test-finished: "<yellow>[TEST]</yellow> <gray>Testturnier beendet – keine Belohnungen vergeben."
+  stopped: "{tier} <gray>wurde vom Team abgebrochen."
+  bar-registration: "{tier} <dark_gray>|</dark_gray> <white>{count}/{slots}</white> <gray>angemeldet <dark_gray>|</dark_gray> <gray>Start <white>{time}"
+  bar-running: "{tier} <dark_gray>|</dark_gray> <red>{alive}</red> <gray>übrig <dark_gray>|</dark_gray> <white>{time}"
+  no-break: "<red>Nur selbst gesetzte Blöcke können abgebaut werden"
+  no-teleport: "<red>Während eines Turniers kannst du dich nicht teleportieren. <gray>/tournament leave"
+  command-blocked: "<red>Dieser Befehl ist im Turnier gesperrt."
+  arena-busy: "<red>Diese Arena wird gerade für ein Turnier genutzt."
+  info-none: "<gray>Gerade läuft kein Turnier. Nächste Turniere:"
+  info-next: "<dark_gray> • </dark_gray>{tier} <gray>{time} <dark_gray>({slots} Plätze, Arena {arena})"
+  info-active: "{tier} <dark_gray>|</dark_gray> {phase} <dark_gray>|</dark_gray> <white>{count}/{slots}</white> <dark_gray>|</dark_gray> Kit {kit} <dark_gray>|</dark_gray> <gray>Arena {arena} <dark_gray>|</dark_gray> <white>{time}"
+  admin-opened: "<green>Anmeldung für {tier} <green>geöffnet ({seconds}s)."
+  admin-test: "<green>Testturnier {tier} <green>startet in {seconds}s mit {bots} Bots. <gray>Mitkämpfen: /tournament join"
+  already-running: "<red>Es läuft bereits ein Turnier."
+  none-running: "<red>Es läuft kein Turnier."
+  no-kits: "<red>Es sind keine Turnier-Kits konfiguriert."
+  arena-problem: "<red>Turnier nicht möglich: {problem} <gray>– /mythos arena place <daily|weekly|monthly>"
+  arena-set: "<green>{tier} <green>nutzt jetzt Arena <white>{arena}</white>."
+  arena-set-warning: "<yellow>{tier} nutzt jetzt Arena {arena}, aber: {problem}"
+
+build:
+  arena-kept: <gray>Turnierarena <white>{tier}</white> steht schon – bleibt, wie sie ist.
+  busy: "<red>Es wird gerade schon etwas gebaut – bitte warten."
+  confirm-spawn: "<gold>⚠ Achtung:</gold> <gray>Der Spawn wird hier gebaut und räumt dafür einen Radius von <white>{radius}</white> Blöcken frei (Bäume, Bauten, Gelände über dem Boden). Bestätigen innerhalb von 30s: <white><click:run_command:{command}><u>{command}</u></click>"
+  confirm-arena: "<gold>⚠ Achtung:</gold> <gray>Die {tier}-Arena wird hier gebaut und räumt einen Radius von <white>{radius}</white> Blöcken frei. Bestätigen innerhalb von 30s: <white><click:run_command:{command}><u>{command}</u></click>"
+  started: "<gray>Baue … <white>{blocks}</white> Blöcke, das dauert ein paar Sekunden."
+  progress: "<gold>⚒ Bauen: <white>{status}"
+  spawn-done: "<green>✔ Spawn fertig! <gray>Spawnpunkt gesetzt, Schutzregion angepasst, <white>{crates}</white> Kisten aufgestellt, Hologramme erstellt. <dark_gray>({location})"
+  arena-snapshot: "<gray>Arena gebaut – Snapshot für das Zurücksetzen wird erstellt …"
+  arena-done: "<green>✔ Arena <white>{arena}</white> fertig! <gray>{spawns} Spawnpunkte, Snapshot gespeichert und als <white>{tier}</white>-Turnierarena gesetzt."
+  arena-done-no-snapshot: "<yellow>Arena {arena} fertig und als {tier}-Turnierarena gesetzt, aber der Snapshot schlug fehl: {error}"
+  removing-old: <yellow>Alter Bau bei {location} wird entfernt …
+  arena-auto: <gray>Baue Turnierarena <white>{tier}</white> weit weg in der Luft bei <white>{location}</white> …
+  arenas-auto-done: <green>Alle Turnierarenen stehen (mind. {distance} Blöcke vom Spawn, ganz oben am Himmel).
+
+gui:
+  previous: "<gray>« Vorherige Seite"
+  next: "<gray>Nächste Seite »"
+
+shop:
+  title: "<gradient:#c084fc:#22d3ee><bold>✦ Gem-Shop ✦</bold></gradient>"
+  disabled: "<red>Der Shop ist gerade geschlossen."
+  blocked-here: "<red>In Arenen und Turnieren kannst du nicht einkaufen."
+  season-only: "<red>Das gibt es nur während der Saison {season}<red>."
+  not-enough: "<red>Dafür brauchst du <white>{price}</white> {currency}<red> – du hast <white>{balance}</white>."
+  bought: "<green>✔ Gekauft: <white>{times}×</white> {item} <gray>für <white>{price}</white> {currency}<gray>. Rest: <white>{balance}"
+  balance: "<light_purple><bold>Dein Guthaben</bold>"
+  balance-lore:
+    - "<gold>● Coins: <white>{coins}"
+    - "<light_purple>✦ Gems: <white>{gems}"
+    - ""
+    - "<gray>Gems gibt's bei Events, Turnieren,"
+    - "<gray>in Kisten und als Tagesbelohnung."
+  to-auction: "<gold><bold>Auktionshaus</bold> <gray>(/ah)"
+  to-orders: "<green><bold>Farmaufträge</bold> <gray>(/auftrag)"
+  lore:
+    price: "<gray>Preis: <white>{price}</white> {currency}"
+    season-locked: "<red>✖ Nur während {season}"
+    season-active: "<green>✦ Saison-Angebot: {season}"
+    buy-one: "<yellow>Linksklick <dark_gray>»</dark_gray> <white>1× kaufen"
+    buy-many: "<yellow>Shift-Klick <dark_gray>»</dark_gray> <white>{times}× kaufen <gray>({price} {currency}<gray>)"
+  title-page: <gradient:#c084fc:#22d3ee><bold>✦ Gem-Shop ✦</bold></gradient> <dark_gray>({page}/{pages})
+  page-prev: <yellow>« Seite {page}
+  page-next: <yellow>Seite {page} »
+
+auction:
+  disabled: "<red>Das Auktionshaus ist gerade geschlossen."
+  loading: "<yellow>Das Auktionshaus lädt noch – versuch es gleich nochmal."
+  blocked-here: "<red>In Arenen und Turnieren ist das Auktionshaus gesperrt."
+  empty-hand: "<red>Nimm das Item, das du verkaufen willst, in die Hand."
+  item-blocked: "<red>Dieses Item darf nicht verkauft werden."
+  gems-disabled: "<red>Verkäufe für Gems sind ausgeschaltet."
+  price-range: "<red>Der Preis muss zwischen <white>{min}</white> und <white>{max}</white> liegen."
+  limit: "<red>Du hast schon <white>{max}</white> Angebote. Warte, bis etwas verkauft ist, oder nimm eins zurück (/ah meine)."
+  listed: "<green>✔ Angeboten: <white>{amount}×</white> {item} <gray>für <white>{price}</white> {currency}<gray>. Steuer beim Verkauf: {tax}%"
+  broadcast: "<gold>⚖ <white>{player}</white> <gray>verkauft <white>{amount}×</white> {item} <gray>für <white>{price}</white> {currency} <dark_gray>[<gold>/ah</gold>]"
+  broadcast-hover: "<gold>Klicke, um das Auktionshaus zu öffnen"
+  gone: "<red>Dieses Angebot gibt es nicht mehr."
+  own: "<yellow>Das ist dein eigenes Angebot. <gray>Zurücknehmen: /ah meine"
+  not-enough: "<red>Du brauchst <white>{price}</white> {currency}<red> – du hast <white>{balance}</white>."
+  bought: "<green>✔ Gekauft: <white>{amount}×</white> {item} <gray>von <white>{seller}</white> für <white>{price}</white> {currency}<gray>."
+  sold: "<gold>⚖ <white>{buyer}</white> <gray>hat <white>{amount}×</white> {item} <gray>gekauft. Du bekommst <green>+{payout}</green> {currency}<gray>."
+  cancelled: "<gray>Angebot zurückgenommen: {item}"
+  removed: "<gray>Angebot von <white>{player}</white> entfernt: {item}"
+  removed-by-team: "<yellow>Dein Angebot {item} <yellow>wurde vom Team entfernt. Abholen: <white>/ah abholen"
+  claimed: "<green>✔ Abgeholt: <white>{amount}×</white> {item}"
+  inventory-full: "<red>Dein Inventar ist voll – mach Platz und hol den Rest mit <white>/ah abholen</white>."
+  expired: "<yellow>⌛ Dein Angebot {item} <yellow>ist abgelaufen. Abholen: <white><click:run_command:/ah abholen><u>/ah abholen</u></click>"
+  pickup-reminder: "<gold>⚖ <gray>Im Auktionshaus warten <white>{count}</white> Items auf dich: <white><click:run_command:/ah abholen><u>/ah abholen</u></click>"
+  nothing-to-claim: "<gray>Es gibt nichts abzuholen."
+  search-hint: "<gray>Suchen: <white>/ah suche <Text></white> <dark_gray>(z.B. /ah suche diamant oder /ah suche Spielername)"
+  confirm-price: "<gray>Preis: <white>{price}</white> {currency}"
+  confirm-seller: "<gray>Verkäufer: <white>{seller}"
+  confirm-yes: "<green><bold>✔ Kaufen</bold>"
+  confirm-no: "<red><bold>✖ Abbrechen</bold>"
+  cancel-yes: "<yellow><bold>Angebot zurücknehmen</bold>"
+  help:
+    - "<gradient:#f59e0b:#fde047><bold>Auktionshaus</bold></gradient>"
+    - "<gray>/ah <dark_gray>–</dark_gray> alle Angebote ansehen und kaufen"
+    - "<gray>/ah sell <Preis> [coins|gems] <dark_gray>–</dark_gray> Item in der Hand verkaufen (z.B. /ah sell 2,5k)"
+    - "<gray>/ah meine <dark_gray>–</dark_gray> eigene Angebote (zurücknehmen)"
+    - "<gray>/ah abholen <dark_gray>–</dark_gray> abgelaufene Items zurückholen"
+    - "<gray>/ah suche <Text> <dark_gray>–</dark_gray> nach Item oder Verkäufer suchen"
+  title:
+    browse: "<gradient:#f59e0b:#fde047><bold>Auktionshaus</bold></gradient> <dark_gray>• Seite {page}"
+    mine: "<gold><bold>Meine Angebote</bold>"
+    pickup: "<gold><bold>Abholen</bold>"
+    confirm: "<dark_green><bold>Kauf bestätigen</bold>"
+    cancel: "<gold><bold>Angebot zurücknehmen?</bold>"
+  lore:
+    browse:
+      - ""
+      - "<gray>Verkäufer: <white>{seller}"
+      - "<gray>Preis: <gold>{price}</gold> {currency}"
+      - "<gray>Endet in: <white>{time}"
+      - ""
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>Kaufen"
+    own:
+      - ""
+      - "<gray>Preis: <gold>{price}</gold> {currency}"
+      - "<gray>Endet in: <white>{time}"
+      - "<aqua>Dein Angebot"
+    mine:
+      - ""
+      - "<gray>Preis: <gold>{price}</gold> {currency}"
+      - "<gray>Endet in: <white>{time}"
+      - ""
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>Zurücknehmen"
+    pickup:
+      - ""
+      - "<gray>{reason}"
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>Abholen"
+    admin: "<red>Shift + Rechtsklick <dark_gray>»</dark_gray> entfernen (Team)"
+  reason:
+    expired: "Abgelaufen – nicht verkauft"
+    cancelled: "Zurückgenommen"
+  sort:
+    newest: "Neueste zuerst"
+    cheapest: "Günstigste zuerst"
+    expensive: "Teuerste zuerst"
+    ending: "Endet bald"
+  button:
+    sort: "<yellow><bold>Sortieren</bold>"
+    sort-lore:
+      - "<gray>Aktuell: <white>{sort}"
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>wechseln"
+    search: "<yellow><bold>Suchen</bold>"
+    search-lore:
+      - "<gray>/ah suche <Text>"
+    search-active-lore:
+      - "<gray>Suche: <white>{filter}"
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>Suche löschen"
+    browse: "<yellow><bold>« Alle Angebote</bold>"
+    mine: "<aqua><bold>Meine Angebote</bold>"
+    mine-lore:
+      - "<gray>Aktiv: <white>{count}/{max}"
+      - "<gray>Verkaufen: <white>/ah sell <Preis>"
+    info: "<gold><bold>So funktioniert's</bold>"
+    info-lore:
+      - "<gray>Dein Guthaben: <gold>{coins} Coins</gold> <dark_gray>|</dark_gray> <light_purple>{gems} Gems"
+      - ""
+      - "<gray>Item in die Hand nehmen und"
+      - "<white>/ah sell <Preis> [coins|gems]"
+      - "<gray>Beim Verkauf gehen <white>{tax}%</white> Steuer ab."
+    pickup: "<light_purple><bold>Abholen</bold>"
+    pickup-lore:
+      - "<gray>Wartende Items: <white>{count}"
+    orders: "<green><bold>Farmaufträge</bold>"
+    orders-lore:
+      - "<gray>Liefere Items und verdiene Coins"
+
+orders:
+  disabled: "<red>Farmaufträge sind gerade ausgeschaltet."
+  loading: "<yellow>Die Farmaufträge laden noch – versuch es gleich nochmal."
+  blocked-here: "<red>In Arenen und Turnieren gehen keine Farmaufträge."
+  item-blocked: "<red>Dieses Item kann nicht bestellt werden."
+  amount-range: "<red>Die Menge muss zwischen <white>1</white> und <white>{max}</white> liegen."
+  price-range: "<red>Der Preis pro Stück muss zwischen <white>{min}</white> und <white>{max}</white> Coins liegen."
+  limit: "<red>Du hast schon <white>{max}</white> offene Aufträge."
+  not-enough: "<red>Der Auftrag kostet <white>{total}</white> Coins (werden vorab hinterlegt) – du hast <white>{balance}</white>."
+  created: "<green>✔ Auftrag erstellt: <white>{amount}× {item}</white> für <white>{price}</white> Coins pro Stück. <gray>Hinterlegt: <white>{total}</white> Coins."
+  broadcast: "<green>🌾 <white>{player}</white> <gray>sucht <white>{amount}× {item}</white> <gray>und zahlt <gold>{price} Coins</gold> pro Stück! <dark_gray>[<green>/auftrag</green>]"
+  gone: "<red>Diesen Auftrag gibt es nicht mehr."
+  own: "<yellow>Das ist dein eigener Auftrag."
+  nothing-to-deliver: "<red>Du hast kein passendes {item} <red>im Inventar. <gray>(Nur normale Items, ohne Namen oder Verzauberung)"
+  delivered: "<green>✔ <white>{amount}× {item}</white> an <white>{player}</white> geliefert: <gold>+{pay} Coins"
+  owner-delivery: "<green>🌾 <white>{player}</white> <gray>hat <white>{amount}× {item}</white> <gray>geliefert ({delivered}/{total}). Abholen: <white><click:run_command:/auftrag meine><u>/auftrag meine</u></click>"
+  owner-completed: "<gold>🌾 Dein Auftrag ist fertig! <white>{player}</white> <gray>hat die letzten <white>{amount}× {item}</white> <gray>geliefert. Abholen: <white><click:run_command:/auftrag meine><u>/auftrag meine</u></click>"
+  collected: "<green>✔ Abgeholt: <white>{amount}× {item}"
+  inventory-full: "<red>Dein Inventar ist voll. Noch abzuholen: <white>{left}"
+  inventory-full-partial: "<yellow>Inventar voll – noch <white>{left}</white> Items warten auf dich."
+  nothing-to-collect: "<gray>Hier gibt es (noch) nichts abzuholen."
+  cancelled: "<gray>Auftrag abgebrochen. Zurückerstattet: <gold>{refund} Coins"
+  removed: "<gray>Auftrag von <white>{player}</white> abgebrochen (Coins zurückerstattet)."
+  expired: "<yellow>⌛ Dein Auftrag für {item} <yellow>ist abgelaufen. Zurückerstattet: <gold>{refund} Coins"
+  pickup-reminder: "<green>🌾 <gray>Für deine Farmaufträge wurden <white>{amount}</white> Items geliefert: <white><click:run_command:/auftrag meine><u>/auftrag meine</u></click>"
+  empty-hand: "<red>Nimm das Item, das du bestellen willst, in die Hand."
+  unknown-item: "<red>Unbekanntes Item: <white>{item}"
+  create-hint: "<gray>Auftrag erstellen: <white>/auftrag erstellen <Item|hand> <Menge> <Preis pro Stück></white> <dark_gray>(z.B. /auftrag erstellen wheat 640 2 – max. {max} Stück)"
+  cancel-yes: "<yellow><bold>Auftrag abbrechen</bold>"
+  cancel-yes-lore:
+    - "<gray>Du bekommst <gold>{refund} Coins</gold> zurück."
+    - "<gray>Gelieferte Items bleiben abholbar."
+  cancel-no: "<red><bold>✖ Nicht abbrechen</bold>"
+  help:
+    - "<gradient:#22c55e:#fde047><bold>Farmaufträge</bold></gradient>"
+    - "<gray>/auftrag <dark_gray>–</dark_gray> offene Aufträge ansehen, Items liefern und Coins verdienen"
+    - "<gray>/auftrag erstellen <Item|hand> <Menge> <Preis/Stück> <dark_gray>–</dark_gray> selbst etwas bestellen"
+    - "<gray>/auftrag meine <dark_gray>–</dark_gray> eigene Aufträge: Items abholen oder abbrechen"
+  title:
+    browse: "<gradient:#22c55e:#fde047><bold>Farmaufträge</bold></gradient> <dark_gray>• Seite {page}"
+    mine: "<green><bold>Meine Aufträge</bold>"
+    cancel: "<gold><bold>Auftrag abbrechen?</bold>"
+  state:
+    open: "<green>Offen"
+    completed: "<gold>Fertig"
+    cancelled: "<gray>Abgebrochen"
+    expired: "<gray>Abgelaufen"
+  lore:
+    common:
+      - ""
+      - "<gray>Auftraggeber: <white>{owner}"
+      - "<green>{bar} <white>{delivered}/{amount}"
+      - "<gray>Zahlt: <gold>{price} Coins</gold> <gray>pro Stück"
+      - "<gray>Noch gesucht: <white>{remaining}</white> <dark_gray>(<gold>{value} Coins</gold>)"
+      - "<gray>Endet in: <white>{time}"
+    own:
+      - ""
+      - "<aqua>Dein Auftrag <dark_gray>»</dark_gray> <white>Klicken zum Verwalten"
+    deliver:
+      - ""
+      - "<gray>Du hast: <white>{has}"
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>{n} liefern <gold>+{pay} Coins"
+    deliver-none:
+      - ""
+      - "<red>Du hast keine passenden Items."
+    admin: "<red>Shift + Rechtsklick <dark_gray>»</dark_gray> abbrechen (Team)"
+    mine:
+      - "<gray>Status: {state}"
+      - "<gray>Abholbereit: <white>{collectable}"
+      - ""
+      - "<yellow>Klicken <dark_gray>»</dark_gray> <white>Abholen"
+      - "<yellow>Shift + Rechtsklick <dark_gray>»</dark_gray> <white>Abbrechen <gray>(<gold>{refund} Coins</gold> zurück)"
+  button:
+    mine: "<aqua><bold>Meine Aufträge</bold>"
+    mine-lore:
+      - "<gray>Aufträge: <white>{count}"
+    browse: "<yellow><bold>« Alle Aufträge</bold>"
+    info: "<green><bold>Auftrag erstellen</bold>"
+    info-lore:
+      - "<white>/auftrag erstellen <Item|hand> <Menge> <Preis>"
+      - "<gray>Die Coins werden vorab hinterlegt und"
+      - "<gray>pro geliefertem Stück ausgezahlt."
+      - "<gray>Max. <white>{max}</white> Stück pro Auftrag."
+    auction: "<gold><bold>Auktionshaus</bold>"
+    auction-lore:
+      - "<gray>Items kaufen und verkaufen"
+
+rtp:
+  name: "<gradient:#22c55e:#38bdf8>Wildnis</gradient>"
+  disabled: "<red>Zufalls-Teleport ist ausgeschaltet."
+  already-searching: "<yellow>Es wird schon ein Ort für dich gesucht …"
+  unknown-world: "<red>Diese Welt gibt es für RTP nicht. Möglich: <white>{worlds}"
+  cooldown: "<red>Du kannst erst in <white>{seconds}s</white> wieder zufällig teleportieren."
+  not-enough: "<red>Ein Zufalls-Teleport kostet <white>{cost}</white> Coins."
+  searching: "<gray>🧭 Suche einen sicheren Ort …"
+  failed: "<red>Kein sicherer Ort gefunden – versuch es gleich nochmal."
+  paid: "<gray>Bezahlt: <gold>{cost} Coins"
+  arrived: "<green>✔ Willkommen in der Wildnis! <gray>({x}, {z} in {world})"
+
+vouchers:
+  name: "<gradient:#f59e0b:#c084fc><bold>Rang-Gutschein</bold></gradient> <dark_gray>»</dark_gray> {rank}"
+  lore:
+    - "<gray>Rang: {rank}"
+    - "<gray>Dauer: <white>{duration}"
+    - ""
+    - "<yellow>Rechtsklick <dark_gray>»</dark_gray> <white>einlösen"
+    - "<dark_gray>Handelbar – auch im Auktionshaus"
+  forever: "für immer"
+  invalid: "<red>Dieser Gutschein ist ungültig."
+  lower: "<red>Du hast schon einen höheren Rang ({rank}<red>). Verkauf den Gutschein doch im Auktionshaus!"
+  already-permanent: "<yellow>Du hast {rank} <yellow>schon für immer."
+  would-replace: "<red>Du hast {rank} <red>für immer – der zeitlich begrenzte {new} <red>würde ihn ersetzen. Gutschein lieber verkaufen."
+  redeemed: "<green>✔ Rang eingelöst: {rank} <gray>({duration})"
+  broadcast: "<gold>★ <white>{player}</white> <gray>hat den Rang {rank} <gray>erhalten!"
+
+buttons:
+  created: "<green>Button <white>{name}</white> erstellt – Klick führt <white>{command}</white> aus. <gray>Text ändern: /mythos holo text {name} <Text>"
+  text-set: "<green>Text von <white>{name}</white> geändert."
+  list-line: "<gray> • <white>{name}</white> <dark_gray>(Button {command})</dark_gray> <gray>{location}"
+  default:
+    - "<gold><bold>▶ {command}"
+    - "<gray>Klicken"
+  presets:
+    spawn_blockparty:
+    - <gradient:#f472b6:#fde047><bold>🎶 Block-Party</bold></gradient>
+    - <gray>Steh auf der richtigen Farbe!
+    - <yellow>▶ Klicken
+    spawn_spleef:
+    - <gradient:#e0f2fe:#38bdf8><bold>❄ Spleef</bold></gradient>
+    - <gray>Grab den Boden weg (ab 2)
+    - <yellow>▶ Klicken
+    spawn_zielschiessen:
+    - <gradient:#fde047:#f59e0b><bold>🎯 Zielschießen</bold></gradient>
+    - <gray>45 Sekunden, goldene Ziele
+    - <yellow>▶ Klicken
+    spawn_shop:
+      - "<gradient:#c084fc:#22d3ee><bold>✦ Gem-Shop ✦</bold></gradient>"
+      - "<gray>Schlüssel, Ränge & Extras"
+      - "<yellow>▶ Klicken"
+    spawn_auktion:
+      - "<gradient:#f59e0b:#fde047><bold>⚖ Auktionshaus</bold></gradient>"
+      - "<gray>Kaufen & verkaufen"
+      - "<yellow>▶ Klicken"
+    spawn_auftraege:
+      - "<gradient:#22c55e:#fde047><bold>🌾 Farmaufträge</bold></gradient>"
+      - "<gray>Liefern & Coins verdienen"
+      - "<yellow>▶ Klicken"
+    spawn_rtp:
+      - "<gradient:#22c55e:#38bdf8><bold>🧭 Wildnis (RTP)</bold></gradient>"
+      - "<gray>Zufälliger Teleport"
+      - "<yellow>▶ Klicken"
+    spawn_turnier:
+      - "<gradient:#fde047:#f59e0b><bold>⚔ Turnier</bold></gradient>"
+      - "<gray>Anmelden, wenn offen"
+      - "<yellow>▶ Klicken"
+    spawn_event:
+      - "<gradient:#f472b6:#a78bfa><bold>⚡ Zum Event</bold></gradient>"
+      - "<gray>Beamt dich zum laufenden Event"
+      - "<yellow>▶ Klicken"
+    spawn_daily:
+      - "<gradient:#fde68a:#f59e0b><bold>☀ Tagesbelohnung</bold></gradient>"
+      - "<gray>Jeden Tag abholen!"
+      - "<yellow>▶ Klicken"
+    spawn_stats:
+      - "<gradient:#e9d5ff:#c084fc><bold>★ Deine Stats</bold></gradient>"
+      - "<gray>Coins, Kills, Spielzeit"
+      - "<yellow>▶ Klicken"
+    spawn_parkour:
+    - <gradient:#34d399:#fde047><bold>⛰ Parkour</bold></gradient>
+    - <gray>Bestzeit & Top 5
+    - <yellow>▶ Klicken
+    spawn_clan:
+    - <gradient:#38bdf8:#a78bfa><bold>⚑ Clans</bold></gradient>
+    - <gray>Gründen, einladen, Bank
+    - <yellow>▶ Klicken
+    spawn_musik:
+    - <gradient:#f472b6:#c084fc><bold>♪ Musik</bold></gradient>
+    - <gray>Was läuft? An / aus
+    - <yellow>▶ Klicken
+    spawn_ringe:
+    - <gradient:#a3e635:#22d3ee><bold>🪽 Ringkurs</bold></gradient>
+    - <gray>Platte am Turm = Start
+    - <gray>Bestzeit & Top 5
+    - <yellow>▶ Klicken
+    spawn_dropper:
+    - <gradient:#38bdf8:#f472b6><bold>🌀 Dropper</bold></gradient>
+    - <gray>Platte = hoch, dann fallen
+    - <gray>Bestzeit & Top 5
+    - <yellow>▶ Klicken
+    spawn_labyrinth:
+    - <gradient:#4ade80:#166534><bold>🌿 Labyrinth</bold></gradient>
+    - <gray>Finde die goldene Platte
+    - <yellow>▶ Klicken
+    spawn_aufgaben:
+    - <gradient:#fde047:#a855f7><bold>📜 Aufgaben</bold></gradient>
+    - <gray>Täglich & wöchentlich Gems
+    - <gray>+ Starthilfe für Neue
+    - <yellow>▶ Klicken
+    spawn_wetten:
+    - <gradient:#fde047:#f97316><bold>🎲 Wetten</bold></gradient>
+    - <gray>Mit Freunden um Coins
+    - <gray>Münze, Würfel, Rennen
+    - <yellow>▶ Klicken
+
+jobs:
+  title: <dark_gray>Berufe
+  names:
+    miner: Bergarbeiter
+    lumberjack: Holzfäller
+    farmer: Farmer
+    hunter: Jäger
+    fisher: Fischer
+    builder: Baumeister
+  how:
+    miner:
+    - <gray>Erze und Stein abbauen
+    - <gray>Seltene Gem-Funde bei Diamant, Smaragd, Antikem Schrott
+    lumberjack:
+    - <gray>Baumstämme fällen
+    farmer:
+    - <gray>Reife Pflanzen ernten, Tiere züchten
+    hunter:
+    - <gray>Monster und Tiere töten
+    fisher:
+    - <gray>Fische fangen – manchmal hängt ein Gem dran
+    builder:
+    - <gray>Blöcke platzieren (Limit pro Stunde)
+  gain: <green>+{xp} XP <gray>{job} <dark_gray>| <white>Lv {level} <gray>({current}/{next})
+  gem-find: <light_purple>💎 Seltener Fund! <white>+{gems} Gems
+  levelup: <gold>⬆ {job} <yellow>ist jetzt Level <white>{level}<yellow>! <light_purple>+{gems} Gems
+  levelup-title: <gold>{job} Level {level}
+  levelup-subtitle: <light_purple>+{gems} Gems
+  levelup-broadcast: <gold>⬆ {player} <yellow>hat {job} Level <white>{level} <yellow>erreicht!
+  lore:
+    name: <gold><bold>{job}</bold> <gray>Lv {level}
+    level: '<gray>Level: <white>{level}<gray>/{max}'
+    xp: <gray>{bar} <white>{xp}<gray>/{next} XP
+    maxed: <gold>✦ Maximales Level!
+    bonus: '<gray>Coin-Bonus: <green>+{bonus}%'
+    reward: '<gray>Nächstes Level: <light_purple>+{gems} Gems'
+  info: <yellow><bold>Berufe</bold>
+  info-lore:
+  - <gray>Alle Berufe zählen automatisch –
+  - <gray>einfach spielen, kein Beitritt nötig.
+  - <gray>Jedes Level gibt Gems, alle 10 extra.
+  - ''
+  - '<gray>Gesamtlevel: <white>{total}'
+  button: <yellow>« Berufe
+  backpay: '<light_purple>💎 Neue Berufs-Belohnungen: Du bekommst <white>{gems} Gems</white> für deine bisherigen Level nachgezahlt!'
+
+achievements:
+  title: <gold><bold>Erfolg!</bold>
+  unlocked: '<gold>🏆 Erfolg freigeschaltet: <white>{name} <light_purple>+{gems} Gems <gold>+{coins} Coins'
+  broadcast: <gold>🏆 {player} <yellow>hat den Erfolg <white>{name} <yellow>freigeschaltet!
+  button: <gold>Erfolge »
+  menu-title: <dark_gray>Erfolge ({done}/{total})
+  lore:
+  - '{desc}'
+  - <gray>{bar} <white>{value}<gray>/{target}
+  - '<gray>Belohnung: <light_purple>{gems} Gems <gold>{coins} Coins'
+  done: <green>✔ Geschafft
+  open: <red>✘ Noch offen
+  names:
+    mobkills_10: <gold>Monsterschreck
+    mobkills_100: <gold>Monsterjäger
+    mobkills_500: <gold>Monsterschlächter
+    mobkills_2000: <gold>Monsterplage
+    mobkills_10000: <gold>Monsterlegende
+    kills_1: <gold>Erstes Blut
+    kills_10: <gold>Kämpfer
+    kills_50: <gold>Krieger
+    kills_250: <gold>Champion
+    streak_5: <gold>Am Laufen
+    streak_10: <gold>Unaufhaltsam
+    streak_25: <gold>Gottgleich
+    playtime_1h: <gold>Neuling
+    playtime_10h: <gold>Stammgast
+    playtime_50h: <gold>Veteran
+    playtime_200h: <gold>Urgestein
+    playtime_500h: <gold>Legende
+    events_1: <gold>Eventsieger
+    events_5: <gold>Eventprofi
+    events_25: <gold>Eventmeister
+    events_100: <gold>Eventkönig
+    bossdamage_1000: <gold>Bossärgernis
+    bossdamage_10000: <gold>Bossbrecher
+    bossdamage_100000: <gold>Bosstöter
+    relics_1: <gold>Schatzsucher
+    relics_25: <gold>Archäologe
+    crates_1: <gold>Erste Kiste
+    crates_10: <gold>Kistenöffner
+    crates_50: <gold>Kistensammler
+    crates_250: <gold>Kistensüchtig
+    crates_1000: <gold>Kistenkönig
+    coins_10000: <gold>Sparschwein
+    coins_100000: <gold>Wohlhabend
+    coins_1000000: <gold>Millionär
+    coins_10000000: <gold>Magnat
+    job_miner_10: '<gold>Bergarbeiter: Geselle'
+    job_miner_25: '<gold>Bergarbeiter: Meister'
+    job_miner_50: '<gold>Bergarbeiter: Großmeister'
+    job_lumberjack_10: '<gold>Holzfäller: Geselle'
+    job_lumberjack_25: '<gold>Holzfäller: Meister'
+    job_lumberjack_50: '<gold>Holzfäller: Großmeister'
+    job_farmer_10: '<gold>Farmer: Geselle'
+    job_farmer_25: '<gold>Farmer: Meister'
+    job_farmer_50: '<gold>Farmer: Großmeister'
+    job_hunter_10: '<gold>Jäger: Geselle'
+    job_hunter_25: '<gold>Jäger: Meister'
+    job_hunter_50: '<gold>Jäger: Großmeister'
+    job_fisher_10: '<gold>Fischer: Geselle'
+    job_fisher_25: '<gold>Fischer: Meister'
+    job_fisher_50: '<gold>Fischer: Großmeister'
+    job_builder_10: '<gold>Baumeister: Geselle'
+    job_builder_25: '<gold>Baumeister: Meister'
+    job_builder_50: '<gold>Baumeister: Großmeister'
+    jobs_total_60: <gold>Allrounder
+    jobs_total_150: <gold>Alleskönner
+    daily_7: <gold>Treue Seele
+    daily_30: <gold>Unzertrennlich
+    parkour_1: <gold>Springinsfeld
+    parkour_25: <gold>Parkourprofi
+  desc:
+    mobkills_10: <gray>Töte 10 Monster
+    mobkills_100: <gray>Töte 100 Monster
+    mobkills_500: <gray>Töte 500 Monster
+    mobkills_2000: <gray>Töte 2000 Monster
+    mobkills_10000: <gray>Töte 10000 Monster
+    kills_1: <gray>Besiege 1 Spieler
+    kills_10: <gray>Besiege 10 Spieler
+    kills_50: <gray>Besiege 50 Spieler
+    kills_250: <gray>Besiege 250 Spieler
+    streak_5: <gray>Erreiche eine Killstreak von 5
+    streak_10: <gray>Erreiche eine Killstreak von 10
+    streak_25: <gray>Erreiche eine Killstreak von 25
+    playtime_1h: <gray>Spiele 1 Stunden
+    playtime_10h: <gray>Spiele 10 Stunden
+    playtime_50h: <gray>Spiele 50 Stunden
+    playtime_200h: <gray>Spiele 200 Stunden
+    playtime_500h: <gray>Spiele 500 Stunden
+    events_1: <gray>Gewinne 1 Events
+    events_5: <gray>Gewinne 5 Events
+    events_25: <gray>Gewinne 25 Events
+    events_100: <gray>Gewinne 100 Events
+    bossdamage_1000: <gray>Mache 1000 Schaden an Bossen
+    bossdamage_10000: <gray>Mache 10000 Schaden an Bossen
+    bossdamage_100000: <gray>Mache 100000 Schaden an Bossen
+    relics_1: <gray>Finde ein Relikt
+    relics_25: <gray>Finde 25 Relikte
+    crates_1: <gray>Öffne 1 Kisten
+    crates_10: <gray>Öffne 10 Kisten
+    crates_50: <gray>Öffne 50 Kisten
+    crates_250: <gray>Öffne 250 Kisten
+    crates_1000: <gray>Öffne 1000 Kisten
+    coins_10000: <gray>Besitze 10.000 Coins
+    coins_100000: <gray>Besitze 100.000 Coins
+    coins_1000000: <gray>Besitze 1.000.000 Coins
+    coins_10000000: <gray>Besitze 10.000.000 Coins
+    job_miner_10: <gray>Erreiche Level 10 als Bergarbeiter
+    job_miner_25: <gray>Erreiche Level 25 als Bergarbeiter
+    job_miner_50: <gray>Erreiche Level 50 als Bergarbeiter
+    job_lumberjack_10: <gray>Erreiche Level 10 als Holzfäller
+    job_lumberjack_25: <gray>Erreiche Level 25 als Holzfäller
+    job_lumberjack_50: <gray>Erreiche Level 50 als Holzfäller
+    job_farmer_10: <gray>Erreiche Level 10 als Farmer
+    job_farmer_25: <gray>Erreiche Level 25 als Farmer
+    job_farmer_50: <gray>Erreiche Level 50 als Farmer
+    job_hunter_10: <gray>Erreiche Level 10 als Jäger
+    job_hunter_25: <gray>Erreiche Level 25 als Jäger
+    job_hunter_50: <gray>Erreiche Level 50 als Jäger
+    job_fisher_10: <gray>Erreiche Level 10 als Fischer
+    job_fisher_25: <gray>Erreiche Level 25 als Fischer
+    job_fisher_50: <gray>Erreiche Level 50 als Fischer
+    job_builder_10: <gray>Erreiche Level 10 als Baumeister
+    job_builder_25: <gray>Erreiche Level 25 als Baumeister
+    job_builder_50: <gray>Erreiche Level 50 als Baumeister
+    jobs_total_60: <gray>Erreiche zusammen 60 Berufslevel
+    jobs_total_150: <gray>Erreiche zusammen 150 Berufslevel
+    daily_7: <gray>7 Tage Login-Serie
+    daily_30: <gray>30 Tage Login-Serie
+    parkour_1: <gray>Schaffe den Spawn-Parkour
+    parkour_25: <gray>Schaffe den Spawn-Parkour 25-mal
+
+milestones:
+  playtime: <gold>⏰ {hours} Stunden Spielzeit! <light_purple>+{gems} Gems <gold>+{coins} Coins
+
+weekly:
+  header: <gradient:#fde047:#f59e0b><bold>🏆 Wochen-Bestenliste – Belohnungen</bold></gradient>
+  line: <gray>{stat} <dark_gray>#{place} <white>{player} <light_purple>+{gems} Gems
+
+parkour:
+  started: <green>▶ Parkour gestartet! Erreiche das goldene Ziel.
+  checkpoint: <aqua>✔ Checkpoint {number}/{total} <gray>({time})
+  finished: '<green>🏁 Geschafft in <white>{time}<green>! <gray>Bestzeit: {best}'
+  finished-record: '<gold>🏁 Neue Bestzeit: <white>{time}<gold>!'
+  daily-reward: '<light_purple>Tagesbelohnung: +{gems} Gems <gold>+{coins} Coins'
+  cancelled: <red>Parkour abgebrochen.
+  reset: <yellow>Zurück zu Checkpoint {number}
+  none: <red>Am Spawn gibt es noch keinen Parkour.
+  info: '<gold>Parkour <gray>– Bestzeit: <white>{best} <gray>| Geschafft: <white>{finishes}x
+
+    <gray>Top 5:'
+  top-line: <dark_gray>#{place} <white>{player} <gray>{time}
+
+rankmanager:
+  title: <dark_gray>Rang-Manager
+  player-lore:
+  - '<gray>Rang: {rank}'
+  - '<yellow>Klicken: Rang ändern'
+  help: <yellow><bold>Rang-Manager</bold>
+  help-lore:
+  - <gray>Spieler → Rang → Dauer
+  - <gray>Gilt wie /rank set
+  select-title: <dark_gray>Rang für {player}
+  rank-lore:
+  - '<gray>Gewicht: <white>{weight}'
+  - '<gray>Homes: <white>{homes}'
+  - '<gray>Coin-Multiplikator: <white>x{multiplier}'
+  duration-title: <dark_gray>Dauer für {player}
+  duration-lore: <gray>{rank} <gray>an <white>{player}
+  duration:
+    1d: <yellow>1 Tag
+    7d: <yellow>7 Tage
+    30d: <yellow>30 Tage
+    90d: <yellow>90 Tage
+    perm: <aqua>Permanent
+  back: <gray>« Zurück
+
+invsee:
+  opened: <gray>Inventar von <white>{player}</white> geöffnet – Änderungen wirken sofort.
+  ender: <gray>Endertruhe von <white>{player}</white> geöffnet.
+  self: <red>Das ist dein eigenes Inventar.
+
+attractions:
+  cannon: '<gold>💥 BUMM! <gray>Ab ins Wasser!'
+  creatures:
+    pet: <light_purple>♥ Du streichelst {creature}<light_purple>!
+    names:
+      moosling: <green>den Moosling
+      glimmerling: <light_purple>den Glimmerling
+      star_jelly: <aqua>die Sternenqualle
+      lantern_shroom: <gold>den Laternenpilz
+      crystal_golem: <light_purple>den Kristallgolem
+      spark_fox: <gold>den Funkenfuchs
+      cloud_whale: <aqua>den Wolkenwal
+  range:
+    busy: <red>🎯 Gerade schießt jemand – warte kurz.
+    start: <gold>🎯 Los! <white>{seconds}</white> Sekunden – triff die goldenen Ziele!
+    status: '<gold>🎯 Treffer: <white>{hits}</white> <gray>| {seconds}s'
+    done: '<gold>🎯 Zeit um! <white>{hits}</white> Treffer. <gray>Rekord: {best}'
+    record: '<gold>🎯 NEUER REKORD: <white>{hits}</white> Treffer!'
+    aborted: <gray>🎯 Zielschießen abgebrochen.
+    bow: <gold><bold>Leih-Bogen
+    info: '<gold><bold>🎯 Zielschießen</bold>
+  
+      <gray>Tritt auf die Platte am Schießstand: 45 Sekunden, immer ein Ziel leuchtet golden. Je mehr Treffer, desto besser!
+  
+      <gray>Dein Rekord: <white>{best} Treffer'
+    place: Zielschießen
+  spleef:
+    waiting: <aqua>❄ Spleef braucht mindestens 2 Spieler – hol einen Freund aufs Schneefeld!
+    lobby: <aqua>❄ Spleef startet in <white>{seconds}s</white> <gray>({players} Spieler)
+    go: <aqua><bold>❄ SPLEEF!
+    go-sub: <gray>Grab den Schnee unter den anderen weg!
+    out: <red>💦 Du bist raus!
+    winner: <aqua>❄ <white>{player}</white> <gray>gewinnt Spleef!
+    shovel: <aqua><bold>Spleef-Schaufel
+    info: '<aqua><bold>❄ Spleef</bold>
+  
+      <gray>Stellt euch zu zweit oder mehr aufs Schneefeld. Klick auf Schnee = weg. Wer runterfällt, ist raus – der Letzte gewinnt. Kein PvP!
+  
+      <gray>Deine Siege: <white>{best}'
+    place: Spleef
+  party:
+    lobby: <light_purple>🎶 Block-Party startet in <white>{seconds}s</white> <gray>({players} auf dem Feld – Freunde holen!)
+    round: <gray>Runde <white>{round}
+    color:
+      red: <red><bold>ROT
+      orange: <gold><bold>ORANGE
+      yellow: <yellow><bold>GELB
+      lime: <green><bold>HELLGRÜN
+      light-blue: <aqua><bold>HELLBLAU
+      blue: <blue><bold>BLAU
+      purple: <dark_purple><bold>LILA
+      pink: <light_purple><bold>PINK
+    out: <red>💦 Raus in Runde {round}!
+    winner: <light_purple>🎶 <white>{player}</white> <gray>gewinnt die Block-Party nach <white>{round}</white> Runden!
+    solo-done: <light_purple>🎶 Stark! {round} Runden überlebt – Block-Party geschafft!
+    info: '<light_purple><bold>🎶 Block-Party</bold>
+  
+      <gray>Stell dich aufs bunte Feld (allein oder mit Freunden). Eine Farbe wird angezeigt – steh rechtzeitig drauf, alle anderen Farben verschwinden! Jede Runde schneller.
+  
+      <gray>Dein Rekord: <white>{best} Runden'
+    place: Block-Party
+  not-enough: <red>Dafür brauchst du <white>{price}</white> {currency}<red>. Du hast <white>{balance}</white>.
+  statue:
+    title-1: <gradient:#fde047:#f59e0b><bold>👑 Nr. 1</bold></gradient>
+    title-2: <gradient:#e5e7eb:#94a3b8><bold>Nr. 2</bold></gradient>
+    title-3: <gradient:#fdba74:#b45309><bold>Nr. 3</bold></gradient>
+    plate: '{title}
+
+      <white><bold>{player}</bold>
+
+      <gray>{stat}: <gold>{value}'
+    empty: '{title}
+
+      <gray>{stat}
+
+      <dark_gray>– noch frei –'
+  wheel:
+    hologram: '<gradient:#f472b6:#fde047:#38bdf8><bold>✦ Glücksrad ✦</bold></gradient>
+
+      <gray>Rechtsklick: drehen <dark_gray>(1× täglich gratis)
+
+      <gray>danach <white>{price}</white> {currency}
+
+      <dark_gray>Linksklick: Gewinne ansehen'
+    busy: <yellow>Das Rad dreht sich gerade – kurz warten!
+    spin-free: <green>🎡 Dein Gratis-Dreh für heute! Viel Glück...
+    spin-paid: <yellow>🎡 Das Rad dreht sich... <dark_gray>(-{price} {currency})
+    won: '<gold>🎡 Gewonnen: <white>{reward}'
+    jackpot: <gradient:#f472b6:#fde047><bold>🎡 JACKPOT!</bold></gradient> <white>{player}</white> <gray>hat am Glücksrad <white>{reward}</white> <gray>gewonnen!
+    prizes-header: '<gold>🎡 Gewinne am Glücksrad:'
+    prize-line: <dark_gray>• <white>{reward} <gray>({chance}%)
+  rings:
+    elytra-name: <gradient:#a3e635:#22d3ee><bold>Leih-Elytra</bold></gradient>
+    elytra-lore:
+    - <gray>Nur für den Ringkurs am Spawn
+    - <dark_gray>Wird nach der Landung zurückgenommen
+    ready: <green>🪽 Leih-Elytra angelegt! Spring vom Turm, gleite los und fliege durch alle <white>{rings}</white> Ringe. <gray>Der nächste Ring funkelt.
+    inventory-full: <red>Mach einen Platz im Inventar frei – deine Brustplatte wird dort abgelegt.
+    go: <green>Los geht's – die Zeit läuft!
+    passed: <green>✔ Ring {number}/{total} <gray>({time})
+    finished: '<green>🏁 Ringkurs geschafft in <white>{time}<green>! <gray>Bestzeit: {best}'
+    finished-record: '<gold>🏁 Neue Ringkurs-Bestzeit: <white>{time}<gold>!'
+    daily-reward: '<light_purple>Tagesbelohnung: +{gems} Gems <gold>+{coins} Coins'
+    landed: <gray>Gelandet – die Leih-Elytra wurde zurückgenommen.
+    cancelled: <red>Ringkurs abgebrochen.
+    none: <red>Am Spawn gibt es noch keinen Ringkurs (/spawn place).
+    info: '<gold>Ringkurs <gray>– Bestzeit: <white>{best} <gray>| Geschafft: <white>{finishes}x
+
+      <gray>Top 5:'
+  well:
+    hologram: '<gradient:#fde047:#38bdf8><bold>⛲ Brunnen der Wünsche</bold></gradient>
+
+      <gray>Rechtsklick: Coins einwerfen
+
+      <gold>{bar}
+
+      <white>{pot} <gray>/ {goal} Coins
+
+      <dark_gray>Voll = Coin-Booster x{factor} für alle ({minutes} Min.)'
+    menu-title: <dark_gray>Brunnen der Wünsche
+    throw: <gold><bold>{amount} Coins</bold> <gray>einwerfen
+    throw-lore:
+    - <gray>Wirf {amount} Coins in den Brunnen.
+    - '<gray>Mit etwas Glück erfüllt sich ein Wunsch:'
+    - ''
+    chance-line: <dark_gray>• <white>{reward} <gray>{chance}%
+    pot: <aqua><bold>Gemeinschafts-Topf</bold> <white>{pot}<gray>/{goal}
+    pot-lore:
+    - <gray>Jede Münze füllt den Topf.
+    - <gray>Ist er voll, startet ein <gold>Coin-Booster x{factor}
+    - <gray>für alle Spieler ({minutes} Minuten)!
+    nothing: <gray>⛲ Plopp... {amount} Coins versinken im Wasser. Diesmal kein Wunsch.
+    won: '<gold>⛲ Dein Wunsch wurde erfüllt: <white>{reward}'
+    jackpot: <gradient:#fde047:#38bdf8><bold>⛲ WUNSCH ERFÜLLT!</bold></gradient> <white>{player}</white> <gray>hat <white>{reward}</white> <gray>aus dem Brunnen gezogen!
+    goal-reached: <gradient:#fde047:#38bdf8><bold>⛲ Der Brunnen ist voll!</bold></gradient> <white>{player}</white> <gray>hat die letzte Münze eingeworfen – Coin-Booster für alle!
+    booster-by: Brunnen der Wünsche
+  merchant:
+    wanderer-arrived: <gold>🐪 Der Wanderhändler ist am Markt angekommen! <gray>Seltene Angebote für <white>{minutes}</white> Minuten. <dark_gray>(Markt im Osten des Spawns)
+    wanderer-left: <gray>🐪 Der Wanderhändler ist weitergezogen.
+    wanderer-hologram: '<gold><bold>Wanderhändler</bold>
+
+      <gray>Rechtsklick: seltene Angebote'
+    wanderer-title: <dark_gray>Wanderhändler <gray>(noch {time})
+  glide: <aqua>🪽 Gleiten! <gray>Kein Fallschaden bis zur Landung.
+  activity-reward: '<light_purple>Tagesbelohnung: +{gems} Gems <gold>+{coins} Coins <dark_gray>(heute noch {left}× Gems bei Spawn-Aktivitäten)'
+  activity-reward-coins: '<gold>Tagesbelohnung: +{coins} Coins <dark_gray>(Gems gibt es nur für deine ersten {limit} Aktivitäten am Tag)'
+  dropper:
+    ready: <aqua>🌀 Spring in die Röhre und lande im Wasser – weiche den Plattformen aus!
+    go: <aqua>Los – die Zeit läuft!
+    finished: '<green>💦 Dropper geschafft in <white>{time}<green>! <gray>Bestzeit: {best}'
+    record: '<gold>💦 Neue Dropper-Bestzeit: <white>{time}<gold>!'
+    failed: <red>Aufgeschlagen! Versuch's nochmal (Platte am Turm).
+    info: '<gold>Dropper <gray>– Bestzeit: <white>{best} <gray>| Geschafft: <white>{finishes}x
+  
+      <gray>Top 5:'
+  maze:
+    finished: <green>🌿 Du hast den Weg durchs Labyrinth gefunden! <gray>({finishes}x)
+    info: '<gold>Labyrinth <gray>– geschafft: <white>{finishes}x <dark_gray>(Ziel: goldene Platte in der Mitte)'
+  mentor:
+    name: <green><bold>Mentorin Lia</bold> <gray>(Aufgaben & Starthilfe)
+    board: '<gradient:#86efac:#fde047><bold>✦ Neu hier? ✦</bold></gradient> <gray>Sprich mit <white>Mentorin Lia</white>: <gray>Starthilfe mit bis zu <gold>22.000 Coins</gold> <gray>+ Tages- und Wochenaufgaben für <light_purple>Gems</light_purple> <dark_gray>/aufgaben'
+
+music:
+  special-started: '<light_purple>♪ <white>{song}</white> <gray>läuft jetzt für alle. <dark_gray>(nochmal = stoppen)'
+  special-stopped: '<gray>♪ Lied gestoppt.'
+  now-playing: '<light_purple>♪ <gray>Jetzt läuft: <white>{song}'
+  turned-on: <green>♪ Spawn-Musik ist an.
+  turned-off: <gray>♪ Spawn-Musik ist aus. <dark_gray>(/musik an)
+  skipped: <gray>Nächstes Lied...
+  state-on: <green>an
+  state-off: <red>aus
+  info: '<light_purple>♪ <gray>Läuft gerade: <white>{song}<gray> | Musik für dich: {state}
+
+    <dark_gray>/musik an|aus – Lautstärke: Einstellungen → Musik & Jukeboxen'
+
+stream:
+  badge: <red><bold>🔴 LIVE</bold>
+  enabled: '<red>🔴 Streamer-Modus an: <gray>Du hörst nur lizenzfreie Musik, neben deinem Namen steht LIVE. <dark_gray>(/stream off)'
+  disabled: <gray>Streamer-Modus aus. <dark_gray>(/stream on)
+  off-first: '<gray>Alles klar! Falls du doch mal streamst: <white>/stream on'
+  prompt-title: <dark_gray>Streamst du auf Twitch/YouTube?
+  prompt-yes: <red><bold>🔴 Ja, ich streame
+  prompt-yes-lore:
+  - <gray>Nur lizenzfreie Musik am Spawn
+  - <gray>+ LIVE-Abzeichen im Chat und Tab
+  prompt-no: <green><bold>Nein
+  prompt-no-lore:
+  - <gray>Alle Musik am Spawn
+  - '<gray>Jederzeit änderbar: /stream on'
+  prompt-info: <yellow><bold>Streamer-Modus
+  prompt-info-lore:
+  - <gray>Schützt dich vor Copyright-Meldungen.
+  - '<gray>Umschalten: /stream on | /stream off'
+
+clans:
+  war:
+    points: <aqua>⚑ +{points} Clan-Krieg-Punkte für <white>{clan}
+    header: <gold><bold>⚑ Clan-Krieg</bold> <gray>(ohne PvP) – endet in <white>{time}
+    empty: <gray>Noch hat kein Clan Punkte diese Woche.
+    line: <dark_gray>#{place} {tag} <white>{clan} <gray>– <gold>{points} Punkte
+    yours: '<aqua>Dein Clan <white>{clan}</white>: <gold>{points} Punkte'
+    how: '<dark_gray>Punkte: Event gewinnen 10, Top 3 5, mitmachen 1, Tagesquest 3, Wochenquest 10, Job-Level 2'
+    winner: <gold>👑 <white>{clan}</white> <gold>hat den Clan-Krieg gewonnen ({points} Punkte)! <gray>+{coins} Coins in die Clan-Bank, +{gems} Gems für alle Mitglieder online und eine Krone für eine Woche!
+  disabled: <red>Clans sind ausgeschaltet.
+  help: '<gold><bold>Clans</bold>
+
+    <yellow>/clan create <Name> <Tag> <gray>– gründen ({cost} Coins)
+
+    <yellow>/clan accept <gray>– Einladung annehmen
+
+    <yellow>/clan list <gray>| <yellow>/clan top <gray>| <yellow>/clan info <Clan>
+
+    <dark_gray>Im Clan: invite, kick, promote, demote, bank, deposit, withdraw, sethome, home, chat (/cc), color, leave, transfer, disband'
+  tag-format: <dark_gray>[{tag}<dark_gray>]
+  chat-format: <dark_gray>[<aqua>Clan</aqua> {tag}<dark_gray>] <white>{player}<dark_gray> » <aqua>{message}
+  chat-on: <aqua>Clan-Chat an – alles was du schreibst, geht an deinen Clan. <dark_gray>(/cc zum Ausschalten)
+  chat-off: <gray>Clan-Chat aus – du schreibst wieder im normalen Chat.
+  not-in-clan: <red>Du bist in keinem Clan. <gray>/clan
+  already-in-clan: <red>Du bist schon in einem Clan.
+  unknown: <red>Den Clan <white>{clan}</white> gibt es nicht.
+  leader-only: <red>Das darf nur der Clan-Leiter.
+  officer-only: <red>Das dürfen nur Offiziere und der Leiter.
+  not-member: <red>{player} ist nicht in deinem Clan.
+  bad-name: '<red>Clan-Name: 3–16 Zeichen, nur Buchstaben, Zahlen und _.'
+  bad-tag: '<red>Clan-Tag: 2–5 Buchstaben oder Zahlen.'
+  taken: <red>Name oder Tag ist schon vergeben.
+  too-expensive: <red>Einen Clan zu gründen kostet <white>{cost}</white> Coins.
+  created: <gold>⚑ <white>{player}</white> <gray>hat den Clan <white>{clan}</white> <dark_gray>[{tag}]</dark_gray> <gray>gegründet!
+  target-in-clan: <red>{player} ist schon in einem Clan.
+  full: <red>Der Clan ist voll (max. {max}).
+  invited: <green>Einladung an <white>{player}</white> verschickt (5 Min. gültig).
+  invite-received: <gold>⚑ <white>{player}</white> <gray>lädt dich in den Clan <white>{clan}</white> <gray>ein. <green>/clan accept <gray>| <red>/clan deny
+  invite-denied: <gray>Einladung abgelehnt.
+  no-invite: <red>Du hast keine offene Clan-Einladung.
+  joined: <green>⚑ <white>{player}</white> ist dem Clan <white>{clan}</white> beigetreten!
+  left: <gray>{player} hat den Clan verlassen.
+  leader-leave: <red>Als Leiter musst du erst die Leitung übergeben (/clan transfer <Spieler>) oder den Clan auflösen.
+  cannot-kick: <red>Das geht nicht.
+  kicked: <gray>{player} wurde von {by} aus dem Clan geworfen.
+  you-were-kicked: <red>Du wurdest aus dem Clan {clan} geworfen.
+  promoted: <green>{player} ist jetzt Offizier.
+  demoted: <gray>{player} ist jetzt Mitglied.
+  transferred: <gold>{player} ist jetzt Clan-Leiter!
+  disband-confirm: <red>Wirklich auflösen? Die Clan-Bank ({bank} Coins) geht an dich. <white>/clan disband confirm
+  disbanded: <red>Der Clan {clan} wurde aufgelöst.
+  bad-amount: <red>Bitte eine gültige Coin-Anzahl angeben.
+  not-enough: <red>Du hast keine {amount} Coins.
+  bank-too-low: <red>In der Clan-Bank sind nur {bank} Coins.
+  bank: '<gold>Clan-Bank: <white>{bank} Coins'
+  deposited: '<green>{player} hat {amount} Coins eingezahlt. <gray>Bank: {bank}'
+  withdrawn: '<yellow>{player} hat {amount} Coins abgehoben. <gray>Bank: {bank}'
+  home-set: <green>{player} hat das Clan-Home gesetzt.
+  no-home: <red>Dein Clan hat noch kein Home. <gray>(/clan sethome)
+  home-name: Clan-Home {clan}
+  bad-color: '<red>Farben: {colors}'
+  color-set: '<green>Neue Tag-Farbe: {tag}'
+  friendly-fire: <gray>Kein Friendly Fire im Clan.
+  info: '<gold><bold>{clan}</bold> {tag} <gray>({count}/{max})
+
+    <gray>Leiter: {leader}
+
+    <gray>Offiziere: {officers}
+
+    <gray>Mitglieder: {members}
+
+    <gray>Bank: <gold>{bank} Coins'
+  none: <gray>Es gibt noch keine Clans. <yellow>/clan create <Name> <Tag>
+  list-header: '<gold>Clans ({count}):'
+  list-line: <dark_gray>• {tag} <white>{clan} <gray>({count})
+  top-header: <gold><bold>Clan-Bestenliste</bold>
+  top-line: <dark_gray>#{place} {tag} <white>{clan} <gray>– Bank <gold>{bank}<gray>, {count} Mitglieder
+
+quests:
+  title: <dark_gray>Aufgaben
+  daily: <gold><bold>Tagesaufgaben
+  daily-lore:
+  - <gray>Jeden Tag 3 neue Aufgaben
+  - '<gray>je <light_purple>{gems} Gems</light_purple>, alle 3: <light_purple>+{bonus} Gems'
+  weekly: <light_purple><bold>Wochenaufgaben
+  weekly-lore:
+  - <gray>Jede Woche 3 große Aufgaben
+  - '<gray>je <light_purple>{gems} Gems</light_purple>, alle 3: <light_purple>+{bonus} Gems'
+  lore:
+  - <gray>{bar} <white>{progress}<gray>/{amount}
+  - '<gray>Belohnung: <light_purple>{gems} Gems'
+  done: <green>✔ Erledigt
+  open: <yellow>… läuft
+  daily-done: '<gold>✔ Tagesaufgabe erledigt: <white>{quest}</white> <light_purple>+{gems} Gems'
+  weekly-done: '<light_purple>✔ Wochenaufgabe erledigt: <white>{quest}</white> <light_purple>+{gems} Gems'
+  daily-all: '<gold>★ Alle Tagesaufgaben geschafft! Bonus: <light_purple>+{gems} Gems'
+  weekly-all: '<light_purple>★ Alle Wochenaufgaben geschafft! Bonus: <light_purple>+{gems} Gems'
+  starter: <green><bold>Starthilfe
+  starter-closed: <gray>Starthilfe <dark_gray>(nur für neue Spieler)
+  starter-lore:
+  - '<gray>Schritt <white>{step}</white>/{steps}: <white>{quest}'
+  - <gray>{bar} <white>{progress}<gray>/{amount}
+  - '<gray>Belohnung: <gold>{coins} Coins'
+  - ''
+  - '<dark_gray>Heute: {today}/{max} Schritte (dann morgen weiter)'
+  starter-done: '<green>✔ Starthilfe {step}/{steps} geschafft: <gold>+{coins} Coins'
+  starter-limit: <gray>Für heute ist genug Starthilfe – morgen geht es weiter (max. {max} Schritte pro Tag).
+  starter-finished: <gold>★ Starthilfe komplett! Jetzt bist du bereit für MythosCraft.
+  types:
+    ore: Baue {amount} Erze ab
+    logs: Fälle {amount} Baumstämme
+    mobs: Besiege {amount} Monster
+    fish: Angle {amount} Fische
+    harvest: Ernte {amount} Pflanzen
+    place: Platziere {amount} Blöcke
+    play: Spiele {amount} Minuten
+    crates: Öffne {amount} Kisten
+    activity: Schaffe {amount} Spawn-Aktivitäten
+    breed: Züchte {amount} Tiere
+
+bets:
+  help: '<gold><bold>Wetten mit Freunden</bold> <gray>(kein PvP)
+
+    <yellow>/wette <Spieler> <Coins> <Spiel>
+
+    <gray>Spiele: <white>muenze</white>, <white>wuerfel</white>, <white>parkour</white>, <white>dropper</white>, <white>ringe</white>, <white>labyrinth</white>
+
+    <gray>Rennen: wer zuerst ins Ziel kommt, gewinnt den Topf.
+
+    <dark_gray>Einsatz: {min} – {max} Coins'
+  games:
+    muenze: <gold>Münzwurf
+    wuerfel: <aqua>Würfelduell
+    parkour: <green>Parkour-Rennen
+    dropper: <aqua>Dropper-Rennen
+    ringe: <yellow>Ringkurs-Rennen
+    labyrinth: <dark_green>Labyrinth-Rennen
+  sent: '<gray>Wette an <white>{player}</white> geschickt: {game} <gray>um <gold>{stake} Coins</gold> <dark_gray>(60s gültig)'
+  received: '<gold>🎲 <white>{player}</white> <gray>fordert dich heraus: {game} <gray>um <gold>{stake} Coins</gold>!'
+  buttons: <green><bold>[ANNEHMEN]</bold></green> <gray>oder <red>/wette ablehnen
+  none: <red>Du hast keine offene Wette.
+  denied: <gray>Wette abgelehnt.
+  denied-other: <red>{player} hat deine Wette abgelehnt.
+  self: <red>Gegen dich selbst wetten geht nicht.
+  bad-stake: '<red>Einsatz: {min} – {max} Coins.'
+  busy: <red>Einer von euch steckt schon in einer Wette.
+  not-enough: <red>Nicht genug Coins für den Einsatz ({stake}).
+  countdown: <gold>🎲 {seconds} …
+  race-start: '<gold>🏁 {game} <gold>läuft! <gray>Topf: <gold>{pot} Coins</gold> – wer zuerst ankommt gewinnt ({minutes} Min. Zeit).'
+  won: <gold>🏆 Gewonnen gegen {player}! <white>+{pot} Coins</white> <dark_gray>({detail})
+  lost: <red>Verloren gegen {player} <dark_gray>({detail})<red>. <gray>Nächstes Mal!
+  timeout: <gray>Die Wette ist abgelaufen – du bekommst deine {stake} Coins zurück.
+companion:
+  on: '<green>Dein Begleiter sitzt jetzt auf deinem Kopf.'
+  off: '<gray>Dein Begleiter ist nach Hause gegangen.'
+trophy:
+  lore-owner: '<gray>Gewinner: <white>{player}'
+  lore-wins: '<gray>Siege in diesem Turnier: <gold>{count}'
+  lore-place: '<dark_gray>Rechtsklick auf einen Block: aufstellen'
+  sign-title: '🏆 {tier}'
+  sign-owner: '<white>{player}'
+  sign-wins: '<gold>{count}× <gray>gewonnen'
+  placed: '<green>Pokal aufgestellt. <gray>(Schleichen + Rechtsklick: einsammeln)'
+  picked: '<gray>Pokal eingesammelt.'
+  hint: '<gray>Schleichen + Rechtsklick: einsammeln'
+  not-yours: '<red>Nur wer ihn aufgestellt hat, kann diesen Pokal einsammeln.'
+  no-space: '<red>Hier ist kein Platz für den Pokal.'
+  no-build: '<red>Hier darfst du nichts aufstellen.'
+starter-kit:
+  received: '<green>🎁 Dein Starter-Kit ist da! <gray>Viel Spaß auf MythosCraft.'
+  coins: '<gray>+ <gold>{amount} Coins</gold> Startkapital'
+  already: '<red>Du hast dein Starter-Kit schon abgeholt.'
+  too-late: '<red>Das Starter-Kit gibt es nur für neue Spieler (bis {hours} Std. Spielzeit).'
+  disabled: '<red>Das Starter-Kit ist gerade deaktiviert.'
+  reset: '<green>Starter-Kit von <white>{player}</white> zurückgesetzt.'
+  hint: "<gold>🎁 Neu hier? <yellow><click:run_command:'/new'><hover:show_text:'<gray>Klicken zum Abholen'>[Hier klicken]</hover></click> <gray>oder tippe <white>/new</white> für dein Starter-Kit!"
+  hint-bar: '<gold>🎁 Tippe <white>/new</white> für dein Starter-Kit!'
+announce:
+  chat: "<newline><gradient:#f59e0b:#ef4444><bold>📢 ANKÜNDIGUNG</bold></gradient><newline><white>{text}<newline><dark_gray>— {sender}<newline>"
+  title: "<gradient:#f59e0b:#ef4444><bold>📢 Ankündigung</bold></gradient>"
+  sent: "<green>Ankündigung gesendet."
+  usage: "<red>Benutzung: <white>/pronounce [-c] <Text></white> <gray>(-c = nur Chat, ohne Titel)"
+creator-mode:
+  list: '<gray>Creator mit Spielmodus: <white>{players}'
+  added: '<green>{player} darf jetzt den Spielmodus wechseln (/gm).'
+  removed: '<gray>{player} darf den Spielmodus nicht mehr wechseln.'
+  not-allowed: '<red>Den Spielmodus darfst du nicht wechseln.'
+  switched: '<green>Spielmodus: <white>{mode}</white> <gray>(eigenes Inventar im Kreativmodus)'
+  blocked-here: '<red>In Arenen und Turnieren geht das nicht.'
+  no-containers: '<red>Im Kreativmodus kannst du keine Kisten öffnen.'
+  no-spawn: '<red>Am Spawn darfst du nicht bauen.'
+intro:
+  welcome:
+    title: '<gradient:#c084fc:#22d3ee><bold>MythosCraft</bold></gradient>'
+    subtitle: '<gray>Willkommen auf dem SMP!'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Hey, ich bin <green>Lia</green>! Ich zeig dir kurz, was es hier gibt. <dark_gray>(/intro skip zum Überspringen)"
+  crates:
+    title: '<gold><bold>Kisten</bold>'
+    subtitle: '<gray>Über 200 eigene Items'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Das sind die <gold>Kisten</gold>. Schlüssel bekommst du bei Events, der Tagesbelohnung und im <yellow>/shop</yellow>. Jede Saison gibt es neue!"
+  wheel:
+    title: '<light_purple><bold>Glücksrad</bold>'
+    subtitle: '<gray>Einmal am Tag gratis'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Am <light_purple>Glücksrad</light_purple> drehst du einmal pro Tag kostenlos – mit etwas Glück gibt's den Jackpot."
+  leaderboards:
+    title: '<aqua><bold>Bestenlisten</bold>'
+    subtitle: '<gray>Werde der Beste'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Hier siehst du die <aqua>Besten</aqua> des Servers. Jeden Tag gibt es <gold>Turniere</gold> mit echten Pokalen!"
+  games:
+    title: '<green><bold>Minispiele</bold>'
+    subtitle: '<gray>Parkour, Spleef & mehr'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Am Spawn warten <green>Minispiele</green> und ein Parkour – dafür gibt's Coins und Gems."
+  start:
+    title: '<yellow><bold>Los geht''s!</bold>'
+    subtitle: '<gray>Dein Abenteuer beginnt'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Fast geschafft! Gleich bekommst du dein <gold>Starter-Kit</gold>."
+  finish: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>So startest du am besten:<newline><gold>1.</gold> <yellow>/new</yellow> <gray>– Starter-Kit abholen<newline><gold>2.</gold> <yellow>/rtp</yellow> <gray>– einen freien Ort in der Wildnis finden<newline><gold>3.</gold> <yellow>/sethome</yellow> <gray>– dort dein Zuhause setzen<newline><gold>4.</gold> <gray>Sprich mich am Spawn an für <green>Aufgaben</green> und Startgeld <dark_gray>(/aufgaben)<newline><gray>Viel Spaß! <dark_gray>(/intro zeigt alles nochmal)<newline>"
+moderation:
+  not-yourself: '<red>Das geht nicht bei dir selbst.'
+  higher-rank: '<red>{player} hat den gleichen oder einen höheren Rang – das darfst du nicht.'
+  unknown: '<red>Spieler {player} ist unbekannt.'
+  unknown-crate: '<red>Kiste {crate} gibt es nicht.'
+  bad-time: '<red>"{value}" ist keine Zeit (z.B. 10m, 2h, 7d, perm).'
+  admin-only: '<red>Dauerhafte Banns dürfen nur Admins.'
+  muted: '<green>{player} ist stummgeschaltet ({time}): <gray>{reason}'
+  unmuted: '<green>{player} darf wieder schreiben.'
+  you-muted: '<red>Du bist stummgeschaltet ({time}). <gray>Grund: {reason}'
+  kicked: '<green>{player} wurde gekickt.'
+  kick-screen: "<red><bold>Du wurdest gekickt</bold><newline><newline><gray>Grund: <white>{reason}<newline><gray>von {by}"
+  banned: '<green>{player} ist gebannt ({time}): <gray>{reason}'
+  unbanned: '<green>{player} ist entbannt.'
+  ban-screen: "<red><bold>Du bist von MythosCraft gebannt</bold><newline><newline><gray>Grund: <white>{reason}<newline><gray>Dauer: <white>{time}<newline><gray>von {by}"
+  warned: '<yellow>{player} wurde verwarnt (Verwarnung {count}).'
+  you-warned: '<red><bold>Verwarnung!</bold> <gray>{reason} <dark_gray>({count}. Verwarnung)'
+  warns-header: '<gold>Verwarnungen von {player}: <white>{count}'
+  log-header: '<gold>Letzte Moderations-Aktionen:'
+  testkey: '<green>{amount}× Test-Schlüssel für {crate} – du siehst die Öffnung, bekommst aber nichts.'
+  testkey-won: '<gray>[TEST] Gewonnen hättest du: {reward} <dark_gray>(nicht ausgegeben)'

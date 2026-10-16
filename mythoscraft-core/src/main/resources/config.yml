@@ -1,0 +1,2725 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║                      MythosCraft – config.yml                        ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+# Texte können &-Farbcodes, &#RRGGBB oder MiniMessage (<gold>, <gradient:#a:#b>…) nutzen.
+# Ungültige Werte werden beim Start/Reload gemeldet und durch sichere Standardwerte ersetzt.
+# Nach Änderungen: /mythos reload
+
+# Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
+config-version: 21
+
+# Zeitzone für Daily-Belohnung, Tages-Multiplikatoren, Event-Uhrzeiten und Tageswechsel.
+timezone: Europe/Berlin
+
+messages:
+  # Überschreibt den Prefix aus messages.yml (Zeile löschen, um den aus messages.yml zu nutzen).
+  prefix: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» "
+
+database:
+  # sqlite (Standard, keine Einrichtung nötig) oder mysql / mariadb
+  type: sqlite
+  file: mythoscraft.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: mythoscraft
+    user: mythoscraft
+    password: ""
+    ssl: false
+
+autosave:
+  # Spielerdaten werden zusätzlich beim Verlassen, bei Überweisungen und beim Stoppen gespeichert.
+  interval-seconds: 300
+
+# ───────────────────────────── Spawn ─────────────────────────────
+spawn:
+  enabled: true
+  # Wird mit /setspawn gesetzt.
+  location: {}
+  teleport-delay: 3
+  cancel-on-move: true
+  respawn-at-spawn: true
+  teleport-on-first-join: true
+  teleport-on-join: false
+  # Kompass "Zum Spawn" fest im Inventar (Rechtsklick = Teleport) – für Spieler ohne Chat
+  item:
+    enabled: true
+    slot: 8
+  protection:
+    # Name der Schutzregion um den Spawn (per /mythos region redefine spawn anpassbar)
+    region: spawn
+    auto-create: true
+    radius: 64
+  # Regeln am Spawn (gelten für die Spawn-Region):
+  pvp: false
+  build: false
+  break: false
+  interact: false
+  use: true
+  container: false
+  explosions: false
+  fire: false
+  entity-damage: false
+  mob-damage: false
+  damage: false
+  mob-spawning: false
+  hunger: false
+  item-drop: true
+
+# ───────────────────────────── Schutz ─────────────────────────────
+protection:
+  # Standard außerhalb aller Regionen ("Wildnis")
+  wilderness:
+    pvp: true
+    build: true
+    break: true
+    interact: true
+    use: true
+    container: true
+    explosions: true
+    fire: true
+    entity-damage: true
+    mob-damage: true
+    damage: true
+    mob-spawning: true
+    hunger: true
+    item-drop: true
+  # Abweichende Standards pro Welt, z.B.:
+  # worlds:
+  #   world_nether:
+  #     pvp: false
+  worlds: {}
+  # Flags, die neue Regionen von /mythos region create bekommen
+  new-region-defaults:
+    pvp: false
+    build: false
+    break: false
+    interact: false
+    use: true
+    container: false
+    explosions: false
+    fire: false
+    entity-damage: false
+  # Soll mythos.bypass auch PvP-Schutz umgehen?
+  bypass-includes-pvp: false
+
+# ───────────────────────────── Arenen ─────────────────────────────
+arena:
+  # Befehle, die in Arenen mit block-commands=true erlaubt bleiben
+  allowed-commands: [arena, msg, r, helpop]
+  snapshot:
+    max-volume: 2000000
+    capture-blocks-per-tick: 20000
+    restore-blocks-per-tick: 4000
+
+kits:
+  pvp:
+    items:
+      - {material: DIAMOND_SWORD, enchantments: {sharpness: 1}}
+      - BOW
+      - ARROW 32
+      - COOKED_BEEF 16
+      - GOLDEN_APPLE 2
+    helmet: IRON_HELMET
+    chestplate: IRON_CHESTPLATE
+    leggings: IRON_LEGGINGS
+    boots: IRON_BOOTS
+    offhand: SHIELD
+
+# ───────────────────────────── Teleport ─────────────────────────────
+teleport:
+  cancel-on-damage: true
+  # Sekunden nach PvP, in denen /home, /tpa und /arena join gesperrt sind
+  combat-tag-seconds: 10
+  sounds:
+    countdown: "block.note_block.hat 0.6 1.6"
+    success: "entity.enderman.teleport 0.8 1.2"
+    cancel: "block.note_block.bass 0.8 0.6"
+  tpa:
+    timeout: 60
+    cooldown: 10
+    max-incoming: 5
+    teleport-delay: 3
+    cancel-on-move: true
+    deny-into-arenas: true
+    deny-into-pvp-areas: false
+
+homes:
+  # Lichtstrahl + Ring aus Partikeln über deinen Homes (sieht nur der Besitzer)
+  particles:
+    enabled: true
+    view-distance: 96
+  teleport-delay: 3
+  cancel-on-move: true
+  cooldown-seconds: 5
+  # Anzahl Homes kommt vom Rang (ranks.list.<RANG>.homes)
+  blocked-worlds: []
+
+# ───────────────────────────── Economy ─────────────────────────────
+economy:
+  max-balance: 1000000000000
+  coins:
+    enabled: true
+    start-balance: 100
+  gems:
+    enabled: true
+    # Dürfen Gems per /pay ... gems überwiesen werden?
+    transferable: false
+  pay:
+    max-amount: 1000000000
+    cooldown-seconds: 3
+
+# Tages-Multiplikatoren (Zeitzone siehe oben). Admins können zusätzlich Booster starten: /mythos boost
+multipliers:
+  announce-day-change: true
+  daily:
+    monday: {coins: 1.0, gems: 1.0, events: 1.0}
+    tuesday: {coins: 1.0, gems: 1.0, events: 1.0}
+    wednesday: {coins: 1.0, gems: 1.0, events: 1.25}
+    thursday: {coins: 1.0, gems: 1.0, events: 1.0}
+    friday: {coins: 1.25, gems: 1.0, events: 1.0}
+    saturday: {coins: 1.5, gems: 1.25, events: 1.25}
+    sunday: {coins: 1.5, gems: 1.25, events: 1.5}
+
+daily:
+  enabled: true
+  base-coins: 100
+  # + pro Streak-Tag (bis streak-cap)
+  streak-bonus-coins: 25
+  streak-cap: 7
+  # alle X Streak-Tage zusätzlich Gems
+  gems-every-days: 7
+  gems-amount: 3
+  sound: "entity.player.levelup 1 1.2"
+  streak-milestones:
+    7:
+    - gems 5
+    14:
+    - gems 10
+    30:
+    - gems 25
+    - voucher VIP 7d
+    60:
+    - gems 40
+    100:
+    - gems 75
+    - voucher ELITE 30d
+    365:
+    - gems 250
+  gem-chance: 0.3
+  random-gems:
+    min: 1
+    max: 3
+
+rewards:
+  mob-kill:
+    enabled: true
+    min-coins: 1
+    max-coins: 3
+    # Mobs aus Spawnern geben keine Coins (gegen Mobfarmen)
+    ignore-spawner-mobs: true
+    special:
+      WITHER: 250
+      ENDER_DRAGON: 500
+      ELDER_GUARDIAN: 75
+      WARDEN: 100
+  player-kill:
+    coins: 15
+    # Kein Reward, wenn derselbe Spieler innerhalb dieser Zeit erneut getötet wird
+    same-victim-cooldown-minutes: 10
+  killstreak-broadcasts: [5, 10, 15, 25]
+  # Belohnung für aktive (nicht AFK) Spielzeit
+  playtime:
+    enabled: true
+    interval-minutes: 30
+    coins: 50
+    gems: 0
+
+deaths:
+  broadcast: false
+  hide-vanilla-messages: false
+
+# ───────────────────────────── Ränge ─────────────────────────────
+# Der Rang MYTHOS gehört MinePro641 und kann NUR von ihm vergeben werden (geprüft über seine UUID).
+ranks:
+  default: SPIELER
+  # Text-Prefix für Teammitglieder (Permission mythos.team) ohne Resource Pack
+  team-prefix: "&c&lTEAM &8| "
+  list:
+    SPIELER:
+      weight: 0
+      display: "&7Spieler"
+      prefix: ""
+      badge: ""
+      team-color: gray
+      chat-color: white
+      homes: 3
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      permissions: []
+    VIP:
+      weight: 10
+      display: "&a&lVIP"
+      prefix: "&a&lVIP &8| "
+      # Glyph aus dem Resource Pack (vip, elite, mythos)
+      badge: vip
+      team-color: green
+      chat-color: white
+      homes: 5
+      coin-multiplier: 1.1
+      gem-multiplier: 1.0
+      daily-bonus: 50
+      permissions: []
+    ELITE:
+      weight: 20
+      display: "&b&lELITE"
+      prefix: "&b&lELITE &8| "
+      badge: elite
+      team-color: aqua
+      chat-color: white
+      homes: 8
+      coin-multiplier: 1.25
+      gem-multiplier: 1.1
+      daily-bonus: 100
+      permissions: [mythos.chat.color]
+    MYTHOS:
+      weight: 100
+      display: "<gradient:#c084fc:#f59e0b><bold>MYTHOS</bold></gradient>"
+      prefix: "<gradient:#c084fc:#f59e0b><bold>MYTHOS</bold></gradient> <dark_gray>| "
+      badge: mythos
+      team-color: light_purple
+      chat-color: "#f5d0fe"
+      homes: 15
+      coin-multiplier: 1.5
+      gem-multiplier: 1.5
+      daily-bonus: 250
+      permissions: [mythos.chat.color]
+
+# ───────────────────────────── Anzeige ─────────────────────────────
+    VIPPLUS:
+      weight: 15
+      display: <green><bold>VIP</bold></green><gold><bold>+</bold></gold>
+      prefix: '<green><bold>VIP</bold></green><gold><bold>+</bold></gold> <dark_gray>| '
+      badge: vipplus
+      team-color: green
+      chat-color: white
+      homes: 6
+      coin-multiplier: 1.15
+      gem-multiplier: 1.05
+      daily-bonus: 75
+      permissions: []
+    HELD:
+      weight: 30
+      display: <gradient:#fb923c:#c2410c><bold>HELD</bold></gradient>
+      prefix: '<gradient:#fb923c:#c2410c><bold>HELD</bold></gradient> <dark_gray>| '
+      badge: held
+      team-color: gold
+      chat-color: white
+      homes: 10
+      coin-multiplier: 1.3
+      gem-multiplier: 1.15
+      daily-bonus: 150
+      permissions:
+      - mythos.chat.color
+    LEGENDE:
+      weight: 40
+      display: <gradient:#fde047:#d97706><bold>LEGENDE</bold></gradient>
+      prefix: '<gradient:#fde047:#d97706><bold>LEGENDE</bold></gradient> <dark_gray>| '
+      badge: legende
+      team-color: yellow
+      chat-color: '#fef9c3'
+      homes: 12
+      coin-multiplier: 1.4
+      gem-multiplier: 1.25
+      daily-bonus: 200
+      permissions:
+      - mythos.chat.color
+    TITAN:
+      weight: 50
+      display: <gradient:#818cf8:#3730a3><bold>TITAN</bold></gradient>
+      prefix: '<gradient:#818cf8:#3730a3><bold>TITAN</bold></gradient> <dark_gray>| '
+      badge: titan
+      team-color: blue
+      chat-color: '#e0e7ff'
+      homes: 14
+      coin-multiplier: 1.45
+      gem-multiplier: 1.35
+      daily-bonus: 225
+      permissions:
+      - mythos.chat.color
+    # Content Creator (YouTube / Twitch / TikTok) – kein Team-Rang, aber gut sichtbar
+    CREATOR:
+      weight: 55
+      display: <gradient:#ef4444:#f43f5e><bold>CREATOR</bold></gradient>
+      prefix: '<gradient:#ef4444:#f43f5e><bold>CREATOR</bold></gradient> <dark_gray>| '
+      badge: creator
+      team-color: red
+      chat-color: white
+      homes: 12
+      coin-multiplier: 1.3
+      gem-multiplier: 1.2
+      daily-bonus: 150
+      permissions:
+      - mythos.chat.color
+      - mythos.giveaway.item
+    SUPPORTER:
+      weight: 60
+      display: <gradient:#2dd4bf:#0f766e><bold>SUPPORTER</bold></gradient>
+      prefix: '<gradient:#2dd4bf:#0f766e><bold>SUP</bold></gradient> <dark_gray>| '
+      badge: supporter
+      team-color: dark_aqua
+      chat-color: white
+      homes: 10
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      permissions:
+      - mythos.helpop.receive
+      - mythos.chat.color
+    BUILDER:
+      weight: 65
+      display: <gradient:#facc15:#a16207><bold>BUILDER</bold></gradient>
+      prefix: '<gradient:#facc15:#a16207><bold>BUILDER</bold></gradient> <dark_gray>| '
+      badge: builder
+      team-color: yellow
+      chat-color: white
+      homes: 15
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      permissions:
+      - mythos.chat.color
+      - mythos.teleport.instant
+    MOD:
+      weight: 70
+      display: <gradient:#60a5fa:#1d4ed8><bold>MOD</bold></gradient>
+      prefix: '<gradient:#60a5fa:#1d4ed8><bold>MOD</bold></gradient> <dark_gray>| '
+      badge: mod
+      team-color: blue
+      chat-color: white
+      homes: 15
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      owner-only: true
+      permissions:
+      - mythos.helpop.receive
+      - mythos.chat.color
+      - mythos.auction.admin
+      - mythos.orders.admin
+      - mythos.teleport.instant
+    ADMIN:
+      weight: 80
+      display: <gradient:#f87171:#b91c1c><bold>ADMIN</bold></gradient>
+      prefix: '<gradient:#f87171:#b91c1c><bold>ADMIN</bold></gradient> <dark_gray>| '
+      badge: admin
+      team-color: red
+      chat-color: white
+      homes: 50
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      owner-only: true
+      permissions:
+      - mythos.admin
+    OWNER:
+      weight: 90
+      display: <gradient:#ef4444:#7f1d1d><bold>OWNER</bold></gradient>
+      prefix: '<gradient:#ef4444:#7f1d1d><bold>OWNER</bold></gradient> <dark_gray>| '
+      badge: owner
+      team-color: dark_red
+      chat-color: white
+      homes: 100
+      coin-multiplier: 1.0
+      gem-multiplier: 1.0
+      daily-bonus: 0
+      owner-only: true
+      permissions:
+      - mythos.admin
+chat:
+  # Auf false setzen, wenn ein anderes Chat-Plugin das Format übernimmt
+  enabled: true
+  format: "{badge}{name} <dark_gray>»</dark_gray> {message}"
+  # Namen im Chat werden für den Erwähnten hervorgehoben (+ Ton)
+  mentions: true
+
+join-messages:
+  enabled: true
+  join: "<dark_gray>[<green>+</green>]</dark_gray> {badge}{name}"
+  quit: "<dark_gray>[<red>-</red>]</dark_gray> {badge}{name}"
+  first-join: "<gradient:#c084fc:#f59e0b>✦ Willkommen {player} auf MythosCraft! ✦</gradient> <gray>(Spieler #{number})"
+  # Titel + Effekte, wenn ein MYTHOS-Spieler online kommt
+  mythos-announce: true
+
+scoreboard:
+  enabled: true
+  title: "<gradient:#c084fc:#f59e0b><bold>✦ MythosCraft ✦</bold></gradient>"
+  # Platzhalter: {player} {rank} {coins} {gems} {kills} {deaths} {kd} {playtime} {mobkills} {killstreak}
+  # {daily_streak} {event_points} {event} {online} {max} {tps} {ping} {world} {boost_coins} {boost_gems} {boost_events}
+  # Icons (mit Resource Pack als Grafik): {icon_coin} {icon_gem} {icon_kill} {icon_death} {icon_time} {icon_event}
+  # {icon_key} {icon_rank} {icon_streak}
+  lines:
+    - "<dark_gray><st>                         </st>"
+    - "{icon_rank} <gray>Rang</gray> <dark_gray>»</dark_gray> {rank}"
+    - "{icon_coin} <gray>Coins</gray> <dark_gray>»</dark_gray> <gold>{coins}"
+    - "{icon_gem} <gray>Gems</gray> <dark_gray>»</dark_gray> <light_purple>{gems}"
+    - ""
+    - "{icon_kill} <gray>Kills</gray> <dark_gray>»</dark_gray> <white>{kills}"
+    - "{icon_death} <gray>Tode</gray> <dark_gray>»</dark_gray> <white>{deaths}"
+    - "{icon_time} <gray>Spielzeit</gray> <dark_gray>»</dark_gray> <white>{playtime}"
+    - " "
+    - "{icon_event} <gray>Event</gray> <dark_gray>»</dark_gray> {event}"
+    - "{icon_streak} <gray>Boost</gray> <dark_gray>»</dark_gray> <green>x{boost_coins}"
+    - "{icon_event} <gray>Saison</gray> <dark_gray>»</dark_gray> {season}"
+    - "<dark_gray><st>                         </st> "
+    - "<gradient:#c084fc:#f59e0b>mythoscraft.online</gradient>"
+  update-interval-ticks: 20
+  # Spätestens nach so vielen Ticks wird alles neu berechnet (z.B. für Event-Timer)
+  full-refresh-ticks: 100
+
+nametags:
+  # Rang-Badge vor dem Namen (Tab-Liste + über dem Kopf)
+  enabled: true
+
+tablist:
+  enabled: true
+  header:
+    - "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient>"
+    - "<gray>Online: <white>{online}</white>/<white>{max}</white>"
+  footer:
+    - ""
+    - "<gray>Event: {event}"
+    - "<gray>Ping: <white>{ping}ms</white>  <dark_gray>•</dark_gray>  <gray>TPS: <white>{tps}"
+    - "<gradient:#c084fc:#f59e0b>mythoscraft.online</gradient>"
+  logo-padding-lines: 2
+  update-interval-ticks: 100
+
+# ───────────────────────────── Resource Pack ─────────────────────────────
+# Das Pack (Rang-Badges, Crate- und Tool-Modelle, GUI-Hintergründe) steckt im Plugin.
+resource-pack:
+  enabled: true
+  # true = ohne Pack kein Beitritt
+  required: true
+  # Externer Link (z.B. download.mc-packs.net). LEER lassen = das Plugin liefert das Pack selbst aus (self-host unten).
+  # MineKeep erlaubt nur bestimmte Hoster (*.minekeep.dev, download.mc-packs.net, github.com, dropbox.com …)!
+  url: ""
+  # SHA-1 der Datei unter "url" – leer lassen bei mc-packs.net (steht im Link) und bei self-host
+  sha1: ""
+  self-host:
+    # Das Plugin startet einen kleinen Webserver und schickt immer automatisch das aktuelle Pack aus der JAR
+    enabled: true
+    bind: 0.0.0.0
+    # MineKeep erlaubt nur die Ports 2053, 2083, 2087 und 2096
+    port: 2053
+    # Öffentliche Adresse ohne Pfad. MineKeep: https://<Servername>.minekeep.dev:<Port>
+    public-url: "https://mythoscraftsmp.minekeep.dev:2053"
+    # Nur genutzt, wenn public-url leer ist (dann http://public-host:port)
+    public-host: mythoscraft.online
+  send-delay-ticks: 20
+  # Nur setzen, wenn alle Spieler das Pack manuell installiert haben
+  assume-loaded: false
+
+helpop:
+  cooldown-seconds: 30
+
+# ───────────────────────────── Custom Tools ─────────────────────────────
+tools:
+  mythos-hammer:
+    enabled: true
+    # Härteste abbaubare Blöcke im 3x3 (Obsidian = 50)
+    max-hardness: 50
+  excavator:
+    enabled: true
+  timber-axe:
+    enabled: true
+    max-logs: 128
+  warden-blade:
+    enabled: true
+    damage: 10
+    range: 16
+    cooldown-seconds: 8
+  meteor-staff:
+    enabled: true
+    damage: 8
+    radius: 3.5
+    range: 40
+    cooldown-seconds: 15
+
+# ───────────────────────────── Events ─────────────────────────────
+events:
+  enabled: true
+  auto:
+    # off, interval (alle X Minuten ein zufälliges Event) oder times (feste Uhrzeiten)
+    mode: interval
+    interval-minutes: 45
+    min-players: 2
+    times: ["18:00", "20:00", "22:00"]
+  # Event-Punkte (Statistik) für Platz 1, 2, 3, … (letzter Wert gilt für alle weiteren Teilnehmer)
+  placement-points: [10, 7, 5, 3, 1]
+
+  coinrain:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    duration-seconds: 90
+    countdown-seconds: 30
+    weight: 30
+    cooldown-minutes: 30
+    min-players: 1
+    # leer = alle Welten
+    worlds: []
+    bossbar-color: YELLOW
+    wave-interval-seconds: 2
+    coins-per-wave: 3
+    radius: 9
+    coin-value: {min: 5, max: 25}
+    golden-coin: {chance: 0.03, multiplier: 10}
+    despawn-seconds: 20
+    rewards:
+      places:
+        1: ["coins 300", "key common 1"]
+        2: ["coins 150"]
+        3: ["coins 75"]
+      participation: []
+      participation-min-score: 1
+
+  gemrush:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 20
+    cooldown-minutes: 45
+    min-players: 1
+    worlds: []
+    bossbar-color: PURPLE
+    points:
+      hostile-mob: 2
+      ores:
+        COAL_ORE: 1
+        DEEPSLATE_COAL_ORE: 1
+        COPPER_ORE: 1
+        DEEPSLATE_COPPER_ORE: 1
+        IRON_ORE: 2
+        DEEPSLATE_IRON_ORE: 2
+        GOLD_ORE: 3
+        DEEPSLATE_GOLD_ORE: 3
+        NETHER_GOLD_ORE: 2
+        NETHER_QUARTZ_ORE: 1
+        REDSTONE_ORE: 2
+        DEEPSLATE_REDSTONE_ORE: 2
+        LAPIS_ORE: 3
+        DEEPSLATE_LAPIS_ORE: 3
+        DIAMOND_ORE: 10
+        DEEPSLATE_DIAMOND_ORE: 10
+        EMERALD_ORE: 15
+        DEEPSLATE_EMERALD_ORE: 15
+        ANCIENT_DEBRIS: 25
+        AMETHYST_CLUSTER: 4
+    shard-chance: 0.08
+    points-per-gem: 20
+    max-gems-per-player: 25
+    rewards:
+      places:
+        1: ["gems 15", "key elite 1"]
+        2: ["gems 10"]
+        3: ["gems 5"]
+      participation: ["coins 50"]
+      participation-min-score: 5
+
+  ancienthunt:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: "wild:800-2500"
+    duration-seconds: 600
+    countdown-seconds: 30
+    weight: 20
+    cooldown-minutes: 60
+    min-players: 1
+    worlds: []
+    bossbar-color: PURPLE
+    # leer = Welt des Spawns
+    world: ""
+    # "spawn" oder "x,z"
+    center: spawn
+    relics: 8
+    radius: {min: 40, max: 250}
+    points-per-relic: 10
+    coins-per-relic: 100
+    hint-radius: 60
+    collect-radius: 2.2
+    beam: true
+    rewards:
+      places:
+        1: ["coins 750", "gems 10", "key mythos 1"]
+        2: ["coins 400", "gems 5"]
+        3: ["coins 200", "gems 3"]
+      participation: ["coins 50"]
+      participation-min-score: 1
+
+  meteor:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: "wild:1500-4000"
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 20
+    cooldown-minutes: 45
+    min-players: 1
+    worlds: []
+    bossbar-color: RED
+    meteors: 3
+    first-delay-seconds: 15
+    interval-seconds: 70
+    warning-seconds: 15
+    # Abstand des Einschlags zu einem zufälligen Spieler
+    distance: {min: 25, max: 70}
+    explosion-power: 3.0
+    # Blöcke werden nur außerhalb geschützter Regionen zerstört
+    break-blocks: true
+    fire: false
+    core:
+      claims: 3
+      lifetime-seconds: 120
+      rewards: ["coins 150", "gems 2"]
+      rare-rewards: ["tool meteor_staff", "key mythos 1"]
+      rare-chance: 0.08
+    points: {first-claim: 10, claim: 5}
+    rewards:
+      places:
+        1: ["coins 400", "key vip 1"]
+        2: ["coins 200"]
+        3: ["coins 100"]
+      participation: []
+      participation-min-score: 1
+
+  ancientwarden:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: arena:daily
+    # Maximale Kampfdauer
+    duration-seconds: 900
+    countdown-seconds: 30
+    weight: 10
+    cooldown-minutes: 120
+    min-players: 3
+    worlds: []
+    bossbar-color: BLUE
+    # Feste Boss-Arena "welt,x,y,z" – leer = in der Nähe eines zufälligen Spielers
+    location: ""
+    spawn-distance: {min: 16, max: 32}
+    # Eigener Lebenspool – nicht durch das Vanilla-Limit von 1024 begrenzt
+    health: 1500
+    damage: 18
+    armor: 12
+    speed: 0.32
+    scale: 1.6
+    follow-range: 48
+    ability-interval-seconds: 8
+    enraged-interval-seconds: 5
+    enrage-threshold: 0.3
+    abilities:
+      shockwave-damage: 7
+      slam-damage: 6
+    minions: {count: 3, max-alive: 6, health: 24}
+    despawn-without-players-seconds: 180
+    loot:
+      warden-blade-chance: 0.35
+      xp: 500
+    rewards:
+      places:
+        1: ["coins 500", "gems 10", "key ancient 1"]
+        2: ["coins 300", "gems 5", "key elite 1"]
+        3: ["coins 150", "gems 3"]
+      participation: ["coins 50", "gems 1"]
+      # Mindest-Schaden für die Teilnahme-Belohnung
+      participation-min-score: 25
+
+# ───────────────────────────── Kollektions-Items ─────────────────────────────
+  pumpkinhunt:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    season: halloween
+    duration-seconds: 150
+    countdown-seconds: 30
+    weight: 30
+    cooldown-minutes: 30
+    bossbar-color: YELLOW
+    wave-interval-seconds: 3
+    per-wave: 2
+    radius: 14
+    rare-chance: 0.05
+    rare-points: 5
+    coins-per-pickup: 5
+    rare-reward: tool candy_corn 3
+    rewards:
+      places:
+        1:
+        - coins 1000
+        - key halloween 1
+        2:
+        - coins 500
+        3:
+        - coins 250
+      participation:
+      - tool lollipop 1
+      participation-min-score: 3
+  ghostnight:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    season: halloween
+    duration-seconds: 240
+    countdown-seconds: 30
+    weight: 25
+    cooldown-minutes: 40
+    bossbar-color: PURPLE
+    wave-interval-seconds: 6
+    per-wave: 2
+    max-per-player: 6
+    drop-chance: 0.25
+    rewards:
+      places:
+        1:
+        - coins 1200
+        - key halloween 1
+        - tool smoke_bomb 2
+        2:
+        - coins 600
+        3:
+        - coins 300
+      participation:
+      - coins 50
+      participation-min-score: 3
+  pumpkinking:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: arena:daily
+    season: halloween
+    duration-seconds: 480
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 90
+    min-players: 2
+    bossbar-color: RED
+    health:
+      base: 300
+      per-player: 120
+    scale: 2.4
+    damage: 9
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1:
+        - gems 20
+        - key halloween 2
+        - tool pumpkin_scythe
+        2:
+        - gems 12
+        - key halloween 1
+        3:
+        - gems 8
+        - key halloween 1
+      participation:
+      - coins 300
+      - tool candy_bucket
+      participation-min-score: 20
+  giftrain:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    season: frostfest
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 30
+    cooldown-minutes: 30
+    bossbar-color: GREEN
+    wave-interval-seconds: 2
+    per-wave: 2
+    radius: 10
+    rare-chance: 0.04
+    rare-points: 5
+    coins-per-pickup: 8
+    rare-reward: tool gift_box 1
+    rewards:
+      places:
+        1:
+        - coins 1000
+        - key frostfest 1
+        2:
+        - coins 500
+        3:
+        - coins 250
+      participation:
+      - tool hot_cocoa 1
+      participation-min-score: 3
+  snowballfight:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    season: frostfest
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 20
+    cooldown-minutes: 40
+    min-players: 2
+    bossbar-color: WHITE
+    refill-seconds: 4
+    max-snowballs: 16
+    rewards:
+      places:
+        1:
+        - coins 1000
+        - key frostfest 1
+        - tool frost_bomb 3
+        2:
+        - coins 500
+        3:
+        - coins 250
+      participation:
+      - tool hot_cocoa 1
+      participation-min-score: 3
+  frostgiant:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: arena:daily
+    season: frostfest
+    duration-seconds: 480
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 90
+    min-players: 2
+    bossbar-color: BLUE
+    health:
+      base: 320
+      per-player: 120
+    scale: 2.6
+    damage: 8
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1:
+        - gems 20
+        - key frostfest 2
+        - tool frost_blade
+        2:
+        - gems 12
+        - key frostfest 1
+        3:
+        - gems 8
+        - key frostfest 1
+      participation:
+      - coins 300
+      - tool gift_box 1
+      participation-min-score: 20
+  starfall:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    season: sternenregen
+    duration-seconds: 150
+    countdown-seconds: 30
+    weight: 30
+    cooldown-minutes: 30
+    bossbar-color: BLUE
+    wave-interval-seconds: 3
+    per-wave: 2
+    radius: 12
+    rare-chance: 0.05
+    rare-points: 6
+    coins-per-pickup: 6
+    rare-reward: gems 3
+    rewards:
+      places:
+        1:
+        - gems 10
+        - key celestial 1
+        2:
+        - gems 6
+        3:
+        - gems 3
+      participation:
+      - coins 100
+      participation-min-score: 3
+  egghunt:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    season: fruehling
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 30
+    cooldown-minutes: 30
+    bossbar-color: PINK
+    wave-interval-seconds: 3
+    per-wave: 2
+    radius: 16
+    rare-chance: 0.05
+    rare-points: 5
+    coins-per-pickup: 5
+    rare-reward: tool easter_egg 1
+    rewards:
+      places:
+        1:
+        - coins 1000
+        - key farm 1
+        - tool easter_egg 3
+        2:
+        - coins 500
+        - tool easter_egg 2
+        3:
+        - coins 250
+        - tool easter_egg 1
+      participation:
+      - tool honey_bread 2
+      participation-min-score: 3
+  mobhunt:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: RED
+    rewards:
+      places:
+        1:
+        - coins 1500
+        - key elite 1
+        2:
+        - coins 800
+        3:
+        - coins 400
+      participation:
+      - coins 50
+      participation-min-score: 5
+  fishing:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: BLUE
+    goldfish-chance: 0.04
+    goldfish-coins: 150
+    rewards:
+      places:
+        1:
+        - coins 1200
+        - key farm 1
+        - tool lucky_rod
+        2:
+        - coins 600
+        3:
+        - coins 300
+      participation:
+      - coins 50
+      participation-min-score: 3
+  harvest:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: GREEN
+    rewards:
+      places:
+        1:
+        - coins 1200
+        - key farm 1
+        2:
+        - coins 600
+        3:
+        - coins 300
+      participation:
+      - coins 50
+      participation-min-score: 10
+  goldrush:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 20
+    cooldown-minutes: 45
+    bossbar-color: YELLOW
+    rewards:
+      places:
+        1:
+        - coins 1500
+        - key vip 1
+        2:
+        - coins 800
+        3:
+        - coins 400
+      participation:
+      - coins 50
+      participation-min-score: 3
+  keyrain:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    duration-seconds: 90
+    countdown-seconds: 30
+    weight: 10
+    cooldown-minutes: 60
+    bossbar-color: PURPLE
+    rewards:
+      places:
+        1:
+        - key elite 1
+        - gems 5
+        2:
+        - key vip 1
+        3:
+        - key common 2
+      participation:
+      - coins 50
+      participation-min-score: 2
+  chickenhunt:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: WHITE
+    rewards:
+      places:
+        1:
+        - coins 1200
+        - key forest 1
+        2:
+        - coins 700
+        3:
+        - coins 350
+      participation:
+      - coins 50
+      participation-min-score: 3
+  lumberjack:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: player
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: GREEN
+    rewards:
+      places:
+        1:
+        - coins 1500
+        - key forest 1
+        2:
+        - coins 800
+        3:
+        - coins 400
+      participation:
+      - coins 50
+      participation-min-score: 5
+  parkourrace:
+    enabled: true
+    # Ort: spawn | player (bei jedem Spieler) | arena:<name> | wild:<min>-<max> (/event tp beamt hin)
+    venue: spawn
+    duration-seconds: 300
+    countdown-seconds: 30
+    weight: 10
+    cooldown-minutes: 60
+    bossbar-color: GREEN
+    max-points-per-finish: 300
+    rewards:
+      places:
+        1:
+        - gems 10
+        - key sky 1
+        2:
+        - gems 5
+        3:
+        - gems 3
+      participation:
+      - coins 100
+      participation-min-score: 1
+  diamondrain:
+    enabled: true
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: BLUE
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1500", "gems 5"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  crystalhunt:
+    enabled: true
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: PURPLE
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1200", "key crystal 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  mushroomhunt:
+    enabled: true
+    venue: player
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: RED
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1200", "key forest 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  featherfall:
+    enabled: true
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: WHITE
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1200", "key sky 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  luckrain:
+    enabled: true
+    season: neujahr
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: YELLOW
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["gems 10", "key silvester 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  petalrain:
+    enabled: true
+    season: fruehling
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: PINK
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1500", "key farm 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  heartrain:
+    enabled: true
+    season: valentin
+    venue: spawn
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: PINK
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1500", "key cosmetic 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  shellhunt:
+    enabled: true
+    season: sommerfest
+    venue: player
+    duration-seconds: 120
+    countdown-seconds: 30
+    weight: 15
+    cooldown-minutes: 45
+    bossbar-color: BLUE
+    wave-interval-seconds: 3
+    per-wave: 2
+    coins-per-pickup: 5
+    rare-chance: 0.05
+    rare-points: 5
+    rewards:
+      places:
+        1: ["coins 1500", "key ocean 1"]
+        2: ["coins 600"]
+        3: ["coins 300"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  slimeplague:
+    enabled: true
+    venue: player
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 12
+    cooldown-minutes: 45
+    bossbar-color: GREEN
+    wave-interval-seconds: 6
+    per-wave: 2
+    max-per-player: 6
+    rewards:
+      places:
+        1: ["coins 1200", "key common 2"]
+        2: ["coins 700"]
+        3: ["coins 350"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  spidernight:
+    enabled: true
+    venue: player
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 12
+    cooldown-minutes: 45
+    bossbar-color: RED
+    wave-interval-seconds: 6
+    per-wave: 2
+    max-per-player: 6
+    rewards:
+      places:
+        1: ["coins 1300", "key vip 1"]
+        2: ["coins 700"]
+        3: ["coins 350"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  pigchase:
+    enabled: true
+    venue: player
+    duration-seconds: 180
+    countdown-seconds: 30
+    weight: 12
+    cooldown-minutes: 45
+    bossbar-color: PINK
+    wave-interval-seconds: 6
+    per-wave: 2
+    max-per-player: 6
+    rewards:
+      places:
+        1: ["coins 1200", "key farm 1"]
+        2: ["coins 700"]
+        3: ["coins 350"]
+      participation: ["coins 50"]
+      participation-min-score: 3
+  spiderqueen:
+    enabled: true
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: GREEN
+    health:
+      base: 350
+      per-player: 120
+    scale: 2.6
+    damage: 7
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 15", "key elite 1"]
+        2: ["gems 10"]
+        3: ["gems 6"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  boneking:
+    enabled: true
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: WHITE
+    health:
+      base: 400
+      per-player: 130
+    scale: 2.2
+    damage: 9
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 15", "key mythos 1"]
+        2: ["gems 10"]
+        3: ["gems 6"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  magmalord:
+    enabled: true
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: RED
+    health:
+      base: 380
+      per-player: 130
+    scale: 2.4
+    damage: 9
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 15", "key inferno 1"]
+        2: ["gems 10"]
+        3: ["gems 6"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  swampwitch:
+    enabled: true
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: PURPLE
+    health:
+      base: 320
+      per-player: 110
+    scale: 2.4
+    damage: 6
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 15", "key elite 1"]
+        2: ["gems 10"]
+        3: ["gems 6"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  stormknight:
+    enabled: true
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: BLUE
+    health:
+      base: 420
+      per-player: 140
+    scale: 2.4
+    damage: 9
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 18", "key storm 1"]
+        2: ["gems 12"]
+        3: ["gems 7"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  killerbunny:
+    enabled: true
+    season: fruehling
+    venue: arena:daily
+    duration-seconds: 600
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: PINK
+    health:
+      base: 300
+      per-player: 100
+    scale: 3.0
+    damage: 8
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 15", "key farm 2"]
+        2: ["gems 10"]
+        3: ["gems 6"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  mythostitan:
+    enabled: true
+    venue: arena:monthly
+    duration-seconds: 2700
+    countdown-seconds: 60
+    weight: 15
+    cooldown-minutes: 120
+    min-players: 1
+    bossbar-color: PURPLE
+    health:
+      base: 900
+      per-player: 120
+    scale: 4.0
+    damage: 12
+    ability-interval-seconds: 7
+    rewards:
+      places:
+        1: ["gems 60", "key ancient 2", "key mythos 2"]
+        2: ["gems 40", "key mythos 1"]
+        3: ["gems 25", "key elite 1"]
+      participation: ["coins 300"]
+      participation-min-score: 20
+  treasurehunt:
+    enabled: true
+    duration-seconds: 43200
+    countdown-seconds: 60
+    weight: 10
+    cooldown-minutes: 0
+    bossbar-color: YELLOW
+    # alle X Minuten taucht eine leuchtende Schatztruhe in der Wildnis auf (Koordinaten grob angesagt)
+    chest-every-minutes: 20
+    max-chests-at-once: 3
+    radius: {min: 400, max: 2500}
+    treasures: ["coins 2500", "gems 8", "key vip 1", "key elite 1", "key mythos 1", "coins 5000", "gems 15"]
+    rewards:
+      places:
+        1: ["gems 30", "key ancient 1"]
+        2: ["gems 20"]
+        3: ["gems 12"]
+      participation: ["coins 500"]
+      participation-min-score: 1
+
+  # ── Zeitplan ─────────────────────────────────────────────────────────────
+  # Ersetzt "auto": stündlich ein leichtes Event, 1x am Tag ein Boss/längeres Event (zufällige Uhrzeit im Fenster),
+  # freitags 17:00 ein langes Wochen-Event, am letzten Tag im Monat der Mythos-Titan, am Wochenende/Monatsende/
+  # Feiertagen den ganzen Tag eine Schatzsuche im Hintergrund. Saison-Events kommen in ihrer Saison viel öfter dran.
+  schedule:
+    enabled: true
+    season-boost: 4
+    hourly:
+      minute: 30
+      min-players: 1
+      pool: [coinrain, goldrush, keyrain, diamondrain, crystalhunt, featherfall, mushroomhunt, chickenhunt, pigchase,
+        slimeplague, spidernight, mobhunt, fishing, harvest, lumberjack, parkourrace, gemrush,
+        pumpkinhunt, ghostnight, giftrain, snowballfight, starfall, egghunt, petalrain, luckrain, heartrain, shellhunt]
+    daily:
+      from: "17:00"
+      to: "21:00"
+      pool: [ancientwarden, spiderqueen, boneking, magmalord, swampwitch, stormknight, meteor, ancienthunt,
+        pumpkinking, frostgiant, killerbunny]
+    weekly:
+      day: FRIDAY
+      time: "17:00"
+      duration-minutes: 60
+      pool: [ancientwarden, gemrush, ancienthunt, stormknight]
+    monthly:
+      time: "19:00"
+      duration-minutes: 45
+      pool: [mythostitan]
+    all-day:
+      enabled: true
+      from: "10:00"
+      to: "22:00"
+      days: [SATURDAY, SUNDAY]
+      last-day-of-month: true
+      holidays: ["10-31", "12-24", "12-25", "12-26", "12-31", "01-01"]
+      pool: [treasurehunt]
+# ───────────────────────────── Schmied (/schmied) ─────────────────────────────
+# Waffen, Rüstung und Werkzeuge von +1 bis +10 verbessern. Ab +7 kann es schiefgehen (Item bleibt, Material weg).
+upgrades:
+  enabled: true
+  max-level: 10
+  # Erfolgschance in % für +1 … +10
+  success-chance: [100, 100, 100, 100, 100, 100, 80, 65, 50, 35]
+  # Coins: coins-base × Stufe² (also +1 = 1.500, +10 = 150.000)
+  coins-base: 1500
+  gems-per-level: 3
+  # Material pro Stufe (MATERIAL:Anzahl) für +1 … +10
+  materials: ["DIAMOND:2", "DIAMOND:4", "DIAMOND:8", "NETHERITE_SCRAP:1", "NETHERITE_SCRAP:2", "NETHERITE_SCRAP:3",
+    "ECHO_SHARD:2", "ECHO_SHARD:4", "NETHER_STAR:1", "NETHER_STAR:2"]
+  bonus:
+    # Waffen/Bögen: +5 % Schaden pro Stufe
+    damage-per-level: 0.05
+    # Rüstung: -1 % Schaden pro Stufe und Teil (max. 35 %)
+    armor-per-level: 0.01
+    armor-max: 0.35
+
+# ───────────────────────────── Kisten-Karussell ─────────────────────────────
+# Am Spawn stehen nur 10 Sockel: 4 feste Kisten, 5 wechselnde (alle swap-seconds die nächste) und 1 Event-Sockel.
+# Event-Kisten stehen NUR während ihres Events dort (Kiste: Saison-ID; Silvester zusätzlich am 31.12.).
+crate-carousel:
+  enabled: true
+  swap-seconds: 180
+  fixed: [common, vip, elite, mythos]
+  event-crates:
+    halloween: halloween
+    frostfest: frostfest
+    silvester: neujahr
+  # Kisten, die nie im Karussell erscheinen
+  never: []
+
+# ───────────────────────────── Persönliche Booster (Items) ─────────────────────────────
+boosters:
+  personal:
+    # Dauer pro Item (gleiche Booster addieren sich bis max-hours)
+    minutes: 30
+    max-hours: 3
+    coins: 2.0
+    gems: 1.5
+    job-xp: 2.0
+    # seltene Gem-Funde beim Abbauen
+    find: 3.0
+  mutation:
+    minutes: 20
+  meteor-shower:
+    meteors: 6
+
+# ───────────────────────────── Mythos-Magie ─────────────────────────────
+magic:
+  max-mana: 100
+  mana-per-second: 3
+  damage-factor: 1.0
+
+# ───────────────────────────── Rang-Vorteile (zusätzlich zu homes / multiplier / daily-bonus) ──────────────
+# job-xp-bonus: 0.10 = +10 % Job-XP | daily-keys: täglich beim ersten Join | blacksmith-discount: % billiger
+# extra-wheel-spins: zusätzliche Gratis-Drehs am Glücksrad pro Tag | extra-mana | join-announce | spawn-trail (sparkle,
+# stars, mythos) | spawn-fly: Fliegen am Spawn | home-fly-radius: Fliegen in X Blöcken um die eigenen Homes | booster-time-bonus: 0.5 = Booster halten 50 % länger
+rank-perks:
+  VIP:
+    job-xp-bonus: 0.05
+    blacksmith-discount: 5
+    extra-mana: 10
+  VIPPLUS:
+    job-xp-bonus: 0.07
+    blacksmith-discount: 7
+    extra-mana: 15
+    spawn-trail: sparkle
+  ELITE:
+    job-xp-bonus: 0.10
+    daily-keys: ["key common 1"]
+    blacksmith-discount: 10
+    extra-wheel-spins: 1
+    extra-mana: 20
+    spawn-trail: sparkle
+  HELD:
+    job-xp-bonus: 0.12
+    daily-keys: ["key vip 1"]
+    blacksmith-discount: 12
+    extra-wheel-spins: 1
+    extra-mana: 25
+    join-announce: true
+    spawn-trail: stars
+    booster-time-bonus: 0.1
+  LEGENDE:
+    job-xp-bonus: 0.15
+    daily-keys: ["key vip 1", "key common 1"]
+    blacksmith-discount: 15
+    extra-wheel-spins: 1
+    extra-mana: 30
+    join-announce: true
+    spawn-trail: stars
+    booster-time-bonus: 0.15
+  TITAN:
+    job-xp-bonus: 0.18
+    daily-keys: ["key elite 1"]
+    blacksmith-discount: 18
+    extra-wheel-spins: 2
+    extra-mana: 40
+    join-announce: true
+    spawn-trail: stars
+    booster-time-bonus: 0.2
+  CREATOR:
+    # Fliegen am Spawn und im Umkreis (Blöcke) der eigenen Homes
+    spawn-fly: true
+    home-fly-radius: 40
+    job-xp-bonus: 0.12
+    daily-keys: ["key vip 1", "key cosmetic 1"]
+    blacksmith-discount: 12
+    extra-wheel-spins: 1
+    extra-mana: 30
+    join-announce: true
+    spawn-trail: stars
+    booster-time-bonus: 0.15
+  MYTHOS:
+    job-xp-bonus: 0.75
+    daily-keys: ["key mythos 2", "key elite 2", "tool coin_booster 1", "tool spell_scroll 1"]
+    blacksmith-discount: 50
+    extra-wheel-spins: 5
+    extra-mana: 150
+    join-announce: true
+    spawn-trail: mythos
+    spawn-fly: true
+    booster-time-bonus: 1.0
+
+# ───────────────────────────── Verlosungen (/verlosung) ─────────────────────────────
+# Alle online können per Klick mitmachen, nach join-minutes wird gezogen. Admins: /verlosung start 10 voucher VIP 7d
+giveaways:
+  enabled: true
+  min-players: 2
+  # Creator (Recht mythos.giveaway.item): /verlosung item [Minuten] verlost das Item in der Hand
+  item:
+    fee-coins: 1500
+    max-minutes: 10
+    cooldown-minutes: 20
+  auto:
+    vip-sonntag:
+      days: [SUNDAY]
+      time: "18:00"
+      reward: "voucher VIP 7d"
+      join-minutes: 10
+      winners: 1
+    vip-mittwoch:
+      days: [WEDNESDAY]
+      time: "19:00"
+      reward: "voucher VIP 7d"
+      join-minutes: 10
+      winners: 1
+    taeglich:
+      time: "20:30"
+      reward: "key elite 2"
+      join-minutes: 5
+      winners: 2
+
+# ───────────────────────────── Admin-Website ─────────────────────────────
+# Eigene Website direkt aus dem Plugin: Live-Statistiken, Spieler, Aktionen per Knopf, Konsole, Config.
+# Anmelden: auf der Website "Mit Server anmelden" → Code → ingame /website login <Code>.
+# Zugriff hat immer MinePro641, weitere nur per /website allow <Spieler> <view|edit|admin>.
+# Port muss beim Hoster freigegeben sein (wie beim Resourcepack). Für HTTPS: public-url hinter einem Proxy eintragen.
+web-panel:
+  enabled: true
+  port: 8085
+  bind: "0.0.0.0"
+  public-url: ""
+  # Hoster ohne zusätzliche Ports (z.B. MineKeep): der Server verbindet sich selbst NACH AUSSEN mit der Netlify-Seite.
+  # url = deine Netlify-Adresse, secret wird automatisch erzeugt (bei Netlify als PANEL_SECRET eintragen, /website relay)
+  relay:
+    url: "https://darling-pie-7277b6.netlify.app"
+    secret: ""
+
+# ───────────────────────────── Sprache ─────────────────────────────
+# Jeder Spieler sieht die Texte in der Sprache seines Minecraft-Spiels: Deutsch für deutsche Spiele,
+# Englisch für alle anderen. default gilt für Konsole, Items und alles ohne Spieler (en oder de).
+language:
+  per-player: true
+  default: en
+
+items:
+  witch-broom:
+    cooldown-seconds: 5
+    speed: 0.65
+    turbo-speed: 1.05
+    max-flight-seconds: 120
+    seat-offset: 0.62
+  ghost-lantern: {cooldown-seconds: 30, radius: 12}
+  candy-bucket: {cooldown-seconds: 300}
+  ice-wand: {cooldown-seconds: 10, range: 20}
+  snow-cannon: {cooldown-seconds: 2, damage: 2}
+  void-scepter: {cooldown-seconds: 8, distance: 8}
+  ember-wand: {cooldown-seconds: 3}
+  healing-totem: {cooldown-seconds: 60, radius: 6, heal: 6}
+  grappling-hook: {cooldown-seconds: 1.5, power: 1.0}
+  magnet-charm: {radius: 7}
+  pumpkin-bomb: {damage: 5, radius: 3}
+  xp-tome: {xp: 500}
+  gift-box:
+    rewards: ["coins 250", "coins 750", "gems 3", "tool hot_cocoa 2", "tool candy_cane", "key frostfest 1", "item SNOWBALL 16"]
+
+# ───────────────────────────── Saisons ─────────────────────────────
+# Während einer Saison droppen feindliche Mobs (nicht aus Spawnern) Saison-Items und selten Saison-Schlüssel.
+  harvest-sickle:
+    cooldown-seconds: 0.5
+    radius: 2
+  watering-can:
+    cooldown-seconds: 3
+    radius: 1
+  seed-bag:
+    radius: 2
+  thunder-hammer:
+    cooldown-seconds: 15
+    range: 25
+    damage: 6
+    hit-chance: 0.25
+    hit-damage: 4
+  wind-blade:
+    cooldown-seconds: 5
+    power: 1.6
+  storm-bow:
+    damage: 3
+  static-charm:
+    chance: 0.2
+    damage: 2
+  dragon-staff:
+    cooldown-seconds: 8
+    radius: 3
+    damage: 6
+  dragon-heart:
+    cooldown-seconds: 120
+  builder-wand:
+    cooldown-seconds: 0.4
+    radius: 1
+  coin-pouch:
+    min: 100
+    max: 1000
+  gem-pouch:
+    min: 1
+    max: 5
+  compost-charm:
+    chance: 0.25
+  lucky-rod:
+    double-chance: 0.35
+    coin-chance: 0.1
+  key-fragment:
+    needed: 9
+    rewards:
+    - key vip 1
+    - key vip 1
+    - key vip 1
+    - key elite 1
+    - key elite 1
+    - key ancient 1
+    - key mythos 1
+    - key rang 1
+  boomerang:
+    cooldown-seconds: 3
+    damage: 5
+    range: 14
+  ender-bow:
+    cooldown-seconds: 8
+  healing-flask:
+    heal: 8
+  wisdom-charm:
+    multiplier: 1.5
+  frost-bomb:
+    radius: 3.5
+    damage: 2
+  smoke-bomb:
+    cooldown-seconds: 20
+  blossom-wand:
+    cooldown-seconds: 8
+  ore-pickaxe:
+    max-blocks: 16
+  treasure-map:
+    min-distance: 150
+    max-distance: 400
+    loot:
+    - item DIAMOND 3
+    - item EMERALD 8
+    - item GOLD_INGOT 12
+    - tool coin_pouch 2
+    - tool gem_pouch 1
+    - tool key_fragment 3
+    - book mending 1
+    - book efficiency 5
+    - key elite 1
+  easter-egg:
+    rewards:
+    - coins 300
+    - coins 800
+    - gems 2
+    - tool lucky_clover 1
+    - tool honey_bread 3
+    - tool carrot_blade
+    - key farm 1
+    - item GOLDEN_CARROT 8
+  tide-staff:
+    cooldown-seconds: 6
+    damage: 3
+  shell-horn:
+    cooldown-seconds: 60
+  druid-staff:
+    cooldown-seconds: 30
+  vine-whip:
+    cooldown-seconds: 4
+    damage: 5
+  seed-of-life:
+    cooldown-seconds: 300
+  wind-horn:
+    cooldown-seconds: 10
+  comet-shard:
+    xp: 300
+  balloon:
+    cooldown-seconds: 15
+  crystal-wand:
+    cooldown-seconds: 5
+    damage: 7
+  arcane-tome:
+    xp: 1000
+  prism-shield:
+    cooldown-seconds: 60
+  thunder-bottle:
+    damage: 5
+  shard-bomb:
+    damage: 4
+  crystal-pickaxe:
+    double-chance: 0.12
+  rocket-booster:
+    power: 1.6
+    uses: 48
+  laser-gun:
+    cooldown-seconds: 3
+    damage: 6
+  star-dust:
+    xp: 400
+  pharaoh-staff:
+    cooldown-seconds: 20
+    damage: 3
+  pharaoh-treasure:
+    min: 500
+    max: 3000
+  sun-disc:
+    cooldown-seconds: 120
+  snow-globe:
+    cooldown-seconds: 30
+  present-launcher:
+    cooldown-seconds: 2
+  reindeer-bell:
+    cooldown-seconds: 60
+  ornament-bomb:
+    damage: 3
+  spawner-pickaxe:
+    durability-per-spawner: 400
+seasons:
+  halloween:
+    name: "<gradient:#ff7a1a:#7c3aed><bold>Schauernacht</bold></gradient>"
+    start: "10-15"
+    end: "11-05"
+    crate: halloween
+    drops:
+      chance: 0.03
+      key-chance: 0.004
+      items: [candy_corn, lollipop, caramel_apple, pumpkin_bomb]
+  frostfest:
+    name: "<gradient:#a5f3fc:#ffffff><bold>Frostfest</bold></gradient>"
+    start: "12-01"
+    end: "12-31"
+    crate: frostfest
+    drops:
+      chance: 0.03
+      key-chance: 0.004
+      items: [hot_cocoa, gift_box, candy_cane]
+  sternenregen:
+    name: "<gradient:#7c3aed:#22d3ee><bold>Sternenregen</bold></gradient>"
+    start: "08-10"
+    end: "08-20"
+    crate: celestial
+    drops:
+      chance: 0.02
+      key-chance: 0.003
+      items: [lucky_clover, xp_tome]
+
+# ───────────────────────────── Turniere ─────────────────────────────
+# Arenen dafür baut "/mythos arena place <daily|weekly|monthly>" automatisch (inkl. Spawnring und Snapshot).
+# Jeder bekommt dasselbe zufällige Kit. Das eigene Inventar wird gesichert und kommt nach Tod/Sieg zurück.
+  fruehling:
+    name: <gradient:#f9a8d4:#86efac><bold>Frühlingsfest</bold></gradient>
+    start: 03-20
+    end: 04-20
+    crate: farm
+    drops:
+      chance: 0.03
+      key-chance: 0.004
+      items:
+      - easter_egg
+      - honey_bread
+      - carrot_blade
+  neujahr:
+    name: <gradient:#fde047:#a855f7><bold>Neujahr</bold></gradient>
+    start: 01-01
+    end: 01-07
+    crate: silvester
+    drops:
+      chance: 0.02
+      key-chance: 0.003
+      items:
+      - confetti_cannon
+      - star_dust
+  valentin:
+    name: <gradient:#f472b6:#dc2626><bold>Valentinstag</bold></gradient>
+    start: 02-07
+    end: 02-16
+    crate: cosmetic
+    drops:
+      chance: 0.02
+      key-chance: 0.003
+      items:
+      - lollipop
+      - healing_flask
+  sommerfest:
+    name: <gradient:#fde047:#38bdf8><bold>Sommerfest</bold></gradient>
+    start: 06-21
+    end: 07-31
+    crate: ocean
+    drops:
+      chance: 0.02
+      key-chance: 0.003
+      items:
+      - sushi
+      - diving_flask
+      - balloon
+  erntefest:
+    name: <gradient:#f97316:#a16207><bold>Erntefest</bold></gradient>
+    start: 09-15
+    end: 10-10
+    crate: farm
+    drops:
+      chance: 0.03
+      key-chance: 0.004
+      items:
+      - berry_pie
+      - honey_bread
+      - caramel_apple
+tournaments:
+  enabled: true
+  # Wie lange vor dem Start die Anmeldung (/tournament join) offen ist
+  registration-minutes: 10
+  min-players: 2
+  start-countdown-seconds: 5
+  # Nach dem Turnier zusätzlich den kompletten Arena-Snapshot zurücksetzen
+  full-arena-reset: true
+  allowed-commands: [tournament, turnier, msg, r, helpop]
+  daily:
+    enabled: true
+    time: "20:00"
+    slots: 5
+    duration-minutes: 10
+    arena: ""
+    rewards:
+      places:
+        1: ["coins 1500", "gems 5", "key vip 1"]
+        2: ["coins 750", "gems 2"]
+        3: ["coins 400"]
+      participation: ["coins 100"]
+  weekly:
+    enabled: true
+    day: SUNDAY
+    time: "19:00"
+    slots: 20
+    duration-minutes: 15
+    arena: ""
+    rewards:
+      places:
+        1: ["coins 6000", "gems 25", "key elite 2"]
+        2: ["coins 3000", "gems 12", "key elite 1"]
+        3: ["coins 1500", "gems 6"]
+      participation: ["coins 250"]
+  monthly:
+    enabled: true
+    day-of-month: 1
+    time: "19:00"
+    slots: 100
+    duration-minutes: 25
+    arena: ""
+    rewards:
+      places:
+        1: ["coins 25000", "gems 100", "key mythos 3"]
+        2: ["coins 12000", "gems 50", "key mythos 1"]
+        3: ["coins 6000", "gems 25", "key elite 2"]
+      participation: ["coins 500", "gems 2"]
+  bots:
+    # MANNEQUIN (Spielerfigur mit Skin) oder ZOMBIE
+    entity: MANNEQUIN
+    health: 20
+    damage: 4
+    speed: 0.28
+    skins: [Notch, jeb_, Dinnerbone, Grumm, Technoblade, Dream, MinePro641, WestDesert68101]
+  kits:
+    uhc:
+      name: "<gold><bold>UHC</bold>"
+      weight: 3
+      items:
+        - {material: DIAMOND_SWORD, enchantments: {sharpness: 2}}
+        - {material: BOW, enchantments: {power: 1}}
+        - ARROW 24
+        - GOLDEN_APPLE 4
+        - COOKED_BEEF 16
+        - LAVA_BUCKET
+        - WATER_BUCKET
+        - COBBLESTONE 64
+        - OAK_PLANKS 64
+        - {material: DIAMOND_PICKAXE, enchantments: {efficiency: 2}}
+        - DIAMOND_AXE
+      helmet: {material: DIAMOND_HELMET, enchantments: {protection: 1}}
+      chestplate: {material: IRON_CHESTPLATE, enchantments: {protection: 2}}
+      leggings: {material: DIAMOND_LEGGINGS, enchantments: {protection: 1}}
+      boots: {material: IRON_BOOTS, enchantments: {protection: 2}}
+      offhand: SHIELD
+    crystal:
+      name: "<light_purple><bold>Crystal PvP</bold>"
+      weight: 2
+      items:
+        - {material: NETHERITE_SWORD, enchantments: {sharpness: 5}}
+        - END_CRYSTAL 64
+        - OBSIDIAN 64
+        - RESPAWN_ANCHOR 16
+        - GLOWSTONE 32
+        - TOTEM_OF_UNDYING
+        - TOTEM_OF_UNDYING
+        - ENCHANTED_GOLDEN_APPLE 2
+        - GOLDEN_APPLE 16
+        - EXPERIENCE_BOTTLE 64
+        - ENDER_PEARL 16
+      helmet: {material: NETHERITE_HELMET, enchantments: {protection: 4, unbreaking: 3}}
+      chestplate: {material: NETHERITE_CHESTPLATE, enchantments: {protection: 4, unbreaking: 3}}
+      leggings: {material: NETHERITE_LEGGINGS, enchantments: {blast_protection: 4, unbreaking: 3}}
+      boots: {material: NETHERITE_BOOTS, enchantments: {protection: 4, feather_falling: 4}}
+      offhand: TOTEM_OF_UNDYING
+    sword:
+      name: "<aqua><bold>Sword</bold>"
+      weight: 3
+      items:
+        - {material: DIAMOND_SWORD, enchantments: {sharpness: 3}}
+        - GOLDEN_APPLE 3
+        - COOKED_BEEF 16
+      helmet: {material: DIAMOND_HELMET, enchantments: {protection: 2}}
+      chestplate: {material: DIAMOND_CHESTPLATE, enchantments: {protection: 2}}
+      leggings: {material: DIAMOND_LEGGINGS, enchantments: {protection: 2}}
+      boots: {material: DIAMOND_BOOTS, enchantments: {protection: 2}}
+    axe:
+      name: "<red><bold>Axe & Shield</bold>"
+      weight: 2
+      items:
+        - {material: DIAMOND_AXE, enchantments: {sharpness: 2}}
+        - {material: DIAMOND_SWORD, enchantments: {sharpness: 1}}
+        - {material: CROSSBOW, enchantments: {piercing: 1}}
+        - ARROW 16
+        - GOLDEN_APPLE 3
+      helmet: DIAMOND_HELMET
+      chestplate: DIAMOND_CHESTPLATE
+      leggings: DIAMOND_LEGGINGS
+      boots: DIAMOND_BOOTS
+      offhand: SHIELD
+    netherite:
+      name: "<dark_gray><bold>Netherite</bold>"
+      weight: 2
+      items:
+        - {material: NETHERITE_SWORD, enchantments: {sharpness: 4, fire_aspect: 1}}
+        - {material: NETHERITE_AXE, enchantments: {sharpness: 3}}
+        - ENCHANTED_GOLDEN_APPLE 1
+        - GOLDEN_APPLE 6
+        - ENDER_PEARL 8
+      helmet: {material: NETHERITE_HELMET, enchantments: {protection: 3}}
+      chestplate: {material: NETHERITE_CHESTPLATE, enchantments: {protection: 3}}
+      leggings: {material: NETHERITE_LEGGINGS, enchantments: {protection: 3}}
+      boots: {material: NETHERITE_BOOTS, enchantments: {protection: 3}}
+      offhand: SHIELD
+    archer:
+      name: "<green><bold>Bogenschütze</bold>"
+      weight: 1
+      items:
+        - {material: BOW, enchantments: {power: 3, punch: 1, infinity: 1}}
+        - ARROW 1
+        - {material: IRON_SWORD, enchantments: {sharpness: 1}}
+        - GOLDEN_APPLE 3
+        - COBBLESTONE 32
+      helmet: {material: CHAINMAIL_HELMET, enchantments: {projectile_protection: 2}}
+      chestplate: {material: IRON_CHESTPLATE, enchantments: {projectile_protection: 2}}
+      leggings: {material: CHAINMAIL_LEGGINGS, enchantments: {projectile_protection: 2}}
+      boots: {material: IRON_BOOTS, enchantments: {projectile_protection: 2}}
+    mace:
+      name: "<gray><bold>Mace</bold>"
+      weight: 1
+      items:
+        - {material: MACE, enchantments: {density: 2, wind_burst: 1}}
+        - WIND_CHARGE 32
+        - {material: DIAMOND_SWORD, enchantments: {sharpness: 2}}
+        - GOLDEN_APPLE 4
+      helmet: DIAMOND_HELMET
+      chestplate: DIAMOND_CHESTPLATE
+      leggings: DIAMOND_LEGGINGS
+      boots: {material: DIAMOND_BOOTS, enchantments: {feather_falling: 4}}
+      offhand: SHIELD
+    potion:
+      name: "<dark_purple><bold>Potion PvP</bold>"
+      weight: 2
+      items:
+        - {material: DIAMOND_SWORD, enchantments: {sharpness: 3}}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: SPLASH_POTION, potion: strong_healing}
+        - {material: POTION, potion: strong_swiftness}
+        - {material: POTION, potion: strong_strength}
+        - COOKED_BEEF 16
+      helmet: {material: DIAMOND_HELMET, enchantments: {protection: 3}}
+      chestplate: {material: DIAMOND_CHESTPLATE, enchantments: {protection: 3}}
+      leggings: {material: DIAMOND_LEGGINGS, enchantments: {protection: 3}}
+      boots: {material: DIAMOND_BOOTS, enchantments: {protection: 3}}
+
+# ───────────────────────────── Gem-Shop (/shop) ─────────────────────────────
+shop:
+  enabled: true
+  # Zeilen des Menüs (2-6, die unterste ist die Leiste) – wird automatisch größer, wenn Angebote weiter unten liegen
+  rows: 6
+  # Shift-Klick kauft so oft auf einmal
+  bulk-amount: 5
+  # reward wie bei Kisten: key <kiste> [anzahl] | tool <item> [anzahl] | coins <n> | gems <n> | xp <n> | item <MATERIAL> [anzahl]
+  # currency: gems (Standard) oder coins | slot: Platz im Menü (0 = oben links) | optional: name, lore, icon
+  # season: halloween → nur während dieser Saison kaufbar (ids siehe seasons:)
+  entries:
+    # ---- Seite 1: Schlüssel ----
+    - {reward: "key common 1", price: 3, slot: 10, page: 1}
+    - {reward: "key vip 1", price: 8, slot: 11, page: 1}
+    - {reward: "key elite 1", price: 15, slot: 12, page: 1}
+    - {reward: "key farm 1", price: 12, slot: 13, page: 1}
+    - {reward: "key ancient 1", price: 25, slot: 14, page: 1}
+    - {reward: "key mythos 1", price: 40, slot: 15, page: 1}
+    - {reward: "key storm 1", price: 25, slot: 16, page: 1}
+    - {reward: "key halloween 1", price: 20, slot: 19, page: 1}
+    - {reward: "key frostfest 1", price: 20, slot: 20, page: 1}
+    - {reward: "key celestial 1", price: 25, slot: 21, page: 1}
+    - {reward: "key inferno 1", price: 25, slot: 22, page: 1}
+    - {reward: "key dragon 1", price: 35, slot: 23, page: 1}
+    - {reward: "key ocean 1", price: 25, slot: 24, page: 1}
+    - {reward: "key forest 1", price: 25, slot: 25, page: 1}
+    - {reward: "key sky 1", price: 25, slot: 28, page: 1}
+    - {reward: "key crystal 1", price: 25, slot: 29, page: 1}
+    - {reward: "key millennium 1", price: 30, slot: 30, page: 1}
+    - {reward: "key cosmetic 1", price: 15, slot: 31, page: 1}
+    - {reward: "key begleiter 1", price: 20, slot: 37, page: 1, name: "<gradient:#fde68a:#f472b6><bold>Begleiter-Schlüssel</bold>", lore: ["<gray>Plüsch-Begleiter für deinen Kopf"]}
+    - {reward: "key space 1", price: 30, slot: 32, page: 1}
+    - {reward: "key spawner 1", price: 35, slot: 33, page: 1}
+    - {reward: "key rang 1", price: 60, slot: 34, page: 1}
+    - {reward: "key common 10", price: 25, slot: 39, page: 1, name: "<white><bold>10× Gewöhnlicher Schlüssel</bold>", lore: ["<gray>Spar-Paket: 5 Gems gespart"]}
+    - {reward: "key vip 5", price: 35, slot: 41, page: 1, name: "<green><bold>5× VIP-Schlüssel</bold>", lore: ["<gray>Spar-Paket: 5 Gems gespart"]}
+    # ---- Seite 2: Items, Gem-Tausch, Rang-Gutscheine ----
+    - {reward: "tool lucky_clover 1", price: 10, slot: 10, page: 2}
+    # ---- Seite 3: Booster & Magie ----
+    - {reward: "tool coin_booster 1", price: 12, slot: 10, page: 3}
+    - {reward: "tool gem_booster 1", price: 25, slot: 11, page: 3}
+    - {reward: "tool xp_booster 1", price: 12, slot: 12, page: 3}
+    - {reward: "tool find_booster 1", price: 18, slot: 13, page: 3}
+    - {reward: "tool mutation_serum 1", price: 15, slot: 14, page: 3}
+    - {reward: "tool meteor_shower 1", price: 20, slot: 15, page: 3}
+    - {reward: "tool mythos_wand 1", price: 60, slot: 19, page: 3}
+    - {reward: "tool spell_scroll 1", price: 20, slot: 20, page: 3}
+    - {reward: "tool mana_elixir 1", price: 4, slot: 21, page: 3}
+    - {reward: "tool xp_tome 2", price: 8, slot: 11, page: 2}
+    - {reward: "tool return_feather 3", price: 6, slot: 12, page: 2}
+    - {reward: "tool haste_rune 2", price: 8, slot: 13, page: 2}
+    - {reward: "tool magnet_charm 1", price: 30, slot: 14, page: 2}
+    - {reward: "tool mythos_backpack 1", price: 60, slot: 15, page: 2}
+    - {reward: "tool rtp_scroll 3", price: 5, slot: 16, page: 2}
+    - {reward: "tool key_fragment 3", price: 6, slot: 19, page: 2}
+    - {reward: "tool treasure_map 1", price: 20, slot: 20, page: 2}
+    - {reward: "coins 5000", price: 10, slot: 21, page: 2}
+    # Gem-Tausch: 5000 Coins = 1 Gem
+    - {reward: "gems 1", price: 5000, currency: coins, slot: 24, page: 2, name: "<light_purple><bold>1 Gem</bold>", lore: ["<gray>Gem-Tausch: 5.000 Coins → 1 Gem"]}
+    - {reward: "gems 10", price: 50000, currency: coins, slot: 25, page: 2, name: "<light_purple><bold>10 Gems</bold>", lore: ["<gray>Gem-Tausch: 50.000 Coins → 10 Gems"]}
+    - {reward: "voucher VIP 30d", price: 100, slot: 28, page: 2}
+    - {reward: "voucher VIPPLUS 30d", price: 150, slot: 29, page: 2}
+    - {reward: "voucher ELITE 30d", price: 220, slot: 30, page: 2}
+    - {reward: "voucher HELD 30d", price: 320, slot: 31, page: 2}
+    - {reward: "voucher LEGENDE 30d", price: 450, slot: 32, page: 2}
+    - {reward: "voucher TITAN 30d", price: 600, slot: 33, page: 2}
+    # ---- Seite 4: Alltag – Enderkiste, Essen, Totem (für Coins) ----
+    - {reward: "item ENDER_CHEST 1", price: 2500, currency: coins, slot: 10, page: 4, name: "<dark_purple><bold>Enderkiste</bold>", lore: ["<gray>Deine sichere Truhe überall"]}
+    - {reward: "item TOTEM_OF_UNDYING 1", price: 15000, currency: coins, slot: 12, page: 4, name: "<gold><bold>Totem der Unsterblichkeit</bold>", lore: ["<gray>Rettet dich einmal vor dem Tod"]}
+    - {reward: "item COOKED_BEEF 16", price: 160, currency: coins, slot: 19, page: 4}
+    - {reward: "item BREAD 32", price: 120, currency: coins, slot: 20, page: 4}
+    - {reward: "item BAKED_POTATO 32", price: 140, currency: coins, slot: 21, page: 4}
+    - {reward: "item COOKED_CHICKEN 16", price: 140, currency: coins, slot: 22, page: 4}
+    - {reward: "item GOLDEN_CARROT 16", price: 600, currency: coins, slot: 23, page: 4}
+    - {reward: "item GOLDEN_APPLE 1", price: 1500, currency: coins, slot: 24, page: 4}
+    - {reward: "item CAKE 1", price: 200, currency: coins, slot: 25, page: 4}
+
+# ───────────────────────────── Auktionshaus (/ah) ─────────────────────────────
+auction:
+  enabled: true
+  # Wie lange ein Angebot im Auktionshaus bleibt (danach: /ah abholen)
+  duration-hours: 48
+  # Gleichzeitige Angebote pro Spieler (mehr je Rang, Permission mythos.auction.unlimited = unbegrenzt)
+  max-listings: 5
+  max-listings-by-rank:
+    VIP: 8
+    ELITE: 12
+    MYTHOS: 30
+  # Steuer in Prozent, die vom Verkaufserlös abgezogen wird (Geld verschwindet aus der Wirtschaft)
+  tax-percent: 5
+  min-price: 1
+  max-price: 1000000000
+  # Dürfen Items auch für Gems verkauft werden?
+  allow-gems: true
+  # Neue Angebote im Chat ankündigen (klickbar)
+  broadcast-new: true
+  # Items, die nicht verkauft werden dürfen (Admin-Blöcke, Spawn-Eier usw. sind immer gesperrt)
+  blocked-items: []
+
+# ───────────────────────────── Farmaufträge (/auftrag) ─────────────────────────────
+farm-orders:
+  enabled: true
+  # Laufzeit eines Auftrags; danach bekommt der Auftraggeber die restlichen Coins zurück
+  duration-days: 7
+  # Gleichzeitige offene Aufträge pro Spieler (mythos.orders.unlimited = unbegrenzt)
+  max-orders: 3
+  # Höchstmenge pro Auftrag (2304 = 36 Stacks)
+  max-amount: 2304
+  # Preis pro Stück in Coins
+  min-price-each: 1
+  max-price-each: 100000
+  broadcast-new: true
+  # Items, die nicht bestellt werden dürfen (zusätzlich zu Admin-Blöcken und Spawn-Eiern)
+  blocked-items: [DRAGON_EGG, ELYTRA, NETHER_STAR, BEACON, ENCHANTED_GOLDEN_APPLE]
+
+# ───────────────────────────── Bauen (/spawn place, /mythos arena place) ─────────────────────────────
+build:
+  blocks-per-tick: 12000
+  # Kisten, die auf den Sockeln des Spawns aufgestellt werden (Reihenfolge = Sockel)
+  spawn-crates: [common, vip, elite, mythos, ancient, halloween, frostfest, celestial, inferno, farm, storm, dragon, rang, ocean, forest, sky, crystal, millennium, cosmetic, space, spawner, silvester]
+  auto-arenas: true
+
+rtp:
+  enabled: true
+  countdown-seconds: 3
+  cooldown-seconds: 300
+  cooldown-by-rank:
+    VIP: 240
+    VIPPLUS: 180
+    ELITE: 150
+    HELD: 120
+    LEGENDE: 90
+    TITAN: 60
+    MYTHOS: 0
+  cost-coins: 0
+  attempts: 25
+  avoid-regions: true
+  default-world: world
+  worlds:
+    world:
+      min-radius: 300
+      max-radius: 5000
+      center: spawn
+    world_nether:
+      min-radius: 100
+      max-radius: 2000
+      center: spawn
+    world_the_end:
+      min-radius: 1200
+      max-radius: 4000
+      center: spawn
+
+jobs:
+  enabled: true
+  coin-factor: 1.0
+  builder-xp-per-hour: 600
+
+gem-finds:
+  enabled: true
+  diamond: 0.04
+  emerald: 0.05
+  ancient-debris: 0.12
+  fishing-treasure: 0.02
+
+milestones:
+  playtime:
+    every-hours: 5
+    gems: 5
+    coins: 500
+
+weekly-rewards:
+  enabled: true
+  day: SUNDAY
+  time: ['20:00']
+  gems:
+    1: 25
+    2: 15
+    3: 8
+
+parkour:
+  daily-gems: 3
+  daily-coins: 300
+
+attractions:
+  # Wiesen am Spawn je nach Saison (Schnee, Sand, Laub, Blüten …)
+  season-ground:
+    enabled: true
+    columns-per-tick: 2500
+  # Eigene Spawn-Kreaturen (Moosling, Glimmerling, Sternenqualle, Laternenpilz) – Rechtsklick = streicheln
+  # Saison-Himmel über dem Spawn: riesige leuchtende Bilder (Nordlicht, Halloween-Mond, Blütenwolken, Feuerwerk …)
+  sky-dome:
+    enabled: true
+    pictures: 10
+    radius: 62
+    height: 52
+    scale: 46
+  creatures:
+    enabled: true
+    per-kind: 3
+    pet-coins: 10
+  # Neue Spawn-Minispiele (kein PvP): Block-Party, Spleef, Zielschießen
+  floor-games:
+    block-party: {daily-gems: 2, daily-coins: 500}
+    spleef: {daily-gems: 2, daily-coins: 500}
+    target-range: {daily-gems: 2, daily-coins: 400, seconds: 45, hits-for-reward: 10}
+  statues:
+    stats:
+    - coins
+    - kills
+    - eventswon
+    scale: 1.25
+    refresh-minutes: 5
+  wheel:
+    price: 2500
+    currency: coins
+    radius: 5
+    # Felder (mehr Felder = feiner verteilt). Hauptgewinn: Silvester-Schlüssel (nur hier erhältlich!)
+    segments:
+      - {reward: "coins 250", weight: 20, block: LIME_CONCRETE}
+      - {reward: "coins 500", weight: 20, block: YELLOW_CONCRETE}
+      - {reward: "key common 1", weight: 14, block: WHITE_CONCRETE}
+      - {reward: "coins 1000", weight: 14, block: ORANGE_CONCRETE}
+      - {reward: "xp 500", weight: 12, block: CYAN_CONCRETE}
+      - {reward: "gems 1", weight: 12, block: PURPLE_CONCRETE}
+      - {reward: "tool lucky_rocket 2", weight: 10, block: RED_CONCRETE}
+      - {reward: "key vip 1", weight: 8, block: GREEN_CONCRETE}
+      - {reward: "coins 2500", weight: 8, block: ORANGE_TERRACOTTA}
+      - {reward: "tool key_fragment 3", weight: 8, block: LIGHT_GRAY_CONCRETE}
+      - {reward: "gems 3", weight: 5, block: MAGENTA_CONCRETE}
+      - {reward: "key elite 1", weight: 4, block: LIGHT_BLUE_CONCRETE}
+      - {reward: "tool job_elixir", weight: 3, block: PINK_CONCRETE}
+      - {reward: "coins 5000", weight: 4, block: BROWN_CONCRETE}
+      - {reward: "key cosmetic 1", weight: 3, block: PINK_GLAZED_TERRACOTTA}
+      - {reward: "key spawner 1", weight: 1.5, block: BLUE_CONCRETE}
+      - {reward: "gems 10", weight: 1.5, block: BLACK_CONCRETE}
+      - {reward: "key mythos 1", weight: 1, block: AMETHYST_BLOCK}
+      - {reward: "gems 25", weight: 0.6, block: DIAMOND_BLOCK}
+      - {reward: "key silvester 1", weight: 0.35, block: GOLD_BLOCK}
+  rings:
+    daily-gems: 3
+    daily-coins: 500
+    ring-radius: 3.3
+    boost: 1.25
+  well:
+    goal: 100000
+    booster-factor: 2
+    booster-minutes: 30
+    throws:
+      100:
+      - reward: key common 1
+        chance: 0.03
+      - reward: coins 300
+        chance: 0.08
+      1000:
+      - reward: gems 3
+        chance: 0.02
+      - reward: key vip 1
+        chance: 0.05
+      - reward: coins 2500
+        chance: 0.1
+      10000:
+      - reward: key mythos 1
+        chance: 0.01
+      - reward: gems 15
+        chance: 0.03
+      - reward: key elite 2
+        chance: 0.06
+      - reward: coins 20000
+        chance: 0.12
+  merchants:
+    stalls:
+      bauer:
+        name: <green><bold>Bäuerin Frieda</bold>
+        profession: farmer
+        offers:
+        - reward: item GOLDEN_CARROT 16
+          price: 400
+          currency: coins
+        - reward: item COOKED_BEEF 32
+          price: 500
+          currency: coins
+        - reward: item BONE_MEAL 32
+          price: 300
+          currency: coins
+        - reward: item HAY_BLOCK 16
+          price: 600
+          currency: coins
+        - reward: tool seed_bag 1
+          price: 3
+          currency: gems
+        - reward: tool watering_can 1
+          price: 5
+          currency: gems
+      gelehrter:
+        name: <light_purple><bold>Gelehrter Arkan</bold>
+        profession: librarian
+        offers:
+        - reward: item EXPERIENCE_BOTTLE 16
+          price: 1500
+          currency: coins
+        - reward: item BOOKSHELF 8
+          price: 800
+          currency: coins
+        - reward: item LAPIS_LAZULI 32
+          price: 900
+          currency: coins
+        - reward: tool xp_tome 1
+          price: 3
+          currency: gems
+        - reward: tool enchant_scroll 1
+          price: 8
+          currency: gems
+        - reward: tool arcane_tome 1
+          price: 6
+          currency: gems
+      schmied:
+        name: <gray><bold>Schmied Bruno</bold>
+        profession: armorer
+        offers:
+        - reward: item IRON_INGOT 32
+          price: 1200
+          currency: coins
+        - reward: item DIAMOND 4
+          price: 2500
+          currency: coins
+        - reward: item ANVIL 1
+          price: 1500
+          currency: coins
+        - reward: item NETHERITE_UPGRADE_SMITHING_TEMPLATE 1
+          price: 20
+          currency: gems
+        - reward: tool repair_hammer 1
+          price: 6
+          currency: gems
+    wandering:
+      name: <gold><bold>Wanderhändler Kasim</bold>
+      every-minutes: 180
+      stay-minutes: 30
+      offers: 5
+      pool:
+      - reward: key mythos 1
+        price: 30
+        currency: gems
+      - reward: key ancient 1
+        price: 18
+        currency: gems
+      - reward: key ocean 1
+        price: 20
+        currency: gems
+      - reward: key forest 1
+        price: 20
+        currency: gems
+      - reward: key sky 1
+        price: 20
+        currency: gems
+      - reward: key crystal 1
+        price: 22
+        currency: gems
+      - reward: item ELYTRA 1
+        price: 120
+        currency: gems
+      - reward: item TOTEM_OF_UNDYING 1
+        price: 25000
+        currency: coins
+      - reward: item ENCHANTED_GOLDEN_APPLE 1
+        price: 30000
+        currency: coins
+      - reward: item SHULKER_SHELL 2
+        price: 8000
+        currency: coins
+      - reward: tool lucky_clover 1
+        price: 6
+        currency: gems
+      - reward: tool magic_bean 2
+        price: 5
+        currency: gems
+      - reward: voucher VIP 3d
+        price: 35
+        currency: gems
+  day-night:
+    enabled: true
+    fireflies: true
+  season-deco:
+    themes:
+      halloween: halloween
+      frostfest: winter
+      fruehling: spring
+      sommerfest: summer
+      erntefest: autumn
+      neujahr: newyear
+      valentin: valentine
+      sternenregen: stars
+    snow-per-second: 30
+    snow-max-blocks: 9000
+    sound-every-minutes: 4
+  spawn-glide:
+    enabled: true
+    boost: 1.1
+  season-ambience:
+    enabled: true
+    season-sky: true
+    firework-every-seconds: 40
+    # Silvester (31.12. bis 1.1. 3 Uhr): alle 20–40 Min. Gems geschenkt für alle
+    silvester-gifts:
+      every-minutes: {min: 20, max: 40}
+      gems: {min: 1, max: 5}
+    new-year-show-seconds: 180
+  gem-activities-per-day: 2
+  jump-pads:
+    power: 1.8
+  dropper:
+    daily-gems: 2
+    daily-coins: 400
+  maze:
+    daily-gems: 2
+    daily-coins: 400
+
+music:
+  enabled: true
+  volume: 0.6
+  pause-seconds: 3
+  extra-radius: 10
+  playlists:
+    default: [spawn_groove, mythos_theme, neon_nights, sunset_drive, entertainer, ode, canon, fur_elise]
+    halloween: [ghost_train, skeleton_shuffle, marionette, mountain_king, toccata]
+    frostfest: [snowflake_funk, carol_bells, jingle_bells, winter_glow, tannenbaum, silent_night]
+    fruehling:
+    - spring_groove
+    - ode
+    - canon
+    - spawn_groove
+    sommerfest:
+    - beach_party
+    - sunset_drive
+    - spawn_groove
+    - can_can
+    erntefest:
+    - sunset_drive
+    - entertainer
+    - fur_elise
+    - spawn_groove
+    silvester: [auld_lang_syne, danube, can_can, new_year_rush, ode]
+    neujahr:
+    - new_year_rush
+    - can_can
+    - neon_nights
+    - ode
+    valentin:
+    - love_song
+    - fur_elise
+    - canon
+    sternenregen:
+    - stardust
+    - neon_nights
+    - mythos_theme
+  stream-safe-files: []
+
+clans:
+  # Clan-Krieg (ohne PvP): Punkte durch Events, Quests und Job-Level – Sonntag 20:00 gewinnt der beste Clan
+  war:
+    enabled: true
+    end: {day: SUNDAY, time: "20:00"}
+    points: {event-win: 10, event-top3: 5, event-join: 1, daily-quest: 3, weekly-quest: 10, job-level: 2}
+    prize: {clan-bank: 25000, gems-per-member: 15}
+  enabled: true
+  create-cost: 10000
+  max-members: 20
+  friendly-fire: false
+
+quests:
+  daily-gems: 3
+  daily-bonus-gems: 3
+  weekly-gems: 10
+  weekly-bonus-gems: 10
+  starter:
+    max-playtime-hours: 30
+    steps-per-day: 3
+
+bets:
+  min-stake: 10
+  max-stake: 100000
+  race-minutes: 10
+
+# ───────────────────────────── Pausenmenü: Server-Links ─────────────────────────────
+# Knopf "Server-Links…" im Pausenmenü (ESC). Einträge ohne url werden ausgelassen.
+# type = eingebauter Link-Typ (website, community, support, news, …) ODER name = eigener Text (MiniMessage).
+server-links:
+  enabled: true
+  links:
+    - {type: website, url: "https://darling-pie-7277b6.netlify.app"}
+    - {name: "<#5865F2>Discord", url: ""}
+    - {name: "<gold>Shop", url: ""}
+    - {name: "<aqua>Wiki & Regeln", url: ""}
+
+# ───────────────────────────── Starter-Kit (/new) ─────────────────────────────
+# Neue Spieler holen sich das Kit einmalig mit /new (Aliase: /starter, /starterkit). Beim ersten Join kommt ein Hinweis.
+# items/helmet/... wie bei den Arena-Kits; custom-items = MythosCraft-Items ("id anzahl"); coins = Startkapital.
+starter-kit:
+  enabled: true
+  # nur bis zu dieser Spielzeit abholbar (0 = immer)
+  max-playtime-hours: 10
+  coins: 250
+  items:
+    - {material: STONE_SWORD, name: "<gray>Starter-Schwert"}
+    - STONE_PICKAXE
+    - STONE_AXE
+    - STONE_SHOVEL
+    - BREAD 16
+    - TORCH 32
+    - OAK_LOG 16
+    - CRAFTING_TABLE
+    - WHITE_BED
+  helmet: LEATHER_HELMET
+  chestplate: LEATHER_CHESTPLATE
+  leggings: LEATHER_LEGGINGS
+  boots: LEATHER_BOOTS
+  custom-items:
+    - home_stone 2
+
+# ───────────────────────────── Einführung ─────────────────────────────
+# Kamerafahrt über den Spawn mit Mentorin Lia – beim ersten Join, sobald das Texture-Pack geladen ist (/intro, /intro skip)
+intro:
+  enabled: true
+

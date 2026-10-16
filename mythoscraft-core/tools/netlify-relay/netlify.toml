@@ -1,0 +1,12 @@
+[build]
+  command = "echo fertig"
+  publish = "public"
+  functions = "functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data: https://mc-heads.net https://crafatar.com https://textures.minecraft.net; connect-src 'self' https://mc-heads.net https://crafatar.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; frame-ancestors 'none'"

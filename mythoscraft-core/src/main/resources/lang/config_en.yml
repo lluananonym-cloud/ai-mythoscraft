@@ -1,0 +1,213 @@
+# English versions of the German display texts in config.yml / crates.yml (exact text → English).
+# Players with a German game see the German text, everybody else this English one. Own texts can be added.
+texts:
+- de: '&7Spieler'
+  en: '&7Player'
+- de: <gradient:#fb923c:#c2410c><bold>HELD</bold></gradient>
+  en: <gradient:#fb923c:#c2410c><bold>HERO</bold></gradient>
+- de: '<gradient:#fb923c:#c2410c><bold>HELD</bold></gradient> <dark_gray>| '
+  en: '<gradient:#fb923c:#c2410c><bold>HERO</bold></gradient> <dark_gray>| '
+- de: <gradient:#fde047:#d97706><bold>LEGENDE</bold></gradient>
+  en: <gradient:#fde047:#d97706><bold>LEGEND</bold></gradient>
+- de: '<gradient:#fde047:#d97706><bold>LEGENDE</bold></gradient> <dark_gray>| '
+  en: '<gradient:#fde047:#d97706><bold>LEGEND</bold></gradient> <dark_gray>| '
+- de: <gradient:#ff7a1a:#7c3aed><bold>Schauernacht</bold></gradient>
+  en: <gradient:#ff7a1a:#7c3aed><bold>Spooky Night</bold></gradient>
+- de: <gradient:#7c3aed:#22d3ee><bold>Sternenregen</bold></gradient>
+  en: <gradient:#7c3aed:#22d3ee><bold>Starfall</bold></gradient>
+- de: <gradient:#f9a8d4:#86efac><bold>Frühlingsfest</bold></gradient>
+  en: <gradient:#f9a8d4:#86efac><bold>Spring Festival</bold></gradient>
+- de: <gradient:#fde047:#a855f7><bold>Neujahr</bold></gradient>
+  en: <gradient:#fde047:#a855f7><bold>New Year</bold></gradient>
+- de: <gradient:#f472b6:#dc2626><bold>Valentinstag</bold></gradient>
+  en: <gradient:#f472b6:#dc2626><bold>Valentine's Day</bold></gradient>
+- de: <gradient:#fde047:#38bdf8><bold>Sommerfest</bold></gradient>
+  en: <gradient:#fde047:#38bdf8><bold>Summer Festival</bold></gradient>
+- de: <gradient:#f97316:#a16207><bold>Erntefest</bold></gradient>
+  en: <gradient:#f97316:#a16207><bold>Harvest Festival</bold></gradient>
+- de: <green><bold>Bogenschütze</bold>
+  en: <green><bold>Archer</bold>
+- de: <white><bold>10× Gewöhnlicher Schlüssel</bold>
+  en: <white><bold>10× Common Key</bold>
+- de: '<gray>Spar-Paket: 5 Gems gespart'
+  en: '<gray>Value pack: save 5 gems'
+- de: <green><bold>5× VIP-Schlüssel</bold>
+  en: <green><bold>5× VIP Key</bold>
+- de: '<gray>Gem-Tausch: 5.000 Coins → 1 Gem'
+  en: '<gray>Gem exchange: 5,000 coins → 1 gem'
+- de: '<gray>Gem-Tausch: 50.000 Coins → 10 Gems'
+  en: '<gray>Gem exchange: 50,000 coins → 10 gems'
+- de: <green><bold>Bäuerin Frieda</bold>
+  en: <green><bold>Farmer Frieda</bold>
+- de: <light_purple><bold>Gelehrter Arkan</bold>
+  en: <light_purple><bold>Scholar Arkan</bold>
+- de: <gray><bold>Schmied Bruno</bold>
+  en: <gray><bold>Blacksmith Bruno</bold>
+- de: <gold><bold>Wanderhändler Kasim</bold>
+  en: <gold><bold>Wandering Merchant Kasim</bold>
+- de: <gradient:#d1d5db:#9ca3af><bold>Gewöhnliche Kiste</bold></gradient>
+  en: <gradient:#d1d5db:#9ca3af><bold>Common Crate</bold></gradient>
+- de: <gray><bold>Gewöhnlicher Schlüssel</bold>
+  en: <gray><bold>Common Key</bold>
+- de: <gray>Öffnet eine <white>Gewöhnliche Kiste</white> am Spawn.
+  en: <gray>Opens a <white>Common Crate</white> at the spawn.
+- de: <gradient:#22c55e:#a3e635><bold>VIP-Kiste</bold></gradient>
+  en: <gradient:#22c55e:#a3e635><bold>VIP Crate</bold></gradient>
+- de: <green><bold>VIP-Schlüssel</bold>
+  en: <green><bold>VIP Key</bold>
+- de: <gray>Öffnet eine <green>VIP-Kiste</green> am Spawn.
+  en: <gray>Opens a <green>VIP Crate</green> at the spawn.
+- de: <gradient:#38bdf8:#818cf8><bold>Elite-Kiste</bold></gradient>
+  en: <gradient:#38bdf8:#818cf8><bold>Elite Crate</bold></gradient>
+- de: <aqua><bold>Elite-Schlüssel</bold>
+  en: <aqua><bold>Elite Key</bold>
+- de: <gray>Öffnet eine <aqua>Elite-Kiste</aqua> am Spawn.
+  en: <gray>Opens a <aqua>Elite Crate</aqua> at the spawn.
+- de: <gradient:#c084fc:#f59e0b><bold>Mythos-Kiste</bold></gradient>
+  en: <gradient:#c084fc:#f59e0b><bold>Mythos Crate</bold></gradient>
+- de: <gradient:#c084fc:#f59e0b><bold>Mythos-Schlüssel</bold></gradient>
+  en: <gradient:#c084fc:#f59e0b><bold>Mythos Key</bold></gradient>
+- de: <gray>Öffnet eine <light_purple>Mythos-Kiste</light_purple> am Spawn.
+  en: <gray>Opens a <light_purple>Mythos Crate</light_purple> at the spawn.
+- de: <dark_gray>Die seltensten Schätze von MythosCraft.
+  en: <dark_gray>The rarest treasures of MythosCraft.
+- de: '<gold><bold>JACKPOT: 25.000 Coins'
+  en: '<gold><bold>JACKPOT: 25,000 Coins'
+- de: <gradient:#0e7c86:#3fe0d0><bold>Uralte Kiste</bold></gradient>
+  en: <gradient:#0e7c86:#3fe0d0><bold>Ancient Crate</bold></gradient>
+- de: <dark_aqua><bold>Uralter Schlüssel</bold>
+  en: <dark_aqua><bold>Ancient Key</bold>
+- de: <gray>Vom Ancient Warden bewacht.
+  en: <gray>Guarded by the Ancient Warden.
+- de: <gray>Öffnet eine <dark_aqua>Uralte Kiste</dark_aqua>.
+  en: <gray>Opens a <dark_aqua>Ancient Crate</dark_aqua>.
+- de: <gradient:#ff7a1a:#7c3aed><bold>Schauernacht-Kiste</bold></gradient>
+  en: <gradient:#ff7a1a:#7c3aed><bold>Spooky Night Crate</bold></gradient>
+- de: <gradient:#ff7a1a:#7c3aed><bold>Schauernacht-Schlüssel</bold></gradient>
+  en: <gradient:#ff7a1a:#7c3aed><bold>Spooky Night Key</bold></gradient>
+- de: <gray>Öffnet die <gold>Schauernacht-Kiste</gold>.
+  en: <gray>Opens the <gold>Spooky Night Crate</gold>.
+- de: <dark_gray>Droppt im Oktober auch von Monstern!
+  en: <dark_gray>Also dropped by monsters in October!
+- de: <gradient:#e0f2fe:#38bdf8><bold>Frostfest-Kiste</bold></gradient>
+  en: <gradient:#e0f2fe:#38bdf8><bold>Frostfest Crate</bold></gradient>
+- de: <gradient:#e0f2fe:#38bdf8><bold>Frostfest-Schlüssel</bold></gradient>
+  en: <gradient:#e0f2fe:#38bdf8><bold>Frostfest Key</bold></gradient>
+- de: <gray>Öffnet die <aqua>Frostfest-Kiste</aqua>.
+  en: <gray>Opens the <aqua>Frostfest Crate</aqua>.
+- de: <gradient:#7c3aed:#22d3ee><bold>Sternen-Kiste</bold></gradient>
+  en: <gradient:#7c3aed:#22d3ee><bold>Star Crate</bold></gradient>
+- de: <gradient:#7c3aed:#22d3ee><bold>Sternen-Schlüssel</bold></gradient>
+  en: <gradient:#7c3aed:#22d3ee><bold>Star Key</bold></gradient>
+- de: <gray>Öffnet die <light_purple>Sternen-Kiste</light_purple>.
+  en: <gray>Opens the <light_purple>Star Crate</light_purple>.
+- de: <dark_gray>Funkelt und schimmert.
+  en: <dark_gray>Sparkles and shimmers.
+- de: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Kiste</bold></gradient>
+  en: <gradient:#ff4d1a:#7f1d1d><bold>Inferno Crate</bold></gradient>
+- de: <gradient:#ff4d1a:#7f1d1d><bold>Inferno-Schlüssel</bold></gradient>
+  en: <gradient:#ff4d1a:#7f1d1d><bold>Inferno Key</bold></gradient>
+- de: <gray>Öffnet die <red>Inferno-Kiste</red>.
+  en: <gray>Opens the <red>Inferno Crate</red>.
+- de: <gradient:#facc15:#16a34a><bold>Bauern-Kiste</bold></gradient>
+  en: <gradient:#facc15:#16a34a><bold>Farm Crate</bold></gradient>
+- de: <gradient:#facc15:#16a34a><bold>Bauern-Schlüssel</bold></gradient>
+  en: <gradient:#facc15:#16a34a><bold>Farm Key</bold></gradient>
+- de: <gray>Öffnet die <green>Bauern-Kiste</green>.
+  en: <gray>Opens the <green>Farm Crate</green>.
+- de: <dark_gray>Werkzeuge für Felder, Tiere und Frühling
+  en: <dark_gray>Tools for fields, animals and spring
+- de: <gradient:#7dd3fc:#facc15><bold>Sturm-Kiste</bold></gradient>
+  en: <gradient:#7dd3fc:#facc15><bold>Storm Crate</bold></gradient>
+- de: <gradient:#7dd3fc:#facc15><bold>Sturm-Schlüssel</bold></gradient>
+  en: <gradient:#7dd3fc:#facc15><bold>Storm Key</bold></gradient>
+- de: <gray>Öffnet die <aqua>Sturm-Kiste</aqua>.
+  en: <gray>Opens the <aqua>Storm Crate</aqua>.
+- de: <gradient:#a21caf:#dc2626><bold>Drachen-Kiste</bold></gradient>
+  en: <gradient:#a21caf:#dc2626><bold>Dragon Crate</bold></gradient>
+- de: <gradient:#a21caf:#dc2626><bold>Drachen-Schlüssel</bold></gradient>
+  en: <gradient:#a21caf:#dc2626><bold>Dragon Key</bold></gradient>
+- de: <gray>Öffnet die <dark_purple>Drachen-Kiste</dark_purple>.
+  en: <gray>Opens the <dark_purple>Dragon Crate</dark_purple>.
+- de: <dark_gray>Die seltenste Kollektion
+  en: <dark_gray>The rarest collection
+- de: <gradient:#f59e0b:#c084fc><bold>Rang-Kiste</bold></gradient>
+  en: <gradient:#f59e0b:#c084fc><bold>Rank Crate</bold></gradient>
+- de: <gradient:#f59e0b:#c084fc><bold>Rang-Schlüssel</bold></gradient>
+  en: <gradient:#f59e0b:#c084fc><bold>Rank Key</bold></gradient>
+- de: '<gray>Öffnet die <gold>Rang-Kiste</gold>: Rang-Gutscheine!'
+  en: '<gray>Opens the <gold>Rank Crate</gold>: rank vouchers!'
+- de: <gradient:#22d3ee:#1e3a8a><bold>Ozean-Kiste</bold></gradient>
+  en: <gradient:#22d3ee:#1e3a8a><bold>Ocean Crate</bold></gradient>
+- de: <gradient:#22d3ee:#1e3a8a><bold>Ozean-Schlüssel</bold></gradient>
+  en: <gradient:#22d3ee:#1e3a8a><bold>Ocean Key</bold></gradient>
+- de: <gray>Öffnet die <aqua>Ozean-Kiste</aqua>.
+  en: <gray>Opens the <aqua>Ocean Crate</aqua>.
+- de: <dark_gray>Ozean-Kollektion + Ozean-Rüstung
+  en: <dark_gray>Ocean collection + ocean armour
+- de: <gradient:#4ade80:#14532d><bold>Wald-Kiste</bold></gradient>
+  en: <gradient:#4ade80:#14532d><bold>Forest Crate</bold></gradient>
+- de: <gradient:#4ade80:#14532d><bold>Wald-Schlüssel</bold></gradient>
+  en: <gradient:#4ade80:#14532d><bold>Forest Key</bold></gradient>
+- de: <gray>Öffnet die <green>Wald-Kiste</green>.
+  en: <gray>Opens the <green>Forest Crate</green>.
+- de: <dark_gray>Wald-Kollektion + Wald-Rüstung
+  en: <dark_gray>Forest collection + forest armour
+- de: <gradient:#e0f2fe:#38bdf8><bold>Himmels-Kiste</bold></gradient>
+  en: <gradient:#e0f2fe:#38bdf8><bold>Sky Crate</bold></gradient>
+- de: <gradient:#e0f2fe:#38bdf8><bold>Himmels-Schlüssel</bold></gradient>
+  en: <gradient:#e0f2fe:#38bdf8><bold>Sky Key</bold></gradient>
+- de: <gray>Öffnet die <aqua>Himmels-Kiste</aqua>.
+  en: <gray>Opens the <aqua>Sky Crate</aqua>.
+- de: <dark_gray>Himmels-Kollektion + Himmels-Rüstung
+  en: <dark_gray>Sky collection + sky armour
+- de: <gradient:#f0abfc:#7e22ce><bold>Kristall-Kiste</bold></gradient>
+  en: <gradient:#f0abfc:#7e22ce><bold>Crystal Crate</bold></gradient>
+- de: <gradient:#f0abfc:#7e22ce><bold>Kristall-Schlüssel</bold></gradient>
+  en: <gradient:#f0abfc:#7e22ce><bold>Crystal Key</bold></gradient>
+- de: <gray>Öffnet die <light_purple>Kristall-Kiste</light_purple>.
+  en: <gray>Opens the <light_purple>Crystal Crate</light_purple>.
+- de: <dark_gray>Kristall-Kollektion + Kristall-Rüstung
+  en: <dark_gray>Crystal collection + crystal armour
+- de: <gradient:#fbbf24:#1d4ed8><bold>Millennium-Kiste</bold></gradient>
+  en: <gradient:#fbbf24:#1d4ed8><bold>Millennium Crate</bold></gradient>
+- de: <gradient:#fbbf24:#1d4ed8><bold>Millennium-Schlüssel</bold></gradient>
+  en: <gradient:#fbbf24:#1d4ed8><bold>Millennium Key</bold></gradient>
+- de: <gray>Öffnet die <gold>Millennium-Kiste</gold>.
+  en: <gray>Opens the <gold>Millennium Crate</gold>.
+- de: <dark_gray>Schätze der Pharaonen
+  en: <dark_gray>Treasures of the pharaohs
+- de: <gradient:#f472b6:#a78bfa><bold>Kosmetik-Kiste</bold></gradient>
+  en: <gradient:#f472b6:#a78bfa><bold>Cosmetic Crate</bold></gradient>
+- de: <gradient:#f472b6:#a78bfa><bold>Kosmetik-Schlüssel</bold></gradient>
+  en: <gradient:#f472b6:#a78bfa><bold>Cosmetic Key</bold></gradient>
+- de: <gray>Öffnet die <light_purple>Kosmetik-Kiste</light_purple>.
+  en: <gray>Opens the <light_purple>Cosmetic Crate</light_purple>.
+- de: <dark_gray>Masken & Hüte – passend zur Saison
+  en: <dark_gray>Masks & hats – matching the season
+- de: <gradient:#94a3b8:#6366f1><bold>Weltraum-Kiste</bold></gradient>
+  en: <gradient:#94a3b8:#6366f1><bold>Space Crate</bold></gradient>
+- de: <gradient:#94a3b8:#6366f1><bold>Weltraum-Schlüssel</bold></gradient>
+  en: <gradient:#94a3b8:#6366f1><bold>Space Key</bold></gradient>
+- de: <gray>Öffnet die <blue>Weltraum-Kiste</blue>.
+  en: <gray>Opens the <blue>Space Crate</blue>.
+- de: <dark_gray>Raketen, Planeten, Astronauten
+  en: <dark_gray>Rockets, planets, astronauts
+- de: <gradient:#a3e635:#7c3aed><bold>Spawner-Kiste</bold></gradient>
+  en: <gradient:#a3e635:#7c3aed><bold>Spawner Crate</bold></gradient>
+- de: <gradient:#a3e635:#7c3aed><bold>Spawner-Schlüssel</bold></gradient>
+  en: <gradient:#a3e635:#7c3aed><bold>Spawner Key</bold></gradient>
+- de: <gray>Öffnet die <green>Spawner-Kiste</green>.
+  en: <gray>Opens the <green>Spawner Crate</green>.
+- de: <dark_gray>Spawneier, Spawner und die seltene Spawner-Spitzhacke
+  en: <dark_gray>Spawn eggs, spawners and the rare spawner pickaxe
+- de: <gradient:#fde047:#a855f7:#38bdf8><bold>Silvester-Kiste</bold></gradient>
+  en: <gradient:#fde047:#a855f7:#38bdf8><bold>New Year's Eve Crate</bold></gradient>
+- de: <gradient:#fde047:#a855f7:#38bdf8><bold>Silvester-Schlüssel</bold></gradient>
+  en: <gradient:#fde047:#a855f7:#38bdf8><bold>New Year's Eve Key</bold></gradient>
+- de: <gray>Öffnet die <gold>Silvester-Kiste</gold>.
+  en: <gray>Opens the <gold>New Year's Eve Crate</gold>.
+- de: <dark_gray>OP-Werkzeuge für alle Berufe
+  en: <dark_gray>OP tools for every job
+- de: <gold>Wanderhändler
+  en: <gold>Wandering Merchant

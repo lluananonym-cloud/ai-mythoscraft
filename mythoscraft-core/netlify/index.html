@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MythosCraft Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="grid-lines"></div>
+
+  <!-- login -->
+  <section id="login" class="screen">
+    <div class="login-card glass">
+      <div class="brand big"><span class="logo-mark">◆</span> MYTHOS<span class="accent">CRAFT</span></div>
+      <p class="sub">Admin Panel – nur mit Freigabe</p>
+      <div id="login-start">
+        <button id="btn-login" class="btn primary glow">Mit Server anmelden</button>
+      </div>
+      <div id="login-code" class="hidden">
+        <p class="hint">Gib ingame ein:</p>
+        <div class="code-box"><span>/website login </span><b id="code">------</b></div>
+        <button id="btn-copy" class="btn ghost small">Befehl kopieren</button>
+        <div class="waiting"><span class="dot"></span><span class="dot"></span><span class="dot"></span> warte auf Bestätigung <span id="countdown"></span></div>
+      </div>
+      <p id="login-error" class="error"></p>
+    </div>
+  </section>
+
+  <!-- app -->
+  <section id="app" class="screen hidden">
+    <aside class="sidebar glass">
+      <div class="brand"><span class="logo-mark">◆</span> MYTHOS<span class="accent">CRAFT</span></div>
+      <nav>
+        <a data-page="dashboard" class="active"><i>◈</i> Dashboard</a>
+        <a data-page="players"><i>☺</i> Spieler</a>
+        <a data-page="actions"><i>⚡</i> Aktionen</a>
+        <a data-page="console" data-role="admin"><i>›_</i> Konsole</a>
+        <a data-page="files" data-role="admin"><i>✎</i> Dateien</a>
+        <a data-page="access" data-role="owner"><i>⚿</i> Zugriff</a>
+        <a data-page="log"><i>≡</i> Protokoll</a>
+      </nav>
+      <div class="me">
+        <img id="me-head" alt="">
+        <div><b id="me-name">…</b><small id="me-role"></small></div>
+        <button id="btn-logout" class="btn ghost small">Abmelden</button>
+      </div>
+    </aside>
+
+    <main>
+      <!-- dashboard -->
+      <div class="page" id="page-dashboard">
+        <header class="page-head">
+          <div><h1>Dashboard</h1><p class="sub">Live vom Server <span class="live-dot"></span></p></div>
+        </header>
+        <div class="hero-row">
+          <div id="hologram" class="glass holo-card hidden">
+            <div class="holo-stage">
+              <canvas id="holo-canvas"></canvas>
+              <img id="holo-fallback" class="hidden" alt="">
+              <div class="scan"></div>
+              <div class="holo-base"></div>
+            </div>
+            <div class="holo-name">MinePro641 <small>OWNER</small></div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat glass"><span class="label">TPS</span><div class="ring"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle id="tps-ring" class="bar" cx="60" cy="60" r="52"/></svg><b id="tps">–</b></div><small id="mspt"></small></div>
+            <div class="stat glass"><span class="label">Spieler online</span><b class="num" id="online">0</b><small id="max"></small></div>
+            <div class="stat glass"><span class="label">RAM</span><b class="num" id="ram">0</b><div class="meter"><i id="ram-bar"></i></div></div>
+            <div class="stat glass"><span class="label">Uptime</span><b class="num small" id="uptime">–</b><small id="world-info"></small></div>
+            <div class="stat glass"><span class="label">Coins (online)</span><b class="num" id="coins">0</b><small>💰</small></div>
+            <div class="stat glass"><span class="label">Gems (online)</span><b class="num" id="gems">0</b><small>💎</small></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="glass panel wide"><h3>TPS-Verlauf</h3><canvas id="tps-chart" height="120"></canvas></div>
+          <div class="glass panel"><h3>Event</h3><div id="event-box" class="event-box">–</div><h3>Saison</h3><div id="season" class="pill">–</div></div>
+          <div class="glass panel"><h3>Clan-Krieg</h3><ol id="clanwar" class="rank-list"></ol></div>
+        </div>
+        <div class="glass panel"><h3>Online</h3><div id="player-cards" class="player-cards"></div></div>
+      </div>
+
+      <!-- players -->
+      <div class="page hidden" id="page-players">
+        <header class="page-head"><h1>Spieler</h1></header>
+        <div class="split">
+          <div class="glass panel"><input id="player-search" class="input" placeholder="Suchen…"><div id="player-list" class="list"></div></div>
+          <div class="glass panel" id="player-detail"><p class="sub">Spieler auswählen</p></div>
+        </div>
+      </div>
+
+      <!-- actions -->
+      <div class="page hidden" id="page-actions">
+        <header class="page-head"><h1>Aktionen</h1><p class="sub">Alle Plugin-Befehle per Knopf</p></header>
+        <div id="action-groups"></div>
+      </div>
+
+      <!-- console -->
+      <div class="page hidden" id="page-console">
+        <header class="page-head"><h1>Konsole</h1><p class="sub">Befehle als Server-Konsole</p></header>
+        <div class="glass terminal">
+          <div id="term-out" class="term-out"></div>
+          <form id="term-form"><span>›</span><input id="term-in" autocomplete="off" placeholder="z.B. mythos event start coinrain"></form>
+        </div>
+      </div>
+
+      <!-- files -->
+      <div class="page hidden" id="page-files">
+        <header class="page-head"><h1>Dateien</h1>
+          <div class="head-tools"><select id="file-select" class="input"></select><button id="btn-save" class="btn primary">Speichern & neu laden</button></div>
+        </header>
+        <textarea id="editor" class="glass editor" spellcheck="false"></textarea>
+        <p id="file-status" class="sub"></p>
+      </div>
+
+      <!-- access -->
+      <div class="page hidden" id="page-access">
+        <header class="page-head"><h1>Zugriff</h1><p class="sub">Wer darf das Panel nutzen?</p></header>
+        <div class="glass panel">
+          <form id="access-form" class="inline-form">
+            <input id="access-name" class="input" placeholder="Spielername" required>
+            <select id="access-role" class="input"><option value="view">Ansehen</option><option value="edit">Bearbeiten</option><option value="admin">Admin</option></select>
+            <button class="btn primary">Hinzufügen</button>
+          </form>
+          <div id="access-list" class="list"></div>
+          <p class="sub small">Ansehen = Live-Daten · Bearbeiten = Aktionen-Knöpfe · Admin = zusätzlich Konsole & Dateien</p>
+        </div>
+      </div>
+
+      <!-- log -->
+      <div class="page hidden" id="page-log">
+        <header class="page-head"><h1>Protokoll</h1><p class="sub">Alles, was über das Panel gemacht wurde</p></header>
+        <div class="glass panel"><pre id="log" class="log"></pre></div>
+      </div>
+    </main>
+  </section>
+
+  <!-- action dialog -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card glass">
+      <h2 id="modal-title"></h2>
+      <form id="modal-form"></form>
+      <pre id="modal-out" class="term-out mini hidden"></pre>
+      <div class="modal-buttons"><button id="modal-cancel" class="btn ghost">Schließen</button><button id="modal-run" class="btn primary glow">Ausführen</button></div>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script src="https://unpkg.com/skinview3d@3.1.0/bundles/skinview3d.bundle.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

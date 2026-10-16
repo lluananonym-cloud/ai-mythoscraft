@@ -1,0 +1,26 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "bat_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/bat_blade"}},
+      {"when": "candy_cane", "model": {"type": "minecraft:model", "model": "mythoscraft:item/candy_cane"}},
+      {"when": "carrot_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/carrot_blade"}},
+      {"when": "cloud_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/cloud_sword"}},
+      {"when": "coral_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/coral_blade"}},
+      {"when": "dragon_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/dragon_blade"}},
+      {"when": "frost_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/frost_blade"}},
+      {"when": "khopesh", "model": {"type": "minecraft:model", "model": "mythoscraft:item/khopesh"}},
+      {"when": "newyear_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_sword"}},
+      {"when": "nutcracker_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/nutcracker_sword"}},
+      {"when": "star_saber", "model": {"type": "minecraft:model", "model": "mythoscraft:item/star_saber"}},
+      {"when": "warden_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/warden_blade"}},
+      {"when": "wind_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/wind_blade"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/netherite_sword"
+  }
+  }
+}

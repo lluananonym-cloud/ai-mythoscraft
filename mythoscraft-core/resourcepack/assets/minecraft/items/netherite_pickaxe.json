@@ -1,0 +1,19 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "crystal_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/crystal_pickaxe"}},
+      {"when": "mythos_hammer", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mythos_hammer"}},
+      {"when": "newyear_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_pickaxe"}},
+      {"when": "ore_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ore_pickaxe"}},
+      {"when": "smelter_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/smelter_pickaxe"}},
+      {"when": "spawner_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/spawner_pickaxe"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/netherite_pickaxe"
+  }
+  }
+}

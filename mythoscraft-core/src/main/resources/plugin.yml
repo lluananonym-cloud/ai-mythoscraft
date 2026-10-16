@@ -1,0 +1,456 @@
+name: MythosCraft
+version: '${project.version}'
+main: online.mythoscraft.core.MythosCraft
+api-version: '1.21'
+author: MythosCraft
+website: https://mythoscraft.online
+description: MythosCraft Core – Spawn, Regionen, Arenen, Economy, Ränge, Events, Crates, Custom Items, Turniere, Shop, Auktionshaus und Farmaufträge.
+load: POSTWORLD
+
+commands:
+  mythos:
+    description: MythosCraft Hauptbefehl (help, status, reload, region, arena, event, top, eco, crate, item, boost, holo, bypass)
+    usage: /mythos help
+    aliases: [mc, mythoscraft]
+  creatormode:
+    description: Spielmodus für ausgewählte Creator freigeben (add/remove/list)
+    usage: /creatormode <add|remove|list> [Spieler]
+  gm:
+    description: Spielmodus wechseln (freigegebene Creator)
+    usage: /gm <c|s|sp>
+    aliases: [gamemode2]
+  intro:
+    description: Einführung mit Kamerafahrt nochmal ansehen (/intro skip beendet sie)
+    usage: /intro [skip]
+    aliases: [einfuehrung, tutorial]
+  mute:
+    description: Spieler stummschalten (Team, nur niedrigere Ränge)
+    usage: /mute <Spieler> <10m|2h|7d|perm> [Grund]
+  unmute:
+    description: Stummschaltung aufheben
+    usage: /unmute <Spieler>
+  kick:
+    description: Spieler vom Server werfen (Team, nur niedrigere Ränge)
+    usage: /kick <Spieler> [Grund]
+  tempban:
+    description: Spieler zeitweise bannen (Team, nur niedrigere Ränge)
+    usage: /tempban <Spieler> <1h|7d|…> [Grund]
+  ban:
+    description: Spieler dauerhaft bannen (ab ADMIN)
+    usage: /ban <Spieler> [Grund]
+  unban:
+    description: Bann aufheben
+    usage: /unban <Spieler>
+  warn:
+    description: Spieler verwarnen
+    usage: /warn <Spieler> <Grund>
+  warns:
+    description: Verwarnungen eines Spielers ansehen
+    usage: /warns <Spieler>
+  goto:
+    description: Zu einem Spieler teleportieren (Team)
+    usage: /goto <Spieler>
+  modlog:
+    description: Letzte Moderations-Aktionen
+    usage: /modlog
+  testkey:
+    description: Test-Schlüssel – Kiste testen ohne Belohnung (Team)
+    usage: /testkey <Kiste> [Anzahl]
+  pronounce:
+    description: Ankündigung an alle Spieler (Chat, Titel, Ton). -c = nur Chat.
+    usage: /pronounce [-c] <Text>
+    aliases: [announce, ankuendigung, bc]
+  new:
+    description: Starter-Kit für neue Spieler abholen (einmalig).
+    usage: /new
+    aliases: [starter, starterkit]
+  spawn:
+    description: Teleportiert dich zum Spawn.
+    usage: /spawn
+  setspawn:
+    description: Setzt den Server-Spawn auf deine Position.
+    usage: /setspawn
+    permission: mythos.spawn.set
+  home:
+    description: Teleportiert dich zu einem Home.
+    usage: /home [Name]
+  sethome:
+    description: Setzt ein Home.
+    usage: /sethome [Name]
+  delhome:
+    description: Löscht ein Home.
+    usage: /delhome <Name>
+  homes:
+    description: Listet deine Homes.
+    usage: /homes
+  tpa:
+    description: Fragt eine Teleportation zu einem Spieler an.
+    usage: /tpa <Spieler>
+  tpahere:
+    description: Fragt an, ob ein Spieler zu dir teleportiert.
+    usage: /tpahere <Spieler>
+  tpaccept:
+    description: Nimmt eine Teleport-Anfrage an.
+    usage: /tpaccept [Spieler]
+  tpdeny:
+    description: Lehnt eine Teleport-Anfrage ab.
+    usage: /tpdeny [Spieler]
+  tpacancel:
+    description: Zieht deine Teleport-Anfrage zurück.
+    usage: /tpacancel
+  balance:
+    description: Zeigt Coins und Gems.
+    usage: /balance [Spieler]
+    aliases: [bal, money]
+  coins:
+    description: Zeigt deine Coins.
+    usage: /coins [Spieler]
+  gems:
+    description: Zeigt deine Gems.
+    usage: /gems [Spieler]
+  pay:
+    description: Überweist Coins an einen Spieler.
+    usage: /pay <Spieler> <Betrag> [coins|gems]
+  gempay:
+    description: Überweist Gems an einen Spieler.
+    usage: /gempay <Spieler> <Betrag>
+    aliases: [paygems]
+  helpop:
+    description: Schickt eine Nachricht an das Team.
+    usage: /helpop <Nachricht>
+  daily:
+    description: Holt deine tägliche Belohnung ab.
+    usage: /daily
+  stats:
+    description: Zeigt Statistiken.
+    usage: /stats [Spieler]
+  top:
+    description: Bestenlisten.
+    usage: /top <Statistik>
+  event:
+    description: Infos zum laufenden Event.
+    usage: /event
+  rank:
+    description: Rang-Verwaltung.
+    usage: /rank <set|remove|info|list>
+  arena:
+    description: Arenen betreten, zuschauen und verlassen.
+    usage: /arena <join|spectate|leave|list>
+  tournament:
+    description: Turniere (täglich, wöchentlich, monatlich) – beitreten, verlassen, Infos.
+    usage: /tournament <join|leave|info>
+    aliases: [turnier, tunier]
+  rtp:
+    description: Zufälliger Teleport in die Wildnis.
+    usage: /rtp [Welt]
+    aliases: [wild, randomtp, zufall]
+  clan:
+    description: Clans – gründen, einladen, Bank, Home, Chat.
+    usage: /clan [create|invite|accept|leave|info|list|top|bank|deposit|withdraw|sethome|home|chat|color|kick|promote|demote|transfer|disband]
+    aliases: [clans, gilde]
+  cc:
+    description: Clan-Chat (ohne Text = umschalten).
+    usage: /cc [Nachricht]
+    aliases: [clanchat]
+  ringe:
+    description: Elytra-Ringkurs – Bestzeit und Top 5.
+    usage: /ringe
+    aliases: [rings, elytra]
+  wette:
+    description: Wette mit Freunden um Coins (Münze, Würfel, Parkour-, Dropper-, Ringe-, Labyrinth-Rennen) – kein PvP.
+    usage: /wette <Spieler> <Coins> <Spiel> | /wette annehmen | /wette ablehnen
+    aliases: [bet, wetten]
+  aufgaben:
+    description: Tägliche und wöchentliche Aufgaben (Gems) und die Starthilfe für neue Spieler.
+    usage: /aufgaben
+    aliases: [quests, quest, aufgabe]
+  dropper:
+    description: Dropper-Turm – Bestzeit und Top 5.
+    usage: /dropper
+  labyrinth:
+    description: Labyrinth am Spawn.
+    usage: /labyrinth
+    aliases: [maze]
+  musik:
+    description: Spawn-Musik an/aus.
+    usage: /musik [an|aus]
+    aliases: [music]
+  stream:
+    description: Streamer-Modus (nur lizenzfreie Musik, LIVE-Abzeichen).
+    usage: /stream [on|off]
+    aliases: [streamer]
+  season:
+    description: Saison anzeigen oder (Admin) früher starten / stoppen.
+    usage: /season [info|start <id>|stop|auto]
+    aliases: [saison]
+  schmied:
+    description: Schmied – Waffen, Rüstung und Werkzeuge auf +1 bis +10 verbessern.
+    usage: /schmied [ok]
+    aliases: [upgrade, blacksmith]
+  kisten:
+    description: Kisten-Karussell – welche Kisten gerade am Spawn stehen und wann die nächste kommt.
+    usage: /kisten
+    aliases: [crates]
+  blockparty:
+    description: Block-Party am Spawn – Regeln, Rekord und hinbeamen.
+    usage: /blockparty
+  spleef:
+    description: Spleef am Spawn – Regeln, Siege und hinbeamen.
+    usage: /spleef
+  zielschiessen:
+    description: Zielschießen am Spawn – Regeln, Rekord und hinbeamen.
+    usage: /zielschiessen
+    aliases: [targets]
+  booster:
+    description: Deine aktiven persönlichen Booster und Mutationen.
+    usage: /booster
+    aliases: [boosters]
+  magie:
+    description: Mythos-Magie – Zauberstab, Zauber und Mana erklärt.
+    usage: /magie [lernen|vergessen <Spieler> <Zauber|alle>]
+    aliases: [magic]
+  verlosung:
+    description: Bei einer Verlosung mitmachen (Admin – /verlosung start <Minuten> [Gewinner] <Belohnung>).
+    usage: /verlosung [item [Minuten]|start|stop]
+    aliases: [giveaway, gewinnspiel]
+  website:
+    description: Admin-Website – Link, Login per Code (/website login <Code>), Zugriff verwalten (nur MinePro641).
+    usage: /website [login <Code>|allow <Spieler> <view|edit|admin>|deny <Spieler>]
+    aliases: [web, panel]
+  snowman:
+    description: (Admin) Spielt Snowman für alle ab (Notenblöcke + Villager-Gesang). Nochmal = stoppen.
+    usage: /snowman
+  haendler:
+    description: (Admin) Wanderhändler sofort erscheinen lassen.
+    usage: /haendler
+    aliases: [merchant]
+    permission: mythos.season
+  invsee:
+    description: Inventar eines Spielers ansehen und bearbeiten.
+    usage: /invsee <Spieler>
+    permission: mythos.invsee
+  endersee:
+    description: Endertruhe eines Spielers ansehen und bearbeiten.
+    usage: /endersee <Spieler>
+    aliases: [ec]
+    permission: mythos.invsee
+  jobs:
+    description: Berufe – Level, XP und Belohnungen.
+    usage: /jobs
+    aliases: [berufe, job, beruf]
+  erfolge:
+    description: Erfolge und ihre Belohnungen.
+    usage: /erfolge
+    aliases: [achievements, erfolg]
+  parkour:
+    description: Deine Parkour-Bestzeit und die Top 5.
+    usage: /parkour
+  shop:
+    description: Gem-Shop – Kisten-Schlüssel und Extras kaufen.
+    usage: /shop
+    aliases: [gemshop, laden]
+  ah:
+    description: Auktionshaus – Items kaufen und verkaufen.
+    usage: /ah [sell <Preis> [coins|gems] | meine | abholen | suche <Text>]
+    aliases: [auktion, auction, auktionshaus]
+  auftrag:
+    description: Farmaufträge – Items bestellen oder liefern und Coins verdienen.
+    usage: /auftrag [erstellen <Item|hand> <Menge> <Preis pro Stück> | meine]
+    aliases: [auftraege, farmauftrag, orders]
+
+permissions:
+  mythos.announce:
+    description: /pronounce – Ankündigungen an alle
+    default: op
+  mythos.invsee:
+    description: /invsee und /endersee
+    default: op
+  mythos.magic.admin:
+    description: /magie lernen|vergessen <Spieler> <Zauber|alle>
+    default: op
+  mythos.giveaway.item:
+    description: /verlosung item – ein Item aus der Hand verlosen (kostet eine kleine Gebühr)
+    default: false
+  mythos.giveaway:
+    description: Verlosungen starten und beenden
+    default: op
+  mythos.season:
+    description: /season start|stop|auto, /musik skip, /haendler
+    default: op
+  mythos.admin:
+    description: Alle MythosCraft-Admin-Rechte. Nie an Namen gebunden – nur per Permission.
+    default: op
+    children:
+      mythos.magic.admin: true
+      mythos.giveaway: true
+      mythos.bypass: true
+      mythos.reload: true
+      mythos.status: true
+      mythos.spawn.set: true
+      mythos.region.*: true
+      mythos.arena.*: true
+      mythos.events.*: true
+      mythos.economy.admin: true
+      mythos.rank.admin: true
+      mythos.crate.admin: true
+      mythos.item.give: true
+      mythos.boost: true
+      mythos.hologram: true
+      mythos.helpop.receive: true
+      mythos.balance.others: true
+      mythos.teleport.instant: true
+      mythos.invsee: true
+      mythos.season: true
+      mythos.homes.unlimited: true
+      mythos.arena.bypass-commands: true
+      mythos.tournament.admin: true
+      mythos.auction.admin: true
+      mythos.orders.admin: true
+      mythos.rtp.bypass-cooldown: true
+  mythos.bypass:
+    description: Ignoriert den Regionsschutz (abschaltbar mit /mythos bypass).
+    default: op
+  mythos.region.*:
+    description: Regionen verwalten (inkl. Bypass).
+    default: op
+    children:
+      mythos.region.manage: true
+      mythos.bypass: true
+  mythos.region.manage:
+    description: /mythos region
+    default: op
+  mythos.arena.*:
+    description: Arenen verwalten.
+    default: op
+    children:
+      mythos.arena.manage: true
+      mythos.arena.join: true
+  mythos.arena.manage:
+    description: /mythos arena
+    default: op
+  mythos.events.*:
+    description: Events steuern.
+    default: op
+    children:
+      mythosevents.admin: true
+  mythosevents.admin:
+    description: Alle Event-Rechte.
+    default: op
+    children:
+      mythosevents.start: true
+      mythosevents.stop: true
+      mythosevents.reload: true
+      mythosevents.spawnboss: true
+  mythosevents.start:
+    default: op
+  mythosevents.stop:
+    default: op
+  mythosevents.reload:
+    default: op
+  mythosevents.spawnboss:
+    default: op
+  mythos.economy.admin:
+    description: Coins/Gems geben, nehmen und setzen.
+    default: op
+  mythos.rank.admin:
+    description: Ränge vergeben (MYTHOS kann nur MinePro641 vergeben).
+    default: op
+  mythos.crate.admin:
+    default: op
+  mythos.item.give:
+    default: op
+  mythos.boost:
+    default: op
+  mythos.hologram:
+    default: op
+  mythos.reload:
+    default: op
+  mythos.status:
+    default: op
+  mythos.spawn.set:
+    default: op
+  mythos.helpop.receive:
+    description: Empfängt /helpop Nachrichten.
+    default: op
+  mythos.balance.others:
+    default: op
+  mythos.teleport.instant:
+    description: Teleportiert ohne Wartezeit.
+    default: op
+  mythos.homes.unlimited:
+    default: op
+  mythos.arena.bypass-commands:
+    default: op
+  mythos.tournament.admin:
+    description: Turniere starten, testen (Bots), stoppen und Arenen zuweisen.
+    default: op
+  mythos.auction.admin:
+    description: Darf fremde Auktionen entfernen (Shift + Rechtsklick im Auktionshaus).
+    default: op
+  mythos.orders.admin:
+    description: Darf fremde Farmaufträge abbrechen (Shift + Rechtsklick).
+    default: op
+  mythos.rtp.bypass-cooldown:
+    description: RTP ohne Wartezeit.
+    default: op
+  mythos.auction.unlimited:
+    description: Keine Begrenzung der gleichzeitigen Auktionen.
+    default: false
+  mythos.orders.unlimited:
+    description: Keine Begrenzung der gleichzeitigen Farmaufträge.
+    default: false
+  mythos.team:
+    description: Zeigt das TEAM-Abzeichen vor dem Namen.
+    default: false
+  mythos.chat.color:
+    description: Darf &-Farbcodes im Chat nutzen.
+    default: false
+  mythos.player:
+    description: Alle normalen Spieler-Befehle.
+    default: true
+    children:
+      mythos.spawn: true
+      mythos.home: true
+      mythos.tpa: true
+      mythos.pay: true
+      mythos.balance: true
+      mythos.helpop: true
+      mythos.daily: true
+      mythos.stats: true
+      mythos.top: true
+      mythos.arena.join: true
+      mythos.tournament: true
+      mythos.shop: true
+      mythos.auction: true
+      mythos.orders: true
+      mythos.rtp: true
+  mythos.rtp:
+    default: true
+  mythos.tournament:
+    default: true
+  mythos.shop:
+    default: true
+  mythos.auction:
+    default: true
+  mythos.orders:
+    default: true
+  mythos.spawn:
+    default: true
+  mythos.home:
+    default: true
+  mythos.tpa:
+    default: true
+  mythos.pay:
+    default: true
+  mythos.balance:
+    default: true
+  mythos.helpop:
+    default: true
+  mythos.daily:
+    default: true
+  mythos.stats:
+    default: true
+  mythos.top:
+    default: true
+  mythos.arena.join:
+    default: true

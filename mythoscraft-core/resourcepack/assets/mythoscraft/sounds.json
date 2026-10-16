@@ -1,0 +1,4 @@
+{
+  "season.hohoho": {"sounds": [{"name": "mythoscraft:season/hohoho"}]},
+  "music.snowman": {"sounds": [{"name": "mythoscraft:music/snowman", "stream": true}]}
+}

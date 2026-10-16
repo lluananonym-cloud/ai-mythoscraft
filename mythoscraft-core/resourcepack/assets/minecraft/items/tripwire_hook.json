@@ -1,0 +1,36 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "key_ancient", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_ancient"}},
+      {"when": "key_begleiter", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_begleiter"}},
+      {"when": "key_celestial", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_celestial"}},
+      {"when": "key_common", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_common"}},
+      {"when": "key_cosmetic", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_cosmetic"}},
+      {"when": "key_crystal", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_crystal"}},
+      {"when": "key_dragon", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_dragon"}},
+      {"when": "key_elite", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_elite"}},
+      {"when": "key_farm", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_farm"}},
+      {"when": "key_forest", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_forest"}},
+      {"when": "key_frostfest", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_frostfest"}},
+      {"when": "key_halloween", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_halloween"}},
+      {"when": "key_inferno", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_inferno"}},
+      {"when": "key_millennium", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_millennium"}},
+      {"when": "key_mythos", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_mythos"}},
+      {"when": "key_ocean", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_ocean"}},
+      {"when": "key_rang", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_rang"}},
+      {"when": "key_silvester", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_silvester"}},
+      {"when": "key_sky", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_sky"}},
+      {"when": "key_space", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_space"}},
+      {"when": "key_spawner", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_spawner"}},
+      {"when": "key_storm", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_storm"}},
+      {"when": "key_vip", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_vip"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/tripwire_hook"
+  }
+  }
+}

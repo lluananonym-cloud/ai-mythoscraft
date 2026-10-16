@@ -1,0 +1,1001 @@
+# MythosCraft – Kisten (Crates)
+# Platzieren: /mythos crate place <id>  (auf einen Block schauen)
+# Schlüssel:  /mythos crate key <Spieler> <id> [Anzahl]  |  /mythos crate keyall <id> [Anzahl]
+#
+# Belohnungen (reward):
+#   coins <Anzahl> | gems <Anzahl> | xp <Anzahl> | key <kiste> [Anzahl] | tool <custom-item> | item <MATERIAL> [Anzahl]
+#   command <Befehl mit {player}>   (wird von der Konsole ausgeführt)
+# weight = Gewichtung (Chance = weight / Summe aller weights)
+# rarity = COMMON, RARE, EPIC, LEGENDARY, MYTHIC  (ab broadcast-from wird es allen angezeigt)
+# model/key-model = Modell-ID im Resource Pack (Standard: crate_<id> / key_<id>)
+
+# Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
+config-version: 16
+
+# Hologramm über jeder Kiste
+hologram:
+  - "{crate}"
+  - "<gray>Rechtsklick <dark_gray>»</dark_gray> <white>Öffnen"
+  - "<gray>Linksklick <dark_gray>»</dark_gray> <white>Vorschau"
+  - "<dark_gray>Schleichen + Rechtsklick: alle Schlüssel"
+
+# Schleichen + Rechtsklick öffnet alle Schlüssel in der Hand ohne Animation
+bulk-open: true
+
+# Täglich wechselnde Auswahl: so viele Belohnungen zeigt jede Kiste pro Tag (0 = immer alle). Pro Kiste änderbar: rotation-size
+rotation-size: 16
+
+crates:
+  common:
+    name: "<gradient:#d1d5db:#9ca3af><bold>Gewöhnliche Kiste</bold></gradient>"
+    key-name: "<gray><bold>Gewöhnlicher Schlüssel</bold>"
+    key-lore:
+      - "<gray>Öffnet eine <white>Gewöhnliche Kiste</white> am Spawn."
+    color: "#9CA3AF"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "tool mana_elixir 1", weight: 8, rarity: COMMON}
+      - {reward: "tool xp_booster 1", weight: 4, rarity: RARE}
+      - {reward: "coins 150", weight: 40, rarity: COMMON}
+      - {reward: "coins 400", weight: 20, rarity: RARE}
+      - {reward: "gems 1", weight: 15, rarity: RARE}
+      - {reward: "item IRON_INGOT 16", weight: 15, rarity: COMMON}
+      - {reward: "item DIAMOND 2", weight: 6, rarity: EPIC}
+      - {reward: "key vip 1", weight: 3, rarity: EPIC}
+      - {reward: "tool relic_compass", weight: 1, rarity: LEGENDARY}
+      - {reward: "tool return_feather 2", weight: 8, rarity: RARE}
+      - {reward: "tool haste_rune", weight: 5, rarity: RARE}
+      - {reward: "tool coin_pouch 2", weight: 14, rarity: COMMON}
+      - {reward: "tool key_fragment 1", weight: 10, rarity: RARE}
+      - {reward: "tool honey_bread 4", weight: 12, rarity: COMMON}
+      - {reward: "tool fortune_cookie 3", weight: 10, rarity: COMMON}
+      - {reward: "tool healing_flask 2", weight: 8, rarity: RARE}
+      - {reward: "tool rtp_scroll 2", weight: 8, rarity: RARE}
+      - {reward: "tool seed_bag", weight: 3, rarity: EPIC}
+      - {reward: "tool jump_charm", weight: 2, rarity: EPIC}
+      - {reward: "book efficiency 3", weight: 4, rarity: RARE}
+      - {reward: "tool firework_wand", weight: 3, rarity: EPIC}
+      - {reward: "tool time_sand", weight: 3, rarity: EPIC}
+      - {reward: "tool weather_orb", weight: 3, rarity: EPIC}
+      - {reward: "tool lucky_dice 2", weight: 10, rarity: RARE}
+      - {reward: "tool repair_hammer", weight: 6, rarity: RARE}
+      - {reward: "tool home_stone 2", weight: 8, rarity: RARE}
+      - {reward: "tool confetti_cannon", weight: 4, rarity: EPIC}
+      - {reward: "tool party_hat", weight: 2, rarity: EPIC}
+
+  vip:
+    name: "<gradient:#22c55e:#a3e635><bold>VIP-Kiste</bold></gradient>"
+    key-name: "<green><bold>VIP-Schlüssel</bold>"
+    key-lore:
+      - "<gray>Öffnet eine <green>VIP-Kiste</green> am Spawn."
+    color: "#22C55E"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "tool coin_booster 1", weight: 6, rarity: RARE}
+      - {reward: "tool mutation_serum 1", weight: 3, rarity: EPIC}
+      - {reward: "coins 500", weight: 35, rarity: COMMON}
+      - {reward: "coins 1500", weight: 15, rarity: RARE}
+      - {reward: "gems 3", weight: 15, rarity: RARE}
+      - {reward: "item DIAMOND 5", weight: 12, rarity: RARE}
+      - {reward: "item ENCHANTED_GOLDEN_APPLE 1", weight: 5, rarity: EPIC}
+      - {reward: "key elite 1", weight: 5, rarity: EPIC}
+      - {reward: "tool excavator", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool timber_axe", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool grappling_hook", weight: 4, rarity: EPIC}
+      - {reward: "tool miner_lantern", weight: 4, rarity: EPIC}
+      - {reward: "tool coin_pouch 3", weight: 12, rarity: COMMON}
+      - {reward: "tool gem_pouch", weight: 8, rarity: RARE}
+      - {reward: "tool key_fragment 2", weight: 8, rarity: RARE}
+      - {reward: "tool healing_flask 3", weight: 8, rarity: RARE}
+      - {reward: "tool swift_rune 2", weight: 6, rarity: RARE}
+      - {reward: "tool watering_can", weight: 3, rarity: EPIC}
+      - {reward: "tool ender_pouch", weight: 2, rarity: EPIC}
+      - {reward: "tool aqua_charm", weight: 2, rarity: EPIC}
+      - {reward: "book unbreaking 3", weight: 5, rarity: RARE}
+      - {reward: "voucher VIP 3d", weight: 1, rarity: LEGENDARY}
+      - {reward: "tool light_staff", weight: 4, rarity: EPIC}
+      - {reward: "tool climbing_gloves", weight: 3, rarity: EPIC}
+      - {reward: "tool ore_compass", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool miner_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool miner_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool lucky_dice 3", weight: 8, rarity: RARE}
+      - {reward: "tool repair_hammer 2", weight: 6, rarity: RARE}
+      - {reward: "tool hunger_charm", weight: 3, rarity: EPIC}
+      - {reward: "tool sponge_bomb 2", weight: 5, rarity: RARE}
+      - {reward: "tool home_stone 3", weight: 6, rarity: RARE}
+      - {reward: "tool rainbow_potion 2", weight: 5, rarity: RARE}
+      - {reward: "tool lucky_horseshoe", weight: 3, rarity: EPIC}
+
+  elite:
+    name: "<gradient:#38bdf8:#818cf8><bold>Elite-Kiste</bold></gradient>"
+    key-name: "<aqua><bold>Elite-Schlüssel</bold>"
+    key-lore:
+      - "<gray>Öffnet eine <aqua>Elite-Kiste</aqua> am Spawn."
+    color: "#38BDF8"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "tool find_booster 1", weight: 5, rarity: EPIC}
+      - {reward: "tool spell_scroll 1", weight: 4, rarity: EPIC}
+      - {reward: "tool meteor_shower 1", weight: 3, rarity: EPIC}
+      - {reward: "coins 1500", weight: 30, rarity: COMMON}
+      - {reward: "gems 8", weight: 20, rarity: RARE}
+      - {reward: "xp 1000", weight: 12, rarity: RARE}
+      - {reward: "item NETHERITE_INGOT 1", weight: 12, rarity: EPIC}
+      - {reward: "item TOTEM_OF_UNDYING 1", weight: 10, rarity: EPIC}
+      - {reward: "tool timber_axe", weight: 4, rarity: EPIC}
+      - {reward: "tool excavator", weight: 4, rarity: EPIC}
+      - {reward: "key mythos 1", weight: 5, rarity: LEGENDARY}
+      - {reward: "tool mythos_hammer", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool magnet_charm", weight: 4, rarity: EPIC}
+      - {reward: "tool healing_totem", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool gem_pouch 2", weight: 10, rarity: RARE}
+      - {reward: "tool key_fragment 3", weight: 8, rarity: RARE}
+      - {reward: "tool mythos_elixir", weight: 5, rarity: EPIC}
+      - {reward: "tool builder_wand", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool smelter_pickaxe", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool ore_pickaxe", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool wisdom_charm", weight: 3, rarity: EPIC}
+      - {reward: "tool treasure_map", weight: 4, rarity: EPIC}
+      - {reward: "book sharpness 5", weight: 4, rarity: EPIC}
+      - {reward: "book mending 1", weight: 3, rarity: EPIC}
+      - {reward: "voucher VIP 7d", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool golem_egg", weight: 4, rarity: EPIC}
+      - {reward: "tool shield_crystal 2", weight: 5, rarity: EPIC}
+      - {reward: "tool knight_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool knight_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool miner_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool miner_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool enchant_scroll", weight: 4, rarity: EPIC}
+      - {reward: "tool soul_jar", weight: 3, rarity: EPIC}
+      - {reward: "tool cloud_bottle", weight: 3, rarity: EPIC}
+      - {reward: "tool player_tracker", weight: 3, rarity: EPIC}
+      - {reward: "tool frost_walker_charm", weight: 3, rarity: EPIC}
+
+  mythos:
+    name: "<gradient:#c084fc:#f59e0b><bold>Mythos-Kiste</bold></gradient>"
+    key-name: "<gradient:#c084fc:#f59e0b><bold>Mythos-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet eine <light_purple>Mythos-Kiste</light_purple> am Spawn."
+      - "<dark_gray>Die seltensten Schätze von MythosCraft."
+    color: "#C084FC"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "tool gem_booster 1", weight: 6, rarity: EPIC}
+      - {reward: "tool mythos_wand 1", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool spell_scroll 2", weight: 4, rarity: EPIC}
+      - {reward: "coins 5000", weight: 25, rarity: RARE}
+      - {reward: "gems 25", weight: 20, rarity: EPIC}
+      - {reward: "item NETHERITE_INGOT 3", weight: 12, rarity: EPIC}
+      - {reward: "key ancient 1", weight: 8, rarity: EPIC}
+      - {reward: "item ELYTRA 1", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool mythos_hammer", weight: 8, rarity: LEGENDARY}
+      - {reward: "tool meteor_staff", weight: 5, rarity: LEGENDARY}
+      - {reward: "tool warden_blade", weight: 3, rarity: MYTHIC}
+      - {reward: "tool mythos_backpack", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool mythos_chestplate", weight: 2, rarity: MYTHIC}
+      - {reward: "tool mythos_leggings", weight: 2, rarity: MYTHIC}
+      - {reward: "key celestial 1", weight: 5, rarity: EPIC}
+      - {reward: "coins 25000", weight: 2, rarity: MYTHIC, name: "<gold><bold>JACKPOT: 25.000 Coins"}
+      - {reward: "tool gem_pouch 3", weight: 10, rarity: RARE}
+      - {reward: "tool key_fragment 5", weight: 8, rarity: EPIC}
+      - {reward: "tool mythos_elixir 2", weight: 6, rarity: EPIC}
+      - {reward: "tool ore_pickaxe", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool treasure_map 2", weight: 4, rarity: EPIC}
+      - {reward: "tool mythos_helmet", weight: 1, rarity: MYTHIC}
+      - {reward: "tool mythos_boots", weight: 1, rarity: MYTHIC}
+      - {reward: "book sharpness 6", weight: 2, rarity: MYTHIC}
+      - {reward: "book protection 5", weight: 2, rarity: MYTHIC}
+      - {reward: "voucher ELITE 7d", weight: 2, rarity: LEGENDARY}
+      - {reward: "voucher HELD 7d", weight: 1, rarity: MYTHIC}
+      - {reward: "tool golem_egg 2", weight: 4, rarity: EPIC}
+      - {reward: "tool knight_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool knight_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool enchant_scroll 2", weight: 5, rarity: EPIC}
+      - {reward: "tool return_crystal", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool golden_crown", weight: 2, rarity: MYTHIC}
+
+  ancient:
+    name: "<gradient:#0e7c86:#3fe0d0><bold>Uralte Kiste</bold></gradient>"
+    key-name: "<dark_aqua><bold>Uralter Schlüssel</bold>"
+    key-lore:
+      - "<gray>Vom Ancient Warden bewacht."
+      - "<gray>Öffnet eine <dark_aqua>Uralte Kiste</dark_aqua>."
+    color: "#0E7C86"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "coins 3000", weight: 25, rarity: RARE}
+      - {reward: "gems 15", weight: 25, rarity: EPIC}
+      - {reward: "item ECHO_SHARD 8", weight: 15, rarity: RARE}
+      - {reward: "item ENCHANTED_GOLDEN_APPLE 2", weight: 10, rarity: EPIC}
+      - {reward: "item MUSIC_DISC_5 1", weight: 5, rarity: EPIC}
+      - {reward: "key mythos 1", weight: 8, rarity: LEGENDARY}
+      - {reward: "tool meteor_staff", weight: 6, rarity: LEGENDARY}
+      - {reward: "tool warden_blade", weight: 6, rarity: MYTHIC}
+      - {reward: "tool sculk_helmet", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool sculk_chestplate", weight: 2, rarity: MYTHIC}
+      - {reward: "tool sculk_leggings", weight: 2, rarity: MYTHIC}
+      - {reward: "tool sculk_boots", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool ore_pickaxe", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool wisdom_charm", weight: 4, rarity: EPIC}
+      - {reward: "tool treasure_map 2", weight: 5, rarity: EPIC}
+      - {reward: "tool key_fragment 3", weight: 8, rarity: RARE}
+      - {reward: "book mending 1", weight: 3, rarity: EPIC}
+      - {reward: "tool ore_compass", weight: 4, rarity: EPIC}
+      - {reward: "tool miner_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool miner_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool miner_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool miner_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool soul_jar", weight: 4, rarity: EPIC}
+      - {reward: "tool enchant_scroll", weight: 4, rarity: EPIC}
+
+  # ─────────────── Kollektions-Kisten (animierte Modelle) ───────────────
+  halloween:
+    name: "<gradient:#ff7a1a:#7c3aed><bold>Schauernacht-Kiste</bold></gradient>"
+    key-name: "<gradient:#ff7a1a:#7c3aed><bold>Schauernacht-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <gold>Schauernacht-Kiste</gold>."
+      - "<dark_gray>Droppt im Oktober auch von Monstern!"
+    color: "#FF7A1A"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "tool candy_corn 4", weight: 18, rarity: COMMON}
+      - {reward: "tool lollipop 3", weight: 16, rarity: COMMON}
+      - {reward: "tool caramel_apple 2", weight: 12, rarity: RARE}
+      - {reward: "tool pumpkin_bomb 4", weight: 12, rarity: RARE}
+      - {reward: "coins 2000", weight: 10, rarity: RARE}
+      - {reward: "tool candy_bucket", weight: 6, rarity: EPIC}
+      - {reward: "tool ghost_lantern", weight: 5, rarity: EPIC}
+      - {reward: "tool witch_broom", weight: 4, rarity: EPIC}
+      - {reward: "tool bat_blade", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool ghost_bow", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool pumpkin_scythe", weight: 2, rarity: MYTHIC}
+      - {reward: "tool pumpkin_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool pumpkin_chestplate", weight: 1, rarity: LEGENDARY}
+      - {reward: "tool pumpkin_leggings", weight: 1, rarity: LEGENDARY}
+      - {reward: "tool pumpkin_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool smoke_bomb 3", weight: 10, rarity: RARE}
+      - {reward: "tool ninja_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool ninja_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool ninja_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool ninja_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool web_shooter", weight: 5, rarity: EPIC}
+      - {reward: "tool chainsaw", weight: 3, rarity: LEGENDARY}
+
+  frostfest:
+    name: "<gradient:#e0f2fe:#38bdf8><bold>Frostfest-Kiste</bold></gradient>"
+    key-name: "<gradient:#e0f2fe:#38bdf8><bold>Frostfest-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <aqua>Frostfest-Kiste</aqua>."
+    color: "#7DD3FC"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "tool hot_cocoa 3", weight: 18, rarity: COMMON}
+      - {reward: "tool gift_box 2", weight: 15, rarity: RARE}
+      - {reward: "coins 2000", weight: 12, rarity: RARE}
+      - {reward: "tool candy_cane", weight: 8, rarity: EPIC}
+      - {reward: "tool snow_cannon", weight: 6, rarity: EPIC}
+      - {reward: "tool ice_wand", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool frost_blade", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool frost_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool frost_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool frost_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool frost_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool frost_bomb 4", weight: 12, rarity: RARE}
+      - {reward: "tool weather_orb", weight: 6, rarity: EPIC}
+      - {reward: "tool sponge_bomb 3", weight: 8, rarity: RARE}
+      - {reward: "tool frost_walker_charm", weight: 5, rarity: EPIC}
+      - {reward: "tool gingerbread 4", weight: 14, rarity: COMMON}
+      - {reward: "tool eggnog 2", weight: 12, rarity: COMMON}
+      - {reward: "tool ornament_bomb 4", weight: 12, rarity: COMMON}
+      - {reward: "tool snow_globe", weight: 7, rarity: RARE}
+      - {reward: "tool mistletoe", weight: 7, rarity: RARE}
+      - {reward: "tool reindeer_bell", weight: 7, rarity: RARE}
+      - {reward: "tool present_launcher", weight: 4, rarity: EPIC}
+      - {reward: "tool nutcracker_sword", weight: 4, rarity: EPIC}
+      - {reward: "tool santa_hat", weight: 5, rarity: EPIC}
+      - {reward: "tool reindeer_antlers", weight: 3, rarity: LEGENDARY}
+
+  celestial:
+    name: "<gradient:#7c3aed:#22d3ee><bold>Sternen-Kiste</bold></gradient>"
+    key-name: "<gradient:#7c3aed:#22d3ee><bold>Sternen-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <light_purple>Sternen-Kiste</light_purple>."
+      - "<dark_gray>Funkelt und schimmert."
+    color: "#8B5CF6"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "gems 15", weight: 18, rarity: RARE}
+      - {reward: "tool lucky_clover 2", weight: 14, rarity: RARE}
+      - {reward: "tool xp_tome 2", weight: 14, rarity: RARE}
+      - {reward: "tool comet_bow", weight: 5, rarity: EPIC}
+      - {reward: "tool void_scepter", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool nebula_orb", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool phoenix_feather", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool star_saber", weight: 2, rarity: MYTHIC}
+      - {reward: "tool mythos_helmet", weight: 1, rarity: MYTHIC}
+      - {reward: "tool mythos_boots", weight: 1, rarity: MYTHIC}
+      - {reward: "tool ender_bow", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool angel_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool angel_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool angel_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool angel_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool firework_wand", weight: 8, rarity: RARE}
+      - {reward: "tool time_sand", weight: 6, rarity: EPIC}
+      - {reward: "tool return_crystal", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool rainbow_potion 2", weight: 8, rarity: RARE}
+      - {reward: "tool confetti_cannon", weight: 6, rarity: EPIC}
+      - {reward: "tool party_hat", weight: 4, rarity: EPIC}
+
+  inferno:
+    name: "<gradient:#ff4d1a:#7f1d1d><bold>Inferno-Kiste</bold></gradient>"
+    key-name: "<gradient:#ff4d1a:#7f1d1d><bold>Inferno-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <red>Inferno-Kiste</red>."
+    color: "#EF4444"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "tool dragon_flask 2", weight: 18, rarity: COMMON}
+      - {reward: "coins 2500", weight: 15, rarity: RARE}
+      - {reward: "item BLAZE_ROD 16", weight: 12, rarity: RARE}
+      - {reward: "item NETHERITE_SCRAP 4", weight: 8, rarity: EPIC}
+      - {reward: "tool ember_wand", weight: 6, rarity: EPIC}
+      - {reward: "tool meteor_staff", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool inferno_axe", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool inferno_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool inferno_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool inferno_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool inferno_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool mythos_elixir", weight: 4, rarity: EPIC}
+      - {reward: "tool dragon_heart", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool shield_crystal 2", weight: 6, rarity: EPIC}
+      - {reward: "tool viking_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool viking_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool viking_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool viking_boots", weight: 2, rarity: LEGENDARY}
+
+  # ─────────────── Neue Kisten: Bauern, Sturm, Drachen (animiert) und Rang ───────────────
+  farm:
+    name: "<gradient:#facc15:#16a34a><bold>Bauern-Kiste</bold></gradient>"
+    key-name: "<gradient:#facc15:#16a34a><bold>Bauern-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <green>Bauern-Kiste</green>."
+      - "<dark_gray>Werkzeuge für Felder, Tiere und Frühling"
+    color: "#65A30D"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "item BONE_MEAL 32", weight: 16, rarity: COMMON}
+      - {reward: "item HAY_BLOCK 16", weight: 12, rarity: COMMON}
+      - {reward: "tool honey_bread 6", weight: 14, rarity: COMMON}
+      - {reward: "tool fortune_cookie 4", weight: 12, rarity: COMMON}
+      - {reward: "tool coin_pouch 2", weight: 10, rarity: RARE}
+      - {reward: "tool easter_egg 3", weight: 10, rarity: RARE}
+      - {reward: "tool seed_bag", weight: 6, rarity: EPIC}
+      - {reward: "tool watering_can", weight: 6, rarity: EPIC}
+      - {reward: "tool compost_charm", weight: 4, rarity: EPIC}
+      - {reward: "tool mob_net", weight: 4, rarity: EPIC}
+      - {reward: "tool carrot_blade", weight: 4, rarity: EPIC}
+      - {reward: "tool blossom_wand", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool lucky_rod", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool harvest_sickle", weight: 2, rarity: LEGENDARY}
+      - {reward: "book fortune 3", weight: 3, rarity: EPIC}
+      - {reward: "tool mega_mushroom 2", weight: 5, rarity: EPIC}
+      - {reward: "tool shrink_potion 2", weight: 5, rarity: EPIC}
+      - {reward: "tool light_staff", weight: 3, rarity: EPIC}
+      - {reward: "tool hunger_charm", weight: 4, rarity: EPIC}
+      - {reward: "tool magic_bean 2", weight: 6, rarity: EPIC}
+      - {reward: "tool lucky_horseshoe", weight: 4, rarity: EPIC}
+
+  storm:
+    name: "<gradient:#7dd3fc:#facc15><bold>Sturm-Kiste</bold></gradient>"
+    key-name: "<gradient:#7dd3fc:#facc15><bold>Sturm-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <aqua>Sturm-Kiste</aqua>."
+    color: "#38BDF8"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "coins 1500", weight: 16, rarity: COMMON}
+      - {reward: "tool storm_flask 3", weight: 14, rarity: COMMON}
+      - {reward: "tool swift_rune 3", weight: 12, rarity: RARE}
+      - {reward: "tool static_charm", weight: 6, rarity: EPIC}
+      - {reward: "tool boomerang", weight: 5, rarity: EPIC}
+      - {reward: "tool wind_blade", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool storm_bow", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool thunder_hammer", weight: 2, rarity: MYTHIC}
+      - {reward: "tool storm_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool storm_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool storm_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool storm_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool gravity_gauntlet", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool climbing_gloves", weight: 5, rarity: EPIC}
+      - {reward: "tool cloud_bottle", weight: 5, rarity: EPIC}
+      - {reward: "tool player_tracker", weight: 4, rarity: EPIC}
+
+  dragon:
+    name: "<gradient:#a21caf:#dc2626><bold>Drachen-Kiste</bold></gradient>"
+    key-name: "<gradient:#a21caf:#dc2626><bold>Drachen-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <dark_purple>Drachen-Kiste</dark_purple>."
+      - "<dark_gray>Die seltenste Kollektion"
+    color: "#A21CAF"
+    broadcast-from: EPIC
+    rewards:
+      - {reward: "gems 12", weight: 16, rarity: RARE}
+      - {reward: "tool dragon_flask 3", weight: 14, rarity: COMMON}
+      - {reward: "tool mythos_elixir", weight: 8, rarity: EPIC}
+      - {reward: "tool dragon_heart 2", weight: 7, rarity: EPIC}
+      - {reward: "tool dragon_scale", weight: 4, rarity: LEGENDARY}
+      - {reward: "tool dragon_staff", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool dragon_blade", weight: 2, rarity: MYTHIC}
+      - {reward: "tool dragon_helmet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool dragon_chestplate", weight: 1, rarity: MYTHIC}
+      - {reward: "tool dragon_leggings", weight: 1, rarity: MYTHIC}
+      - {reward: "tool dragon_boots", weight: 2, rarity: LEGENDARY}
+      - {reward: "item DRAGON_BREATH 4", weight: 6, rarity: RARE}
+      - {reward: "tool gravity_gauntlet", weight: 2, rarity: LEGENDARY}
+      - {reward: "tool shield_crystal 2", weight: 6, rarity: EPIC}
+
+  rang:
+    name: "<gradient:#f59e0b:#c084fc><bold>Rang-Kiste</bold></gradient>"
+    key-name: "<gradient:#f59e0b:#c084fc><bold>Rang-Schlüssel</bold></gradient>"
+    key-lore:
+      - "<gray>Öffnet die <gold>Rang-Kiste</gold>: Rang-Gutscheine!"
+    color: "#F59E0B"
+    broadcast-from: LEGENDARY
+    rewards:
+      - {reward: "gems 10", weight: 20, rarity: COMMON}
+      - {reward: "tool key_fragment 3", weight: 15, rarity: COMMON}
+      - {reward: "voucher VIP 7d", weight: 25, rarity: RARE}
+      - {reward: "voucher VIPPLUS 7d", weight: 18, rarity: RARE}
+      - {reward: "voucher ELITE 7d", weight: 12, rarity: EPIC}
+      - {reward: "voucher HELD 7d", weight: 8, rarity: EPIC}
+      - {reward: "voucher LEGENDE 7d", weight: 5, rarity: LEGENDARY}
+      - {reward: "voucher TITAN 7d", weight: 2, rarity: LEGENDARY}
+      - {reward: "voucher VIP 30d", weight: 6, rarity: EPIC}
+      - {reward: "voucher ELITE 30d", weight: 3, rarity: LEGENDARY}
+      - {reward: "voucher TITAN 30d", weight: 1, rarity: MYTHIC}
+      - {reward: "tool golem_egg", weight: 4, rarity: EPIC}
+      - {reward: "tool lucky_dice 5", weight: 10, rarity: RARE}
+      - {reward: "tool golden_crown", weight: 3, rarity: LEGENDARY}
+      - {reward: "tool party_hat", weight: 6, rarity: RARE}
+  ocean:
+    name: <gradient:#22d3ee:#1e3a8a><bold>Ozean-Kiste</bold></gradient>
+    key-name: <gradient:#22d3ee:#1e3a8a><bold>Ozean-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <aqua>Ozean-Kiste</aqua>.
+    - <dark_gray>Ozean-Kollektion + Ozean-Rüstung
+    color: '#22D3EE'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 500
+      weight: 20
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: tool coral_blade
+      weight: 4
+      rarity: EPIC
+    - reward: tool tide_staff
+      weight: 4
+      rarity: EPIC
+    - reward: tool pearl_charm
+      weight: 8
+      rarity: RARE
+    - reward: tool shell_horn
+      weight: 8
+      rarity: RARE
+    - reward: tool kraken_ink 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool diving_flask 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool sushi 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool treasure_net 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool ocean_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool ocean_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool ocean_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool ocean_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  forest:
+    name: <gradient:#4ade80:#14532d><bold>Wald-Kiste</bold></gradient>
+    key-name: <gradient:#4ade80:#14532d><bold>Wald-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <green>Wald-Kiste</green>.
+    - <dark_gray>Wald-Kollektion + Wald-Rüstung
+    color: '#4ADE80'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 500
+      weight: 20
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: tool druid_staff
+      weight: 4
+      rarity: EPIC
+    - reward: tool leaf_bow
+      weight: 4
+      rarity: EPIC
+    - reward: tool vine_whip
+      weight: 8
+      rarity: RARE
+    - reward: tool acorn_bomb 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool owl_charm
+      weight: 8
+      rarity: RARE
+    - reward: tool berry_pie 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool seed_of_life
+      weight: 8
+      rarity: RARE
+    - reward: tool lumber_charm
+      weight: 8
+      rarity: RARE
+    - reward: tool druid_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool druid_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool druid_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool druid_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  sky:
+    name: <gradient:#e0f2fe:#38bdf8><bold>Himmels-Kiste</bold></gradient>
+    key-name: <gradient:#e0f2fe:#38bdf8><bold>Himmels-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <aqua>Himmels-Kiste</aqua>.
+    - <dark_gray>Himmels-Kollektion + Himmels-Rüstung
+    color: '#7DD3FC'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 500
+      weight: 20
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: tool sky_glider
+      weight: 8
+      rarity: RARE
+    - reward: tool wind_horn
+      weight: 8
+      rarity: RARE
+    - reward: tool cloud_sword
+      weight: 4
+      rarity: EPIC
+    - reward: tool thunder_bottle 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool star_map
+      weight: 8
+      rarity: RARE
+    - reward: tool sky_cookie 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool comet_shard 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool balloon 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool sky_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool sky_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool sky_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool sky_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  crystal:
+    name: <gradient:#f0abfc:#7e22ce><bold>Kristall-Kiste</bold></gradient>
+    key-name: <gradient:#f0abfc:#7e22ce><bold>Kristall-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <light_purple>Kristall-Kiste</light_purple>.
+    - <dark_gray>Kristall-Kollektion + Kristall-Rüstung
+    color: '#C026D3'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 500
+      weight: 20
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: tool crystal_wand
+      weight: 4
+      rarity: EPIC
+    - reward: tool arcane_tome 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool mana_potion 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool prism_shield
+      weight: 8
+      rarity: RARE
+    - reward: tool crystal_bow
+      weight: 4
+      rarity: EPIC
+    - reward: tool crystal_heart
+      weight: 8
+      rarity: RARE
+    - reward: tool crystal_pickaxe
+      weight: 4
+      rarity: EPIC
+    - reward: tool shard_bomb 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool crystal_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool crystal_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool crystal_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool crystal_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  millennium:
+    name: <gradient:#fbbf24:#1d4ed8><bold>Millennium-Kiste</bold></gradient>
+    key-name: <gradient:#fbbf24:#1d4ed8><bold>Millennium-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <gold>Millennium-Kiste</gold>.
+    - <dark_gray>Schätze der Pharaonen
+    color: '#FBBF24'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 800
+      weight: 18
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: item GOLD_BLOCK 4
+      weight: 12
+      rarity: COMMON
+    - reward: item SANDSTONE 32
+      weight: 12
+      rarity: COMMON
+    - reward: tool mummy_wrap 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool sand_bomb 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool pharaoh_treasure 2
+      weight: 12
+      rarity: RARE
+    - reward: tool scarab_charm
+      weight: 7
+      rarity: RARE
+    - reward: tool sun_disc
+      weight: 5
+      rarity: EPIC
+    - reward: tool pharaoh_staff
+      weight: 4
+      rarity: EPIC
+    - reward: tool khopesh
+      weight: 4
+      rarity: EPIC
+    - reward: tool ankh
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool pharaoh_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool pharaoh_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool pharaoh_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool pharaoh_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: item ENCHANTED_GOLDEN_APPLE 1
+      weight: 1
+      rarity: MYTHIC
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  cosmetic:
+    name: <gradient:#f472b6:#a78bfa><bold>Kosmetik-Kiste</bold></gradient>
+    key-name: <gradient:#f472b6:#a78bfa><bold>Kosmetik-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <light_purple>Kosmetik-Kiste</light_purple>.
+    - <dark_gray>Masken & Hüte – passend zur Saison
+    color: '#F472B6'
+    broadcast-from: EPIC
+    rotation-size: 12
+    rewards:
+    - reward: coins 500
+      weight: 18
+      rarity: COMMON
+    - reward: gems 2
+      weight: 10
+      rarity: RARE
+    - reward: tool party_hat
+      weight: 10
+      rarity: RARE
+    - reward: tool top_hat
+      weight: 10
+      rarity: RARE
+    - reward: tool cat_ears
+      weight: 10
+      rarity: RARE
+    - reward: tool golden_crown
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool pumpkin_mask
+      weight: 12
+      rarity: RARE
+      season: halloween
+    - reward: tool skull_mask
+      weight: 10
+      rarity: RARE
+      season: halloween
+    - reward: tool witch_hat
+      weight: 5
+      rarity: EPIC
+      season: halloween
+    - reward: tool santa_hat
+      weight: 12
+      rarity: RARE
+      season: frostfest
+    - reward: tool snowman_head
+      weight: 10
+      rarity: RARE
+      season: frostfest
+    - reward: tool reindeer_antlers
+      weight: 5
+      rarity: EPIC
+      season: frostfest
+    - reward: tool bunny_ears
+      weight: 12
+      rarity: RARE
+      season: fruehling
+    - reward: tool heart_glasses
+      weight: 12
+      rarity: RARE
+      season: valentin
+    - reward: tool sun_hat
+      weight: 12
+      rarity: RARE
+      season: sommerfest
+    - reward: tool leaf_crown
+      weight: 12
+      rarity: RARE
+      season: erntefest
+    - reward: tool new_year_glasses
+      weight: 12
+      rarity: RARE
+      season: neujahr
+    - reward: tool star_halo
+      weight: 6
+      rarity: EPIC
+      season: sternenregen
+  begleiter:
+    name: <gradient:#fde68a:#f472b6><bold>Begleiter-Kiste</bold></gradient>
+    key-name: <gradient:#fde68a:#f472b6><bold>Begleiter-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <light_purple>Begleiter-Kiste</light_purple>.
+    - <dark_gray>Kleine Plüsch-Begleiter, die auf deinem Kopf sitzen
+    color: '#F9A8D4'
+    broadcast-from: EPIC
+    rewards:
+    - {reward: "tool companion_bee", weight: 22, rarity: RARE}
+    - {reward: "tool companion_penguin", weight: 18, rarity: RARE}
+    - {reward: "tool companion_snowman", weight: 18, rarity: EPIC}
+    - {reward: "tool companion_ghost", weight: 14, rarity: EPIC}
+    - {reward: "tool companion_dragon", weight: 6, rarity: LEGENDARY}
+    - {reward: "coins 1500", weight: 14, rarity: COMMON}
+    - {reward: "gems 3", weight: 8, rarity: COMMON}
+  space:
+    name: <gradient:#94a3b8:#6366f1><bold>Weltraum-Kiste</bold></gradient>
+    key-name: <gradient:#94a3b8:#6366f1><bold>Weltraum-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <blue>Weltraum-Kiste</blue>.
+    - <dark_gray>Raketen, Planeten, Astronauten
+    color: '#6366F1'
+    broadcast-from: LEGENDARY
+    rewards:
+    - reward: coins 800
+      weight: 18
+      rarity: COMMON
+    - reward: gems 3
+      weight: 10
+      rarity: RARE
+    - reward: item FIREWORK_ROCKET 32
+      weight: 14
+      rarity: COMMON
+    - reward: tool star_dust 3
+      weight: 14
+      rarity: COMMON
+    - reward: tool rocket_booster
+      weight: 6
+      rarity: EPIC
+    - reward: tool laser_gun
+      weight: 5
+      rarity: EPIC
+    - reward: tool mars_orb
+      weight: 4
+      rarity: EPIC
+    - reward: tool moon_orb
+      weight: 4
+      rarity: EPIC
+    - reward: tool saturn_orb
+      weight: 3
+      rarity: EPIC
+    - reward: tool earth_orb
+      weight: 3
+      rarity: EPIC
+    - reward: tool astronaut_helmet
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool astronaut_chestplate
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool astronaut_leggings
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool astronaut_boots
+      weight: 2
+      rarity: LEGENDARY
+    - reward: item ELYTRA 1
+      weight: 0.7
+      rarity: MYTHIC
+    - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  spawner:
+    name: <gradient:#a3e635:#7c3aed><bold>Spawner-Kiste</bold></gradient>
+    key-name: <gradient:#a3e635:#7c3aed><bold>Spawner-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <green>Spawner-Kiste</green>.
+    - <dark_gray>Spawneier, Spawner und die seltene Spawner-Spitzhacke
+    color: '#7C3AED'
+    broadcast-from: EPIC
+    rewards:
+    - reward: item COW_SPAWN_EGG 2
+      weight: 14
+      rarity: COMMON
+    - reward: item SHEEP_SPAWN_EGG 2
+      weight: 14
+      rarity: COMMON
+    - reward: item CHICKEN_SPAWN_EGG 2
+      weight: 14
+      rarity: COMMON
+    - reward: item PIG_SPAWN_EGG 2
+      weight: 14
+      rarity: COMMON
+    - reward: item VILLAGER_SPAWN_EGG 1
+      weight: 6
+      rarity: RARE
+    - reward: item HORSE_SPAWN_EGG 1
+      weight: 8
+      rarity: RARE
+    - reward: item AXOLOTL_SPAWN_EGG 1
+      weight: 8
+      rarity: RARE
+    - reward: spawner ZOMBIE
+      weight: 6
+      rarity: RARE
+    - reward: spawner SKELETON
+      weight: 6
+      rarity: RARE
+    - reward: spawner SPIDER
+      weight: 5
+      rarity: RARE
+    - reward: spawner CREEPER
+      weight: 4
+      rarity: EPIC
+    - reward: spawner COW
+      weight: 4
+      rarity: EPIC
+    - reward: spawner CHICKEN
+      weight: 4
+      rarity: EPIC
+    - reward: spawner BLAZE
+      weight: 2
+      rarity: EPIC
+    - reward: spawner SLIME
+      weight: 2
+      rarity: EPIC
+    - reward: spawner IRON_GOLEM
+      weight: 0.8
+      rarity: LEGENDARY
+    - reward: spawner MOOSHROOM
+      weight: 0.8
+      rarity: LEGENDARY
+    - reward: spawner BREEZE
+      weight: 0.6
+      rarity: LEGENDARY
+    - reward: tool spawner_pickaxe
+      weight: 0.4
+      rarity: MYTHIC
+  silvester:
+    name: <gradient:#fde047:#a855f7:#38bdf8><bold>Silvester-Kiste</bold></gradient>
+    key-name: <gradient:#fde047:#a855f7:#38bdf8><bold>Silvester-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <gold>Silvester-Kiste</gold>.
+    - <dark_gray>OP-Werkzeuge für alle Berufe
+    color: '#FDE047'
+    broadcast-from: EPIC
+    rewards:
+    - reward: coins 1500
+      weight: 16
+      rarity: COMMON
+    - reward: gems 4
+      weight: 10
+      rarity: RARE
+    - reward: tool lucky_rocket 5
+      weight: 16
+      rarity: COMMON
+    - reward: item FIREWORK_ROCKET 64
+      weight: 12
+      rarity: COMMON
+    - reward: tool job_elixir
+      weight: 8
+      rarity: RARE
+    - reward: tool newyear_trowel
+      weight: 4
+      rarity: EPIC
+    - reward: tool fortune_charm
+      weight: 3
+      rarity: EPIC
+    - reward: tool newyear_rod
+      weight: 3
+      rarity: EPIC
+    - reward: tool newyear_hoe
+      weight: 3
+      rarity: EPIC
+    - reward: tool newyear_sword
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool newyear_axe
+      weight: 2
+      rarity: LEGENDARY
+    - reward: tool newyear_pickaxe
+      weight: 1.2
+      rarity: LEGENDARY
+    - reward: gems 30
+      weight: 1
+      rarity: MYTHIC

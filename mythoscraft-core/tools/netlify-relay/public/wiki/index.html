@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MythosCraft Wiki</title>
+  <meta name="description" content="Alle Items in 3D, Kollektionen, Saisons, Events, Turniere und Bestenlisten von MythosCraft.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+  <div class="bg-glow g1"></div><div class="bg-glow g2"></div><div class="bg-stars"></div>
+
+  <nav class="nav">
+    <a class="brand" href="#top">✦ <b>Mythos</b>Craft <span>Wiki</span></a>
+    <div class="links">
+      <a href="#items" data-i18n="nav.items">Items</a>
+      <a href="#collections" data-i18n="nav.collections">Kollektionen</a>
+      <a href="#calendar" data-i18n="nav.calendar">Kalender</a>
+      <a href="#tournaments" data-i18n="nav.tournaments">Turniere</a>
+      <a href="#leaderboards" data-i18n="nav.leaderboards">Bestenlisten</a>
+    </div>
+    <button class="lang" id="lang">EN</button>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="hero-text reveal">
+      <p class="eyebrow" data-i18n="hero.eyebrow">Das offizielle Wiki</p>
+      <h1>Mythos<span>Craft</span></h1>
+      <p class="lead" data-i18n="hero.lead">Jedes Item in 3D zum Drehen, alle Kollektionen, wann welche Saison startet, die nächsten Turniere und die besten Spieler – live vom Server.</p>
+      <div class="cta">
+        <button class="ip" id="ip" title="Kopieren">mythoscraftsmp.minekeep.gg <span>⧉</span></button>
+        <span class="online" id="online"><i></i> <b>–</b> <span data-i18n="hero.online">online</span></span>
+      </div>
+      <div class="stats">
+        <div><b id="st-items">0</b><span data-i18n="hero.items">Items</span></div>
+        <div><b id="st-colls">0</b><span data-i18n="hero.collections">Kollektionen</span></div>
+        <div><b id="st-seasons">0</b><span data-i18n="hero.seasons">Saisons</span></div>
+      </div>
+    </div>
+    <div class="hero-stage reveal">
+      <canvas id="hero3d"></canvas>
+      <div class="hero-caption" id="hero-caption"></div>
+      <div class="ring"></div>
+    </div>
+    <a class="scroll-hint" href="#items">⌄</a>
+  </header>
+
+  <section id="items" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="items.title">Alle Items</h2>
+      <p data-i18n="items.sub">Klick auf ein Item, um es in 3D zu drehen und zu sehen, wo du es bekommst.</p>
+    </div>
+    <div class="filters reveal">
+      <input id="search" type="search" placeholder="Suchen …" data-i18n-ph="items.search">
+      <div class="chips" id="kind-chips"></div>
+      <div class="chips" id="rarity-chips"></div>
+    </div>
+    <div class="chips coll-chips reveal" id="coll-chips"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="collections" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="coll.title">Kollektionen</h2>
+      <p data-i18n="coll.sub">Jede Kollektion hat ihre eigene Kiste – manche gibt es nur in ihrer Saison.</p>
+    </div>
+    <div class="coll-rail" id="coll-rail"></div>
+  </section>
+
+  <section id="calendar" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="cal.title">Saison-Kalender</h2>
+      <p data-i18n="cal.sub">Wann was reinkommt – die Saisons im Jahr und was als Nächstes startet.</p>
+    </div>
+    <div class="year reveal" id="year"></div>
+    <div class="upcoming" id="upcoming"></div>
+    <div class="event-live reveal" id="event-live"></div>
+  </section>
+
+  <section id="tournaments" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="tour.title">Turniere</h2>
+      <p data-i18n="tour.sub">PvP-Turniere mit Pokalen – Anmeldung ingame mit /turnier.</p>
+    </div>
+    <div class="tours" id="tours"></div>
+  </section>
+
+  <section id="leaderboards" class="section">
+    <div class="section-head reveal">
+      <h2 data-i18n="lb.title">Bestenlisten</h2>
+      <p data-i18n="lb.sub">Live vom Server – wird jede Minute aktualisiert.</p>
+    </div>
+    <div class="chips reveal" id="lb-tabs"></div>
+    <ol class="board reveal" id="board"></ol>
+  </section>
+
+  <footer class="foot">
+    <span>MythosCraft · <a href="../" data-i18n="foot.panel">Team-Panel</a></span>
+    <span data-i18n="foot.note">Nicht offiziell mit Mojang verbunden.</span>
+  </footer>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card">
+      <button class="close" id="close">✕</button>
+      <div class="viewer">
+        <canvas id="view3d"></canvas>
+        <p class="hint" data-i18n="modal.hint">Ziehen zum Drehen · Mausrad zum Zoomen</p>
+      </div>
+      <div class="info" id="info"></div>
+    </div>
+  </div>
+
+  <script type="module" src="wiki.js"></script>
+</body>
+</html>

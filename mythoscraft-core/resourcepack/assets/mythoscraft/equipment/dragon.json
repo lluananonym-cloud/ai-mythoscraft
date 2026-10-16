@@ -1,0 +1,6 @@
+{
+  "layers": {
+    "humanoid": [{"texture": "mythoscraft:dragon"}],
+    "humanoid_leggings": [{"texture": "mythoscraft:dragon"}]
+  }
+}

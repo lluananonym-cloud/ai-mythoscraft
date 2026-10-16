@@ -1,0 +1,1 @@
+{"textures": {"0": "mythoscraft:item/sky/sky_summer_cloud", "particle": "mythoscraft:item/sky/sky_summer_cloud"}, "elements": [{"from": [0, 4.0, 7.95], "to": [16, 12.0, 8.05], "light_emission": 15, "shade": false, "faces": {"north": {"uv": [0, 0, 16, 16], "texture": "#0"}, "south": {"uv": [0, 0, 16, 16], "texture": "#0"}}}], "display": {"fixed": {"scale": [1, 1, 1]}}}

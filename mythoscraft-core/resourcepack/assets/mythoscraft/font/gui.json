@@ -1,0 +1,7 @@
+{
+  "providers": [
+    {"type": "space", "advances": {"\uF801": -256, "\uF802": -128, "\uF803": -64, "\uF804": -32, "\uF805": -16, "\uF806": -8, "\uF807": -4, "\uF808": -2, "\uF809": -1, "\uF821": 256, "\uF822": 128, "\uF823": 64, "\uF824": 32, "\uF825": 16, "\uF826": 8, "\uF827": 4, "\uF828": 2, "\uF829": 1}},
+    {"type": "bitmap", "file": "mythoscraft:font/gui_crate_open.png", "height": 168, "ascent": 13, "chars": ["\uE100"]},
+    {"type": "bitmap", "file": "mythoscraft:font/gui_crate_preview.png", "height": 222, "ascent": 13, "chars": ["\uE101"]}
+  ]
+}

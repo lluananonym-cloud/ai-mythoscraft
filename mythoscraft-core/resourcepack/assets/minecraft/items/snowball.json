@@ -1,0 +1,21 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "acorn_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/acorn_bomb"}},
+      {"when": "frost_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/frost_bomb"}},
+      {"when": "kraken_ink", "model": {"type": "minecraft:model", "model": "mythoscraft:item/kraken_ink"}},
+      {"when": "ornament_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ornament_bomb"}},
+      {"when": "pumpkin_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/pumpkin_bomb"}},
+      {"when": "sand_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/sand_bomb"}},
+      {"when": "shard_bomb", "model": {"type": "minecraft:model", "model": "mythoscraft:item/shard_bomb"}},
+      {"when": "thunder_bottle", "model": {"type": "minecraft:model", "model": "mythoscraft:item/thunder_bottle"}}
+    ],
+    "fallback": {
+    "type": "minecraft:model",
+    "model": "minecraft:item/snowball"
+  }
+  }
+}

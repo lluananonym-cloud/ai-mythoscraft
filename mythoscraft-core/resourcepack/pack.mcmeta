@@ -1,0 +1,12 @@
+{
+  "pack": {
+    "description": [
+      {"text": "MythosCraft ", "color": "#c084fc", "bold": true},
+      {"text": "Ränge, Kisten & Mythos-Tools", "color": "#f5d0fe"}
+    ],
+    "pack_format": 46,
+    "supported_formats": [46, 999],
+    "min_format": 46,
+    "max_format": 999
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {"when": "loan_elytra", "model": {"type": "minecraft:model", "model": "mythoscraft:item/loan_elytra"}}
+    ],
+    "fallback": {
+    "type": "minecraft:condition",
+    "property": "minecraft:broken",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/elytra"
+    },
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/broken_elytra"
+    }
+  }
+  }
+}
