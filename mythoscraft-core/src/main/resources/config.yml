@@ -6,9 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 24
+config-version: 25
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
+  25: [language.per-player, language.default]
   24: [attractions.wheel.daily-limit, attractions.wheel2.daily-limit, attractions.wheel2.segments]
   23: [attractions.wheel, attractions.wheel2]
 
@@ -1805,10 +1806,10 @@ web-panel:
     secret: ""
 
 # ───────────────────────────── Sprache ─────────────────────────────
-# Jeder Spieler sieht die Texte in der Sprache seines Minecraft-Spiels: Deutsch für deutsche Spiele,
-# Englisch für alle anderen. default gilt für Konsole, Items und alles ohne Spieler (en oder de).
+# Standard: alles auf Englisch für alle Spieler. per-player: true = jeder sieht die Sprache seines Minecraft-Spiels
+# (Deutsch für deutsche Spiele). default gilt für Konsole, Hologramme und alles ohne Spieler (en oder de).
 language:
-  per-player: true
+  per-player: false
   default: en
 
 items:

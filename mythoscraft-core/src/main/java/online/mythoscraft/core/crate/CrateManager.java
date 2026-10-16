@@ -484,7 +484,7 @@ public final class CrateManager {
         });
         List<Component> lines = new ArrayList<>();
         for (String line : hologram) {
-            lines.add(plugin.messages().format(line, "crate", Text.parse(type.name())));
+            lines.add(plugin.messages().format(online.mythoscraft.core.config.ConfigText.tr(line), "crate", Text.parse(type.name())));
         }
         crate.label.text(Component.join(net.kyori.adventure.text.JoinConfiguration.newlines(), lines));
     }

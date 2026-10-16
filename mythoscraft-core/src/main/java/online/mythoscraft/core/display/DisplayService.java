@@ -129,7 +129,7 @@ public final class DisplayService implements Listener {
             if (firstJoin && !firstJoinFormat.isEmpty()) {
                 plugin.database().query("count players", c -> plugin.playerData().repository().countPlayers(c))
                         .thenAccept(count -> plugin.tasks().sync(() -> Bukkit.getServer().sendMessage(
-                                plugin.messages().format(firstJoinFormat, "player", player.getName(), "number", count))));
+                                plugin.messages().format(online.mythoscraft.core.config.ConfigText.tr(firstJoinFormat), "player", player.getName(), "number", count))));
             }
         }
         if (mythosAnnounce && rank.isMythos()) {
