@@ -3,7 +3,9 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 19
+config-version: 20
+config-reset:
+  20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
 
 prefix: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» "
 
@@ -3324,7 +3326,7 @@ invsee:
 
 attractions:
   wheel2:
-    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS-RAD ✦</bold></gradient><newline><gray>Rechtsklick: drehen für <white>{price}</white> {currency}<newline><gray>Bessere Preise & <gradient:#f59e0b:#ec4899><bold>Relikt-Schlüssel</bold></gradient><newline><dark_gray>Linksklick: Gewinne ansehen"
+    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS-RAD ✦</bold></gradient><newline><gray>Rechtsklick: drehen für <white>{price}</white> {currency} <dark_gray>(max. {limit}× am Tag)<newline><gray>Seltene Preise & <gradient:#f59e0b:#ec4899><bold>Relikt-Schlüssel</bold></gradient><newline><dark_gray>Linksklick: Gewinne ansehen"
     prizes-header: '<light_purple>🎡 Gewinne am Mythos-Rad:'
   rtp-portal: "<gradient:#a855f7:#ec4899><bold>✦ WILDNIS-PORTAL ✦</bold></gradient><newline><gray>Hineinlaufen = zufälliger Ort zum Bauen"
   cannon: '<gold>💥 BUMM! <gray>Ab ins Wasser!'
@@ -3403,16 +3405,12 @@ attractions:
 
       <dark_gray>– noch frei –'
   wheel:
-    hologram: '<gradient:#f472b6:#fde047:#38bdf8><bold>✦ Glücksrad ✦</bold></gradient>
-
-      <gray>Rechtsklick: drehen <dark_gray>(1× täglich gratis)
-
-      <gray>danach <white>{price}</white> {currency}
-
-      <dark_gray>Linksklick: Gewinne ansehen'
+    hologram: "<gradient:#f472b6:#fde047:#38bdf8><bold>✦ Glücksrad ✦</bold></gradient><newline><gray>Rechtsklick: drehen <dark_gray>(1× täglich gratis)<newline><gray>danach <white>{price}</white> {currency} <dark_gray>(max. {limit}× am Tag)<newline><dark_gray>Linksklick: Gewinne ansehen"
+    cooldown: '<gray>Das Rad muss sich erst abkühlen – noch <white>{seconds}s</white>.'
+    daily-limit: '<red>Du hast heute schon {max}× an diesem Rad gedreht. <gray>Morgen geht''s weiter!'
     busy: <yellow>Das Rad dreht sich gerade – kurz warten!
     spin-free: <green>🎡 Dein Gratis-Dreh für heute! Viel Glück...
-    spin-paid: <yellow>🎡 Das Rad dreht sich... <dark_gray>(-{price} {currency})
+    spin-paid: <yellow>🎡 Das Rad dreht sich... <dark_gray>(-{price} {currency} · heute noch {left}×)
     won: '<gold>🎡 Gewonnen: <white>{reward}'
     jackpot: <gradient:#f472b6:#fde047><bold>🎡 JACKPOT!</bold></gradient> <white>{player}</white> <gray>hat am Glücksrad <white>{reward}</white> <gray>gewonnen!
     prizes-header: '<gold>🎡 Gewinne am Glücksrad:'
@@ -3852,9 +3850,51 @@ companion-farm:
   duration-selected: '<green><bold>▶ {minutes} Minuten</bold>'
   radius: '<gray>{radius} Blöcke weit'
   radius-selected: '<green><bold>▶ {radius} Blöcke weit</bold>'
+  set-duration: '<yellow><bold>⏱ Dauer: {minutes} Min.'
+  set-radius: '<aqua><bold>🔭 Reichweite: {radius} Blöcke'
+  set-limit: '<gold><bold>📦 Limit: {limit} Stapel'
+  adjust-lore:
+  - '<gray>Linksklick: <green>+{step}</green> <dark_gray>· <gray>Rechtsklick: <red>−{step}'
+  - '<gray>Shift: <white>±{big}'
+  - '<dark_gray>Bereich: {min} – {max}'
+  upgrade:
+    speed:
+      name: '<aqua><bold>⚡ Tempo</bold> <gray>Stufe {level}/{max}'
+      lore:
+      - '<gray>Läuft und arbeitet schneller'
+      - '<gray>(-13 % Wartezeit pro Stufe).'
+    power:
+      name: '<red><bold>⚔ Stärke</bold> <gray>Stufe {level}/{max}'
+      lore:
+      - '<gray>Mehr Schaden, mehr Ernte pro Runde'
+      - '<gray>und 8 % Chance pro Stufe auf doppelte Beute.'
+    range:
+      name: '<green><bold>🔭 Reichweite</bold> <gray>Stufe {level}/{max}'
+      lore:
+      - '<gray>Maximale Reichweite +3 Blöcke pro Stufe.'
+    luck:
+      name: '<light_purple><bold>🍀 Glück</bold> <gray>Stufe {level}/{max}'
+      lore:
+      - '<gray>Höhere Chance auf <gradient:#f59e0b:#ec4899><bold>OP-Funde</bold></gradient>'
+      - '<gray>(seltene Relikt-Items).'
+  upgrade-cost:
+  - ''
+  - '<gray>Upgrade: <light_purple>{cost} Gems'
+  - '<yellow>Klicken zum Verbessern'
+  upgrade-maxed:
+  - ''
+  - '<green>✔ Maximale Stufe'
+  upgrade-max: '<green>Schon auf maximaler Stufe!'
+  upgraded: '<green>✔ {upgrade} <dark_gray>(-{cost} Gems)'
+  item-upgrades:
+  - ''
+  - '<gray>Upgrades: <aqua>⚡{speed}</aqua> <red>⚔{power}</red> <green>🔭{range}</green> <light_purple>🍀{luck}'
+  op-find: '<gradient:#f59e0b:#ec4899><bold>✦ OP-FUND!</bold></gradient> <white>Dein {job} <white>hat <reset>{item}</reset> <white>gefunden! <gray>(liegt im Lager)'
+  op-find-broadcast: '<gradient:#f59e0b:#ec4899><bold>✦ OP-FUND!</bold></gradient> <gray>Der Begleiter von <white>{player}</white> <gray>hat <reset>{item}</reset> <gray>gefunden!'
   start: '<green><bold>▶ Loslegen'
   start-lore:
   - '<gray>Arbeitet <white>{minutes} Min.</white> im Umkreis von <white>{radius}</white> Blöcken'
+  - '<gray>bis <white>{limit}</white> Stapel im Lager sind'
   - '<dark_gray>(nur solange der Chunk geladen ist)'
   stop: '<red><bold>■ Anhalten'
   stop-lore:

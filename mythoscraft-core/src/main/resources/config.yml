@@ -6,7 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 22
+config-version: 23
+# Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
+config-reset:
+  23: [attractions.wheel, attractions.wheel2]
 
 # Zeitzone für Daily-Belohnung, Tages-Multiplikatoren, Event-Uhrzeiten und Tageswechsel.
 timezone: Europe/Berlin
@@ -1627,6 +1630,35 @@ companion-farm:
   enabled: true
   # so viele Begleiter darf jeder gleichzeitig farmen lassen
   max-per-player: 2
+  # Reichweite ohne Upgrade und Blöcke mehr pro Reichweiten-Stufe
+  base-radius: 8
+  radius-per-level: 3
+  # Upgrades im Begleiter-Menü (Gems). Preis = Grundpreis × nächste Stufe
+  max-upgrade-level: 5
+  upgrade-cost:
+    speed: 15
+    power: 15
+    range: 10
+    luck: 25
+  # Winzige Chance pro Fund auf ein OP-Item (0.00005 = 0,005 %; Glücks-Upgrade erhöht sie pro Stufe)
+  op-find:
+    chance: 0.00005
+    chance-per-luck-level: 0.00004
+    # "item-id gewicht"
+    items:
+      - "sort_wand 20"
+      - "repair_charm 20"
+      - "infinite_bucket 15"
+      - "spawner_booster 12"
+      - "vein_pickaxe 10"
+      - "growth_totem 8"
+      - "paint_brush 6"
+      - "concrete_mixer 6"
+      - "soul_sword 3"
+      - "dwarf_hat 3"
+      - "bark_hand 1"
+      - "power_drill 1"
+      - "zap_pickaxe 0.5"
 
 # Spawner-Booster (aus der Spawner-Kiste): Rechtsklick auf einen Spawner, stapelbar
 spawner-booster:
@@ -2435,59 +2467,65 @@ attractions:
     scale: 1.25
     refresh-minutes: 5
   wheel:
-    price: 2500
+    price: 10000
     currency: coins
     radius: 6
     # Größe der Felder (1 = ein Block)
     segment-size: 1.25
     # 1× am Tag gratis drehen (plus Extra-Drehs der Ränge)
     free-daily: true
+    # bezahlte Drehs pro Spieler und Tag (0 = unbegrenzt) und Wartezeit zwischen zwei Drehs
+    daily-limit: 5
+    cooldown-seconds: 30
     # Felder (mehr Felder = feiner verteilt). Hauptgewinn: Silvester-Schlüssel (nur hier erhältlich!)
     segments:
-      - {reward: "coins 250", weight: 20, block: LIME_CONCRETE}
-      - {reward: "coins 500", weight: 20, block: YELLOW_CONCRETE}
-      - {reward: "key common 1", weight: 14, block: WHITE_CONCRETE}
+      - {reward: "coins 250", weight: 26, block: LIME_CONCRETE}
+      - {reward: "coins 500", weight: 24, block: YELLOW_CONCRETE}
+      - {reward: "xp 300", weight: 16, block: CYAN_CONCRETE}
       - {reward: "coins 1000", weight: 14, block: ORANGE_CONCRETE}
-      - {reward: "xp 500", weight: 12, block: CYAN_CONCRETE}
-      - {reward: "gems 1", weight: 12, block: PURPLE_CONCRETE}
-      - {reward: "tool lucky_rocket 2", weight: 10, block: RED_CONCRETE}
-      - {reward: "key vip 1", weight: 8, block: GREEN_CONCRETE}
-      - {reward: "coins 2500", weight: 8, block: ORANGE_TERRACOTTA}
-      - {reward: "tool key_fragment 3", weight: 8, block: LIGHT_GRAY_CONCRETE}
-      - {reward: "gems 3", weight: 5, block: MAGENTA_CONCRETE}
-      - {reward: "key elite 1", weight: 4, block: LIGHT_BLUE_CONCRETE}
-      - {reward: "tool job_elixir", weight: 3, block: PINK_CONCRETE}
-      - {reward: "coins 5000", weight: 4, block: BROWN_CONCRETE}
-      - {reward: "key cosmetic 1", weight: 3, block: PINK_GLAZED_TERRACOTTA}
-      - {reward: "key spawner 1", weight: 1.5, block: BLUE_CONCRETE}
-      - {reward: "gems 10", weight: 1.5, block: BLACK_CONCRETE}
-      - {reward: "key mythos 1", weight: 1, block: AMETHYST_BLOCK}
-      - {reward: "gems 25", weight: 0.6, block: DIAMOND_BLOCK}
-      - {reward: "key silvester 1", weight: 0.35, block: GOLD_BLOCK}
+      - {reward: "key common 1", weight: 10, block: WHITE_CONCRETE}
+      - {reward: "tool key_fragment 2", weight: 8, block: LIGHT_GRAY_CONCRETE}
+      - {reward: "tool lucky_rocket 1", weight: 7, block: RED_CONCRETE}
+      - {reward: "coins 2500", weight: 5, block: ORANGE_TERRACOTTA}
+      - {reward: "gems 1", weight: 5, block: PURPLE_CONCRETE}
+      - {reward: "key vip 1", weight: 3, block: GREEN_CONCRETE}
+      - {reward: "coins 7500", weight: 1.5, block: BROWN_CONCRETE}
+      - {reward: "tool job_elixir", weight: 1.2, block: PINK_CONCRETE}
+      - {reward: "key elite 1", weight: 1, block: LIGHT_BLUE_CONCRETE}
+      - {reward: "gems 3", weight: 0.8, block: MAGENTA_CONCRETE}
+      - {reward: "key cosmetic 1", weight: 0.6, block: PINK_GLAZED_TERRACOTTA}
+      - {reward: "key spawner 1", weight: 0.3, block: BLUE_CONCRETE}
+      - {reward: "coins 25000", weight: 0.25, block: BLACK_CONCRETE}
+      - {reward: "key mythos 1", weight: 0.15, block: AMETHYST_BLOCK}
+      - {reward: "gems 10", weight: 0.1, block: DIAMOND_BLOCK}
+      - {reward: "key silvester 1", weight: 0.05, block: GOLD_BLOCK}
   # Zweites, größeres Rad am Spawn: kostet Gems, dafür bessere Preise und Relikt-Schlüssel
   wheel2:
-    price: 5
+    price: 30
     currency: gems
     radius: 6
     segment-size: 1.35
     free-daily: false
+    daily-limit: 3
+    cooldown-seconds: 60
     segments:
-      - {reward: "coins 5000", weight: 18, block: YELLOW_STAINED_GLASS}
-      - {reward: "key elite 1", weight: 14, block: LIGHT_BLUE_STAINED_GLASS}
-      - {reward: "coins 10000", weight: 12, block: ORANGE_STAINED_GLASS}
-      - {reward: "gems 4", weight: 12, block: MAGENTA_STAINED_GLASS}
-      - {reward: "key cosmetic 1", weight: 9, block: PINK_STAINED_GLASS}
-      - {reward: "key spawner 1", weight: 7, block: BLUE_STAINED_GLASS}
-      - {reward: "tool job_elixir 2", weight: 7, block: LIME_STAINED_GLASS}
-      - {reward: "key begleiter 1", weight: 6, block: GREEN_STAINED_GLASS}
-      - {reward: "gems 10", weight: 6, block: PURPLE_STAINED_GLASS}
-      - {reward: "coins 25000", weight: 5, block: GOLD_BLOCK}
-      - {reward: "key mythos 1", weight: 4, block: AMETHYST_BLOCK}
-      - {reward: "key relic1 1", weight: 3, block: COPPER_BLOCK}
-      - {reward: "gems 30", weight: 2, block: DIAMOND_BLOCK}
-      - {reward: "key relic2 1", weight: 1.5, block: EMERALD_BLOCK}
-      - {reward: "key relic3 1", weight: 0.5, block: CRYING_OBSIDIAN}
-      - {reward: "key relic4 1", weight: 0.12, block: NETHERITE_BLOCK}
+      - {reward: "coins 2500", weight: 26, block: YELLOW_STAINED_GLASS}
+      - {reward: "key vip 1", weight: 18, block: LIME_STAINED_GLASS}
+      - {reward: "coins 5000", weight: 16, block: ORANGE_STAINED_GLASS}
+      - {reward: "gems 5", weight: 12, block: MAGENTA_STAINED_GLASS}
+      - {reward: "key elite 1", weight: 9, block: LIGHT_BLUE_STAINED_GLASS}
+      - {reward: "tool job_elixir 1", weight: 6, block: GREEN_STAINED_GLASS}
+      - {reward: "key cosmetic 1", weight: 4, block: PINK_STAINED_GLASS}
+      - {reward: "gems 12", weight: 3, block: PURPLE_STAINED_GLASS}
+      - {reward: "key spawner 1", weight: 2, block: BLUE_STAINED_GLASS}
+      - {reward: "key begleiter 1", weight: 1.5, block: CYAN_STAINED_GLASS}
+      - {reward: "coins 50000", weight: 0.8, block: GOLD_BLOCK}
+      - {reward: "key mythos 1", weight: 0.6, block: AMETHYST_BLOCK}
+      - {reward: "key relic1 1", weight: 0.4, block: COPPER_BLOCK}
+      - {reward: "gems 40", weight: 0.25, block: DIAMOND_BLOCK}
+      - {reward: "key relic2 1", weight: 0.12, block: EMERALD_BLOCK}
+      - {reward: "key relic3 1", weight: 0.04, block: CRYING_OBSIDIAN}
+      - {reward: "key relic4 1", weight: 0.01, block: NETHERITE_BLOCK}
   rings:
     daily-gems: 3
     daily-coins: 500

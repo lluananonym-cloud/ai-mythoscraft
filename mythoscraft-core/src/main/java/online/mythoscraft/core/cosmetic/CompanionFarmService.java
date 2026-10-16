@@ -60,9 +60,10 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Farming companions: sneak + right-click the ground with a companion item → it sits down there as a little farm
- * station. Right-click it: a menu to pick how long (10 min … 2 h) and how far (4 … 16 blocks) it works, start /
- * stop, collect the loot and pick it up again. Every companion has its own job and shows the tool it uses:
+ * Farming companions: sneak + right-click the ground with a companion item → it settles there as a little farm
+ * station and walks around its spot while it works. Right-click it: a menu to set how long (5 min … 4 h), how far and
+ * up to how many stacks it farms, start / stop, gem upgrades (speed, power, range, luck), collect the loot and pick it
+ * up again (upgrades stay on the item). Every action has a tiny chance to find an OP item. Every companion has its own job and shows the tool it uses:
  * bee → crops (harvest + replant), penguin → fishing, snowman → trees (fell + replant), ghost → sugar cane, cactus,
  * bamboo, melons and pumpkins, dragon → ores (replaced by stone), shadow cube → hostile mobs.
  * Stations are saved in data/companion_farms.yml and only work while their chunk is loaded.
@@ -107,6 +108,15 @@ public final class CompanionFarmService implements Listener {
         final Location at;
         int radius = 8;
         int minutes = 30;
+        /** stop farming at this many loot stacks */
+        int limit = MAX_STACKS;
+        /** upgrade levels, index = Upgrade.ordinal() */
+        final int[] levels = new int[Upgrade.values().length];
+        /** where the companion currently stands / walks to (home = at) */
+        Location pos;
+        Location goal;
+        int idleUntil;
+        boolean moving;
         /** end of the running work time, 0 = stopped */
         long until;
         final List<ItemStack> loot = new ArrayList<>();
@@ -129,20 +139,56 @@ public final class CompanionFarmService implements Listener {
             return until > System.currentTimeMillis();
         }
 
+        int level(Upgrade u) {
+            return levels[u.ordinal()];
+        }
+
+        /** a copy of where the companion stands right now */
+        Location pos() {
+            return (pos == null ? at : pos).clone();
+        }
+
         int stacks() {
             return loot.size();
         }
     }
 
+    enum Upgrade {
+        SPEED(Material.SUGAR), POWER(Material.BLAZE_POWDER), RANGE(Material.ENDER_EYE), LUCK(Material.RABBIT_FOOT);
+
+        final Material icon;
+
+        Upgrade(Material icon) {
+            this.icon = icon;
+        }
+
+        String key() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+    }
+
+    record OpFind(String item, double weight) {
+    }
+
     private static final int MAX_STACKS = 54;
-    private static final int[] DURATIONS = {10, 30, 60, 120};
-    private static final int[] RADII = {4, 8, 12, 16};
+    private static final int MIN_MINUTES = 5;
+    private static final int MAX_MINUTES = 240;
+    private static final int MIN_RADIUS = 2;
+    /** walking speed in blocks per movement step (every 2 ticks) */
+    private static final double STEP = 0.2;
 
     private final MythosCraft plugin;
     private final YamlStore store;
     private final Map<UUID, Station> stations = new LinkedHashMap<>();
     private int maxPerPlayer = 2;
     private boolean enabled = true;
+    private int baseRadius = 8;
+    private int radiusPerLevel = 3;
+    private int maxLevel = 5;
+    private final Map<Upgrade, Integer> upgradeCost = new java.util.EnumMap<>(Upgrade.class);
+    private double opChance = 0.00005;
+    private double opChancePerLevel = 0.00004;
+    private final List<OpFind> opFinds = new ArrayList<>();
     private boolean dirty;
     /** stations in worlds that are not loaded (yet) – kept unchanged in the file */
     private final Map<String, Map<String, Object>> orphans = new LinkedHashMap<>();
@@ -152,6 +198,7 @@ public final class CompanionFarmService implements Listener {
         this.store = new YamlStore(plugin, "data/companion_farms.yml");
         load();
         plugin.tasks().repeat(this, 40, 10, "companion farms", this::tick);
+        plugin.tasks().repeat(this, 41, 2, "companion farms walk", this::walk);
         plugin.tasks().repeat(this, 20 * 60, 20 * 60, "companion farms save", () -> {
             if (dirty) {
                 save();
@@ -164,6 +211,42 @@ public final class CompanionFarmService implements Listener {
         ConfigReader cfg = root.sub("companion-farm");
         enabled = cfg.bool("enabled", true);
         maxPerPlayer = cfg.integer("max-per-player", 2, 0, 20);
+        baseRadius = cfg.integer("base-radius", 8, 2, 32);
+        radiusPerLevel = cfg.integer("radius-per-level", 3, 0, 16);
+        maxLevel = cfg.integer("max-upgrade-level", 5, 0, 20);
+        ConfigReader cost = cfg.sub("upgrade-cost");
+        upgradeCost.put(Upgrade.SPEED, cost.integer("speed", 15, 0, 1_000_000));
+        upgradeCost.put(Upgrade.POWER, cost.integer("power", 15, 0, 1_000_000));
+        upgradeCost.put(Upgrade.RANGE, cost.integer("range", 10, 0, 1_000_000));
+        upgradeCost.put(Upgrade.LUCK, cost.integer("luck", 25, 0, 1_000_000));
+        opChance = cfg.decimal("op-find.chance", 0.00005, 0, 1);
+        opChancePerLevel = cfg.decimal("op-find.chance-per-luck-level", 0.00004, 0, 1);
+        opFinds.clear();
+        for (String line : cfg.raw().getStringList("op-find.items")) {
+            String[] parts = line.trim().split("\\s+");
+            if (parts.length == 0 || CustomItem.byId(parts[0]) == null) {
+                cfg.warn("op-find.items", "unbekanntes Item: " + line);
+                continue;
+            }
+            double w = 1;
+            try {
+                w = parts.length > 1 ? Double.parseDouble(parts[1]) : 1;
+            } catch (NumberFormatException ignored) {
+                cfg.warn("op-find.items", "ungültiges Gewicht: " + line);
+            }
+            opFinds.add(new OpFind(parts[0], Math.max(0, w)));
+        }
+        for (Station s : stations.values()) {
+            s.radius = Math.min(s.radius, maxRadius(s));
+        }
+    }
+
+    int maxRadius(Station s) {
+        return baseRadius + radiusPerLevel * s.level(Upgrade.RANGE);
+    }
+
+    long upgradeCost(Station s, Upgrade u) {
+        return (long) upgradeCost.getOrDefault(u, 15) * (s.level(u) + 1);
     }
 
     // ------------------------------------------------------------------------------------------- placing
@@ -202,10 +285,14 @@ public final class CompanionFarmService implements Listener {
         if (type.id().equals(plugin.companions().active(p))) {
             plugin.companions().set(p, null);
         }
+        String saved = hand.getItemMeta() == null ? null
+                : hand.getItemMeta().getPersistentDataContainer().get(UPGRADES, PersistentDataType.STRING);
         hand.setAmount(hand.getAmount() - 1);
         Location at = spot.getLocation().add(0.5, 0, 0.5);
         at.setYaw(p.getLocation().getYaw() + 180);
         Station s = new Station(UUID.randomUUID(), p.getUniqueId(), p.getName(), job, at);
+        readLevels(s, saved);
+        s.radius = Math.min(s.radius, maxRadius(s));
         stations.put(s.id, s);
         spawn(s);
         dirty = true;
@@ -215,6 +302,30 @@ public final class CompanionFarmService implements Listener {
         plugin.tasks().later(2, "companion farm menu", () -> new FarmMenu(s, p).open(p));
     }
 
+    private static final org.bukkit.NamespacedKey UPGRADES = Keys.key("farm_upgrades");
+
+    private static void readLevels(Station s, String saved) {
+        if (saved == null) {
+            return;
+        }
+        String[] parts = saved.split(",");
+        for (int i = 0; i < Math.min(parts.length, s.levels.length); i++) {
+            try {
+                s.levels[i] = Math.max(0, Integer.parseInt(parts[i].trim()));
+            } catch (NumberFormatException ignored) {
+                // keep 0
+            }
+        }
+    }
+
+    private static String writeLevels(Station s) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < s.levels.length; i++) {
+            b.append(i == 0 ? "" : ",").append(s.levels[i]);
+        }
+        return b.toString();
+    }
+
     // ------------------------------------------------------------------------------------------- visuals
     private void spawn(Station s) {
         despawn(s);
@@ -222,6 +333,8 @@ public final class CompanionFarmService implements Listener {
         if (w == null || !s.at.isChunkLoaded()) {
             return;
         }
+        s.pos = s.at.clone();
+        s.goal = null;
         String tag = "companion_farm:" + s.id;
         s.body = w.spawn(s.at.clone(), ItemDisplay.class, d -> {
             d.setPersistent(false);
@@ -238,6 +351,7 @@ public final class CompanionFarmService implements Listener {
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.THIRDPERSON_RIGHTHAND);
             d.setTransformation(new Transformation(new Vector3f(0.42f, 0.0f, 0), new AxisAngle4f(), new Vector3f(0.7f, 0.7f, 0.7f), new AxisAngle4f()));
             d.setInterpolationDuration(4);
+            d.setTeleportDuration(2);
             d.setRotation(s.at.getYaw(), 0);
             d.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, tag);
         });
@@ -246,6 +360,7 @@ public final class CompanionFarmService implements Listener {
             d.setBillboard(Display.Billboard.CENTER);
             d.setShadowed(true);
             d.setBackgroundColor(Color.fromARGB(110, 20, 10, 30));
+            d.setTeleportDuration(2);
             d.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, tag);
         });
         s.hitbox = w.spawn(s.at.clone(), Interaction.class, i -> {
@@ -278,10 +393,10 @@ public final class CompanionFarmService implements Listener {
         if (s.running()) {
             long left = (s.until - System.currentTimeMillis()) / 1000;
             s.label.text(plugin.messages().get("companion-farm.label-running", "owner", s.ownerName, "job", job,
-                    "time", String.format("%d:%02d", left / 60, left % 60), "stacks", s.stacks(), "max", MAX_STACKS, "radius", s.radius));
+                    "time", String.format("%d:%02d", left / 60, left % 60), "stacks", s.stacks(), "max", s.limit, "radius", s.radius));
         } else {
             s.label.text(plugin.messages().get("companion-farm.label-idle", "owner", s.ownerName, "job", job, "stacks", s.stacks(),
-                    "max", MAX_STACKS));
+                    "max", s.limit));
         }
     }
 
@@ -313,20 +428,117 @@ public final class CompanionFarmService implements Listener {
                 }
                 continue;
             }
-            if (s.stacks() >= MAX_STACKS) {
+            if (s.stacks() >= s.limit) {
+                s.goal = s.at.clone();
                 if (s.tick % 20 == 0) {
-                    s.at.getWorld().spawnParticle(Particle.ANGRY_VILLAGER, s.at.clone().add(0, 1, 0), 1, 0.2, 0.2, 0.2, 0);
+                    s.at.getWorld().spawnParticle(Particle.ANGRY_VILLAGER, s.pos().add(0, 1, 0), 1, 0.2, 0.2, 0.2, 0);
                 }
                 continue;
             }
-            int every = switch (s.job) {
-                case FISH -> 24;          // a catch every ~12 s
-                case TREES, ORES -> 8;    // one tree / ore every ~4 s
-                default -> 4;             // crops, plants and mobs every 2 s
-            };
+            int base = baseInterval(s.job);
+            int every = Math.max(2, (int) Math.round(base * (1 - 0.13 * Math.min(5, s.level(Upgrade.SPEED)))));
             if (s.tick % every == 0) {
-                work(s);
+                work(s, base);
             }
+        }
+    }
+
+    private static int baseInterval(Job job) {
+        return switch (job) {
+            case FISH -> 24;          // a catch every ~12 s
+            case TREES, ORES -> 8;    // one tree / ore every ~4 s
+            default -> 4;             // crops, plants and mobs every 2 s
+        };
+    }
+
+    // ------------------------------------------------------------------------------------------- walking
+    /** Every 2 ticks: the companion walks (hops) towards its goal – the spot it works on, a wander point or home. */
+    private void walk() {
+        for (Station s : stations.values()) {
+            if (s.body == null || !s.body.isValid() || s.pos == null) {
+                continue;
+            }
+            if (s.goal == null) {
+                if (!s.running()) {
+                    if (s.pos.distanceSquared(s.at) > 0.04) {
+                        s.goal = s.at.clone();
+                    }
+                } else if (s.tick >= s.idleUntil) {
+                    // nothing to do right now: stroll around the home spot
+                    ThreadLocalRandom r = ThreadLocalRandom.current();
+                    int range = Math.max(2, Math.min(s.radius, 5));
+                    s.goal = s.at.clone().add(r.nextInt(-range, range + 1), 0, r.nextInt(-range, range + 1));
+                    s.idleUntil = s.tick + 6 + r.nextInt(8);
+                }
+            }
+            if (s.goal == null) {
+                s.moving = false;
+                continue;
+            }
+            double dx = s.goal.getX() - s.pos.getX();
+            double dz = s.goal.getZ() - s.pos.getZ();
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < 0.9 || (s.goal.equals(s.at) && dist < 0.2)) {
+                if (s.goal.getX() == s.at.getX() && s.goal.getZ() == s.at.getZ() && dist > 0.01) {
+                    s.pos = s.at.clone();
+                    place(s, s.at.getYaw(), 0);
+                }
+                s.goal = null;
+                s.moving = false;
+                continue;
+            }
+            double step = STEP * (1 + 0.1 * Math.min(5, s.level(Upgrade.SPEED)));
+            double nx = s.pos.getX() + dx / dist * Math.min(step, dist);
+            double nz = s.pos.getZ() + dz / dist * Math.min(step, dist);
+            Double y = groundY(s.pos.getWorld(), nx, s.pos.getY(), nz);
+            if (y == null) {
+                s.goal = null;              // wall, cliff or unloaded chunk: pick something else
+                s.idleUntil = s.tick + 2;
+                s.moving = false;
+                continue;
+            }
+            float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            s.pos = new Location(s.pos.getWorld(), nx, y, nz, yaw, 0);
+            s.moving = true;
+            int walked = (int) (System.currentTimeMillis() / 100);
+            double hop = Math.abs(Math.sin(walked * 0.9)) * 0.18;
+            place(s, yaw, hop);
+        }
+    }
+
+    /** Height to stand on at x/z: steps up one block or down up to three; null = can't go there. */
+    private static Double groundY(World w, double x, double y, double z) {
+        int bx = (int) Math.floor(x);
+        int bz = (int) Math.floor(z);
+        if (!w.isChunkLoaded(bx >> 4, bz >> 4)) {
+            return null;
+        }
+        int feet = (int) Math.floor(y + 0.01);
+        for (int fy = feet + 1; fy >= feet - 3; fy--) {
+            Block below = w.getBlockAt(bx, fy - 1, bz);
+            Block at = w.getBlockAt(bx, fy, bz);
+            Block head = w.getBlockAt(bx, fy + 1, bz);
+            boolean standable = below.getType().isSolid() || below.isLiquid();
+            if (standable && at.isPassable() && !at.isLiquid() && head.isPassable()) {
+                return (double) fy;
+            }
+        }
+        return null;
+    }
+
+    private void place(Station s, float yaw, double hop) {
+        Location body = s.pos.clone().add(0, hop, 0);
+        body.setYaw(yaw);
+        body.setPitch(0);
+        s.body.teleport(body);
+        if (s.tool != null && s.tool.isValid()) {
+            s.tool.teleport(body.clone().add(0, 0.5, 0));
+        }
+        if (s.label != null && s.label.isValid()) {
+            s.label.teleport(s.pos.clone().add(0, 1.35, 0));
+        }
+        if (s.hitbox != null && s.hitbox.isValid()) {
+            s.hitbox.teleport(s.pos.clone());
         }
     }
 
@@ -334,10 +546,10 @@ public final class CompanionFarmService implements Listener {
         if (s.body == null || !s.body.isValid()) {
             return;
         }
-        float bob = running ? (float) Math.sin(s.tick * 0.6) * 0.06f : 0f;
+        float bob = running && !s.moving ? (float) Math.sin(s.tick * 0.6) * 0.06f : 0f;
         s.body.setInterpolationDelay(0);
         s.body.setInterpolationDuration(10);
-        Quaternionf turn = new Quaternionf().rotationY(running ? (float) Math.sin(s.tick * 0.15) * 0.5f : 0f);
+        Quaternionf turn = new Quaternionf().rotationY(running && !s.moving ? (float) Math.sin(s.tick * 0.15) * 0.5f : 0f);
         s.body.setTransformation(new Transformation(new Vector3f(0, 0.42f + bob, 0), turn, new Vector3f(0.8f, 0.8f, 0.8f), new Quaternionf()));
         if (s.tool != null && s.tool.isValid()) {
             float swing = running ? (float) Math.sin(s.tick * 1.3) * 0.7f : 0f;
@@ -347,11 +559,15 @@ public final class CompanionFarmService implements Listener {
                     new Vector3f(0.7f, 0.7f, 0.7f), new Quaternionf()));
         }
         if (running && s.tick % 6 == 0) {
-            s.at.getWorld().spawnParticle(Particle.WAX_ON, s.at.clone().add(0, 0.9, 0), 2, 0.25, 0.2, 0.25, 0);
+            s.at.getWorld().spawnParticle(Particle.WAX_ON, s.pos().add(0, 0.9, 0), 2, 0.25, 0.2, 0.25, 0);
+        }
+        if (s.moving && s.tick % 2 == 0) {
+            s.at.getWorld().spawnParticle(Particle.CLOUD, s.pos().add(0, 0.1, 0), 1, 0.1, 0, 0.1, 0.01);
         }
     }
 
-    private void work(Station s) {
+    private void work(Station s, int baseInterval) {
+        int before = totalItems(s);
         switch (s.job) {
             case CROPS -> crops(s);
             case FISH -> fish(s);
@@ -361,6 +577,53 @@ public final class CompanionFarmService implements Listener {
             case MOBS -> mobs(s);
         }
         dirty = true;
+        // found something (mobs: they drop when they die) → tiny chance for an OP item, same odds per minute for every job
+        if ((totalItems(s) > before || s.job == Job.MOBS) && !opFinds.isEmpty()) {
+            double chance = (opChance + opChancePerLevel * s.level(Upgrade.LUCK)) * baseInterval / 4.0;
+            if (ThreadLocalRandom.current().nextDouble() < chance) {
+                opFind(s);
+            }
+        }
+    }
+
+    private static int totalItems(Station s) {
+        int n = 0;
+        for (ItemStack it : s.loot) {
+            n += it.getAmount();
+        }
+        return n;
+    }
+
+    private void opFind(Station s) {
+        double total = opFinds.stream().mapToDouble(OpFind::weight).sum();
+        if (total <= 0) {
+            return;
+        }
+        double r = ThreadLocalRandom.current().nextDouble() * total;
+        OpFind pick = opFinds.get(opFinds.size() - 1);
+        for (OpFind f : opFinds) {
+            r -= f.weight();
+            if (r < 0) {
+                pick = f;
+                break;
+            }
+        }
+        CustomItem type = CustomItem.byId(pick.item());
+        if (type == null) {
+            return;
+        }
+        ItemStack item = plugin.items().create(type);
+        s.loot.add(item);                 // always kept, even when the storage is full
+        Location l = s.pos().add(0, 1, 0);
+        l.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, l, 60, 0.4, 0.6, 0.4, 0.4);
+        l.getWorld().strikeLightningEffect(l);
+        SoundSpec.of("ui.toast.challenge_complete", 1f, 1.2f).playAt(l);
+        Player owner = Bukkit.getPlayer(s.owner);
+        if (owner != null) {
+            plugin.messages().send(owner, "companion-farm.op-find", "job", plugin.messages().get("companion-farm.jobs." + s.job.key()),
+                    "item", item.effectiveName());
+        }
+        plugin.messages().broadcast("companion-farm.op-find-broadcast", "player", s.ownerName, "item", item.effectiveName());
     }
 
     private boolean allowed(Block b) {
@@ -368,11 +631,15 @@ public final class CompanionFarmService implements Listener {
     }
 
     private void addLoot(Station s, java.util.Collection<ItemStack> drops) {
+        double bonus = 0.08 * s.level(Upgrade.POWER);
         for (ItemStack d : drops) {
             if (d == null || d.isEmpty()) {
                 continue;
             }
             ItemStack rest = d.clone();
+            if (bonus > 0 && ThreadLocalRandom.current().nextDouble() < bonus) {
+                rest.setAmount(Math.min(rest.getMaxStackSize(), rest.getAmount() * 2));     // power upgrade: double drops
+            }
             for (ItemStack have : s.loot) {
                 if (rest.getAmount() <= 0) {
                     break;
@@ -389,9 +656,11 @@ public final class CompanionFarmService implements Listener {
         }
     }
 
-    /** Line of light from the companion to the block it works on. */
+    /** Line of light from the companion to the block it works on – and the companion runs over there. */
     private static void beam(Station s, Location to) {
-        Location from = s.at.clone().add(0, 0.7, 0);
+        s.goal = to.clone();
+        s.idleUntil = s.tick + 6;
+        Location from = s.pos().add(0, 0.7, 0);
         org.bukkit.util.Vector d = to.toVector().subtract(from.toVector());
         double len = d.length();
         if (len < 0.3) {
@@ -424,7 +693,7 @@ public final class CompanionFarmService implements Listener {
         ItemStack hoe = new ItemStack(Material.IRON_HOE);
         for (Block b : around(s, 3, b -> b.getBlockData() instanceof Ageable a && a.getAge() >= a.getMaximumAge()
                 && !b.getType().name().endsWith("_STEM") && (Tag.CROPS.isTagged(b.getType()) || b.getType() == Material.NETHER_WART || b.getType() == Material.COCOA
-                || b.getType() == Material.SWEET_BERRY_BUSH), 6)) {
+                || b.getType() == Material.SWEET_BERRY_BUSH), 6 + 3 * s.level(Upgrade.POWER))) {
             if (!allowed(b)) {
                 continue;
             }
@@ -495,6 +764,9 @@ public final class CompanionFarmService implements Listener {
             catchItem = new ItemStack(Material.LILY_PAD, 2);
         }
         addLoot(s, List.of(catchItem));
+        if (r.nextDouble() < 0.15 * s.level(Upgrade.POWER)) {
+            addLoot(s, List.of(new ItemStack(r.nextBoolean() ? Material.COD : Material.SALMON)));
+        }
         s.xp += 1 + r.nextInt(3);
         Location w = water.get(0).getLocation().add(0.5, 1, 0.5);
         w.getWorld().spawnParticle(Particle.SPLASH, w, 15, 0.3, 0.1, 0.3, 0.1);
@@ -573,7 +845,7 @@ public final class CompanionFarmService implements Listener {
             }
             return (m == Material.SUGAR_CANE || m == Material.CACTUS || m == Material.BAMBOO || m == Material.KELP_PLANT || m == Material.KELP)
                     && sameBelow(b);
-        }, 8)) {
+        }, 8 + 3 * s.level(Upgrade.POWER))) {
             if (!allowed(b)) {
                 continue;
             }
@@ -623,14 +895,15 @@ public final class CompanionFarmService implements Listener {
 
     private void mobs(Station s) {
         int hit = 0;
+        int power = s.level(Upgrade.POWER);
         for (Entity e : s.at.getWorld().getNearbyEntities(s.at, s.radius, Math.min(s.radius, 6), s.radius)) {
-            if (hit >= 3 || !(e instanceof Monster m) || m.isDead() || m.customName() != null
+            if (hit >= 3 + power || !(e instanceof Monster m) || m.isDead() || m.customName() != null
                     || online.mythoscraft.core.protection.DamageSources.isPluginEntity(m)
                     || !plugin.protection().query(m.getLocation(), Flag.MOB_DAMAGE)) {
                 continue;
             }
             m.getPersistentDataContainer().set(Keys.key("farm_kill"), PersistentDataType.STRING, s.id.toString());
-            m.damage(7);
+            m.damage(7 + 3 * power);
             m.getWorld().spawnParticle(Particle.SWEEP_ATTACK, m.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
             beam(s, m.getLocation().add(0, 1, 0));
             hit++;
@@ -720,7 +993,18 @@ public final class CompanionFarmService implements Listener {
         despawn(s);
         CustomItem item = CustomItem.byId(s.job.item);
         if (item != null) {
-            CustomItemManager.give(p, plugin.items().create(item));
+            ItemStack back = plugin.items().create(item);
+            if (java.util.Arrays.stream(s.levels).anyMatch(l -> l > 0)) {
+                back.editMeta(meta -> {
+                    meta.getPersistentDataContainer().set(UPGRADES, PersistentDataType.STRING, writeLevels(s));
+                    List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
+                    lore.addAll(plugin.messages().in(p, () -> plugin.messages().getList("companion-farm.item-upgrades",
+                            "speed", s.level(Upgrade.SPEED), "power", s.level(Upgrade.POWER), "range", s.level(Upgrade.RANGE),
+                            "luck", s.level(Upgrade.LUCK))));
+                    meta.lore(lore);
+                });
+            }
+            CustomItemManager.give(p, back);
         }
         save();
         store.saveAsync(plugin.tasks());
@@ -729,10 +1013,18 @@ public final class CompanionFarmService implements Listener {
     }
 
     final class FarmMenu extends Menu {
+        private static final int ICON = 4;
+        private static final int DURATION = 10;
+        private static final int RADIUS = 12;
+        private static final int LIMIT = 14;
+        private static final int START = 16;
+        private static final int[] UPGRADE_SLOTS = {19, 21, 23, 25};
+        private static final int COLLECT = 31;
+        private static final int PICKUP = 49;
         private final Station s;
 
         FarmMenu(Station s, Player viewer) {
-            super(5, plugin.messages().in(viewer, () -> plugin.messages().get("companion-farm.menu-title",
+            super(6, plugin.messages().in(viewer, () -> plugin.messages().get("companion-farm.menu-title",
                     "job", plugin.messages().get("companion-farm.jobs." + s.job.key()))));
             this.s = s;
             plugin.messages().in(viewer, this::draw);
@@ -740,35 +1032,51 @@ public final class CompanionFarmService implements Listener {
 
         private void draw() {
             var m = plugin.messages();
-            for (int i = 0; i < 45; i++) {
+            for (int i = 0; i < 54; i++) {
                 getInventory().setItem(i, MenuItems.filler());
             }
             CustomItem type = CustomItem.byId(s.job.item);
             ItemStack icon = type == null ? new ItemStack(Material.PAPER) : plugin.items().create(type);
-            getInventory().setItem(4, MenuItems.withLore(icon, m.getList("companion-farm.how." + s.job.key())));
-            for (int i = 0; i < DURATIONS.length; i++) {
-                boolean sel = s.minutes == DURATIONS[i];
-                getInventory().setItem(10 + i, MenuItems.button(sel ? Material.CLOCK : Material.GRAY_DYE,
-                        m.get(sel ? "companion-farm.duration-selected" : "companion-farm.duration", "minutes", DURATIONS[i]), List.of()));
-            }
-            for (int i = 0; i < RADII.length; i++) {
-                boolean sel = s.radius == RADII[i];
-                getInventory().setItem(19 + i, MenuItems.button(sel ? Material.SPYGLASS : Material.GRAY_DYE,
-                        m.get(sel ? "companion-farm.radius-selected" : "companion-farm.radius", "radius", RADII[i]), List.of()));
-            }
+            getInventory().setItem(ICON, MenuItems.withLore(icon, m.getList("companion-farm.how." + s.job.key())));
+            getInventory().setItem(DURATION, MenuItems.button(Material.CLOCK, m.get("companion-farm.set-duration", "minutes", s.minutes),
+                    m.getList("companion-farm.adjust-lore", "min", MIN_MINUTES, "max", MAX_MINUTES, "step", 5, "big", 30)));
+            getInventory().setItem(RADIUS, MenuItems.button(Material.SPYGLASS, m.get("companion-farm.set-radius", "radius", s.radius),
+                    m.getList("companion-farm.adjust-lore", "min", MIN_RADIUS, "max", maxRadius(s), "step", 1, "big", 4)));
+            getInventory().setItem(LIMIT, MenuItems.button(Material.HOPPER, m.get("companion-farm.set-limit", "limit", s.limit),
+                    m.getList("companion-farm.adjust-lore", "min", 1, "max", MAX_STACKS, "step", 1, "big", 9)));
             boolean running = s.running();
             long left = running ? Math.max(0, (s.until - System.currentTimeMillis()) / 60_000) : 0;
-            getInventory().setItem(15, MenuItems.button(running ? Material.RED_CONCRETE : Material.LIME_CONCRETE,
+            getInventory().setItem(START, MenuItems.button(running ? Material.RED_CONCRETE : Material.LIME_CONCRETE,
                     m.get(running ? "companion-farm.stop" : "companion-farm.start"),
                     running ? m.getList("companion-farm.stop-lore", "minutes", left) : m.getList("companion-farm.start-lore",
-                            "minutes", s.minutes, "radius", s.radius)));
-            getInventory().setItem(24, MenuItems.button(Material.CHEST, m.get("companion-farm.collect"),
-                    m.getList("companion-farm.collect-lore", "stacks", s.stacks(), "max", MAX_STACKS, "xp", s.xp)));
-            getInventory().setItem(40, MenuItems.button(Material.BARRIER, m.get("companion-farm.pickup"), m.getList("companion-farm.pickup-lore")));
-            // preview of the loot
-            for (int i = 0; i < Math.min(7, s.loot.size()); i++) {
-                getInventory().setItem(28 + i, s.loot.get(i).clone());
+                            "minutes", s.minutes, "radius", s.radius, "limit", s.limit)));
+            Upgrade[] ups = Upgrade.values();
+            for (int i = 0; i < ups.length; i++) {
+                Upgrade u = ups[i];
+                int lvl = s.level(u);
+                boolean max = lvl >= maxLevel;
+                List<Component> lore = new ArrayList<>(m.getList("companion-farm.upgrade." + u.key() + ".lore", "level", lvl, "max", maxLevel,
+                        "next", lvl + 1));
+                lore.addAll(max ? m.getList("companion-farm.upgrade-maxed")
+                        : m.getList("companion-farm.upgrade-cost", "cost", upgradeCost(s, u)));
+                ItemStack b = MenuItems.button(u.icon, m.get("companion-farm.upgrade." + u.key() + ".name", "level", lvl, "max", maxLevel), lore);
+                b.setAmount(Math.max(1, lvl));
+                getInventory().setItem(UPGRADE_SLOTS[i], b);
             }
+            getInventory().setItem(COLLECT, MenuItems.button(Material.CHEST, m.get("companion-farm.collect"),
+                    m.getList("companion-farm.collect-lore", "stacks", s.stacks(), "max", s.limit, "xp", s.xp)));
+            getInventory().setItem(PICKUP, MenuItems.button(Material.BARRIER, m.get("companion-farm.pickup"), m.getList("companion-farm.pickup-lore")));
+            // preview of the loot
+            for (int i = 0; i < Math.min(9, s.loot.size()); i++) {
+                getInventory().setItem(36 + i, s.loot.get(i).clone());
+            }
+        }
+
+        /** left click +, right click −, with shift the big step */
+        private int adjust(InventoryClickEvent event, int value, int step, int big, int min, int max) {
+            int d = event.isShiftClick() ? big : step;
+            int v = event.isRightClick() ? value - d : value + d;
+            return Math.max(min, Math.min(max, v));
         }
 
         @Override
@@ -778,14 +1086,39 @@ public final class CompanionFarmService implements Listener {
                 player.closeInventory();
                 return;
             }
-            if (slot >= 10 && slot < 10 + DURATIONS.length) {
-                s.minutes = DURATIONS[slot - 10];
-                if (s.running()) {
-                    s.until = System.currentTimeMillis() + s.minutes * 60_000L;
+            int upgrade = -1;
+            for (int i = 0; i < UPGRADE_SLOTS.length; i++) {
+                if (UPGRADE_SLOTS[i] == slot) {
+                    upgrade = i;
                 }
-            } else if (slot >= 19 && slot < 19 + RADII.length) {
-                s.radius = RADII[slot - 19];
-            } else if (slot == 15) {
+            }
+            if (slot == DURATION) {
+                int before = s.minutes;
+                s.minutes = adjust(event, s.minutes, 5, 30, MIN_MINUTES, MAX_MINUTES);
+                if (s.running()) {
+                    s.until += (s.minutes - before) * 60_000L;
+                }
+            } else if (slot == RADIUS) {
+                s.radius = adjust(event, s.radius, 1, 4, MIN_RADIUS, maxRadius(s));
+            } else if (slot == LIMIT) {
+                s.limit = adjust(event, s.limit, 1, 9, 1, MAX_STACKS);
+            } else if (upgrade >= 0) {
+                Upgrade u = Upgrade.values()[upgrade];
+                if (s.level(u) >= maxLevel) {
+                    plugin.messages().actionBar(player, "companion-farm.upgrade-max");
+                    return;
+                }
+                long cost = upgradeCost(s, u);
+                if (!plugin.attractions().charge(player, online.mythoscraft.core.economy.Currency.GEMS, cost)) {
+                    return;
+                }
+                s.levels[u.ordinal()]++;
+                SoundSpec.of("block.anvil.use", 0.6f, 1.5f).play(player);
+                s.at.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, s.pos().add(0, 0.8, 0), 25, 0.4, 0.4, 0.4, 0);
+                plugin.messages().send(player, "companion-farm.upgraded", "upgrade",
+                        plugin.messages().get("companion-farm.upgrade." + u.key() + ".name", "level", s.level(u), "max", maxLevel),
+                        "cost", cost);
+            } else if (slot == START) {
                 if (s.running()) {
                     s.until = 0;
                     plugin.messages().actionBar(player, "companion-farm.stopped");
@@ -794,9 +1127,9 @@ public final class CompanionFarmService implements Listener {
                     SoundSpec.of("block.note_block.chime", 1f, 1.4f).play(player);
                     plugin.messages().actionBar(player, "companion-farm.started", "minutes", s.minutes, "radius", s.radius);
                 }
-            } else if (slot == 24) {
+            } else if (slot == COLLECT) {
                 collect(s, player);
-            } else if (slot == 40) {
+            } else if (slot == PICKUP) {
                 player.closeInventory();
                 pickUp(s, player);
                 return;
@@ -829,7 +1162,9 @@ public final class CompanionFarmService implements Listener {
                 Location at = new Location(w, c.getDouble("x"), c.getDouble("y"), c.getDouble("z"), (float) c.getDouble("yaw"), 0);
                 Station s = new Station(UUID.fromString(key), UUID.fromString(c.getString("owner")), c.getString("owner-name", "?"), job, at);
                 s.radius = c.getInt("radius", 8);
-                s.minutes = c.getInt("minutes", 30);
+                s.minutes = Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, c.getInt("minutes", 30)));
+                s.limit = Math.max(1, Math.min(MAX_STACKS, c.getInt("limit", MAX_STACKS)));
+                readLevels(s, c.getString("upgrades"));
                 s.until = c.getLong("until", 0);
                 s.xp = c.getInt("xp", 0);
                 List<?> loot = c.getList("loot");
@@ -866,6 +1201,8 @@ public final class CompanionFarmService implements Listener {
             y.set(p + ".yaw", s.at.getYaw());
             y.set(p + ".radius", s.radius);
             y.set(p + ".minutes", s.minutes);
+            y.set(p + ".limit", s.limit);
+            y.set(p + ".upgrades", writeLevels(s));
             y.set(p + ".until", s.until);
             y.set(p + ".xp", s.xp);
             y.set(p + ".loot", new ArrayList<>(s.loot));

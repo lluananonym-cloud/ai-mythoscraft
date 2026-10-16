@@ -61,6 +61,10 @@ public final class WheelService {
     private long price = 2500;
     private Currency currency = Currency.COINS;
     private double radius = 3.4;
+    /** paid spins per player and day (0 = unlimited) */
+    private int dailyLimit = 5;
+    private long cooldownMillis = 30_000;
+    private final Map<java.util.UUID, Long> lastSpin = new java.util.HashMap<>();
 
     public WheelService(MythosCraft plugin, String id) {
         this.plugin = plugin;
@@ -79,6 +83,8 @@ public final class WheelService {
         Currency c = Currency.byId(cfg.string("currency", "coins"));
         currency = c == null ? Currency.COINS : c;
         radius = cfg.decimal("radius", 5, 1.5, 10);
+        dailyLimit = cfg.integer("daily-limit", id.equals(TAG) ? 5 : 3, 0, 1000);
+        cooldownMillis = cfg.integer("cooldown-seconds", id.equals(TAG) ? 30 : 60, 0, 86_400) * 1000L;
         segments.clear();
         List<?> list = cfg.raw().getList("segments");
         if (list != null) {
@@ -162,7 +168,7 @@ public final class WheelService {
             t.setShadowed(true);
             t.setBackgroundColor(Color.fromARGB(0x70, 0x1b, 0x10, 0x22));
             t.text(plugin.messages().get("attractions." + id + ".hologram", "price", price,
-                    "currency", plugin.messages().get("economy.names." + currency.id())));
+                    "currency", plugin.messages().get("economy.names." + currency.id()), "limit", dailyLimit));
             t.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, id);
         }));
         Interaction hit = center.getWorld().spawn(center.clone().add(0, -radius - 0.6, 0), Interaction.class, i -> {
@@ -221,8 +227,24 @@ public final class WheelService {
             usedToday = 1; // spun before the extra rank spins existed
         }
         boolean free = freeDaily && usedToday < 1 + plugin.rankPerks().extraSpins(p);
+        long now = System.currentTimeMillis();
+        Long last = lastSpin.get(p.getUniqueId());
+        if (last != null && now - last < cooldownMillis) {
+            plugin.messages().actionBar(p, "attractions.wheel.cooldown", "seconds", (cooldownMillis - (now - last) + 999) / 1000);
+            return;
+        }
+        long paidToday = plugin.progress().get(p, id + ".paid-day") == today ? plugin.progress().get(p, id + ".paid") : 0;
+        if (!free && dailyLimit > 0 && paidToday >= dailyLimit) {
+            plugin.messages().send(p, "attractions.wheel.daily-limit", "max", dailyLimit);
+            return;
+        }
         if (!free && !plugin.attractions().charge(p, currency, price)) {
             return;
+        }
+        lastSpin.put(p.getUniqueId(), now);
+        if (!free) {
+            plugin.progress().set(p, id + ".paid-day", today);
+            plugin.progress().set(p, id + ".paid", paidToday + 1);
         }
         if (free) {
             plugin.progress().set(p, id + ".day", today);
@@ -239,7 +261,8 @@ public final class WheelService {
         double delta = ((target - start) % 360 + 360) % 360 + 360 * (4 + ThreadLocalRandom.current().nextInt(2));
         int duration = 110;
         plugin.messages().send(p, free ? "attractions.wheel.spin-free" : "attractions.wheel.spin-paid", "price", price,
-                "currency", plugin.messages().get("economy.names." + currency.id()));
+                "currency", plugin.messages().get("economy.names." + currency.id()),
+                "left", dailyLimit <= 0 ? "∞" : String.valueOf(Math.max(0, dailyLimit - paidToday - (free ? 0 : 1))));
         Segment prize = segments.get(win);
         pending = () -> finish(p, prize);
         int[] tick = {0};
@@ -291,7 +314,7 @@ public final class WheelService {
         s.reward().give(plugin, p, 1.0);
         Component prize = s.reward().describe(plugin, 1.0);
         plugin.messages().send(p, "attractions.wheel.won", "reward", prize);
-        if (s.weight() <= 2) {
+        if (s.weight() <= 1) {
             plugin.messages().broadcast("attractions.wheel.jackpot", "player", p.getName(), "reward", prize);
         }
     }

@@ -29,6 +29,40 @@ class ConfigUpdaterTest {
     }
 
     @Test
+    void resetsListedSectionsOnceForOlderFiles() throws Exception {
+        YamlConfiguration server = yaml("""
+                config-version: 22
+                attractions:
+                  wheel:
+                    price: 2500
+                    old-key: true
+                  rings:
+                    boost: 3
+                """);
+        YamlConfiguration bundled = yaml("""
+                config-version: 23
+                config-reset:
+                  23: [attractions.wheel]
+                attractions:
+                  wheel:
+                    price: 10000
+                    daily-limit: 5
+                  rings:
+                    boost: 1.25
+                """);
+        ConfigUpdater.merge(server, bundled);
+        assertEquals(10000, server.getInt("attractions.wheel.price"));
+        assertEquals(5, server.getInt("attractions.wheel.daily-limit"));
+        assertFalse(server.contains("attractions.wheel.old-key"));
+        assertEquals(3, server.getInt("attractions.rings.boost"), "other admin values stay");
+        assertFalse(server.contains("config-reset"));
+        // already on the new version: the admin's later change stays
+        server.set("attractions.wheel.price", 1);
+        ConfigUpdater.merge(server, bundled);
+        assertEquals(1, server.getInt("attractions.wheel.price"));
+    }
+
+    @Test
     void addsMissingEntriesButKeepsAdminValues() throws Exception {
         YamlConfiguration server = yaml("""
                 resource-pack:

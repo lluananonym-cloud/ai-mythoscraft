@@ -28,6 +28,11 @@ import java.util.Set;
 public final class ConfigUpdater {
 
     public static final String VERSION_KEY = "config-version";
+    /**
+     * Optional in a bundled file: {@code config-reset: {<version>: [paths]}} – when a file older than that version is
+     * updated, these paths are replaced by the new defaults once (for balance changes that must reach every server).
+     */
+    public static final String RESET_KEY = "config-reset";
     /** Plain lists that get new default values appended on an update (e.g. new crates on the spawn). */
     private static final Set<String> GROWING_LISTS = Set.of("build.spawn-crates", "music.playlists.default",
             "music.playlists.halloween", "music.playlists.frostfest");
@@ -47,8 +52,26 @@ public final class ConfigUpdater {
             return -1;
         }
         int added = 0;
+        ConfigurationSection resets = defaults.getConfigurationSection(RESET_KEY);
+        if (resets != null) {
+            for (String v : resets.getKeys(false)) {
+                int version;
+                try {
+                    version = Integer.parseInt(v);
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+                if (fileVersion > 0 && fileVersion < version && version <= defaultVersion) {
+                    for (String path : resets.getStringList(v)) {
+                        if (defaults.contains(path, true) && target.contains(path, true)) {
+                            target.set(path, null);
+                        }
+                    }
+                }
+            }
+        }
         for (String path : defaults.getKeys(true)) {
-            if (path.equals(VERSION_KEY) || parentBlocked(target, path)) {
+            if (path.equals(VERSION_KEY) || path.equals(RESET_KEY) || path.startsWith(RESET_KEY + ".") || parentBlocked(target, path)) {
                 continue;
             }
             if (target.contains(path, true)) {

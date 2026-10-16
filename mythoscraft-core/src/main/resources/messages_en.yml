@@ -1,4 +1,6 @@
-config-version: 19
+config-version: 20
+config-reset:
+  20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
 general:
   usage: '<gray>Usage: <#e9d5ff>{usage}'
@@ -3156,7 +3158,7 @@ invsee:
   self: <red>That's your own inventory.
 attractions:
   wheel2:
-    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS WHEEL ✦</bold></gradient><newline><gray>Right-click: spin for <white>{price}</white> {currency}<newline><gray>Better prizes & <gradient:#f59e0b:#ec4899><bold>relic keys</bold></gradient><newline><dark_gray>Left-click: show prizes"
+    hologram: "<gradient:#a855f7:#ec4899:#f59e0b><bold>✦ MYTHOS WHEEL ✦</bold></gradient><newline><gray>Right-click: spin for <white>{price}</white> {currency} <dark_gray>(max. {limit}× a day)<newline><gray>Rare prizes & <gradient:#f59e0b:#ec4899><bold>relic keys</bold></gradient><newline><dark_gray>Left-click: show prizes"
     prizes-header: '<light_purple>🎡 Prizes on the Mythos wheel:'
   rtp-portal: "<gradient:#a855f7:#ec4899><bold>✦ WILDERNESS PORTAL ✦</bold></gradient><newline><gray>Walk in = random spot to build"
   not-enough: <red>You need <white>{price}</white> {currency}<red> for that. You have <white>{balance}</white>.
@@ -3175,16 +3177,12 @@ attractions:
 
       <dark_gray>– still free –'
   wheel:
-    hologram: '<gradient:#f472b6:#fde047:#38bdf8><bold>✦ Wheel of Fortune ✦</bold></gradient>
-
-      <gray>Right click: spin <dark_gray>(1× free per day)
-
-      <gray>after that <white>{price}</white> {currency}
-
-      <dark_gray>Left click: view prizes'
+    hologram: "<gradient:#f472b6:#fde047:#38bdf8><bold>✦ Wheel of Fortune ✦</bold></gradient><newline><gray>Right click: spin <dark_gray>(1× free per day)<newline><gray>after that <white>{price}</white> {currency} <dark_gray>(max. {limit}× a day)<newline><dark_gray>Left click: view prizes"
+    cooldown: '<gray>The wheel has to cool down – <white>{seconds}s</white> left.'
+    daily-limit: '<red>You already spun this wheel {max}× today. <gray>Come back tomorrow!'
     busy: <yellow>The wheel is spinning – wait a moment!
     spin-free: <green>🎡 Your free spin for today! Good luck...
-    spin-paid: <yellow>🎡 The wheel is spinning... <dark_gray>(-{price} {currency})
+    spin-paid: <yellow>🎡 The wheel is spinning... <dark_gray>(-{price} {currency} · {left}× left today)
     won: '<gold>🎡 Won: <white>{reward}'
     jackpot: <gradient:#f472b6:#fde047><bold>🎡 JACKPOT!</bold></gradient> <white>{player}</white> <gray>won <white>{reward}</white> <gray>on the wheel of fortune!
     prizes-header: '<gold>🎡 Prizes on the wheel of fortune:'
@@ -3822,9 +3820,51 @@ companion-farm:
   duration-selected: '<green><bold>▶ {minutes} minutes</bold>'
   radius: '<gray>{radius} blocks wide'
   radius-selected: '<green><bold>▶ {radius} blocks wide</bold>'
+  set-duration: '<yellow><bold>⏱ Duration: {minutes} min'
+  set-radius: '<aqua><bold>🔭 Range: {radius} blocks'
+  set-limit: '<gold><bold>📦 Limit: {limit} stacks'
+  adjust-lore:
+  - '<gray>Left click: <green>+{step}</green> <dark_gray>· <gray>Right click: <red>−{step}'
+  - '<gray>Shift: <white>±{big}'
+  - '<dark_gray>Range: {min} – {max}'
+  upgrade:
+    speed:
+      name: '<aqua><bold>⚡ Speed</bold> <gray>Level {level}/{max}'
+      lore:
+      - '<gray>Walks and works faster'
+      - '<gray>(-13 % wait time per level).'
+    power:
+      name: '<red><bold>⚔ Power</bold> <gray>Level {level}/{max}'
+      lore:
+      - '<gray>More damage, more harvest per round'
+      - '<gray>and 8 % chance per level for double loot.'
+    range:
+      name: '<green><bold>🔭 Range</bold> <gray>Level {level}/{max}'
+      lore:
+      - '<gray>Maximum range +3 blocks per level.'
+    luck:
+      name: '<light_purple><bold>🍀 Luck</bold> <gray>Level {level}/{max}'
+      lore:
+      - '<gray>Higher chance for <gradient:#f59e0b:#ec4899><bold>OP finds</bold></gradient>'
+      - '<gray>(rare relic items).'
+  upgrade-cost:
+  - ''
+  - '<gray>Upgrade: <light_purple>{cost} gems'
+  - '<yellow>Click to upgrade'
+  upgrade-maxed:
+  - ''
+  - '<green>✔ Maximum level'
+  upgrade-max: '<green>Already at the maximum level!'
+  upgraded: '<green>✔ {upgrade} <dark_gray>(-{cost} gems)'
+  item-upgrades:
+  - ''
+  - '<gray>Upgrades: <aqua>⚡{speed}</aqua> <red>⚔{power}</red> <green>🔭{range}</green> <light_purple>🍀{luck}'
+  op-find: '<gradient:#f59e0b:#ec4899><bold>✦ OP FIND!</bold></gradient> <white>Your {job} <white>found <reset>{item}</reset><white>! <gray>(it is in the storage)'
+  op-find-broadcast: '<gradient:#f59e0b:#ec4899><bold>✦ OP FIND!</bold></gradient> <gray>The companion of <white>{player}</white> <gray>found <reset>{item}</reset><gray>!'
   start: '<green><bold>▶ Start'
   start-lore:
   - '<gray>Works <white>{minutes} min</white> within <white>{radius}</white> blocks'
+  - '<gray>until <white>{limit}</white> stacks are stored'
   - '<dark_gray>(only while the chunk is loaded)'
   stop: '<red><bold>■ Stop'
   stop-lore:
