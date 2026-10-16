@@ -78,7 +78,7 @@ def main():
         done.add(name)
     # relic crate items, spawner booster, shadow companion, zap tools (own module, also runnable on its own)
     done |= relics.build(OUT, PREV, hd.render)
-    done |= ghost_tools.build(OUT, PREV)
+    done |= ghost_tools.build(OUT, PREV, hd.render)
     converted = 0
     for path in sorted(glob.glob(os.path.join(src, 'assets', 'mythoscraft', 'models', 'item', '*.json'))):
         name = os.path.splitext(os.path.basename(path))[0]
