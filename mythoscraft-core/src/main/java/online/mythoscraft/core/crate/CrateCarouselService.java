@@ -489,14 +489,18 @@ public final class CrateCarouselService {
                 : Text.parse(plugin.crates().type(ev).name()));
         List<String> later = projected(rotating().size());
         if (later.size() > rotatingSlots) {
-            List<String> names = new ArrayList<>();
+            // every crate that is not on the spawn yet, with the minutes until it comes
+            List<net.kyori.adventure.text.Component> names = new ArrayList<>();
             for (String c : later.subList(rotatingSlots, later.size())) {
                 CrateType t = plugin.crates().type(c);
-                if (t != null) {
-                    names.add(t.name());
+                long m = minutesUntil(c);
+                if (t != null && m > 0) {
+                    names.add(plugin.messages().get("crates.carousel.later-entry", "crate", Text.parse(t.name()), "minutes", m));
                 }
             }
-            plugin.messages().sendRaw(sender, "crates.carousel.later", "crates", Text.parse(String.join("<gray>, ", names)));
+            plugin.messages().sendRaw(sender, "crates.carousel.later", "crates", net.kyori.adventure.text.Component.join(
+                    net.kyori.adventure.text.JoinConfiguration.separator(net.kyori.adventure.text.Component.text(", ",
+                            net.kyori.adventure.text.format.NamedTextColor.GRAY)), names));
         }
     }
 

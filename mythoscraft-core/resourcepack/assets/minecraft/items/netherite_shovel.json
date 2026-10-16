@@ -4,7 +4,8 @@
     "property": "minecraft:custom_model_data",
     "index": 0,
     "cases": [
-      {"when": "excavator", "model": {"type": "minecraft:model", "model": "mythoscraft:item/excavator"}}
+      {"when": "excavator", "model": {"type": "minecraft:model", "model": "mythoscraft:item/excavator"}},
+      {"when": "ghost_shovel", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ghost_shovel"}}
     ],
     "fallback": {
     "type": "minecraft:model",

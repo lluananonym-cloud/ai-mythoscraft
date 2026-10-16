@@ -4,6 +4,7 @@
     "property": "minecraft:custom_model_data",
     "index": 0,
     "cases": [
+      {"when": "ghost_hoe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ghost_hoe"}},
       {"when": "harvest_sickle", "model": {"type": "minecraft:model", "model": "mythoscraft:item/harvest_sickle"}},
       {"when": "newyear_hoe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_hoe"}},
       {"when": "pumpkin_scythe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/pumpkin_scythe"}}

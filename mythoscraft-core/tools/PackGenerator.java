@@ -1295,6 +1295,7 @@ public class PackGenerator {
             new CrateTheme("begleiter", 0xfde68a, 0xf9a8d4, 0xf472b6, 0x9d174d, 0xffffff, 0xfbcfe8, true, 0xfff1f2),
             new CrateTheme("space", 0x1e1b4b, 0x0f172a, 0x94a3b8, 0x334155, 0x818cf8, 0x6366f1, true, 0xe0e7ff),
             new CrateTheme("spawner", 0x1f2937, 0x111827, 0x4b5563, 0x1f2937, 0xa3e635, 0x7c3aed, true, 0xa3e635),
+            new CrateTheme("shadow", 0x1c1027, 0x0b0612, 0xf8fafc, 0x94a3b8, 0xe9d5ff, 0x6d28d9, true, 0xffffff),
             new CrateTheme("silvester", 0x1e1b4b, 0x0f172a, 0xfde047, 0xb45309, 0xa855f7, 0xfde047, true, 0xfef3c7),
             // relic crates V1–V4 (bronze, silver, arcane, ruby-gold)
             new CrateTheme("relic1", 0x6b4a2b, 0x4a321c, 0xc8743c, 0x7a3f12, 0xf6c58a, 0xd6a35c, true, 0xf59e0b),
@@ -1503,13 +1504,13 @@ public class PackGenerator {
     static void itemDefinitions() throws IOException {
         Map<String, List<String>> plain = new LinkedHashMap<>();
         plain.put("netherite_pickaxe", List.of("mythos_hammer", "smelter_pickaxe", "ore_pickaxe", "crystal_pickaxe", "spawner_pickaxe", "newyear_pickaxe",
-                "vein_pickaxe", "power_drill", "zap_pickaxe"));
-        plain.put("netherite_shovel", List.of("excavator"));
-        plain.put("netherite_axe", List.of("timber_axe", "inferno_axe", "thunder_hammer", "chainsaw", "newyear_axe", "mega_chainsaw"));
+                "vein_pickaxe", "power_drill", "zap_pickaxe", "ghost_pickaxe"));
+        plain.put("netherite_shovel", List.of("excavator", "ghost_shovel"));
+        plain.put("netherite_axe", List.of("timber_axe", "inferno_axe", "thunder_hammer", "chainsaw", "newyear_axe", "mega_chainsaw", "ghost_axe"));
         plain.put("netherite_sword", List.of("warden_blade", "bat_blade", "frost_blade", "candy_cane", "star_saber", "wind_blade",
                 "dragon_blade", "carrot_blade", "coral_blade", "cloud_sword", "khopesh", "nutcracker_sword", "newyear_sword",
-                "soul_sword", "zap_sword"));
-        plain.put("netherite_hoe", List.of("pumpkin_scythe", "harvest_sickle", "newyear_hoe"));
+                "soul_sword", "zap_sword", "ghost_sword"));
+        plain.put("netherite_hoe", List.of("pumpkin_scythe", "harvest_sickle", "newyear_hoe", "ghost_hoe"));
         plain.put("blaze_rod", List.of("mythos_wand", "meteor_staff", "region_wand", "witch_broom", "ice_wand", "void_scepter", "ember_wand",
                 "dragon_staff", "builder_wand", "blossom_wand", "sort_wand", "witch_broom_ride", "light_staff", "firework_wand", "tide_staff", "druid_staff", "crystal_wand", "pharaoh_staff", "laser_gun"));
         plain.put("paper", List.of("mythos_backpack", "healing_totem", "magnet_charm", "miner_lantern", "xp_tome", "return_feather",
@@ -2385,7 +2386,7 @@ public class PackGenerator {
     static boolean animatedCrate(CrateTheme t) {
         return switch (t.id) {
             case "halloween", "frostfest", "celestial", "inferno", "storm", "dragon", "rang", "ocean", "forest", "sky", "crystal", "millennium", "cosmetic", "begleiter", "space",
-                    "spawner", "silvester", "relic1", "relic2", "relic3", "relic4" -> true;
+                    "spawner", "silvester", "shadow", "relic1", "relic2", "relic3", "relic4" -> true;
             default -> false;
         };
     }
@@ -3673,7 +3674,8 @@ public class PackGenerator {
                 {"mega_chainsaw", "netherite_axe"}, {"minepro_totem", "totem_of_undying"}, {"blossom_crown", "pink_petals"},
                 {"bark_hand", "stick"}, {"zap_pickaxe", "netherite_pickaxe"}, {"zap_sword", "netherite_sword"},
                 {"zap_rod", "fishing_rod"}, {"zap_rod_cast", "fishing_rod_cast"}, {"spawner_booster", "trial_key"},
-                {"companion_shadow", "black_dye"}};
+                {"companion_shadow", "black_dye"}, {"ghost_sword", "netherite_sword"}, {"ghost_pickaxe", "netherite_pickaxe"},
+                {"ghost_axe", "netherite_axe"}, {"ghost_shovel", "netherite_shovel"}, {"ghost_hoe", "netherite_hoe"}};
         for (String[] it : items) {
             spriteModel(it[0], "minecraft:item/" + it[1]);
         }

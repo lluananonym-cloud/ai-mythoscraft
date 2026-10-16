@@ -458,12 +458,53 @@ public final class RelicListener implements Listener {
             SoundSpec.of("particle.soul_escape", 1.2f, 0.8f).playAt(from);
             plugin.messages().actionBar(p, "relic.soul.stolen");
         }
+        if (holds(p, CustomItem.GHOST_SWORD) && p.getAttackCooldown() > 0.9f && r.nextDouble() < 0.18) {
+            // the ghost jumps over: wither and blindness for a moment
+            target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 60, 1, false, true, true));
+            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1, false, true, true));
+            event.setDamage(event.getDamage() + 3);
+            Location at = target.getLocation().add(0, 1, 0);
+            target.getWorld().spawnParticle(Particle.SOUL, at, 18, 0.3, 0.5, 0.3, 0.04);
+            target.getWorld().spawnParticle(Particle.END_ROD, at, 12, 0.35, 0.5, 0.35, 0.03);
+            SoundSpec.of("entity.vex.charge", 1f, 0.7f).playAt(at);
+        }
         if (holds(p, CustomItem.ZAP_SWORD) && p.getAttackCooldown() > 0.9f && r.nextDouble() < 0.2) {
             target.getWorld().strikeLightningEffect(target.getLocation());
             event.setDamage(event.getDamage() + 4);
             target.setFireTicks(0);
             p.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().add(0, 1, 0), 30, 0.4, 0.8, 0.4, 0.2);
         }
+    }
+
+    // ================================================================================================ ghost hoe
+    /** Ghost hoe: tills 3×3 at once. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onGhostHoe(PlayerInteractEvent event) {
+        Player p = event.getPlayer();
+        Block b = event.getClickedBlock();
+        if (event.getHand() != EquipmentSlot.HAND || event.getAction() != Action.RIGHT_CLICK_BLOCK || b == null
+                || !holds(p, CustomItem.GHOST_HOE) || !tillable(b.getType())) {
+            return;
+        }
+        int n = 0;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                Block t = b.getRelative(dx, 0, dz);
+                if ((dx != 0 || dz != 0) && tillable(t.getType()) && t.getRelative(0, 1, 0).getType().isAir()
+                        && plugin.protection().allows(p, t.getLocation(), online.mythoscraft.core.protection.Flag.BUILD)) {
+                    t.setType(Material.FARMLAND);
+                    t.getWorld().spawnParticle(Particle.SOUL, t.getLocation().add(0.5, 1.1, 0.5), 2, 0.2, 0.05, 0.2, 0.01);
+                    n++;
+                }
+            }
+        }
+        if (n > 0) {
+            SoundSpec.of("item.hoe.till", 1f, 0.8f).playAt(b.getLocation());
+        }
+    }
+
+    private static boolean tillable(Material m) {
+        return m == Material.DIRT || m == Material.GRASS_BLOCK || m == Material.DIRT_PATH || m == Material.COARSE_DIRT;
     }
 
     // ================================================================================================ V4 power drill
@@ -836,6 +877,18 @@ public final class RelicListener implements Listener {
                 if (tick % 2 == 0) {
                     p.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, p.getLocation().add(0, 1.1, 0)
                             .add(p.getLocation().getDirection().setY(0).normalize().multiply(0.5)), 2, 0.2, 0.3, 0.2, 0.05);
+                }
+            }
+            CustomItem held = plugin.items().identify(p.getInventory().getItemInMainHand());
+            if (held != null && held.collection() == ItemCollection.SHADOW) {
+                // white ghost glow around the tool, a soul now and then
+                Location hand = p.getLocation().add(0, 1.1, 0).add(p.getLocation().getDirection().setY(0).normalize().multiply(0.45));
+                p.getWorld().spawnParticle(Particle.WHITE_ASH, hand, 3, 0.2, 0.3, 0.2, 0);
+                if (tick % 3 == 0) {
+                    p.getWorld().spawnParticle(Particle.SOUL, hand, 1, 0.15, 0.2, 0.15, 0.01);
+                }
+                if (held != CustomItem.GHOST_SWORD && held != CustomItem.GHOST_HOE && tick % 10 == 0) {
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 60, 1, true, false, true));
                 }
             }
             if (offhand(p, CustomItem.REPAIR_CHARM) && tick % 15 == 0) {

@@ -25,6 +25,7 @@ public enum ItemCollection {
     SPAWNER("spawner"),
     SILVESTER("silvester"),
     RELIC("relic"),
+    SHADOW("shadow"),
     TOURNAMENT("tournament");
 
     private final String id;

@@ -3,8 +3,9 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 20
+config-version: 21
 config-reset:
+  21: [items.minepro_totem.lore]
   20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
 
 prefix: "<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» "
@@ -453,6 +454,7 @@ items:
     - <dark_gray>Relikt-Kiste V4
     - '<#e9d5ff>✦ Rettet dich vor dem Tod – und bleibt!'
     - '<gray>Lädt 10 Minuten auf, danach wieder bereit'
+    - '<dark_gray>Rechtsklick auf einen Block: aufstellen'
   blossom_crown:
     name: <gradient:#f9a8d4:#58b83a><bold>Blütenkrone</bold></gradient>
     lore:
@@ -482,6 +484,32 @@ items:
     - <dark_gray>Relikt-Kiste V4
     - '<#ecfccb>✦ Beißt schneller, doppelter Fang & XP'
     - '<gray>Zieht gehakte Mobs zu dir'
+  ghost_sword:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Geist-Schwert</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Kiste
+    - '<#e9d5ff>✦ 18 % Chance: Der Geist springt über'
+    - '<gray>(Verdorrung, Langsamkeit, +3 Schaden)'
+  ghost_pickaxe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Geist-Spitzhacke</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Kiste
+    - '<#e9d5ff>✦ Eile II in der Hand'
+  ghost_axe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Geist-Axt</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Kiste
+    - '<#e9d5ff>✦ Eile II in der Hand'
+  ghost_shovel:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Geist-Schaufel</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Kiste
+    - '<#e9d5ff>✦ Eile II in der Hand'
+  ghost_hoe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Geist-Harke</bold></gradient>
+    lore:
+    - <dark_gray>Schatten-Kiste
+    - '<#e9d5ff>✦ Pflügt 3×3 auf einmal'
   mana_elixir:
     name: <blue><bold>Mana-Elixier</bold>
     lore:
@@ -2047,6 +2075,7 @@ crates:
     slot-line: <dark_gray>▪ {crate} <dark_gray>→ <white>{next} <gray>in <yellow>{time}
     event-line: '<dark_gray>▪ <light_purple>Event-Sockel: {event}'
     later: '<gray>Danach: {crates}'
+    later-entry: '{crate} <dark_gray>({minutes} Min.)'
     empty: <dark_gray>leer
     sign: '<gray>⟳ <yellow>{time}
     
@@ -3686,6 +3715,8 @@ trophy:
   not-yours: '<red>Nur wer ihn aufgestellt hat, kann diesen Pokal einsammeln.'
   no-space: '<red>Hier ist kein Platz für den Pokal.'
   no-build: '<red>Hier darfst du nichts aufstellen.'
+  totem-placed: '<green>MinePro641-Totem aufgestellt. <gray>(Schleichen + Rechtsklick: einsammeln)'
+  totem-sign: "<gradient:#7c3aed:#e0a628><bold>✦ MinePro641-Totem ✦</bold></gradient><newline><gray>aufgestellt von <white>{player}"
 starter-kit:
   received: '<green>🎁 Dein Starter-Kit ist da! <gray>Viel Spaß auf MythosCraft.'
   coins: '<gray>+ <gold>{amount} Coins</gold> Startkapital'

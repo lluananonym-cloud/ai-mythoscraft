@@ -37,6 +37,7 @@ import static online.mythoscraft.core.item.ItemCollection.SPACE;
 import static online.mythoscraft.core.item.ItemCollection.SPAWNER;
 import static online.mythoscraft.core.item.ItemCollection.SILVESTER;
 import static online.mythoscraft.core.item.ItemCollection.RELIC;
+import static online.mythoscraft.core.item.ItemCollection.SHADOW;
 import static org.bukkit.inventory.ItemRarity.EPIC;
 import static org.bukkit.inventory.ItemRarity.RARE;
 import static org.bukkit.inventory.ItemRarity.UNCOMMON;
@@ -404,6 +405,13 @@ public enum CustomItem {
     ZAP_PICKAXE(spec("zap_pickaxe", Material.NETHERITE_PICKAXE, EPIC, TOOL, RELIC).glint()),
     ZAP_SWORD(spec("zap_sword", Material.NETHERITE_SWORD, EPIC, WEAPON, RELIC).weapon(10, 1.7).glint()),
     ZAP_ROD(spec("zap_rod", Material.FISHING_ROD, EPIC, TOOL, RELIC).glint()),
+
+    // ---- shadow-ghost collection (the player's own drawings, Schatten-Kiste) -------------------------------
+    GHOST_SWORD(spec("ghost_sword", Material.NETHERITE_SWORD, EPIC, WEAPON, SHADOW).weapon(10, 1.6).glint()),
+    GHOST_PICKAXE(spec("ghost_pickaxe", Material.NETHERITE_PICKAXE, EPIC, TOOL, SHADOW).glint()),
+    GHOST_AXE(spec("ghost_axe", Material.NETHERITE_AXE, EPIC, TOOL, SHADOW).glint()),
+    GHOST_SHOVEL(spec("ghost_shovel", Material.NETHERITE_SHOVEL, EPIC, TOOL, SHADOW).glint()),
+    GHOST_HOE(spec("ghost_hoe", Material.NETHERITE_HOE, EPIC, TOOL, SHADOW).glint()),
 
     // ---- visuals (event objects, currency icons) ----------------------------------------------------------
     MYTHOS_COIN(spec("mythos_coin", Material.GOLD_NUGGET, UNCOMMON, VISUAL, CORE).glint()),

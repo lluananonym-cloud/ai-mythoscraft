@@ -5,6 +5,7 @@
     "index": 0,
     "cases": [
       {"when": "crystal_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/crystal_pickaxe"}},
+      {"when": "ghost_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ghost_pickaxe"}},
       {"when": "mythos_hammer", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mythos_hammer"}},
       {"when": "newyear_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_pickaxe"}},
       {"when": "ore_pickaxe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ore_pickaxe"}},

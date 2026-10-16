@@ -97,7 +97,8 @@ public final class TrophyService implements Listener {
         }
         ItemStack hand = event.getItem();
         TournamentTier tier = tierOf(plugin.items().identify(hand));
-        if (tier == null) {
+        boolean totem = plugin.items().is(hand, online.mythoscraft.core.item.CustomItem.MINEPRO_TOTEM);
+        if (tier == null && !totem) {
             return;
         }
         event.setCancelled(true);
@@ -118,7 +119,7 @@ public final class TrophyService implements Listener {
         }
         place(on.getLocation().add(0.5, 0, 0.5), p, hand.asOne());
         hand.subtract(1);
-        plugin.messages().actionBar(p, "trophy.placed");
+        plugin.messages().actionBar(p, totem ? "trophy.totem-placed" : "trophy.placed");
     }
 
     private void place(Location base, Player placer, ItemStack item) {
@@ -127,7 +128,7 @@ public final class TrophyService implements Listener {
         long wins = src.getOrDefault(winsKey, PersistentDataType.LONG, 1L);
         TournamentTier tier = tierOf(plugin.items().identify(item));
         String id = UUID.randomUUID().toString();
-        float scale = 0.9f;
+        float scale = tier == null ? 1.1f : 0.9f;      // the MinePro totem stands a bit bigger
         Location at = base.clone().add(0, scale * 0.5, 0);
         at.setYaw(placer.getLocation().getYaw());      // the star plate faces the player
         at.setPitch(0);
@@ -138,7 +139,9 @@ public final class TrophyService implements Listener {
             d.setPersistent(true);
             mark(d.getPersistentDataContainer(), id, placer);
         });
-        Component text = plugin.messages().get("trophy.sign-title", "tier", plugin.tournaments().tierName(tier))
+        Component text = tier == null
+                ? plugin.messages().get("trophy.totem-sign", "player", placer.getName())
+                : plugin.messages().get("trophy.sign-title", "tier", plugin.tournaments().tierName(tier))
                 .append(Component.newline()).append(plugin.messages().get("trophy.sign-owner", "player", ownerName))
                 .append(Component.newline()).append(plugin.messages().get("trophy.sign-wins", "count", wins));
         base.getWorld().spawn(base.clone().add(0, scale + 0.45, 0), TextDisplay.class, t -> {

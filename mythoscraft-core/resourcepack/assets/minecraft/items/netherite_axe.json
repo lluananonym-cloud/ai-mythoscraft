@@ -5,6 +5,7 @@
     "index": 0,
     "cases": [
       {"when": "chainsaw", "model": {"type": "minecraft:model", "model": "mythoscraft:item/chainsaw"}},
+      {"when": "ghost_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ghost_axe"}},
       {"when": "inferno_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/inferno_axe"}},
       {"when": "mega_chainsaw", "model": {"type": "minecraft:model", "model": "mythoscraft:item/mega_chainsaw"}},
       {"when": "newyear_axe", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_axe"}},

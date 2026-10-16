@@ -25,6 +25,7 @@
       {"when": "key_relic2", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_relic2"}},
       {"when": "key_relic3", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_relic3"}},
       {"when": "key_relic4", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_relic4"}},
+      {"when": "key_shadow", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_shadow"}},
       {"when": "key_silvester", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_silvester"}},
       {"when": "key_sky", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_sky"}},
       {"when": "key_space", "model": {"type": "minecraft:model", "model": "mythoscraft:item/key_space"}},

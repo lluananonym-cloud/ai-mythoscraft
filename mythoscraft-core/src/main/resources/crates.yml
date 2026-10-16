@@ -10,7 +10,7 @@
 # model/key-model = Modell-ID im Resource Pack (Standard: crate_<id> / key_<id>)
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 17
+config-version: 18
 
 # Hologramm über jeder Kiste
 hologram:
@@ -884,6 +884,51 @@ crates:
       weight: 0.7
       rarity: MYTHIC
     - reward: gems 25
+      weight: 1
+      rarity: MYTHIC
+  shadow:
+    name: <gradient:#f8fafc:#3b0764:#0b0018><bold>Schatten-Kiste</bold></gradient>
+    key-name: <gradient:#f8fafc:#3b0764><bold>Schatten-Schlüssel</bold></gradient>
+    key-lore:
+    - <gray>Öffnet die <dark_purple>Schatten-Kiste</dark_purple>.
+    - <dark_gray>Die Geist-Werkzeuge mit dem kleinen Schattengeist
+    color: '#3B0764'
+    broadcast-from: EPIC
+    rewards:
+    - reward: coins 1500
+      weight: 20
+      rarity: COMMON
+    - reward: item SOUL_LANTERN 4
+      weight: 14
+      rarity: COMMON
+    - reward: item SCULK 16
+      weight: 12
+      rarity: COMMON
+    - reward: gems 4
+      weight: 10
+      rarity: RARE
+    - reward: key elite 1
+      weight: 8
+      rarity: RARE
+    - reward: tool ghost_shovel
+      weight: 5
+      rarity: EPIC
+    - reward: tool ghost_hoe
+      weight: 5
+      rarity: EPIC
+    - reward: tool ghost_axe
+      weight: 4
+      rarity: EPIC
+    - reward: tool ghost_pickaxe
+      weight: 3
+      rarity: LEGENDARY
+    - reward: tool ghost_sword
+      weight: 3
+      rarity: LEGENDARY
+    - reward: tool companion_shadow
+      weight: 1.5
+      rarity: LEGENDARY
+    - reward: key relic1 1
       weight: 1
       rarity: MYTHIC
   spawner:

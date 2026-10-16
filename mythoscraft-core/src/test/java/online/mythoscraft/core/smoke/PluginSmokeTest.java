@@ -43,7 +43,7 @@ class PluginSmokeTest {
 
     @Test
     void contentIsLoaded() {
-        assertEquals(27, plugin.crates().types().size(), "crate types");
+        assertEquals(28, plugin.crates().types().size(), "crate types");
         for (CrateType type : plugin.crates().types()) {
             assertFalse(type.table().isEmpty(), type.id() + " has no rewards");
             assertNotNull(plugin.crates().createKey(type.id(), 1), "key for " + type.id());

@@ -11,6 +11,7 @@
       {"when": "coral_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/coral_blade"}},
       {"when": "dragon_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/dragon_blade"}},
       {"when": "frost_blade", "model": {"type": "minecraft:model", "model": "mythoscraft:item/frost_blade"}},
+      {"when": "ghost_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/ghost_sword"}},
       {"when": "khopesh", "model": {"type": "minecraft:model", "model": "mythoscraft:item/khopesh"}},
       {"when": "newyear_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/newyear_sword"}},
       {"when": "nutcracker_sword", "model": {"type": "minecraft:model", "model": "mythoscraft:item/nutcracker_sword"}},

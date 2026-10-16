@@ -1,5 +1,6 @@
-config-version: 20
+config-version: 21
 config-reset:
+  21: [items.minepro_totem.lore]
   20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
 general:
@@ -448,6 +449,7 @@ items:
     - <dark_gray>Relic Crate V4
     - '<#e9d5ff>✦ Saves you from death – and stays!'
     - '<gray>Recharges for 10 minutes'
+    - '<dark_gray>Right-click a block: place it'
   blossom_crown:
     name: <gradient:#f9a8d4:#58b83a><bold>Blossom Crown</bold></gradient>
     lore:
@@ -477,6 +479,32 @@ items:
     - <dark_gray>Relic Crate V4
     - '<#ecfccb>✦ Faster bites, double catch & XP'
     - '<gray>Pulls hooked mobs towards you'
+  ghost_sword:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Ghost Sword</bold></gradient>
+    lore:
+    - <dark_gray>Shadow Crate
+    - '<#e9d5ff>✦ 18 % chance: the ghost jumps over'
+    - '<gray>(wither, slowness, +3 damage)'
+  ghost_pickaxe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Ghost Pickaxe</bold></gradient>
+    lore:
+    - <dark_gray>Shadow Crate
+    - '<#e9d5ff>✦ Haste II while held'
+  ghost_axe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Ghost Axe</bold></gradient>
+    lore:
+    - <dark_gray>Shadow Crate
+    - '<#e9d5ff>✦ Haste II while held'
+  ghost_shovel:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Ghost Shovel</bold></gradient>
+    lore:
+    - <dark_gray>Shadow Crate
+    - '<#e9d5ff>✦ Haste II while held'
+  ghost_hoe:
+    name: <gradient:#ffffff:#6d28d9:#0b0018><bold>Ghost Hoe</bold></gradient>
+    lore:
+    - <dark_gray>Shadow Crate
+    - '<#e9d5ff>✦ Tills 3×3 at once'
   list: '<gray>Custom items: <white>{items}'
   unknown: '<red>Unknown item. Available: <white>{items}'
   given: <green>{player} received {item}<green>.
@@ -2082,6 +2110,7 @@ crates:
     slot-line: <dark_gray>▪ {crate} <dark_gray>→ <white>{next} <gray>in <yellow>{time}
     event-line: '<dark_gray>▪ <light_purple>Event pedestal: {event}'
     later: '<gray>After that: {crates}'
+    later-entry: '{crate} <dark_gray>({minutes} min)'
     empty: <dark_gray>empty
     sign: '<gray>⟳ <yellow>{time}
 
@@ -3656,6 +3685,8 @@ trophy:
   not-yours: '<red>Only whoever placed this trophy can pick it up.'
   no-space: '<red>There is no room for the trophy here.'
   no-build: '<red>You cannot place anything here.'
+  totem-placed: '<green>MinePro641 Totem placed. <gray>(Sneak + right-click: pick up)'
+  totem-sign: "<gradient:#7c3aed:#e0a628><bold>✦ MinePro641 Totem ✦</bold></gradient><newline><gray>placed by <white>{player}"
 starter-kit:
   received: '<green>🎁 Your starter kit is here! <gray>Have fun on MythosCraft.'
   coins: '<gray>+ <gold>{amount} coins</gold> starting money'

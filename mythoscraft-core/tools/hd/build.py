@@ -27,6 +27,7 @@ import companions  # noqa: E402
 import swatch  # noqa: E402
 import sprite3d  # noqa: E402
 import relics  # noqa: E402
+import ghost_tools  # noqa: E402
 
 # masks that really are a face keep their picture; every other mask has no face of its own
 FACE_PICTURES = {'pumpkin_mask', 'pumpkin_helmet', 'skull_mask', 'snowman_head'}
@@ -77,6 +78,7 @@ def main():
         done.add(name)
     # relic crate items, spawner booster, shadow companion, zap tools (own module, also runnable on its own)
     done |= relics.build(OUT, PREV, hd.render)
+    done |= ghost_tools.build(OUT, PREV)
     converted = 0
     for path in sorted(glob.glob(os.path.join(src, 'assets', 'mythoscraft', 'models', 'item', '*.json'))):
         name = os.path.splitext(os.path.basename(path))[0]

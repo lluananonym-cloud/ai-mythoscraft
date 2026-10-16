@@ -6,9 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 23
+config-version: 24
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
+  24: [attractions.wheel.daily-limit, attractions.wheel2.daily-limit, attractions.wheel2.segments]
   23: [attractions.wheel, attractions.wheel2]
 
 # Zeitzone für Daily-Belohnung, Tages-Multiplikatoren, Event-Uhrzeiten und Tageswechsel.
@@ -2373,7 +2374,7 @@ farm-orders:
 build:
   blocks-per-tick: 12000
   # Kisten, die auf den Sockeln des Spawns aufgestellt werden (Reihenfolge = Sockel)
-  spawn-crates: [common, vip, elite, mythos, ancient, halloween, frostfest, celestial, inferno, farm, storm, dragon, rang, ocean, forest, sky, crystal, millennium, cosmetic, space, spawner, silvester]
+  spawn-crates: [common, vip, elite, mythos, ancient, halloween, frostfest, celestial, inferno, farm, storm, dragon, rang, ocean, forest, sky, crystal, millennium, cosmetic, space, spawner, silvester, shadow]
   auto-arenas: true
 
 rtp:
@@ -2475,8 +2476,8 @@ attractions:
     # 1× am Tag gratis drehen (plus Extra-Drehs der Ränge)
     free-daily: true
     # bezahlte Drehs pro Spieler und Tag (0 = unbegrenzt) und Wartezeit zwischen zwei Drehs
-    daily-limit: 5
-    cooldown-seconds: 30
+    daily-limit: 15
+    cooldown-seconds: 20
     # Felder (mehr Felder = feiner verteilt). Hauptgewinn: Silvester-Schlüssel (nur hier erhältlich!)
     segments:
       - {reward: "coins 250", weight: 26, block: LIME_CONCRETE}
@@ -2506,8 +2507,8 @@ attractions:
     radius: 6
     segment-size: 1.35
     free-daily: false
-    daily-limit: 3
-    cooldown-seconds: 60
+    daily-limit: 8
+    cooldown-seconds: 40
     segments:
       - {reward: "coins 2500", weight: 26, block: YELLOW_STAINED_GLASS}
       - {reward: "key vip 1", weight: 18, block: LIME_STAINED_GLASS}
@@ -2519,6 +2520,7 @@ attractions:
       - {reward: "gems 12", weight: 3, block: PURPLE_STAINED_GLASS}
       - {reward: "key spawner 1", weight: 2, block: BLUE_STAINED_GLASS}
       - {reward: "key begleiter 1", weight: 1.5, block: CYAN_STAINED_GLASS}
+      - {reward: "key shadow 1", weight: 1.2, block: BLACK_STAINED_GLASS}
       - {reward: "coins 50000", weight: 0.8, block: GOLD_BLOCK}
       - {reward: "key mythos 1", weight: 0.6, block: AMETHYST_BLOCK}
       - {reward: "key relic1 1", weight: 0.4, block: COPPER_BLOCK}
