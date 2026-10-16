@@ -76,10 +76,10 @@ public final class SpawnNpcService {
         }
         Location l = base.clone().add(n.dx() + 0.5, 0, n.dz() + 0.5);
         // stand on the ground there (the spawn may have been built a bit differently)
-        for (int i = 0; i < 4 && !l.getBlock().isPassable(); i++) {
+        for (int i = 0; i < 4 && l.getBlock().getType().isSolid(); i++) {
             l.add(0, 1, 0);
         }
-        for (int i = 0; i < 4 && l.clone().add(0, -1, 0).getBlock().isPassable(); i++) {
+        for (int i = 0; i < 4 && !l.clone().add(0, -1, 0).getBlock().getType().isSolid(); i++) {
             l.add(0, -1, 0);
         }
         l.setYaw(n.yaw());
