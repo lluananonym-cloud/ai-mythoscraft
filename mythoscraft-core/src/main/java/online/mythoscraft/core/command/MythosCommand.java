@@ -87,7 +87,14 @@ public final class MythosCommand extends BaseCommand {
             public void execute(CommandSender sender, String[] args) {
                 String cmd = "/plot admin key " + plugin.serverSync().key();
                 if (sender instanceof org.bukkit.entity.Player) {
-                    plugin.messages().sendRaw(sender, "server-sync.key", "command", cmd);
+                    // the button is built here (not from the text file) so it always holds the real command
+                    var copy = net.kyori.adventure.text.Component.text("[ CLICK TO COPY ]", net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD)
+                            .clickEvent(net.kyori.adventure.text.event.ClickEvent.copyToClipboard(cmd))
+                            .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(net.kyori.adventure.text.Component.text(cmd)));
+                    sender.sendMessage(net.kyori.adventure.text.Component.text("Plot server key: ", net.kyori.adventure.text.format.NamedTextColor.GRAY).append(copy));
+                    sender.sendMessage(net.kyori.adventure.text.Component.text("Paste it in the chat on the plot server (as OP). Only needed once.",
+                            net.kyori.adventure.text.format.NamedTextColor.GRAY));
                 } else {
                     sender.sendMessage("Run this on the plot server: " + cmd);
                 }

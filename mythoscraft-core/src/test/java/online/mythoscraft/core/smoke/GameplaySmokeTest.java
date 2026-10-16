@@ -291,6 +291,25 @@ class GameplaySmokeTest {
     private String syncKey;
 
     @Test
+    void syncKeyCopyButtonHoldsTheCommand() {
+        for (String lang : new String[]{"de", "en"}) {
+            String raw = lang.equals("de") ? plugin.messages().raw("server-sync.key")
+                    : plugin.messages().raw("server-sync.key").replace("'{command}'", "\"{command}\"");
+            net.kyori.adventure.text.Component c = plugin.messages().format(raw, "command", "/plot admin key abc123");
+            String json = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(c);
+            assertTrue(json.contains("/plot admin key abc123"), json);
+        }
+        PlayerMock p = server.addPlayer("Keyowner");
+        p.setOp(true);
+        server.dispatchCommand(p, "mythos synckey");
+        StringBuilder all = new StringBuilder();
+        for (net.kyori.adventure.text.Component m = p.nextComponentMessage(); m != null; m = p.nextComponentMessage()) {
+            all.append(net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(m)).append('\n');
+        }
+        assertTrue(all.toString().contains("\"value\":\"/plot admin key " + plugin.serverSync().key()) || all.toString().contains("/plot admin key " + plugin.serverSync().key()), all.toString());
+    }
+
+    @Test
     void inventoryGoesToThePlotServerAndBack() throws Exception {
         plugin.getConfig().set("web-panel.port", 18085);
         plugin.getConfig().set("web-panel.bind", "127.0.0.1");

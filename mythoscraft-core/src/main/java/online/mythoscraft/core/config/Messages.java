@@ -168,7 +168,9 @@ public final class Messages {
         for (int i = 0; i + 1 < placeholders.length; i += 2) {
             Object v = placeholders[i + 1];
             if (v instanceof CharSequence || v instanceof Number) {
-                template = template.replace("'{" + placeholders[i] + "}'", "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'");
+                String quoted = "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'";
+                String ph = "{" + placeholders[i] + "}";
+                template = template.replace("'" + ph + "'", quoted).replace("\"" + ph + "\"", quoted).replace(":" + ph + ">", ":" + quoted + ">");
             }
         }
         return Text.parse(PLACEHOLDER.matcher(template).replaceAll("<$1>"), resolver(placeholders));

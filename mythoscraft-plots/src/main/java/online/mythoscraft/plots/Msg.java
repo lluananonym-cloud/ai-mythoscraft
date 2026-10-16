@@ -52,7 +52,9 @@ public final class Msg {
         for (int i = 0; i + 1 < pairs.length; i += 2) {
             Object v = pairs[i + 1];
             if (v instanceof CharSequence || v instanceof Number) {
-                text = text.replace("'{" + pairs[i] + "}'", "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'");
+                String quoted = "'" + v.toString().replace("\\", "\\\\").replace("'", "\\'") + "'";
+                String ph = "{" + pairs[i] + "}";
+                text = text.replace("'" + ph + "'", quoted).replace("\"" + ph + "\"", quoted).replace(":" + ph + ">", ":" + quoted + ">");
             }
         }
         TagResolver.Builder b = TagResolver.builder();
