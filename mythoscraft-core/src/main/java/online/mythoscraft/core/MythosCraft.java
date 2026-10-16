@@ -553,6 +553,10 @@ public class MythosCraft extends JavaPlugin {
         }
         cmd.setExecutor(executor);
         cmd.setTabCompleter(executor);
+        org.bukkit.command.Command active = getServer().getCommandMap().getCommand(name);
+        if (active instanceof PluginCommand pc && pc.getPlugin() != this) {
+            getLogger().warning("/" + name + " belongs to " + pc.getPlugin().getName() + " – MythosCraft's version is /mythoscraft:" + name);
+        }
     }
 
     /** Hook from the player data manager once a joining player's data is available. */

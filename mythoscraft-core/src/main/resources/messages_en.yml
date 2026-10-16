@@ -1,4 +1,4 @@
-config-version: 22
+config-version: 23
 config-reset:
   22: [intro]
   21: [items.minepro_totem.lore]
@@ -3941,6 +3941,7 @@ plot-server:
   title: '<gradient:#5ef0a0:#22d3ee><bold>PLOT WORLD</bold></gradient>'
   subtitle: '<gray>Your own plots to build on'
   failed: '<red>The plot server can''t be reached right now. Try again later.'
+  stuck: "<red>The transfer didn't work. <gray>Join the plot world directly: <click:copy_to_clipboard:'{host}'><hover:show_text:'<gray>Click to copy'><white><u>{host}</u></white></hover></click> <dark_gray>(needs Minecraft Java 1.20.5+)"
   disabled: '<red>The plot world is closed right now.'
 newbie:
   tag: '<green><bold>[NEW]</bold></green>'

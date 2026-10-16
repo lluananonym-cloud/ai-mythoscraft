@@ -40,12 +40,22 @@ public final class PlotTransferCommand extends BaseCommand {
             if (!p.isOnline()) {
                 return;
             }
+            plugin.getLogger().info("Transferring " + p.getName() + " to the plot server " + host + ":" + port);
             try {
                 p.transfer(host, port);
             } catch (RuntimeException e) {
-                plugin.messages().send(p, "plot-server.failed");
-                plugin.getLogger().warning("Transfer to plot server failed: " + e.getMessage());
+                plugin.messages().send(p, "plot-server.failed", "host", host, "port", port);
+                plugin.getLogger().warning("Transfer to plot server failed: " + e);
+                return;
             }
+            // still here after a few seconds: the client or the host did not follow the transfer
+            plugin.tasks().later(100, "plot transfer check", () -> {
+                if (p.isOnline()) {
+                    plugin.getLogger().warning(p.getName() + " is still online 5 s after the transfer to " + host + ":" + port
+                            + " – check accepts-transfers=true on the plot server and that the address is reachable.");
+                    plugin.messages().send(p, "plot-server.stuck", "host", host, "port", port);
+                }
+            });
         });
     }
 

@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 22
+config-version: 23
 config-reset:
   22: [intro]
   21: [items.minepro_totem.lore]
@@ -3971,6 +3971,7 @@ plot-server:
   title: '<gradient:#5ef0a0:#22d3ee><bold>PLOT-WELT</bold></gradient>'
   subtitle: '<gray>Eigene Grundstücke zum Bauen'
   failed: '<red>Der Plot-Server ist gerade nicht erreichbar.'
+  stuck: "<red>The transfer didn't work. <gray>Join the plot world directly: <click:copy_to_clipboard:'{host}'><hover:show_text:'<gray>Click to copy'><white><u>{host}</u></white></hover></click> <dark_gray>(needs Minecraft Java 1.20.5+)"
   disabled: '<red>Die Plot-Welt ist gerade geschlossen.'
 newbie:
   tag: '<green><bold>[NEW]</bold></green>'
