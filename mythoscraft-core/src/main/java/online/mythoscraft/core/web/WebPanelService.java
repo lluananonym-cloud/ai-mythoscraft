@@ -389,6 +389,14 @@ public final class WebPanelService {
                     ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                     json(ex, 200, sync(() -> plugin.wiki().snapshot()));
                 }
+                case "/api/public/plotperks" -> {
+                    // plot server: rank + how many plots this player may claim (no secrets – just the rank)
+                    if (limited(ex, 240)) {
+                        json(ex, 429, Map.of("error", "rate"));
+                        return;
+                    }
+                    json(ex, 200, plotPerks(query(ex).getOrDefault("uuid", "")));
+                }
                 case "/api/login/start" -> loginStart(ex);
                 case "/api/apply/decide" -> {
                     if (limited(ex, 30)) {
@@ -873,6 +881,36 @@ public final class WebPanelService {
             m.put(java.net.URLDecoder.decode(kv[0], StandardCharsets.UTF_8), kv.length > 1 ? java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8) : "");
         }
         return m;
+    }
+
+    private Map<String, Object> plotPerks(String id) throws Exception {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            return Map.of("error", "uuid");
+        }
+        online.mythoscraft.core.player.PlayerData.Snapshot snap = plugin.playerData().loadSnapshot(uuid).get(8, TimeUnit.SECONDS);
+        return sync(() -> {
+            var ranks = plugin.ranks();
+            online.mythoscraft.core.rank.Rank r = snap == null ? null : ranks.byId(snap.rankId());
+            boolean expired = snap != null && snap.rankExpires() > 0 && snap.rankExpires() < System.currentTimeMillis();
+            if (online.mythoscraft.core.rank.MythosOwner.is(uuid) && (r == null || expired)) {
+                r = ranks.mythos();
+            } else if (r == null || expired) {
+                r = ranks.defaultRank();
+            }
+            int plots = plugin.rankPerks().plotsFor(r.id());
+            online.mythoscraft.core.rank.Rank mod = ranks.byId("MOD");
+            if (mod != null && r.weight() >= mod.weight()) {
+                plots = Math.max(plots, plugin.getConfig().getInt("plot-server.staff-plots", 5));
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("rank", r.id());
+            out.put("display", r.display());
+            out.put("plots", plots);
+            return out;
+        });
     }
 
     <T> T sync(java.util.concurrent.Callable<T> task) throws Exception {

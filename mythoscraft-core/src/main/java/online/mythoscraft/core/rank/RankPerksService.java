@@ -30,8 +30,8 @@ import java.util.UUID;
 public final class RankPerksService implements Listener {
 
     public record Perks(double jobXp, List<Reward> dailyKeys, int upgradeDiscount, int extraSpins, int extraMana, boolean announce,
-                        String trail, boolean spawnFly, double boosterTime, int homeFly) {
-        static final Perks NONE = new Perks(0, List.of(), 0, 0, 0, false, "", false, 0, 0);
+                        String trail, boolean spawnFly, double boosterTime, int homeFly, boolean baseFly, int plots) {
+        static final Perks NONE = new Perks(0, List.of(), 0, 0, 0, false, "", false, 0, 0, false, 1);
     }
 
     private final MythosCraft plugin;
@@ -60,7 +60,7 @@ public final class RankPerksService implements Listener {
             perks.put(id.toUpperCase(Locale.ROOT), new Perks(r.decimal("job-xp-bonus", 0, 0, 10), keys, r.integer("blacksmith-discount", 0, 0, 90),
                     r.integer("extra-wheel-spins", 0, 0, 20), r.integer("extra-mana", 0, 0, 10_000), r.bool("join-announce", false),
                     r.string("spawn-trail", ""), r.bool("spawn-fly", false), r.decimal("booster-time-bonus", 0, 0, 10),
-                    r.integer("home-fly-radius", 0, 0, 500)));
+                    r.integer("home-fly-radius", 0, 0, 500), r.bool("base-fly", false), r.integer("plots", 1, 0, 1000)));
         }
         plugin.tasks().cancel(this);
         plugin.tasks().repeat(this, 60, 10, "rank perks", this::tick);
@@ -135,7 +135,12 @@ public final class RankPerksService implements Listener {
             boolean atSpawn = plugin.attractionStore().inside(p.getLocation(), 0) && !plugin.arenas().isInArena(p);
             boolean atHome = k.homeFly() > 0 && nearHome(p, k.homeFly()) && !plugin.arenas().isInArena(p)
                     && !plugin.tournaments().isParticipant(p);
-            boolean may = fliesAtSpawn(p) && atSpawn || atHome;
+            // own base (first place after /rtp): by rank, or anywhere near the own homes with an active Fly Booster
+            boolean booster = flyBoosterLeft(p) > 0;
+            boolean atBase = plugin.bases() != null && plugin.bases().mayFlyHere(p, p.getLocation());
+            boolean boosted = booster && !plugin.arenas().isInArena(p) && !plugin.tournaments().isParticipant(p)
+                    && (atBase || nearHome(p, 48));
+            boolean may = fliesAtSpawn(p) && atSpawn || atHome || (atBase && k.baseFly()) || boosted;
             // MYTHOS / CREATOR may fly at the spawn (and CREATOR around the own homes)
             if (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) {
                 if (may && !p.getAllowFlight()) {
@@ -165,6 +170,23 @@ public final class RankPerksService implements Listener {
                 trail(p, k.trail());
             }
         }
+    }
+
+    /** milliseconds of Fly Booster left */
+    public long flyBoosterLeft(Player p) {
+        return Math.max(0, plugin.progress().get(p, "flybooster.until") - System.currentTimeMillis());
+    }
+
+    /** Fly Booster item: adds {@code minutes} of flight in the own base / around the own homes. */
+    public void addFlyBooster(Player p, int minutes) {
+        long start = Math.max(System.currentTimeMillis(), plugin.progress().get(p, "flybooster.until"));
+        plugin.progress().set(p, "flybooster.until", start + minutes * 60_000L);
+    }
+
+    /** plots on the plot server for this rank (rank-perks.<rank>.plots) */
+    public int plotsFor(String rankId) {
+        Perks k = rankId == null ? null : perks.get(rankId.toUpperCase(Locale.ROOT));
+        return k == null ? 1 : k.plots();
     }
 
     private boolean nearHome(Player p, int radius) {

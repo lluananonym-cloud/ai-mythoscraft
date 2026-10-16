@@ -13,8 +13,8 @@ public final class Plot {
     long claimedAt;
     final Set<UUID> trusted = new LinkedHashSet<>();
     final Set<UUID> denied = new LinkedHashSet<>();
-    /** home inside the plot: x, y, z, yaw (null = plot centre) */
-    double[] home;
+    /** border slab chosen with /plot border (null = default) */
+    org.bukkit.Material border;
 
     Plot(PlotId id, UUID owner, String ownerName) {
         this.id = id;

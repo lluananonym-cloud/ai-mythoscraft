@@ -3,7 +3,7 @@
 # Eine Nachricht auf "" setzen, um sie abzuschalten.
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 27
+config-version: 28
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -554,6 +554,12 @@ items:
     name: <light_purple><bold>Gem-Booster</bold>
     lore:
     - <gray>30 Minuten <light_purple>×1,5 Gems</light_purple> – nur für dich.
+    - <dark_gray>Rechtsklick zum Benutzen
+  fly_booster:
+    name: <aqua><bold>Fly-Booster</bold>
+    lore:
+    - <gray>30 Minuten <aqua>Fliegen</aqua> in deiner Base
+    - <gray>und um deine Homes. Stapelt sich.
     - <dark_gray>Rechtsklick zum Benutzen
   coin_booster:
     name: <gold><bold>Coin-Booster</bold>
@@ -2496,6 +2502,8 @@ rank-perks:
   daily-keys: <gold>🎁 Deine täglichen {rank}<gold>-Schlüssel sind da!
   fly-on: <light_purple>✦ Hier kannst du fliegen (doppelt springen).
   fly-off: <gray>✦ Flug aus – du bist außerhalb des Flug-Bereichs.
+  fly-booster-on: "<aqua>✈ Fly-Booster aktiv: <white>{minutes} Min.</white> Fliegen in deiner Base und um deine Homes."
+  fly-booster-left: "<gray>✈ Fly-Booster: noch <white>{minutes} Min.</white>"
 giveaway:
   coins-not-enough: "<red>Du hast keine <white>{amount}</white> Coins für die Verlosung."
   coins-returned: "<gray>Niemand hat mitgemacht – deine <gold>{amount} Coins</gold> sind zurück auf deinem Konto."

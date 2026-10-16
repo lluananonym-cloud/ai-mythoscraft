@@ -6,9 +6,10 @@
 # Nach Änderungen: /mythos reload
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 29
+config-version: 30
 # Bei einem Update werden diese Bereiche einmalig auf die neuen Standardwerte gesetzt (Version: [Pfade])
 config-reset:
+  30: [shop.entries]
   29: [plot-server]
   28: [web-panel.port, web-panel.public-url, web-panel.relay.url, server-links.links]
   25: [language.per-player, language.default]
@@ -455,6 +456,8 @@ join-messages:
   enabled: true
   join: "<dark_gray>[<green>+</green>]</dark_gray> {badge}{name}"
   quit: "<dark_gray>[<red>-</red>]</dark_gray> {badge}{name}"
+  # wer per /plot auf den Plot-Server wechselt
+  to-plots: "<dark_gray>[<aqua>✈</aqua>]</dark_gray> {badge}{name} <gray>went to the plot world"
   first-join: "<gradient:#c084fc:#f59e0b>✦ Willkommen {player} auf MythosCraft! ✦</gradient> <gray>(Spieler #{number})"
   # Titel + Effekte, wenn ein MYTHOS-Spieler online kommt
   mythos-announce: true
@@ -1636,6 +1639,8 @@ plot-server:
   proxy-server: "mythoscraftsmpplot"
   # 2. Versuch, falls der Spieler nach 2 s noch da ist: Knopf, der diesen Befehl vom Spieler aus schickt
   join-command: "mk join mythoscraftsmpplot"
+  # Plots für Teammitglieder (MOD und höher); Spieler: rank-perks.<Rang>.plots
+  staff-plots: 5
 
 # Neue Spieler: [NEW]-Tag, Chat-Helfer, /thank, Belohnung fürs Durchziehen des Guides, Login-Streak beim Join
 newbies:
@@ -1750,18 +1755,23 @@ magic:
 # ───────────────────────────── Rang-Vorteile (zusätzlich zu homes / multiplier / daily-bonus) ──────────────
 # job-xp-bonus: 0.10 = +10 % Job-XP | daily-keys: täglich beim ersten Join | blacksmith-discount: % billiger
 # extra-wheel-spins: zusätzliche Gratis-Drehs am Glücksrad pro Tag | extra-mana | join-announce | spawn-trail (sparkle,
-# stars, mythos) | spawn-fly: Fliegen am Spawn | home-fly-radius: Fliegen in X Blöcken um die eigenen Homes | booster-time-bonus: 0.5 = Booster halten 50 % länger
+# stars, mythos) | plots: Plots auf dem Plot-Server (Standard 1) | base-fly: Fliegen in der eigenen Base | spawn-fly: Fliegen am Spawn | home-fly-radius: Fliegen in X Blöcken um die eigenen Homes | booster-time-bonus: 0.5 = Booster halten 50 % länger
 rank-perks:
   VIP:
+    plots: 2
     job-xp-bonus: 0.05
     blacksmith-discount: 5
     extra-mana: 10
   VIPPLUS:
+    plots: 2
+    base-fly: true
     job-xp-bonus: 0.07
     blacksmith-discount: 7
     extra-mana: 15
     spawn-trail: sparkle
   ELITE:
+    plots: 3
+    base-fly: true
     job-xp-bonus: 0.10
     daily-keys: ["key common 1"]
     blacksmith-discount: 10
@@ -1769,6 +1779,8 @@ rank-perks:
     extra-mana: 20
     spawn-trail: sparkle
   HELD:
+    plots: 3
+    base-fly: true
     job-xp-bonus: 0.12
     daily-keys: ["key vip 1"]
     blacksmith-discount: 12
@@ -1778,6 +1790,8 @@ rank-perks:
     spawn-trail: stars
     booster-time-bonus: 0.1
   LEGENDE:
+    plots: 4
+    base-fly: true
     job-xp-bonus: 0.15
     daily-keys: ["key vip 1", "key common 1"]
     blacksmith-discount: 15
@@ -1787,6 +1801,8 @@ rank-perks:
     spawn-trail: stars
     booster-time-bonus: 0.15
   TITAN:
+    plots: 5
+    base-fly: true
     job-xp-bonus: 0.18
     daily-keys: ["key elite 1"]
     blacksmith-discount: 18
@@ -1796,6 +1812,8 @@ rank-perks:
     spawn-trail: stars
     booster-time-bonus: 0.2
   CREATOR:
+    plots: 5
+    base-fly: true
     # Fliegen am Spawn und im Umkreis (Blöcke) der eigenen Homes
     spawn-fly: true
     home-fly-radius: 40
@@ -1808,6 +1826,8 @@ rank-perks:
     spawn-trail: stars
     booster-time-bonus: 0.15
   MYTHOS:
+    plots: 10
+    base-fly: true
     job-xp-bonus: 0.75
     daily-keys: ["key mythos 2", "key elite 2", "tool coin_booster 1", "tool spell_scroll 1"]
     blacksmith-discount: 50
@@ -2385,6 +2405,7 @@ shop:
     - {reward: "tool find_booster 1", price: 18, slot: 13, page: 3}
     - {reward: "tool mutation_serum 1", price: 15, slot: 14, page: 3}
     - {reward: "tool meteor_shower 1", price: 20, slot: 15, page: 3}
+    - {reward: "tool fly_booster 1", price: 15, slot: 16, page: 3}
     - {reward: "tool mythos_wand 1", price: 60, slot: 19, page: 3}
     - {reward: "tool spell_scroll 1", price: 20, slot: 20, page: 3}
     - {reward: "tool mana_elixir 1", price: 4, slot: 21, page: 3}

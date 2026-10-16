@@ -38,14 +38,10 @@ final class PlayerListener implements Listener {
         if (!plugin.isPlotWorld(p.getWorld()) || !p.hasPlayedBefore() || plugin.getConfig().getBoolean("world.spawn-on-join", false)) {
             p.teleport(plugin.spawn());
         }
-        String mode = plugin.getConfig().getString("world.gamemode", "CREATIVE");
-        try {
-            GameMode gm = GameMode.valueOf(mode.toUpperCase(java.util.Locale.ROOT));
-            if (!plugin.bypass(p) || p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) {
-                p.setGameMode(gm);
-            }
-        } catch (IllegalArgumentException ignored) {
-            plugin.getLogger().warning("world.gamemode: unknown game mode " + mode);
+        // everyone builds in creative here (own inventory of this server – nothing comes over from survival)
+        GameMode gm = mode();
+        if (p.getGameMode() != gm && !(plugin.bypass(p) && p.getGameMode() == GameMode.SPECTATOR)) {
+            p.setGameMode(gm);
         }
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
@@ -54,10 +50,32 @@ final class PlayerListener implements Listener {
         }, 40);
     }
 
+    private GameMode mode() {
+        String mode = plugin.getConfig().getString("world.gamemode", "CREATIVE");
+        try {
+            return GameMode.valueOf(mode.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            plugin.getLogger().warning("world.gamemode: unknown game mode " + mode);
+            return GameMode.CREATIVE;
+        }
+    }
+
+    /** the game mode stays what the plot world uses (team members may still go spectator) */
+    @EventHandler(ignoreCancelled = true)
+    public void onGameMode(org.bukkit.event.player.PlayerGameModeChangeEvent e) {
+        if (!plugin.getConfig().getBoolean("world.force-gamemode", true)) {
+            return;
+        }
+        GameMode gm = mode();
+        if (e.getNewGameMode() != gm && !(plugin.bypass(e.getPlayer()) && e.getNewGameMode() == GameMode.SPECTATOR)) {
+            e.setCancelled(true);
+        }
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         current.remove(e.getPlayer().getUniqueId());
-        e.quitMessage(plugin.msg().get("quit", "player", e.getPlayer().getName()));
+        e.quitMessage(plugin.msg().get(plugin.hopped(e.getPlayer()) ? "quit-to-main" : "quit", "player", e.getPlayer().getName()));
     }
 
     @EventHandler

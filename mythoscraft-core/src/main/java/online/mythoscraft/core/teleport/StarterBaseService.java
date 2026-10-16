@@ -137,6 +137,12 @@ public final class StarterBaseService extends BaseCommand implements Listener {
         return !plugin.regions().at(l).isEmpty() || plugin.attractionStore().inside(l, radius + 16);
     }
 
+    /** standing in the own base (or one the player is trusted in)? – for base flight */
+    public boolean mayFlyHere(Player p, Location l) {
+        Base b = at(l);
+        return b != null && (b.owner.equals(p.getUniqueId()) || b.trusted.contains(p.getUniqueId()));
+    }
+
     private boolean mayEdit(Player p, Location l) {
         Base b = at(l);
         return b == null || b.owner.equals(p.getUniqueId()) || b.trusted.contains(p.getUniqueId()) || p.hasPermission("mythos.admin");

@@ -17,6 +17,7 @@
       {"when": "climbing_gloves", "model": {"type": "minecraft:model", "model": "mythoscraft:item/climbing_gloves"}},
       {"when": "cloud_bottle", "model": {"type": "minecraft:model", "model": "mythoscraft:item/cloud_bottle"}},
       {"when": "coin_booster", "model": {"type": "minecraft:model", "model": "mythoscraft:item/coin_booster"}},
+      {"when": "fly_booster", "model": {"type": "minecraft:model", "model": "mythoscraft:item/fly_booster"}},
       {"when": "coin_pouch", "model": {"type": "minecraft:model", "model": "mythoscraft:item/coin_pouch"}},
       {"when": "comet_shard", "model": {"type": "minecraft:model", "model": "mythoscraft:item/comet_shard"}},
       {"when": "companion_bee", "model": {"type": "minecraft:model", "model": "mythoscraft:item/companion_bee"}},

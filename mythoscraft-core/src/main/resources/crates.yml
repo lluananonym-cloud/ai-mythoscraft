@@ -10,7 +10,9 @@
 # model/key-model = Modell-ID im Resource Pack (Standard: crate_<id> / key_<id>)
 
 # Nicht ändern: Damit ergänzt das Plugin nach Updates automatisch neue Einstellungen.
-config-version: 18
+config-version: 19
+config-reset:
+  19: [crates.vip.rewards]
 
 # Hologramm über jeder Kiste
 hologram:
@@ -72,6 +74,7 @@ crates:
     broadcast-from: LEGENDARY
     rewards:
       - {reward: "tool coin_booster 1", weight: 6, rarity: RARE}
+      - {reward: "tool fly_booster 1", weight: 4, rarity: RARE}
       - {reward: "tool mutation_serum 1", weight: 3, rarity: EPIC}
       - {reward: "coins 500", weight: 35, rarity: COMMON}
       - {reward: "coins 1500", weight: 15, rarity: RARE}

@@ -31,6 +31,14 @@ public final class MythosPlots extends JavaPlugin {
     private World world;
     private Material borderFree;
     private Material borderClaimed;
+    private RankLimits ranks;
+    /** who used /smp recently – the quit message then says "went back to MythosCraft" */
+    private final java.util.Map<java.util.UUID, Long> hops = new java.util.concurrent.ConcurrentHashMap<>();
+
+    boolean hopped(Player p) {
+        Long at = hops.remove(p.getUniqueId());
+        return at != null && System.currentTimeMillis() - at < 120_000;
+    }
 
     @Override
     public void onEnable() {
@@ -52,6 +60,9 @@ public final class MythosPlots extends JavaPlugin {
         getCommand("smp").setExecutor(back);
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        ranks = new RankLimits(this);
+        getServer().getPluginManager().registerEvents(ranks, this);
+        getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
         pack = new PackHost(this);
         pack.start();
         getLogger().info("Plot world '" + world.getName() + "' ready – " + store.all().size() + " plots claimed.");
@@ -159,6 +170,7 @@ public final class MythosPlots extends JavaPlugin {
             return Integer.MAX_VALUE;
         }
         int max = getConfig().getInt("plots.max-per-player", 1);
+        max = Math.max(max, ranks == null ? 0 : ranks.plots(p));      // MythosCraft rank (rank-perks.<rank>.plots)
         for (int n = 1; n <= 100; n++) {
             if (p.hasPermission("mythosplots.plots." + n)) {
                 max = Math.max(max, n);
@@ -167,21 +179,34 @@ public final class MythosPlots extends JavaPlugin {
         return max;
     }
 
-    public Location home(Plot p) {
-        if (p.home != null) {
-            return new Location(world, p.home[0], p.home[1], p.home[2], (float) p.home[3], 0);
-        }
-        return entrance(p.id);
+    public RankLimits ranks() {
+        return ranks;
     }
 
-    /** Standing spot on the road in front of a plot, looking into it. */
+    /**
+     * The plot entrance: an invisible, fixed spot just inside the plot (middle of the side facing the road), looking
+     * into the plot. Everyone – the owner too – arrives here; it can't be moved. If something was built on it, the
+     * player stands on top of it.
+     */
     public Location entrance(PlotId id) {
-        return new Location(world, grid.centerX(id) + 0.5, PlotGrid.SURFACE + 1, grid.minZ(id) - grid.road() / 2.0, 0, 10);
+        int x = grid.centerX(id);
+        int z = grid.minZ(id) + 1;
+        int y = PlotGrid.SURFACE + 1;
+        int top = world.getMaxHeight() - 2;
+        while (y < top && (!world.getBlockAt(x, y, z).isPassable() || !world.getBlockAt(x, y + 1, z).isPassable())) {
+            y++;
+        }
+        return new Location(world, x + 0.5, y, z + 0.5, 0, 10);
     }
 
-    /** Border slabs around a plot: different block for claimed plots. */
+    public Material defaultBorder(boolean claimed) {
+        return claimed ? borderClaimed : borderFree;
+    }
+
+    /** Border slabs around a plot: different block for claimed plots, or the one the owner chose. */
     public void updateBorder(PlotId id, boolean claimed) {
-        Material m = claimed ? borderClaimed : borderFree;
+        Plot plot = claimed ? store.get(id) : null;
+        Material m = plot != null && plot.border != null ? plot.border : claimed ? borderClaimed : borderFree;
         int y = PlotGrid.SURFACE + 1;
         for (int x = grid.minX(id) - 1; x <= grid.maxX(id) + 1; x++) {
             world.getBlockAt(x, y, grid.minZ(id) - 1).setType(m, false);
@@ -235,6 +260,7 @@ public final class MythosPlots extends JavaPlugin {
 
     /** Back to the main server: proxy "Connect" first, after 2 s the /mk join button. */
     public void backToMain(Player p) {
+        hops.put(p.getUniqueId(), System.currentTimeMillis());
         String server = getConfig().getString("main-server.proxy-server", "mythoscraftsmp").trim();
         String cmd = getConfig().getString("main-server.join-command", "mk join mythoscraftsmp").trim();
         String full = cmd.startsWith("/") ? cmd : "/" + cmd;

@@ -75,9 +75,9 @@ public final class PlotStore {
                 p.claimedAt = c.getLong("claimed", System.currentTimeMillis());
                 c.getStringList("trusted").forEach(u -> p.trusted.add(UUID.fromString(u)));
                 c.getStringList("denied").forEach(u -> p.denied.add(UUID.fromString(u)));
-                List<Double> home = c.getDoubleList("home");
-                if (home.size() == 4) {
-                    p.home = new double[]{home.get(0), home.get(1), home.get(2), home.get(3)};
+                String border = c.getString("border");
+                if (border != null) {
+                    p.border = org.bukkit.Material.matchMaterial(border);
                 }
                 plots.put(id, p);
             } catch (RuntimeException e) {
@@ -95,8 +95,8 @@ public final class PlotStore {
             y.set(k + ".claimed", p.claimedAt);
             y.set(k + ".trusted", p.trusted.stream().map(UUID::toString).toList());
             y.set(k + ".denied", p.denied.stream().map(UUID::toString).toList());
-            if (p.home != null) {
-                y.set(k + ".home", List.of(p.home[0], p.home[1], p.home[2], p.home[3]));
+            if (p.border != null) {
+                y.set(k + ".border", p.border.name());
             }
         }
         try {

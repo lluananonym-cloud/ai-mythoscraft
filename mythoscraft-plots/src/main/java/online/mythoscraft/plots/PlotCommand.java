@@ -1,7 +1,6 @@
 package online.mythoscraft.plots;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -21,7 +20,7 @@ import java.util.UUID;
 final class PlotCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of("auto", "claim", "home", "list", "visit", "info", "add", "remove",
-            "deny", "undeny", "sethome", "unclaim", "clear", "spawn", "help");
+            "deny", "undeny", "border", "unclaim", "clear", "spawn", "help");
 
     private final MythosPlots plugin;
 
@@ -48,7 +47,13 @@ final class PlotCommand implements TabExecutor {
             case "remove", "untrust" -> member(p, args, false);
             case "deny" -> deny(p, args, true);
             case "undeny" -> deny(p, args, false);
-            case "sethome" -> setHome(p);
+            case "sethome", "setentrance" -> plugin.msg().send(p, "entrance-fixed");
+            case "border", "color", "colour", "rand" -> {
+                Plot plot = own(p);
+                if (plot != null) {
+                    BorderMenu.open(plugin, p, plot);
+                }
+            }
             case "unclaim", "delete" -> unclaim(p, args);
             case "clear", "reset" -> clear(p, args);
             case "spawn" -> p.teleport(plugin.spawn());
@@ -136,7 +141,7 @@ final class PlotCommand implements TabExecutor {
             // first plot
         }
         Plot plot = own.get(Math.max(0, Math.min(own.size() - 1, n - 1)));
-        p.teleport(plugin.home(plot));
+        p.teleport(plugin.entrance(plot.id()));
         plugin.msg().send(p, "teleported", "id", plot.id());
     }
 
@@ -251,17 +256,6 @@ final class PlotCommand implements TabExecutor {
         }
         plugin.store().save();
         plugin.msg().send(p, deny ? "denied" : "undenied", "player", args[1]);
-    }
-
-    private void setHome(Player p) {
-        Plot plot = own(p);
-        if (plot == null) {
-            return;
-        }
-        Location l = p.getLocation();
-        plot.home = new double[]{l.getX(), l.getY(), l.getZ(), l.getYaw()};
-        plugin.store().save();
-        plugin.msg().send(p, "home-set");
     }
 
     private void unclaim(Player p, String[] args) {

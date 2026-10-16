@@ -6,12 +6,16 @@ main-server:
   # server name at MineKeep
   proxy-server: mythoscraftsmp
   join-command: "mk join mythoscraftsmp"
+  # website of the main server (MythosCraft plugin) – tells how many plots a player's rank gives
+  api-url: "https://mythoscraftsmp.minekeep.dev:2083"
 
 world:
   # created automatically with its own generator (plot raster) – no flat world or build command needed
   name: plots
   # CREATIVE (build freely, CityBuild plot style) or SURVIVAL
   gamemode: CREATIVE
+  # nobody can switch to another game mode here (team members may still use spectator)
+  force-gamemode: true
   always-day: true
   no-weather: true
   pvp: false
@@ -23,7 +27,8 @@ plots:
   # plot size in blocks and road width – do NOT change once plots are claimed
   size: 48
   road: 7
-  # plots per player; more with permission mythosplots.plots.<n> (e.g. mythosplots.plots.3)
+  # plots per player; more by MythosCraft rank (main plugin: rank-perks.<rank>.plots)
+  # or with permission mythosplots.plots.<n> (e.g. mythosplots.plots.3) – the highest counts
   max-per-player: 1
   road-block: POLISHED_ANDESITE
   road-edge-block: STONE_BRICKS

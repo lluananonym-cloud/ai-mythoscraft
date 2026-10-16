@@ -33,6 +33,7 @@ public final class DisplayService implements Listener {
     private boolean joinMessages = true;
     private String joinFormat = "";
     private String quitFormat = "";
+    private String plotFormat = "";
     private String firstJoinFormat = "";
     private boolean mythosAnnounce = true;
     private String teamTextPrefix = "&c&lTEAM &8| ";
@@ -48,6 +49,7 @@ public final class DisplayService implements Listener {
         joinMessages = jm.bool("enabled", true);
         joinFormat = jm.string("join", "<dark_gray>[<green>+</green>]</dark_gray> {badge}{name}");
         quitFormat = jm.string("quit", "<dark_gray>[<red>-</red>]</dark_gray> {badge}{name}");
+        plotFormat = jm.string("to-plots", "<dark_gray>[<aqua>✈</aqua>]</dark_gray> {badge}{name} <gray>went to the plot world");
         firstJoinFormat = jm.string("first-join", "");
         mythosAnnounce = jm.bool("mythos-announce", true);
         teamTextPrefix = root.string("ranks.team-prefix", "&c&lTEAM &8| ");
@@ -165,9 +167,11 @@ public final class DisplayService implements Listener {
         if (joinMessages && !player.hasMetadata("vanish")) {
             Rank rank = plugin.ranks().rankOf(player);
             boolean staff = player.hasPermission(Perms.TEAM_BADGE);
+            // left through /plot: not "left the server" but "went to the plot world"
+            String format = online.mythoscraft.core.teleport.PlotTransferCommand.hopped(player) && !plotFormat.isBlank() ? plotFormat : quitFormat;
             for (Player viewer : Bukkit.getOnlinePlayers()) {
                 if (!viewer.equals(player)) {
-                    viewer.sendMessage(plugin.messages().format(quitFormat, "badge", prefix(rank, staff, hasPack(viewer)),
+                    viewer.sendMessage(plugin.messages().format(format, "badge", prefix(rank, staff, hasPack(viewer)),
                             "name", Component.text(player.getName(), rank.teamColor()), "player", player.getName()));
                 }
             }

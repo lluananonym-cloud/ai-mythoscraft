@@ -66,6 +66,7 @@ public enum CustomItem {
     GEM_BOOSTER(spec("gem_booster", Material.PAPER, EPIC, CONSUMABLE, CORE).stack(16)),
     XP_BOOSTER(spec("xp_booster", Material.PAPER, RARE, CONSUMABLE, CORE).stack(16)),
     FIND_BOOSTER(spec("find_booster", Material.PAPER, EPIC, CONSUMABLE, CORE).stack(16)),
+    FLY_BOOSTER(spec("fly_booster", Material.PAPER, RARE, CONSUMABLE, CORE).stack(16)),
     MUTATION_SERUM(spec("mutation_serum", Material.PAPER, EPIC, CONSUMABLE, CORE).stack(16)),
     METEOR_SHOWER(spec("meteor_shower", Material.PAPER, EPIC, CONSUMABLE, CORE).stack(16)),
     // Mythos magic

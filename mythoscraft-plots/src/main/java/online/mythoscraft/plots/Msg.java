@@ -30,6 +30,14 @@ public final class Msg {
         if (in != null) {
             defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
+        // texts of an older version: replaced by the new ones from the jar (old file kept as messages-old.yml)
+        if (texts.getInt("messages-version", 1) < defaults.getInt("messages-version", 1)) {
+            File old = new File(plugin.getDataFolder(), "messages-old.yml");
+            old.delete();
+            f.renameTo(old);
+            plugin.saveResource("messages.yml", true);
+            texts = YamlConfiguration.loadConfiguration(f);
+        }
     }
 
     private String raw(String key) {

@@ -310,6 +310,13 @@ public final class BoosterService implements Listener {
             event.setCancelled(true);
             AbilitySupport.consumeOne(item);
             start(p, booster);
+        } else if (type == CustomItem.FLY_BOOSTER) {
+            event.setCancelled(true);
+            AbilitySupport.consumeOne(item);
+            plugin.rankPerks().addFlyBooster(p, 30);
+            long minutes = (plugin.rankPerks().flyBoosterLeft(p) + 59_999) / 60_000;
+            plugin.messages().send(p, "rank-perks.fly-booster-on", "minutes", minutes);
+            online.mythoscraft.core.util.SoundSpec.of("entity.phantom.flap", 0.8f, 1.4f).play(p);
         } else if (type == CustomItem.MUTATION_SERUM) {
             event.setCancelled(true);
             AbilitySupport.consumeOne(item);

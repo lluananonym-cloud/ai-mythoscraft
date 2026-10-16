@@ -1,4 +1,4 @@
-config-version: 27
+config-version: 28
 config-reset:
   27: [plot-server]
   22: [intro]
@@ -2009,6 +2009,12 @@ items:
     lore:
     - <dark_gray>New Year collection
     - '<gray>In the off hand: +25% XP in all jobs'
+  fly_booster:
+    name: <aqua><bold>Fly Booster</bold>
+    lore:
+    - <gray>30 minutes of <aqua>flight</aqua> in your own base
+    - <gray>and around your homes. Stacks up.
+    - <dark_gray>Right click to use
   coin_booster:
     name: <gold><bold>Coin Booster</bold>
     lore:
@@ -3637,6 +3643,8 @@ rank-perks:
   daily-keys: <gold>🎁 Your daily {rank}<gold> keys have arrived!
   fly-on: <light_purple>✦ You can fly here (double jump).
   fly-off: <gray>✦ Flight off – you left the flight area.
+  fly-booster-on: "<aqua>✈ Fly Booster active: <white>{minutes} min</white> of flight in your base and around your homes."
+  fly-booster-left: "<gray>✈ Fly Booster: <white>{minutes} min</white> left."
 giveaway:
   coins-not-enough: "<red>You don't have <white>{amount}</white> coins for the giveaway."
   coins-returned: "<gray>Nobody joined – your <gold>{amount} coins</gold> are back on your account."

@@ -24,6 +24,14 @@ import java.util.List;
  */
 public final class PlotTransferCommand extends BaseCommand {
 
+    /** who used /plot recently – their quit is shown as "went to the plot world" */
+    private static final java.util.Map<java.util.UUID, Long> HOPS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static boolean hopped(Player p) {
+        Long at = HOPS.remove(p.getUniqueId());
+        return at != null && System.currentTimeMillis() - at < 120_000;
+    }
+
     public PlotTransferCommand(MythosCraft plugin) {
         super(plugin);
     }
@@ -40,6 +48,7 @@ public final class PlotTransferCommand extends BaseCommand {
         String server = cfg.getString("plot-server.proxy-server", "mythoscraftsmpplot").trim();
         String cmd = command.startsWith("/") ? command : "/" + command;
         plugin.messages().send(p, "plot-server.sending");
+        HOPS.put(p.getUniqueId(), System.currentTimeMillis());
         // 1) straight away through the proxy (BungeeCord "Connect" message – understood by Velocity/Bungee based proxies)
         connect(plugin, p, server);
         // 2) still here after 2 s: the proxy did not move him – the button lets his client send /mk join itself
