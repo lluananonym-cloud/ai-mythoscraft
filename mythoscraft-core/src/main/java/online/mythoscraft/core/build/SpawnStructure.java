@@ -16,7 +16,7 @@ public final class SpawnStructure {
 
     public static final int RADIUS = 128;
     /** Version of the layout (data/builds.yml) – used to remove the right old spawn on a rebuild. */
-    public static final int VERSION = 11;
+    public static final int VERSION = 12;
     /** Number of crate pedestals (all crates of the plugin fit). */
     public static final int PEDESTALS = 22;
     /** Number of rings of the elytra course. */
@@ -804,6 +804,12 @@ public final class SpawnStructure {
         }
         p.marker("mentor", cx + 0.5, 1, cz + 0.5, yaw(0, -1));
         p.marker("starter_board", cx + 0.5, 4.3, cz + 4.5, 0f);
+        // helper NPCs around Lia (instead of text holograms with commands)
+        p.marker("npc_rtp", cx + 2.5, 1, cz + 7.5, yaw(0, -1));
+        p.marker("npc_plot", cx - 4.5, 1, cz + 1.5, yaw(1, 0));
+        p.marker("npc_jobs", cx + 4.5, 1, cz + 1.5, yaw(-1, 0));
+        p.marker("npc_crates", cx - 2.5, 1, cz - 4.5, yaw(0, 1));
+        p.marker("npc_idle", cx + 6.5, 1, cz - 7.5, yaw(-1, 1));
         rtpPortal(p, cx, cz + 12);
     }
 

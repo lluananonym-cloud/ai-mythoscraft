@@ -209,6 +209,9 @@ public final class RtpService {
                     }
                 }
                 plugin.messages().send(player, "rtp.arrived", "x", spot.getBlockX(), "z", spot.getBlockZ(), "world", world.getName());
+                if (plugin.bases() != null) {
+                    plugin.bases().afterRtp(player, spot);
+                }
                 if (onSuccess != null) {
                     onSuccess.run();
                 }

@@ -96,6 +96,9 @@ public final class GuideService extends BaseCommand implements Listener {
         Run r = new Run(p, step);
         running.put(p.getUniqueId(), r);
         p.showBossBar(r.bar);
+        if (plugin.newbies() != null && step == Step.STARTER) {
+            plugin.messages().send(p, "newbie.guide-promise", "reward", plugin.newbies().describe());
+        }
         enter(r, step);
     }
 
@@ -135,6 +138,9 @@ public final class GuideService extends BaseCommand implements Listener {
         if (completed) {
             plugin.progress().set(r.player, STEP, DONE);
             plugin.messages().sendRaw(r.player, "guide.finish");
+            if (plugin.newbies() != null) {
+                plugin.newbies().guideFinished(r.player);
+            }
         }
     }
 
@@ -281,6 +287,9 @@ public final class GuideService extends BaseCommand implements Listener {
                     finish(r, false);
                     plugin.progress().set(p, STEP, DONE);
                     plugin.messages().send(p, "guide.stopped");
+                    if (plugin.newbies() != null) {
+                        plugin.newbies().guideSkipped(p);
+                    }
                 }
             }
             default -> {

@@ -115,9 +115,17 @@ public final class IntroService extends BaseCommand implements Listener {
         if (crate != null) {
             list.add(new Scene("crates", crate, 6, 3.5));
         }
+        Location relic = plugin.attractionStore().first("relic_crate");
+        if (relic != null) {
+            list.add(new Scene("relic", relic.clone().add(0, 1, 0), 6, 3));
+        }
         Location wheel = plugin.attractionStore().first("wheel");
         if (wheel != null) {
             list.add(new Scene("wheel", wheel, 9, 1.5));
+        }
+        Location mentor = plugin.attractionStore().first("mentor");
+        if (mentor != null) {
+            list.add(new Scene("companions", mentor.clone().add(0, 1.5, 0), 7, 3));
         }
         List<Location> statues = plugin.attractionStore().all("statue");
         if (!statues.isEmpty()) {
@@ -126,6 +134,10 @@ public final class IntroService extends BaseCommand implements Listener {
         Location parkour = plugin.attractionStore().first("parkour_start");
         if (parkour != null) {
             list.add(new Scene("games", parkour.clone().add(0, 2, 0), 10, 6));
+        }
+        Location portal = plugin.attractionStore().first("rtp_portal");
+        if (portal != null) {
+            list.add(new Scene("wild", portal.clone().add(0, 1.5, 0), 8, 3.5));
         }
         list.add(new Scene("start", center.clone().add(0, 2, 0), 14, 7));
         return list;
@@ -187,6 +199,9 @@ public final class IntroService extends BaseCommand implements Listener {
             p.teleport(at);
             p.setSpectatorTarget(r.cam);
         }
+        if (r.tick % 20 == 0) {
+            plugin.messages().actionBar(p, "intro.skip-hint");
+        }
         if (++r.tick >= SCENE_TICKS) {
             r.tick = 0;
             if (++r.scene >= r.scenes.size()) {
@@ -218,6 +233,16 @@ public final class IntroService extends BaseCommand implements Listener {
             SoundSpec.of("ui.toast.challenge_complete", 0.8f, 1.2f).play(p);
             // the glowing trail takes over: starter kit → wheel → games → crates → RTP
             plugin.tasks().later(60, "guide after intro", () -> plugin.guide().begin(p));
+        }
+    }
+
+    /** Sneak = skip (in spectator mode sneaking would leave the camera anyway). */
+    @EventHandler
+    public void onSneak(org.bukkit.event.player.PlayerToggleSneakEvent event) {
+        Run r = running.get(event.getPlayer().getUniqueId());
+        if (r != null && event.isSneaking() && (r.scene > 0 || r.tick > 10)) {
+            event.setCancelled(true);
+            finish(r, false);
         }
     }
 

@@ -101,6 +101,10 @@ class StructureTest {
                 "spawn exceeds its clear radius");
         // relic pedestal, second wheel and the wilderness portal of the newcomer guide
         assertEquals(1, p.markers("wheel2").size());
+        for (String npc : new String[]{"npc_rtp", "npc_plot", "npc_jobs", "npc_crates", "npc_idle"}) {
+            assertEquals(1, p.markers(npc).size(), npc);
+            assertStandable(p, p.markers(npc).get(0), npc);
+        }
         assertEquals(1, p.markers("relic_crate").size());
         assertEquals(5, p.markers("rtp_portal").size());
         for (BlockPlan.Marker plate : p.markers("rtp_portal")) {

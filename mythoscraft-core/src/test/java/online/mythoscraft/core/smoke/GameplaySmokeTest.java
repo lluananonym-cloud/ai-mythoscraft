@@ -390,6 +390,8 @@ class GameplaySmokeTest {
         });
         fake.start();
         try {
+            plugin.getConfig().set("newbies.auto-daily-on-join", false);   // the login reward would change the coins too
+            plugin.reloadAll();
             PlayerMock fan = join("Relayfan");
             online.mythoscraft.core.player.PlayerData d = plugin.playerData().get(fan);
             long before = online.mythoscraft.core.economy.Currency.COINS.get(d);
@@ -873,7 +875,7 @@ class GameplaySmokeTest {
             chat.append(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c));
         }
         assertTrue(chat.toString().contains("Lia"), "Lia talks: " + chat);
-        assertTrue(chat.toString().contains("/new"), "starting steps mention the starter kit");
+        assertTrue(chat.toString().contains("/starter"), "starting steps mention the starter kit");
     }
 
     @Test

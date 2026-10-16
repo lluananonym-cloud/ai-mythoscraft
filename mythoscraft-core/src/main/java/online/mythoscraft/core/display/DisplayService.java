@@ -85,6 +85,9 @@ public final class DisplayService implements Listener {
         if (plugin.clans() != null && plugin.clans().of(player.getUniqueId()) != null) {
             out = out.append(Component.space()).append(plugin.clans().tag(player.getUniqueId()));
         }
+        if (plugin.newbies() != null) {
+            out = out.append(plugin.newbies().tag(player));
+        }
         if (plugin.attractions() != null && plugin.progress().loaded(player) && plugin.attractions().music().streaming(player)) {
             out = out.append(Component.space()).append(plugin.messages().get("stream.badge"));
         }

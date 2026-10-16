@@ -117,6 +117,9 @@ public final class CompanionFarmService implements Listener {
         Location goal;
         int idleUntil;
         boolean moving;
+        /** last time the station worked (ms) – the gap is made up as offline progress */
+        long lastSeen;
+        int offlineGot;
         /** end of the running work time, 0 = stopped */
         long until;
         final List<ItemStack> loot = new ArrayList<>();
@@ -172,7 +175,7 @@ public final class CompanionFarmService implements Listener {
 
     private static final int MAX_STACKS = 54;
     private static final int MIN_MINUTES = 5;
-    private static final int MAX_MINUTES = 240;
+    private static final int MAX_MINUTES = 720;      // up to 12 h – also overnight while offline
     private static final int MIN_RADIUS = 2;
     /** walking speed in blocks per movement step (every 2 ticks) */
     private static final double STEP = 0.2;
@@ -414,6 +417,7 @@ public final class CompanionFarmService implements Listener {
             if (s.tick % 2 == 0) {
                 label(s);
             }
+            catchUp(s, false);
             boolean running = s.running();
             animate(s, running);
             if (!running) {
@@ -441,6 +445,128 @@ public final class CompanionFarmService implements Listener {
                 work(s, base);
             }
         }
+    }
+
+    // ------------------------------------------------------------------------------------------- offline progress
+    /** items per hour while nobody is near (chunk unloaded, server off) – before upgrades */
+    private static int offlinePerHour(Job job) {
+        return switch (job) {
+            case CROPS -> 220;
+            case FISH -> 50;
+            case TREES -> 70;
+            case PLANTS -> 180;
+            case ORES -> 24;
+            case MOBS -> 60;
+        };
+    }
+
+    private static List<ItemStack> offlineDrop(Job job, ThreadLocalRandom r) {
+        return switch (job) {
+            case CROPS -> List.of(new ItemStack(switch (r.nextInt(4)) {
+                case 0 -> Material.WHEAT;
+                case 1 -> Material.CARROT;
+                case 2 -> Material.POTATO;
+                default -> Material.BEETROOT;
+            }));
+            case FISH -> List.of(new ItemStack(r.nextInt(10) < 6 ? Material.COD : r.nextInt(10) < 8 ? Material.SALMON : Material.PUFFERFISH));
+            case TREES -> r.nextInt(12) == 0 ? List.of(new ItemStack(Material.OAK_SAPLING)) : r.nextInt(20) == 0
+                    ? List.of(new ItemStack(Material.APPLE)) : List.of(new ItemStack(Material.OAK_LOG));
+            case PLANTS -> List.of(new ItemStack(switch (r.nextInt(5)) {
+                case 0 -> Material.SUGAR_CANE;
+                case 1 -> Material.CACTUS;
+                case 2 -> Material.BAMBOO;
+                case 3 -> Material.MELON_SLICE;
+                default -> Material.PUMPKIN;
+            }));
+            case ORES -> List.of(new ItemStack(switch (r.nextInt(20)) {
+                case 0, 1, 2, 3, 4, 5, 6, 7 -> Material.COAL;
+                case 8, 9, 10, 11, 12 -> Material.RAW_IRON;
+                case 13, 14, 15 -> Material.RAW_COPPER;
+                case 16, 17 -> Material.RAW_GOLD;
+                case 18 -> Material.REDSTONE;
+                default -> Material.DIAMOND;
+            }));
+            case MOBS -> List.of(new ItemStack(switch (r.nextInt(5)) {
+                case 0 -> Material.ROTTEN_FLESH;
+                case 1 -> Material.BONE;
+                case 2 -> Material.STRING;
+                case 3 -> Material.GUNPOWDER;
+                default -> Material.ARROW;
+            }));
+        };
+    }
+
+    /**
+     * Makes up for the time the station could not work (chunk unloaded or server off) while it was switched on:
+     * a calmer, simulated production with the same upgrades. Called while ticking and when the owner joins.
+     */
+    private void catchUp(Station s, boolean notify) {
+        long now = System.currentTimeMillis();
+        long last = s.lastSeen;
+        s.lastSeen = now;
+        if (last <= 0 || s.until <= last) {
+            return;
+        }
+        long gap = Math.min(now, s.until) - last;
+        if (gap < 15_000) {
+            return;
+        }
+        double perHour = offlinePerHour(s.job) * (1 + 0.15 * s.level(Upgrade.SPEED)) * (1 + 0.1 * s.level(Upgrade.POWER));
+        int items = (int) Math.min(64 * MAX_STACKS, perHour * gap / 3_600_000.0);
+        if (items <= 0) {
+            return;
+        }
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        int before = totalItems(s);
+        for (int i = 0; i < items && s.stacks() <= s.limit; i++) {
+            List<ItemStack> drop = offlineDrop(s.job, r);
+            if (s.stacks() >= s.limit && s.loot.stream().noneMatch(h -> h.isSimilar(drop.get(0)) && h.getAmount() < h.getMaxStackSize())) {
+                break;
+            }
+            addLoot(s, drop);
+        }
+        int got = totalItems(s) - before;
+        if (s.job == Job.FISH || s.job == Job.MOBS || s.job == Job.ORES) {
+            s.xp += got / 2;
+        }
+        // a few OP-find chances for the simulated work, too
+        if (!opFinds.isEmpty() && got > 0) {
+            double chance = (opChance + opChancePerLevel * s.level(Upgrade.LUCK)) * Math.min(400, got / 2.0);
+            if (r.nextDouble() < chance) {
+                opFind(s);
+            }
+        }
+        if (got > 0) {
+            dirty = true;
+            s.offlineGot += got;
+            Player owner = Bukkit.getPlayer(s.owner);
+            if (owner != null && (notify || owner.getWorld().equals(s.at.getWorld()))) {
+                plugin.messages().send(owner, "companion-farm.offline", "job", plugin.messages().get("companion-farm.jobs." + s.job.key()),
+                        "items", s.offlineGot, "time", online.mythoscraft.core.util.Durations.format(java.time.Duration.ofMillis(gap)));
+                s.offlineGot = 0;
+            }
+        }
+    }
+
+    /** Owner joins: report what the companions did while he was away. */
+    @EventHandler
+    public void onOwnerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player p = event.getPlayer();
+        plugin.tasks().later(120, "companion offline", () -> {
+            if (!p.isOnline()) {
+                return;
+            }
+            for (Station s : List.copyOf(stations.values())) {
+                if (s.owner.equals(p.getUniqueId())) {
+                    catchUp(s, true);
+                    if (s.offlineGot > 0) {
+                        plugin.messages().send(p, "companion-farm.offline", "job", plugin.messages().get("companion-farm.jobs." + s.job.key()),
+                                "items", s.offlineGot, "time", "-");
+                        s.offlineGot = 0;
+                    }
+                }
+            }
+        });
     }
 
     private static int baseInterval(Job job) {
@@ -1124,6 +1250,7 @@ public final class CompanionFarmService implements Listener {
                     plugin.messages().actionBar(player, "companion-farm.stopped");
                 } else {
                     s.until = System.currentTimeMillis() + s.minutes * 60_000L;
+                    s.lastSeen = System.currentTimeMillis();
                     SoundSpec.of("block.note_block.chime", 1f, 1.4f).play(player);
                     plugin.messages().actionBar(player, "companion-farm.started", "minutes", s.minutes, "radius", s.radius);
                 }
@@ -1166,6 +1293,7 @@ public final class CompanionFarmService implements Listener {
                 s.limit = Math.max(1, Math.min(MAX_STACKS, c.getInt("limit", MAX_STACKS)));
                 readLevels(s, c.getString("upgrades"));
                 s.until = c.getLong("until", 0);
+                s.lastSeen = c.getLong("last-seen", 0);
                 s.xp = c.getInt("xp", 0);
                 List<?> loot = c.getList("loot");
                 if (loot != null) {
@@ -1204,6 +1332,7 @@ public final class CompanionFarmService implements Listener {
             y.set(p + ".limit", s.limit);
             y.set(p + ".upgrades", writeLevels(s));
             y.set(p + ".until", s.until);
+            y.set(p + ".last-seen", s.lastSeen);
             y.set(p + ".xp", s.xp);
             y.set(p + ".loot", new ArrayList<>(s.loot));
         }

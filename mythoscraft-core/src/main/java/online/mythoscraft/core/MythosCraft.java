@@ -164,6 +164,8 @@ public class MythosCraft extends JavaPlugin {
     private online.mythoscraft.core.cosmetic.CompanionService companions;
     private online.mythoscraft.core.cosmetic.CompanionFarmService companionFarms;
     private online.mythoscraft.core.web.WebDailyRewards webDaily;
+    private online.mythoscraft.core.progress.NewbieService newbies;
+    private online.mythoscraft.core.teleport.StarterBaseService bases;
 
     public online.mythoscraft.core.cosmetic.CompanionService companions() {
         return companions;
@@ -246,6 +248,8 @@ public class MythosCraft extends JavaPlugin {
             companions = new online.mythoscraft.core.cosmetic.CompanionService(this);
             companionFarms = new online.mythoscraft.core.cosmetic.CompanionFarmService(this);
             webDaily = new online.mythoscraft.core.web.WebDailyRewards(this);
+            newbies = new online.mythoscraft.core.progress.NewbieService(this);
+            bases = new online.mythoscraft.core.teleport.StarterBaseService(this);
             rtp = new RtpService(this, cooldowns);
             vouchers = new RankVouchers(this);
             armorSets = new ArmorSetService(this);
@@ -370,6 +374,8 @@ public class MythosCraft extends JavaPlugin {
         relics.reload(root);
         companionFarms.reload(root);
         webDaily.reload(root);
+        newbies.reload(root);
+        bases.reload(root);
         rtp.reload(root);
         armorSets.start();
         seasons.reload(root);
@@ -440,7 +446,7 @@ public class MythosCraft extends JavaPlugin {
                 clans, upgrades, floorGames, boosters, magic, creatures, rankPerks, giveaways,
                 new online.mythoscraft.core.item.HelmetUpgradeListener(this),
                 new online.mythoscraft.core.teleport.SpawnItemListener(this),
-                companions, companionFarms, webDaily,
+                companions, companionFarms, webDaily, newbies, bases,
                 trophies,
                 new online.mythoscraft.core.display.ServerLinksService(this),
                 new online.mythoscraft.core.config.LocaleContextListener(messages)
@@ -512,6 +518,9 @@ public class MythosCraft extends JavaPlugin {
         guide = new online.mythoscraft.core.attraction.GuideService(this);
         getServer().getPluginManager().registerEvents(guide, this);
         command("guide", guide);
+        command("thank", newbies);
+        command("base", bases);
+        command("plot", new online.mythoscraft.core.teleport.PlotTransferCommand(this));
         online.mythoscraft.core.command.ModerationService moderation = new online.mythoscraft.core.command.ModerationService(this);
         getServer().getPluginManager().registerEvents(moderation, this);
         for (String c : new String[]{"mute", "unmute", "kick", "tempban", "ban", "unban", "warn", "warns", "goto", "modlog", "testkey"}) {
@@ -635,6 +644,7 @@ public class MythosCraft extends JavaPlugin {
         safe("relic items", () -> relics.shutdown());
         safe("companion farms", () -> companionFarms.shutdown());
         safe("web daily", () -> webDaily.shutdown());
+        safe("bases", () -> bases.shutdown());
         safe("companions", () -> companions.shutdown());
         safe("clans", () -> clans.shutdown());
         safe("bets", () -> bets.shutdown());
@@ -863,6 +873,14 @@ public class MythosCraft extends JavaPlugin {
         return intro;
     }
 
+
+    public online.mythoscraft.core.teleport.StarterBaseService bases() {
+        return bases;
+    }
+
+    public online.mythoscraft.core.progress.NewbieService newbies() {
+        return newbies;
+    }
 
     public online.mythoscraft.core.web.WebDailyRewards webDaily() {
         return webDaily;

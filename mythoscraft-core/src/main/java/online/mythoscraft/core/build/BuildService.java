@@ -157,10 +157,21 @@ public final class BuildService {
         plugin.crates().removeAll();
         plugin.holograms().removeAll();
         for (World w : plugin.getServer().getWorlds()) {
-            for (org.bukkit.entity.Entity e : w.getEntitiesByClasses(org.bukkit.entity.Display.class, org.bukkit.entity.Interaction.class)) {
+            for (org.bukkit.entity.Entity e : w.getEntitiesByClasses(org.bukkit.entity.Display.class, org.bukkit.entity.Interaction.class,
+                    org.bukkit.entity.Mannequin.class, org.bukkit.entity.ArmorStand.class)) {
                 String tag = e.getPersistentDataContainer().get(online.mythoscraft.core.util.Keys.ENTITY,
                         org.bukkit.persistence.PersistentDataType.STRING);
                 if (tag != null && (tag.startsWith("crate:") || tag.startsWith("hologram:"))) {
+                    e.remove();
+                    continue;
+                }
+                // every other hologram / text / NPC figure on the old or new spawn goes too (also from older versions or
+                // other plugins) – the new spawn places everything it needs again, in English
+                if (tag != null && (tag.equals(online.mythoscraft.core.tournament.TrophyService.TAG) || tag.startsWith("companion_farm:"))) {
+                    continue;                       // placed trophies / totems and farm companions belong to players
+                }
+                boolean holo = !(e instanceof org.bukkit.entity.ArmorStand a) || a.isMarker() || a.isInvisible();
+                if (holo && (near(e.getLocation(), origin) || (old != null && near(e.getLocation(), old)))) {
                     e.remove();
                 }
             }
@@ -231,7 +242,7 @@ public final class BuildService {
         }
         java.util.Map<String, List<Location>> points = new java.util.LinkedHashMap<>();
         for (String key : new String[]{"statue", "wheel", "well", "merchant", "merchant_wander", "ring", "elytra_start", "elytra_lift",
-                "lamp", "deco", "season_tree", "dropper_start", "dropper_pool", "dropper_lift", "maze_goal", "jump_pad", "mentor", "starter_board", "ground", "obelisk_accent", "arch_top",
+                "lamp", "deco", "season_tree", "dropper_start", "dropper_pool", "dropper_lift", "maze_goal", "jump_pad", "mentor", "starter_board", "npc_rtp", "npc_plot", "npc_jobs", "npc_crates", "npc_idle", "ground", "obelisk_accent", "arch_top",
                 "crate", "crate_event", "cannon", "cannon_target", "party_center", "party_exit", "spleef_center", "spleef_exit", "range_start", "range_stand", "target",
                 "rtp_portal", "wheel2", "relic_crate"}) {
             List<Location> list = new java.util.ArrayList<>();
@@ -261,6 +272,12 @@ public final class BuildService {
             plugin.tasks().later(100, "auto arenas", () -> autoArenas(player, origin));
         }
         plugin.getLogger().info("Spawn structure built at " + LocationCodec.describe(origin) + " by " + player.getName());
+    }
+
+    /** Inside the spawn area around {@code center} (with a margin)? */
+    private static boolean near(Location l, Location center) {
+        return center != null && l.getWorld() != null && l.getWorld().equals(center.getWorld())
+                && l.distanceSquared(center) <= Math.pow(SpawnStructure.RADIUS + 24, 2);
     }
 
     private void buildArena(Player player, TournamentTier tier, String requestedName) {

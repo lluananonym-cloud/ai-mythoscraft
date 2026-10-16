@@ -44,6 +44,7 @@ public final class Attractions implements Listener {
     private final SpawnGamesService games;
     private boolean rebuildQueued;
     private final java.util.List<Entity> mentor = new java.util.ArrayList<>();
+    private SpawnNpcService npcs;
 
     /** The mentor on the starter square: opens the quests (starter help for new players) + a notice board. */
     private void spawnMentor() {
@@ -69,7 +70,12 @@ public final class Attractions implements Listener {
             v.setCustomNameVisible(true);
             v.getPersistentDataContainer().set(Keys.ENTITY, PersistentDataType.STRING, "mentor");
         }));
-        Location board = plugin.attractionStore().first("starter_board");
+        if (npcs == null) {
+            npcs = new SpawnNpcService(plugin);
+        }
+        npcs.spawn();
+        // the old text board with commands is replaced by the helper NPCs; it only stays on spawns built before them
+        Location board = npcs.any() ? null : plugin.attractionStore().first("starter_board");
         if (board != null) {
             mentor.add(board.getWorld().spawn(board, org.bukkit.entity.TextDisplay.class, t -> {
                 t.setPersistent(false);
@@ -83,7 +89,7 @@ public final class Attractions implements Listener {
     }
 
     private boolean mentorPresent() {
-        return !mentor.isEmpty() && mentor.get(0).isValid();
+        return !mentor.isEmpty() && mentor.get(0).isValid() && (npcs == null || !npcs.any() || npcs.present());
     }
 
     public Attractions(MythosCraft plugin) {
@@ -227,6 +233,12 @@ public final class Attractions implements Listener {
                 event.setCancelled(true);
                 plugin.quests().open(p);
             }
+            case SpawnNpcService.TAG -> {
+                event.setCancelled(true);
+                if (npcs != null) {
+                    npcs.click(p, e);
+                }
+            }
             default -> {
             }
         }
@@ -235,7 +247,7 @@ public final class Attractions implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onInteractAt(PlayerInteractAtEntityEvent event) {
         String tag = tag(event.getRightClicked());
-        if (tag != null && (tag.equals(StatueService.TAG) || tag.equals(MerchantService.TAG) || tag.equals("mentor"))) {
+        if (tag != null && (tag.equals(StatueService.TAG) || tag.equals(MerchantService.TAG) || tag.equals("mentor") || tag.equals(SpawnNpcService.TAG))) {
             event.setCancelled(true);
         }
     }
@@ -251,7 +263,7 @@ public final class Attractions implements Listener {
             return;
         }
         switch (tag) {
-            case WheelService.TAG, WheelService.TAG2, WellService.TAG, MerchantService.TAG, StatueService.TAG, "season_bat", "mentor" -> {
+            case WheelService.TAG, WheelService.TAG2, WellService.TAG, MerchantService.TAG, StatueService.TAG, "season_bat", "mentor", SpawnNpcService.TAG -> {
                 event.setCancelled(true);
                 if (tag.equals(WheelService.TAG) && event.getDamager() instanceof Player p) {
                     wheel.showPrizes(p);
@@ -332,6 +344,9 @@ public final class Attractions implements Listener {
                 e.remove();
             }
         });
+        if (npcs != null) {
+            npcs.clear();
+        }
         statues.shutdown();
         wheel.shutdown();
         wheel2.shutdown();

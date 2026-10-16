@@ -1626,6 +1626,47 @@ crate-carousel:
       relic2: 0.03
       relic1: 0.06
 
+# Plot-Server (eigener Server mit dem MythosPlots-Plugin): /plot beamt Spieler dorthin, /smp dort wieder zurück.
+# Auf BEIDEN Servern muss in server.properties accepts-transfers=true stehen.
+plot-server:
+  enabled: true
+  host: mythoscraftsmpplot.minekeep.gg
+  port: 25565
+
+# Neue Spieler: [NEW]-Tag, Chat-Helfer, /thank, Belohnung fürs Durchziehen des Guides, Login-Streak beim Join
+newbies:
+  enabled: true
+  # so lange (Spielzeit in Stunden) steht [NEW] hinter dem Namen
+  new-tag-hours: 2
+  # Tagesbelohnung (/daily) automatisch beim Join abholen – mit Streak-Titel
+  auto-daily-on-join: true
+  # Belohnung, wenn der Guide (Leucht-Spur) bis zum Ende gemacht wird
+  guide-rewards:
+    - "key mythos 1"
+    - "coins 2500"
+  thank:
+    # Coins für den Helfer, wenn sich ein neuer Spieler mit /thank bedankt
+    coins: 250
+    max-per-new-player: 3
+    max-per-helper-per-day: 5
+
+# Erster eigener Platz: nach dem ersten /rtp ein geschützter Bereich um den Landepunkt (+ Truhe + Home "base")
+starter-base:
+  enabled: true
+  # 10 = 21×21 Blöcke
+  radius: 10
+  move-cooldown-hours: 24
+  chest:
+    - "OAK_LOG 16"
+    - "COBBLESTONE 32"
+    - "TORCH 16"
+    - "BREAD 12"
+    - "WHITE_BED 1"
+    - "CRAFTING_TABLE 1"
+    - "FURNACE 1"
+    - "STONE_PICKAXE 1"
+    - "STONE_AXE 1"
+
 # Tägliche Belohnung auf der Website: mit dem Minecraft-Konto anmelden (/website login <Code>) und 1× am Tag abholen.
 # Die Serie zählt Tag 1 … 7 (danach wieder Tag 1, wer einen Tag auslässt, fängt neu an). Mehrere Belohnungen mit ";" trennen.
 web-daily:

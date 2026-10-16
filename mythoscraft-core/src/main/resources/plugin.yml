@@ -19,6 +19,18 @@ commands:
     description: Spielmodus wechseln (freigegebene Creator)
     usage: /gm <c|s|sp>
     aliases: [gamemode2]
+  plot:
+    description: Ab auf den Plot-Server (eigene Grundstücke zum Bauen). Zurück mit /smp.
+    usage: /plot
+    aliases: [plots, plotworld, plotwelt]
+  thank:
+    description: Neue Spieler bedanken sich bei jemandem, der geholfen hat – der Helfer bekommt Coins.
+    usage: /thank <Spieler>
+    aliases: [danke, thanks]
+  base:
+    description: Dein erster eigener geschützter Platz (nach dem ersten /rtp). /base here|trust|untrust|info|show
+    usage: /base [here|trust <Spieler>|untrust <Spieler>|info|show]
+    aliases: [mybase]
   guide:
     description: Leucht-Spur für die ersten Schritte (Starter-Kit, Glücksrad, Spiele, Kisten, RTP). /guide skip|stop
     usage: /guide [skip|stop]

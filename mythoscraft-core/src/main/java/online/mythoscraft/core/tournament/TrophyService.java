@@ -43,7 +43,7 @@ import java.util.UUID;
  */
 public final class TrophyService implements Listener {
 
-    private static final String TAG = "trophy";
+    public static final String TAG = "trophy";
     private final NamespacedKey ownerKey, ownerNameKey, winsKey, placedKey, placerKey;
     private final MythosCraft plugin;
 

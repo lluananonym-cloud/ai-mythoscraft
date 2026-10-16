@@ -1,5 +1,6 @@
-config-version: 21
+config-version: 22
 config-reset:
+  22: [intro]
   21: [items.minepro_totem.lore]
   20: [companion-farm.start-lore, attractions.wheel.hologram, attractions.wheel.spin-paid, attractions.wheel2.hologram]
 prefix: '<gradient:#c084fc:#f59e0b><bold>MythosCraft</bold></gradient> <dark_gray>» '
@@ -3712,31 +3713,44 @@ creator-mode:
   no-containers: '<red>You cannot open containers in creative.'
   no-spawn: '<red>You may not build at the spawn.'
 intro:
+  skip-hint: '<gray>Press <white><bold>SNEAK</bold></white> <gray>to skip the intro'
   welcome:
     title: '<gradient:#c084fc:#22d3ee><bold>MythosCraft</bold></gradient>'
-    subtitle: '<gray>Welcome to the SMP!'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Hey, I'm <green>Lia</green>! Let me quickly show you around. <dark_gray>(/intro skip to skip)"
+    subtitle: '<green>100% free to play – no pay-to-win'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Hey, I'm <green>Lia</green>! On MythosCraft <green>everything can be earned by playing</green> – ranks, keys, items. Nothing is locked behind a paywall. <dark_gray>(sneak to skip)"
   crates:
-    title: '<gold><bold>Crates</bold>'
-    subtitle: '<gray>Over 200 custom items'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>These are the <gold>crates</gold>. You get keys from events, the daily reward and the <yellow>/shop</yellow>. New ones every season!"
+    title: '<gold><bold>300+ custom 3D items</bold>'
+    subtitle: '<gray>Real 3D models – no mods needed'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Swords, pickaxes, wands, hats and pets as <gold>real 3D models</gold> – with special abilities. They all come from these <gold>crates</gold>, and you see every chance before you open."
+  relic:
+    title: '<gradient:#f59e0b:#ec4899><bold>Relic crates</bold></gradient>'
+    subtitle: '<gray>Appear only rarely – be there!'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>On this pedestal a <gradient:#f59e0b:#ec4899>relic crate</gradient> appears every now and then – the whole server is told. Inside: drills, chainsaws, soul swords …"
   wheel:
-    title: '<light_purple><bold>Wheel of Fortune</bold>'
-    subtitle: '<gray>One free spin a day'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Spin the <light_purple>wheel</light_purple> for free once a day – with some luck you hit the jackpot."
+    title: '<light_purple><bold>Two wheels of fortune</bold>'
+    subtitle: '<gray>One free spin every day'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>The big wheel spins <green>for free once a day</green>, the Mythos wheel has the rare relic keys."
+  companions:
+    title: '<aqua><bold>Pets that work for you</bold>'
+    subtitle: '<gray>They farm even while you are offline'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Companions are not just cute: put a bee, penguin or snowman down and it <aqua>farms, fishes and chops trees for you</aqua> – also while you are offline. Upgrade them with gems!"
   leaderboards:
-    title: '<aqua><bold>Leaderboards</bold>'
-    subtitle: '<gray>Become the best'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Here you see the <aqua>best players</aqua>. There are <gold>tournaments</gold> with real trophies every day!"
+    title: '<aqua><bold>Tournaments & trophies</bold>'
+    subtitle: '<gray>Daily, weekly, monthly'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Every day there is a <gold>PvP tournament</gold> – winners get a real trophy you can place in your base. The best players get a statue here!"
   games:
     title: '<green><bold>Minigames</bold>'
-    subtitle: '<gray>Parkour, spleef & more'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white><green>Minigames</green> and a parkour wait at the spawn – they pay coins and gems."
+    subtitle: '<gray>Parkour, dropper, spleef & more'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white><green>Minigames</green> with daily rewards wait at the spawn – they pay coins and gems."
+  wild:
+    title: '<gradient:#5ef0a0:#22d3ee><bold>Your own place – free</bold></gradient>'
+    subtitle: '<gray>Protected base + a plot world'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Jump into this portal: you land on a free spot and get your <green>own protected base</green> with a starter chest. Want to build creative? <green>/plot</green> takes you to the plot world."
   start:
     title: '<yellow><bold>Let''s go!</bold>'
-    subtitle: '<gray>Your adventure begins'
-    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Almost done! Your <gold>starter kit</gold> is waiting."
-  finish: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>This is how to start:<newline><gold>1.</gold> <yellow>/new</yellow> <gray>– claim your starter kit<newline><gold>2.</gold> <yellow>/rtp</yellow> <gray>– find a free spot in the wild<newline><gold>3.</gold> <yellow>/sethome</yellow> <gray>– set your home there<newline><gold>4.</gold> <gray>Talk to me at the spawn for <green>quests</green> and starting money<newline><gray>Have fun! <dark_gray>(/intro shows it again)<newline>"
+    subtitle: '<gray>Log in daily – your streak grows'
+    lia: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Every login gives you a <gold>daily reward</gold> that grows with your streak – and on our website you can claim even more. Help new players and get coins with <green>/thank</green>!"
+  finish: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>This is how to start:<newline><gold>1.</gold> <click:run_command:'/starter'><yellow><u>/starter</u></yellow></click> <gray>– claim your starter kit<newline><gold>2.</gold> <click:run_command:'/rtp'><yellow><u>/rtp</u></yellow></click> <gray>– a free spot in the wild + your own protected base<newline><gold>3.</gold> <click:run_command:'/plot'><yellow><u>/plot</u></yellow></click> <gray>– build on your own plot<newline><gold>4.</gold> <gray>Follow the <gold>glowing trail</gold> – finishing it gives a <gold>free reward</gold>!<newline><gray>Questions? Just ask in chat. <dark_gray>(/intro shows it again)<newline>"
 moderation:
   not-yourself: '<red>You cannot do that to yourself.'
   higher-rank: '<red>{player} has the same or a higher rank – you may not do that.'
@@ -3814,6 +3828,7 @@ relic:
   zap:
     charged: '<yellow>⚡ Charged! <white>Haste III'
 companion-farm:
+  offline: '<aqua>🐾 While you were away your {job} <aqua>collected <white>{items}</white> <aqua>items <gray>({time}). Right-click it to collect!'
   menu-title: '<dark_gray>Farming companion: {job}'
   jobs:
     crops: '<yellow>Field Bee'
@@ -3921,3 +3936,73 @@ companion-farm:
   no-water: '<aqua>🐧 No water nearby – the penguin needs water to fish.'
   label-running: "{job}<newline><gray>{owner} <dark_gray>· <white>{time}<newline><gray>Storage {stacks}/{max} <dark_gray>· {radius} blocks"
   label-idle: "{job}<newline><gray>{owner} <dark_gray>· <yellow>paused<newline><gray>Storage {stacks}/{max}"
+plot-server:
+  sending: '<gray>Beaming you to the <gradient:#5ef0a0:#22d3ee><bold>Plot World</bold></gradient><gray>… <dark_gray>(back with /smp)'
+  title: '<gradient:#5ef0a0:#22d3ee><bold>PLOT WORLD</bold></gradient>'
+  subtitle: '<gray>Your own plots to build on'
+  failed: '<red>The plot server can''t be reached right now. Try again later.'
+  disabled: '<red>The plot world is closed right now.'
+newbie:
+  tag: '<green><bold>[NEW]</bold></green>'
+  welcome-back: "<green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Welcome back! Not sure what to do? <click:run_command:'/guide'><hover:show_text:'<gray>Click'><aqua><u>/guide</u></aqua></hover></click> <white>shows you around – and finishing it gives a <gold>free reward</gold>!"
+  streak-title: '<gradient:#f6c23c:#ff6ad5><bold>Day {streak} 🔥</bold></gradient>'
+  streak-subtitle: '<gray>Login streak – your daily reward is in!'
+  guide-promise: '<gold>🎁 Finish the guide and get <reset>{reward}<gold>!'
+  guide-reward: '<gradient:#f6c23c:#5ef0a0><bold>✔ Guide finished!</bold></gradient> <gray>Your reward: <reset>{reward}'
+  guide-skipped: "<gray>You stopped the guide – you missed <reset>{reward}<gray>! <click:run_command:'/guide'><hover:show_text:'<gray>Click to continue'><yellow><u>/guide</u></yellow></hover></click> <gray>to get it."
+  thank-only-new: '<gray>Only new players can use /thank – but you can help them to get thanked!'
+  thank-self: '<red>You can''t thank yourself.'
+  thank-twice: '<gray>You already thanked <white>{player}</white>.'
+  thank-max: '<gray>You already thanked {max} players.'
+  thank-sent: '<green>❤ You thanked <white>{player}</white>!'
+  thanked: '<green>❤ <white>{player}</white> <green>thanked you for your help! <gold>+{coins} Coins'
+  thanked-nocoins: '<green>❤ <white>{player}</white> <green>thanked you for your help! <dark_gray>(daily coin limit reached)'
+  thank-broadcast: '<gray>❤ <white>{player}</white> <gray>thanked <white>{helper}</white> <gray>for helping. Help new players <green>[NEW]</green> <gray>and get coins!'
+  answers:
+    general: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Here is what you can do:<newline><click:run_command:'/rtp'><hover:show_text:'<gray>Click'><gold>⛏ /rtp</gold></hover></click> <gray>– find a free spot in the wild and get your own protected base<newline><click:run_command:'/plot'><hover:show_text:'<gray>Click'><green>🏠 /plot</green></hover></click> <gray>– build on your own plot in the plot world<newline><click:run_command:'/kisten'><hover:show_text:'<gray>Click'><light_purple>📦 /crates</light_purple></hover></click> <gray>– crates, keys and rare relics at spawn<newline><click:run_command:'/jobs'><hover:show_text:'<gray>Click'><yellow>💰 /jobs</yellow></hover></click> <gray>– earn coins with every block you mine, chop or farm<newline><click:run_command:'/guide'><hover:show_text:'<gray>Click'><aqua>✦ /guide</aqua></hover></click> <gray>– a glowing trail shows you everything (with a reward!)<newline>"
+    money: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Coins come from <click:run_command:'/jobs'><yellow><u>/jobs</u></yellow></click> <gray>(mining, farming, fishing …), the free daily reward (<click:run_command:'/daily'><yellow><u>/daily</u></yellow></click><gray>), quests (<click:run_command:'/aufgaben'><yellow><u>/quests</u></yellow></click><gray>), events and the wheels of fortune at spawn. Sell stuff in <click:run_command:'/ah'><yellow><u>/ah</u></yellow></click><gray>.<newline>"
+    home: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>After your first <click:run_command:'/rtp'><gold><u>/rtp</u></gold></click> <white>you get your own <green>protected base</green> (21×21) with a starter chest. <click:run_command:'/base'><green><u>/base</u></green></click> <gray>brings you back, <white>/base here</white> <gray>moves it, <white>/sethome</white> <gray>saves more homes.<newline>"
+    wild: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Type <click:run_command:'/rtp'><gold><u>/rtp</u></gold></click> <white>or walk into the <dark_purple>wilderness portal</dark_purple> at spawn – you land on a free spot to build and get your own protected base there.<newline>"
+    crates: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Crates stand at spawn – hold the right <yellow>key</yellow> and right-click. Keys come from the daily reward, events, the wheels, quests and <click:run_command:'/shop'><yellow><u>/shop</u></yellow></click><white>. <click:run_command:'/kisten'><light_purple><u>/crates</u></light_purple></click> <gray>shows which crate comes when.<newline>"
+    plot: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>Want to build creative? <click:run_command:'/plot'><green><u>/plot</u></green></click> <white>beams you to the plot world – claim a plot there with <white>/plot auto</white>. <gray>Back with /smp.<newline>"
+    rank: "<newline><green><bold>Lia</bold></green> <dark_gray>»</dark_gray> <white>MythosCraft is <green>free to play</green> – ranks can be won in crates, at events, in tournaments and with the daily streak. <click:run_command:'/rang'><yellow><u>/rank</u></yellow></click> <gray>shows all perks.<newline>"
+base:
+  name: '<green>your base'
+  chest-name: '<green><bold>Starter Chest'
+  created: "<newline><gradient:#5ef0a0:#22d3ee><bold>🏠 YOUR OWN PLACE!</bold></gradient><newline><white>This {size}×{size} area is now <green>protected</green> – only you can build here.<newline><gray>• A <white>starter chest</white> <gray>is right in front of you<newline><gray>• <click:run_command:'/base'><green><u>/base</u></green></click> <gray>brings you back any time (home \"base\")<newline><gray>• <white>/base here</white> <gray>moves it · <white>/base trust <player></white> <gray>lets friends build<newline>"
+  protected: '<red>This base belongs to someone else.'
+  enter: '<gray>Base of <white>{player}'
+  enter-own: '<green>🏠 Your base'
+  none: "<gray>You don't have a base yet – it is created after your first <click:run_command:'/rtp'><gold><u>/rtp</u></gold></click><gray>, or use <white>/base here</white><gray>."
+  overworld-only: '<red>Bases only work in the overworld.'
+  move-cooldown: '<red>You can move your base again in {time}.'
+  overlap: '<red>Too close to another base or a protected area.'
+  moved: '<green>✔ Your base ({size}×{size}) is now here.'
+  trusted: '<green><white>{player}</white> can now build in your base.'
+  untrusted: '<gray><white>{player}</white> can no longer build in your base.'
+  info: '<green>🏠 Base</green> <gray>at <white>{x}, {z}</white> ({world}) · {size}×{size} · trusted: <white>{trusted}'
+npcs:
+  rtp:
+    name: '<gradient:#a855f7:#ec4899><bold>Wilderness Guide</bold></gradient>'
+    description: '<gray>Right-click: <white>/rtp</white> + your own base'
+    talk: "<light_purple><bold>Wilderness Guide</bold></light_purple> <dark_gray>»</dark_gray> <white>Off you go! You land on a free spot – and your first trip gives you your <green>own protected base</green>."
+  plot:
+    name: '<gradient:#5ef0a0:#22d3ee><bold>Plot Builder</bold></gradient>'
+    description: '<gray>Right-click: <white>/plot</white> – your own plot'
+    talk: "<aqua><bold>Plot Builder</bold></aqua> <dark_gray>»</dark_gray> <white>Building creative? In the plot world you claim your own plot with <green>/plot auto</green>. Back here with <green>/smp</green>!"
+  jobs:
+    name: '<gradient:#fde047:#f59e0b><bold>Job Master</bold></gradient>'
+    description: '<gray>Right-click: <white>/jobs</white> – earn coins'
+    talk: "<gold><bold>Job Master</bold></gold> <dark_gray>»</dark_gray> <white>Every block you mine, chop or farm pays coins – level up your jobs for more!"
+  crates:
+    name: '<gradient:#f59e0b:#ec4899><bold>Crate Keeper</bold></gradient>'
+    description: '<gray>Right-click: which crate comes when'
+    talk: "<gold><bold>Crate Keeper</bold></gold> <dark_gray>»</dark_gray> <white>Hold the right key and right-click a crate. Here is what stands at spawn right now:"
+  idle:
+    name: '<gray><bold>LeonKal</bold></gray>'
+    description: '<dark_gray>just chilling'
+    lines:
+    - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>Shh, I'm taking a break. The cookies here are great."
+    - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>Did you know? The wheel gives you a free spin every day."
+    - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>I once saw a relic crate appear. Best day of my life."
+    - "<gray><bold>LeonKal</bold> <dark_gray>»</dark_gray> <white>Help a [NEW] player and they can /thank you – free coins!"
