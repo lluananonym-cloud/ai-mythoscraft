@@ -7,10 +7,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import online.mythoscraft.core.MythosCraft;
 import online.mythoscraft.core.command.BaseCommand;
 import online.mythoscraft.core.command.CommandFail;
-import online.mythoscraft.core.core.Perms;
 import online.mythoscraft.core.util.LocationCodec;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -32,9 +30,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.NamespacedKey;
-import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -95,7 +90,7 @@ public final class SelectorIslandService extends BaseCommand implements Listener
     @Override
     protected void execute(CommandSender sender, String label, String[] args) throws CommandFail {
         Player player = player(sender);
-        permission(sender, Perms.SPAWN_SET);
+        permission(sender, "mythos.spawn.set");
         if (args.length == 0 || !args[0].equalsIgnoreCase("place")) {
             throw CommandFail.usage("/island place [confirm]");
         }
@@ -283,7 +278,7 @@ public final class SelectorIslandService extends BaseCommand implements Listener
         player.getPersistentDataContainer().remove(SELECTOR_PENDING);
         if (role.equals("smp")) {
             player.getPersistentDataContainer().remove(NEXT_WORLD);
-            plugin.intro().selectedPlots(player); // cancel the first-join auto trigger; selection below is explicit
+            plugin.intro().selectedSmp(player); // cancel the first-join auto trigger; this choice is explicit
             Location spawn = plugin.spawn().spawn();
             if (spawn == null) {
                 player.sendMessage(Component.text("Der SMP-Spawn ist noch nicht gesetzt.", NamedTextColor.RED));
