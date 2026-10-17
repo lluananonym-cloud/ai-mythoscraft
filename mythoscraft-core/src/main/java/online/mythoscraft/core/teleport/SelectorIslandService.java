@@ -278,7 +278,7 @@ public final class SelectorIslandService extends BaseCommand implements Listener
         player.getPersistentDataContainer().remove(SELECTOR_PENDING);
         if (role.equals("smp")) {
             player.getPersistentDataContainer().remove(NEXT_WORLD);
-            plugin.intro().selectedSmp(player); // cancel the first-join auto trigger; this choice is explicit
+            plugin.intro().selectedPlots(player); // cancel the first-join auto trigger until the SMP teleport completes
             Location spawn = plugin.spawn().spawn();
             if (spawn == null) {
                 player.sendMessage(Component.text("Der SMP-Spawn ist noch nicht gesetzt.", NamedTextColor.RED));
