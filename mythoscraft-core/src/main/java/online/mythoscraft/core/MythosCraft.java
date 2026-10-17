@@ -168,6 +168,7 @@ public class MythosCraft extends JavaPlugin {
     private online.mythoscraft.core.web.ServerSync serverSync;
     private online.mythoscraft.core.progress.NewbieService newbies;
     private online.mythoscraft.core.teleport.StarterBaseService bases;
+    private online.mythoscraft.core.teleport.SelectorIslandService selectorIsland;
 
     public online.mythoscraft.core.cosmetic.CompanionService companions() {
         return companions;
@@ -523,6 +524,9 @@ public class MythosCraft extends JavaPlugin {
         intro = new online.mythoscraft.core.attraction.IntroService(this);
         getServer().getPluginManager().registerEvents(intro, this);
         command("intro", intro);
+        selectorIsland = new online.mythoscraft.core.teleport.SelectorIslandService(this);
+        getServer().getPluginManager().registerEvents(selectorIsland, this);
+        command("island", selectorIsland);
         guide = new online.mythoscraft.core.attraction.GuideService(this);
         getServer().getPluginManager().registerEvents(guide, this);
         command("guide", guide);
@@ -530,7 +534,9 @@ public class MythosCraft extends JavaPlugin {
         command("applications", playerSite);
         command("discord", new online.mythoscraft.core.display.DiscordCommand(this));
         command("base", bases);
-        command("plot", new online.mythoscraft.core.teleport.PlotTransferCommand(this));
+        BaseCommand plotTransfer = new online.mythoscraft.core.teleport.PlotTransferCommand(this);
+        command("plot", plotTransfer);
+        command("farmwelt", plotTransfer);
         online.mythoscraft.core.command.ModerationService moderation = new online.mythoscraft.core.command.ModerationService(this);
         getServer().getPluginManager().registerEvents(moderation, this);
         for (String c : new String[]{"mute", "unmute", "kick", "tempban", "ban", "unban", "warn", "warns", "goto", "modlog", "testkey"}) {
@@ -576,7 +582,9 @@ public class MythosCraft extends JavaPlugin {
             economy.deposit(data, Currency.COINS, economy.startCoins());
         }
         display.handleJoin(player, data, firstJoin);
-        spawn.handleJoin(player, firstJoin);
+        if (selectorIsland == null || !selectorIsland.handleJoin(player, firstJoin)) {
+            spawn.handleJoin(player, firstJoin);
+        }
         if (firstJoin) {
             online.mythoscraft.core.command.StarterKitCommand.hint(this, player);
             if (intro != null) {
@@ -648,6 +656,7 @@ public class MythosCraft extends JavaPlugin {
         safe("sky dome", () -> skyDome.clear());
         safe("rank perks", () -> rankPerks.shutdown());
         safe("server sync", () -> serverSync.shutdown());
+        safe("selector island", () -> { if (selectorIsland != null) selectorIsland.shutdown(); });
         safe("web panel", () -> webPanel.stop());
         safe("crates", () -> crates.shutdown());
         safe("arenas", () -> arenas.shutdown());
@@ -888,6 +897,10 @@ public class MythosCraft extends JavaPlugin {
         return intro;
     }
 
+
+    public online.mythoscraft.core.teleport.SelectorIslandService selectorIsland() {
+        return selectorIsland;
+    }
 
     public online.mythoscraft.core.teleport.StarterBaseService bases() {
         return bases;
