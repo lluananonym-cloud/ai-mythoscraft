@@ -34,6 +34,8 @@ import java.util.UUID;
 public final class IntroService extends BaseCommand implements Listener {
 
     private static final String DONE = "intro.done";
+    private static final org.bukkit.NamespacedKey INTRO_ENABLED =
+            new org.bukkit.NamespacedKey("mythoscraft", "intro-enabled");
     private static final int SCENE_TICKS = 70;   // 3.5 s per shot
 
     /** one camera shot: orbit around {@code target} */
@@ -91,10 +93,45 @@ public final class IntroService extends BaseCommand implements Listener {
     private void maybeStart(Player p) {
         if (!enabled() || !p.isOnline() || !newcomers.contains(p.getUniqueId()) || running.containsKey(p.getUniqueId())
                 || !plugin.progress().loaded(p)
-                || plugin.progress().get(p, DONE) > 0 || plugin.arenas().isInArena(p)) {
+                || plugin.progress().get(p, DONE) > 0 || plugin.arenas().isInArena(p)
+                || !playerEnabled(p) || online.mythoscraft.core.teleport.SelectorIslandService.waitingForChoice(p)) {
             return;
         }
         start(p);
+    }
+
+    /** An explicit selector choice bypasses the first-join-only trigger but respects the player's on/off choice. */
+    public void selectedSmp(Player p) {
+        newcomers.remove(p.getUniqueId());
+        if (!enabled() || !playerEnabled(p)) {
+            p.sendMessage(net.kyori.adventure.text.Component.text(
+                    "Intro ist ausgeschaltet. Mit /intro on kannst du es wieder aktivieren.",
+                    net.kyori.adventure.text.format.NamedTextColor.GRAY));
+            return;
+        }
+        Run old = running.get(p.getUniqueId());
+        if (old != null) {
+            finish(old, false);
+        }
+        start(p);
+    }
+
+    /** Selecting Citybuild must prevent the SMP first-join fallback from firing during the world transfer. */
+    public void selectedPlots(Player p) {
+        newcomers.remove(p.getUniqueId());
+        Run old = running.get(p.getUniqueId());
+        if (old != null) {
+            finish(old, false);
+        }
+    }
+
+    public static boolean playerEnabled(Player p) {
+        Byte value = p.getPersistentDataContainer().get(INTRO_ENABLED, PersistentDataType.BYTE);
+        return value == null || value != 0;
+    }
+
+    private void setPlayerEnabled(Player p, boolean value) {
+        p.getPersistentDataContainer().set(INTRO_ENABLED, PersistentDataType.BYTE, (byte) (value ? 1 : 0));
     }
 
     // ------------------------------------------------------------------ the show
@@ -259,6 +296,28 @@ public final class IntroService extends BaseCommand implements Listener {
     protected void execute(CommandSender sender, String label, String[] args) throws CommandFail {
         Player p = player(sender);
         Run r = running.get(p.getUniqueId());
+        if (args.length > 0) {
+            String option = args[0].toLowerCase(java.util.Locale.ROOT);
+            if (List.of("on", "an", "enable", "ein").contains(option)) {
+                setPlayerEnabled(p, true);
+                p.sendMessage(net.kyori.adventure.text.Component.text("Intro aktiviert (Standard: an).",
+                        net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                return;
+            }
+            if (List.of("off", "aus", "disable", "ausmachen").contains(option)) {
+                setPlayerEnabled(p, false);
+                if (r != null) finish(r, false);
+                p.sendMessage(net.kyori.adventure.text.Component.text("Intro deaktiviert. Mit /intro on kannst du es aktivieren.",
+                        net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                return;
+            }
+            if (option.equals("status")) {
+                p.sendMessage(net.kyori.adventure.text.Component.text(
+                        "Intro: " + (playerEnabled(p) ? "an" : "aus") + " (Standard: an)",
+                        net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
+                return;
+            }
+        }
         if (args.length > 0 && args[0].equalsIgnoreCase("skip")) {
             if (r != null) {
                 finish(r, false);
@@ -272,7 +331,7 @@ public final class IntroService extends BaseCommand implements Listener {
 
     @Override
     protected List<String> complete(CommandSender sender, String label, String[] args) {
-        return args.length == 1 ? List.of("skip") : List.of();
+        return args.length == 1 ? List.of("skip", "on", "off", "status") : List.of();
     }
 
     public void shutdown() {
