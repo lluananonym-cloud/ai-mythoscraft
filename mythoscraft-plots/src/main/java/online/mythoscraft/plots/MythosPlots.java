@@ -211,8 +211,7 @@ public final class MythosPlots extends JavaPlugin {
             display.setPersistent(false);
             display.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
             display.setAlignment(org.bukkit.entity.TextDisplay.TextAlignment.CENTER);
-            display.setText(net.kyori.adventure.text.Component.text("✦ MYTHOSCRAFT ✦\nCITYBUILD",
-                    net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
+            display.setText("✦ MYTHOSCRAFT ✦\nCITYBUILD");
             display.setShadowed(true);
             display.getPersistentDataContainer().set(titleKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
         });
