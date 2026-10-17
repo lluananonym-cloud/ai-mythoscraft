@@ -268,8 +268,15 @@ public final class IntroService extends BaseCommand implements Listener {
         if (p.isOnline()) {
             plugin.messages().sendRaw(p, "intro.finish");
             SoundSpec.of("ui.toast.challenge_complete", 0.8f, 1.2f).play(p);
-            // the glowing trail takes over: starter kit → wheel → games → crates → RTP
-            plugin.tasks().later(60, "guide after intro", () -> plugin.guide().begin(p));
+            // Turning the intro off must not silently launch the starter guide afterwards.
+            if (playerEnabled(p)) {
+                // the glowing trail takes over: starter kit → wheel → games → crates → RTP
+                plugin.tasks().later(60, "guide after intro", () -> {
+                    if (p.isOnline() && playerEnabled(p)) {
+                        plugin.guide().begin(p);
+                    }
+                });
+            }
         }
     }
 
