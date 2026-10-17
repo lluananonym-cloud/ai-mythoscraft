@@ -74,6 +74,12 @@ spawn:
   hunger: false
   item-drop: true
 
+# Separate first-join selector platform. Configure the location with /island place confirm.
+# This is independent from the existing SMP spawn structure.
+selector-island:
+  enabled: true
+  location: {}
+
 # ───────────────────────────── Schutz ─────────────────────────────
 protection:
   # Standard außerhalb aller Regionen ("Wildnis")
