@@ -36,6 +36,7 @@ public final class MythosPlots extends JavaPlugin {
     private boolean local;
     private PlotBoard board;
     private SyncClient sync;
+    private PlotIntroService intro;
     /** who used /smp recently – the quit message then says "went back to MythosCraft" */
     private final java.util.Map<java.util.UUID, Long> hops = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -74,6 +75,8 @@ public final class MythosPlots extends JavaPlugin {
         getCommand("smp").setExecutor(back);
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        intro = new PlotIntroService(this);
+        getServer().getPluginManager().registerEvents(intro, this);
         getServer().getPluginManager().registerEvents(new BorderMenu(this), this);
         local = getServer().getPluginManager().isPluginEnabled("MythosCraft");
         if (local) {
@@ -109,6 +112,9 @@ public final class MythosPlots extends JavaPlugin {
         }
         if (store != null) {
             store.save();
+        }
+        if (intro != null) {
+            intro.shutdown();
         }
         if (pack != null) {
             pack.stop();
@@ -152,12 +158,64 @@ public final class MythosPlots extends JavaPlugin {
             w.setThundering(false);
         }
         w.setSpawnLocation(spawn(w));
+        buildCityBuildSpawn(w);
         return w;
     }
 
     private Location spawn(World w) {
         double c = grid.road() / 2.0;
         return new Location(w, c, PlotGrid.SURFACE + 1, c, -45, 0);
+    }
+
+    /**
+     * A dedicated MythosCraft-branded CityBuild plaza. It occupies only the road intersection (never a plot),
+     * so existing plot coordinates and claims are untouched.
+     */
+    private void buildCityBuildSpawn(World w) {
+        int road = grid.road();
+        int mid = road / 2;
+        int y = PlotGrid.SURFACE;
+        org.bukkit.NamespacedKey titleKey = new org.bukkit.NamespacedKey("mythosplots", "citybuild-spawn-title");
+
+        // Only x/z inside the first road intersection are changed; plot terrain starts at road coordinate road.
+        for (int x = 0; x < road; x++) {
+            for (int z = 0; z < road; z++) {
+                boolean edge = x == 0 || z == 0 || x == road - 1 || z == road - 1;
+                Material floor = edge ? Material.POLISHED_BLACKSTONE_BRICKS : Material.POLISHED_ANDESITE;
+                if (x == mid || z == mid) floor = Material.PURPUR_BLOCK;
+                if ((x == 1 || x == road - 2) && (z == 1 || z == road - 2)) floor = Material.SEA_LANTERN;
+                w.getBlockAt(x, y, z).setType(floor, false);
+                w.getBlockAt(x, y - 1, z).setType(Material.DEEPSLATE_TILES, false);
+            }
+        }
+
+        // Four compact pillars and a purple/gold marker make it visibly different from an unbuilt road crossing.
+        int[][] corners = {{0,0},{0,road-1},{road-1,0},{road-1,road-1}};
+        for (int[] c : corners) {
+            for (int h = 1; h <= 3; h++) {
+                w.getBlockAt(c[0], y + h, c[1]).setType(h == 3 ? Material.AMETHYST_BLOCK : Material.POLISHED_BLACKSTONE_BRICKS, false);
+            }
+            w.getBlockAt(c[0], y + 4, c[1]).setType(Material.END_ROD, false);
+        }
+        w.getBlockAt(mid, y, mid).setType(Material.GOLD_BLOCK, false);
+        w.getBlockAt(mid, y + 1, mid).setType(Material.AIR, false);
+        w.getBlockAt(mid, y + 2, mid).setType(Material.AIR, false);
+
+        for (org.bukkit.entity.Entity entity : new java.util.ArrayList<>(w.getEntities())) {
+            if (entity.getPersistentDataContainer().has(titleKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                entity.remove();
+            }
+        }
+        org.bukkit.Location titleAt = new org.bukkit.Location(w, mid + 0.5, y + 3.7, mid + 0.5);
+        w.spawn(titleAt, org.bukkit.entity.TextDisplay.class, display -> {
+            display.setPersistent(false);
+            display.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            display.setAlignment(org.bukkit.entity.TextDisplay.TextAlignment.CENTER);
+            display.setText(net.kyori.adventure.text.Component.text("✦ MYTHOSCRAFT ✦\nCITYBUILD",
+                    net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
+            display.setShadowed(true);
+            display.getPersistentDataContainer().set(titleKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        });
     }
 
     // ------------------------------------------------------------------------------------------- helpers
