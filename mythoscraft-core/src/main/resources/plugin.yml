@@ -32,6 +32,14 @@ commands:
     description: Ab auf den Plot-Server (eigene Grundstücke zum Bauen). Zurück mit /smp.
     usage: /plot
     aliases: [plots, plotworld, plotwelt]
+  farmwelt:
+    description: Öffnet den MythosCraft-Citybuild.
+    usage: /farmwelt
+  island:
+    description: Baut die geschützte Welt-Auswahl-Plattform.
+    usage: /island place [confirm]
+    aliases: [islan, insel, selector]
+    permission: mythos.spawn.set
   thank:
     description: Neue Spieler bedanken sich bei jemandem, der geholfen hat – der Helfer bekommt Coins.
     usage: /thank <Spieler>
